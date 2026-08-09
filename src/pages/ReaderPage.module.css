@@ -143,50 +143,71 @@
   box-shadow: 0 0 8px rgba(255, 204, 0, 0.4);
 }
 
-/* Floating Cultivation EXP Toast */
-.cultivationToast {
+/* Breakthrough Toast — Hiện nhanh 1 giây và tự động tiêu tán */
+.breakthroughToast {
   position: fixed;
-  bottom: 80px;
-  right: 20px;
-  z-index: 50;
-  background: linear-gradient(135deg, rgba(23, 35, 56, 0.95), rgba(31, 48, 76, 0.95));
-  border: 1px solid var(--border-gold);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), var(--glow-gold-sm);
-  border-radius: var(--radius-lg);
-  padding: 10px 16px;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  background: linear-gradient(135deg, rgba(20, 28, 48, 0.96), rgba(30, 44, 72, 0.96));
+  border: 1px solid #ffcc00;
+  box-shadow: 0 0 25px rgba(255, 204, 0, 0.5), 0 8px 32px rgba(0, 0, 0, 0.7);
+  border-radius: var(--radius-full);
+  padding: 8px 22px;
   display: flex;
   align-items: center;
   gap: 10px;
-  cursor: pointer;
-  animation: slideUp 0.3s ease, pulse 2s infinite;
+  pointer-events: none;
+  animation: breakthroughFlash 1.2s ease forwards;
   backdrop-filter: blur(12px);
-  max-width: 280px;
-}
-.cultivationToast:hover {
-  border-color: #ffcc00;
-  transform: translateY(-2px);
+  white-space: nowrap;
 }
 
-.toastIcon {
+@keyframes breakthroughFlash {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -15px) scale(0.9);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.05);
+  }
+  30% {
+    transform: translate(-50%, 0) scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.95);
+  }
+}
+
+.breakthroughIcon {
   font-size: 20px;
 }
 
-.toastContent {
+.breakthroughContent {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: 12px;
-  color: var(--text-primary);
-}
-.toastContent strong {
-  color: #ffcc00;
-  font-family: var(--font-serif);
+  gap: 1px;
 }
 
-.toastRealm {
+.breakthroughTitle {
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffcc00;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 8px rgba(255, 204, 0, 0.6);
+}
+
+.breakthroughSubtitle {
   font-size: 11px;
   color: var(--accent-cyan);
-  font-weight: 500;
 }
 
 /* Lamp Drop Celebration Modal */

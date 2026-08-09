@@ -946,17 +946,18 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   }
 
   let droppedLamp = null;
+  let breakthrough = null;
 
-  // TỈ LỆ RƠI MỆNH ĐĂNG THEO 6 CẤP BẬC HIẾM (~1.8% mỗi chương đọc đủ 60s)
+  // TỈ LỆ RƠI MỆNH ĐĂNG THEO 6 CẤP BẬC HIẾM (~7.5% mỗi chu kỳ 60s)
   const allOwnedLamps = [...(state.inventoryLamps || []), ...(state.absorbedLamps || [])];
-  if (isFirstRead && allOwnedLamps.length < LIFE_LAMPS.length) {
+  if (allOwnedLamps.length < LIFE_LAMPS.length) {
     const unownedLamps = LIFE_LAMPS.filter(l => !allOwnedLamps.includes(l.id));
 
     if (unownedLamps.length > 0) {
       const dropRoll = Math.random();
-      // Tỉ lệ rơi: 1.8% cơ bản
-      if (dropRoll < 0.018) {
-        // Chọn tier ngẫu nhiên theo trọng số phẩm cấp
+      // Tỉ lệ rơi: 7.5% cơ bản mỗi chu kỳ 60s (tăng hấp dẫn phù hợp 72 Mệnh Đăng)
+      if (dropRoll < 0.075) {
+        // Chọn tier ngẫu nhiên theo trọng số phẩm cấp tương quan
         const tierRoll = Math.random();
         let selectedTier = 'ha_pham';
         if (tierRoll < 0.45) selectedTier = 'ha_pham';
@@ -992,6 +993,12 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
         if (lvl > state.ngungKhiLevel) {
           state.ngungKhiLevel = lvl;
           const cpStr = getCombatPowerDisplay({ ...state, ngungKhiLevel: lvl });
+          breakthrough = {
+            type: 'layer',
+            title: `ĐỘT PHÁ NGƯNG KHÍ TẦNG ${lvl}!`,
+            subtitle: `Chiến lực: ${cpStr}`,
+            icon: '⚡',
+          };
           state.logs.unshift({
             text: `Đột phá thành công! Tiến nhập Ngưng Khí Tầng ${lvl} (Chiến lực: ${cpStr}).`,
             time: Date.now(),
@@ -1001,8 +1008,14 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
       }
     }
 
-    if (state.expCurrentRealm >= NGUNG_KHI_THRESHOLDS[10]) {
+    if (state.expCurrentRealm >= NGUNG_KHI_THRESHOLDS[10] && !state.readyBreakthroughTrucCo) {
       state.readyBreakthroughTrucCo = true;
+      breakthrough = {
+        type: 'realm',
+        title: 'NGƯNG KHÍ ĐẠI VIÊN MÃN!',
+        subtitle: 'Đã sẵn sàng đột phá Trúc Cơ',
+        icon: '🔥',
+      };
     }
   } else if (state.realm === 'truc_co') {
     state.expCurrentRealm += gainedExp;
@@ -1014,6 +1027,12 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
         const newSelfHoa = Math.floor(state.phapKhieu / 30);
         if (newSelfHoa > state.selfMenhHoa) {
           state.selfMenhHoa = newSelfHoa;
+          breakthrough = {
+            type: 'hoa',
+            title: `THẮP SÁNG ${newSelfHoa} HỎA TỰ THÂN!`,
+            subtitle: `Pháp khiếu: ${state.phapKhieu}/120 khiếu`,
+            icon: '🔥',
+          };
           state.logs.unshift({
             text: `Thắp sáng Mệnh Hỏa tự thân thứ ${newSelfHoa}! Pháp khiếu đã khai mở ${state.phapKhieu}/120 khiếu.`,
             time: Date.now(),
@@ -1029,6 +1048,12 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
       if (state.currentThienCungExp >= EXP_PER_THIEN_CUNG) {
         state.currentThienCungExp -= EXP_PER_THIEN_CUNG;
         state.realizedThienCung += 1;
+        breakthrough = {
+          type: 'cung',
+          title: `HÓA THỰC CUNG THỨ ${state.realizedThienCung}!`,
+          subtitle: `Chiến lực: ${state.realizedThienCung} Cung Thật`,
+          icon: '🏛️',
+        };
         state.logs.unshift({
           text: `Thiên địa dị tượng! Đã Hóa Thực thành công Thiên Cung thứ ${state.realizedThienCung}/${state.maxThienCung} thành Cung Thật (+1 Cung chiến lực)!`,
           time: Date.now(),
@@ -1038,7 +1063,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   }
 
   saveCultivationState(state);
-  return { state, gainedExp, gainedThienMenh, isFirstRead, droppedLamp };
+  return { state, gainedExp, gainedThienMenh, isFirstRead, droppedLamp, breakthrough };
 }
 
 /**

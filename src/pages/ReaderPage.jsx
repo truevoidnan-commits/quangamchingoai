@@ -27,7 +27,7 @@ export default function ReaderPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [cultivationOpen, setCultivationOpen] = useState(false);
   const [barVisible, setBarVisible] = useState(true);
-  const [expToast, setExpToast] = useState(null);
+  const [breakthroughToast, setBreakthroughToast] = useState(null);
   const [droppedLamp, setDroppedLamp] = useState(null);
   const scrollRef = useRef(null);
   const lastScrollY = useRef(0);
@@ -55,51 +55,45 @@ export default function ReaderPage() {
     })();
   }, [chapterId]);
 
-  // Reading time counter (requires at least 60 seconds of reading to gain cultivation EXP)
-  const [readSeconds, setReadSeconds] = useState(0);
-  const [hasGainedExp, setHasGainedExp] = useState(false);
+  // Chu kỳ ngộ đạo 60s lặp lại liên tục (cứ 60s tăng tu vi âm thầm & bắt đầu vòng mới)
+  const [cycleSeconds, setCycleSeconds] = useState(0);
+  const [cycleCount, setCycleCount] = useState(0);
 
   // Reset timer on chapter change & save reading progress
   useEffect(() => {
-    setReadSeconds(0);
-    setHasGainedExp(false);
+    setCycleSeconds(0);
     if (chapter) {
       saveReadingProgress(novelId, { chapterId: chapter.id, scrollTop: 0 });
     }
   }, [chapter?.id, novelId]);
 
-  // Count seconds read
+  // Đếm chu kỳ 60 giây ngộ đạo tu vi lặp lại vô tận
   useEffect(() => {
     if (!chapter) return;
     const timer = setInterval(() => {
-      setReadSeconds(s => s + 1);
+      setCycleSeconds(prev => {
+        if (prev + 1 >= 60) {
+          // Hoàn thành chu kỳ 60s: Tự động cộng tu vi âm thầm
+          const wordCount = chapter.content ? chapter.content.length : 0;
+          const res = gainReadingExp(novelId, chapter.id, wordCount);
+          if (res) {
+            if (res.droppedLamp) {
+              setDroppedLamp(res.droppedLamp);
+            }
+            // Chỉ khi đột phá tầng / cảnh giới mới hiện thông báo 1 giây rồi tự tiêu tán
+            if (res.breakthrough) {
+              setBreakthroughToast(res.breakthrough);
+              setTimeout(() => setBreakthroughToast(null), 1200);
+            }
+          }
+          setCycleCount(c => c + 1);
+          return 0; // Bắt đầu vòng 60s mới
+        }
+        return prev + 1;
+      });
     }, 1000);
     return () => clearInterval(timer);
-  }, [chapter?.id]);
-
-  // Award EXP only when user has stayed on the chapter for >= 60 seconds
-  useEffect(() => {
-    if (readSeconds >= 60 && !hasGainedExp && chapter) {
-      setHasGainedExp(true);
-      const wordCount = chapter.content ? chapter.content.length : 0;
-      const res = gainReadingExp(novelId, chapter.id, wordCount);
-      if (res) {
-        if (res.droppedLamp) {
-          setDroppedLamp(res.droppedLamp);
-        }
-        if (res.gainedExp) {
-          setExpToast({
-            exp: res.gainedExp,
-            thienMenh: res.gainedThienMenh,
-            isFirst: res.isFirstRead,
-            realm: displayName,
-          });
-          const t = setTimeout(() => setExpToast(null), 4000);
-          return () => clearTimeout(t);
-        }
-      }
-    }
-  }, [readSeconds, hasGainedExp, chapter, novelId, gainReadingExp, displayName]);
+  }, [chapter?.id, novelId, gainReadingExp]);
 
   // Auto-hide top bar on scroll down
   useEffect(() => {
@@ -158,15 +152,9 @@ export default function ReaderPage() {
             {chapter?.title || '...'}
           </span>
           <div className={styles.meditationBadgeWrap}>
-            {hasGainedExp || readSeconds >= 60 ? (
-              <span className={`${styles.meditationBadge} ${styles.meditationComplete}`} title="Đã hấp thu linh khí chương này">
-                ✨ Đã ngộ đạo
-              </span>
-            ) : (
-              <span className={styles.meditationBadge} title="Tĩnh tâm đọc tối thiểu 60s để hấp thu linh khí">
-                🧘 Ngộ đạo {readSeconds}/60s
-              </span>
-            )}
+            <span className={styles.meditationBadge} title="Mỗi chu kỳ 60s tĩnh tâm đọc sẽ hấp thu một luồng linh khí tu vi (lặp lại liên tục)">
+              🧘 Ngộ đạo {cycleSeconds}/60s {cycleCount > 0 ? `(Vòng ${cycleCount + 1})` : ''}
+            </span>
           </div>
           <div className={styles.topBtns}>
             <button
@@ -216,13 +204,15 @@ export default function ReaderPage() {
         </div>
       )}
 
-      {/* Floating Daoist Cultivation Toast */}
-      {expToast && (
-        <div className={styles.cultivationToast} onClick={() => setCultivationOpen(true)}>
-          <span className={styles.toastIcon}>✨</span>
-          <div className={styles.toastContent}>
-            <strong>+{expToast.exp} Tu Vi</strong> {expToast.thienMenh > 0 && `(+${expToast.thienMenh} Thiên Mệnh)`}
-            <span className={styles.toastRealm}>{expToast.realm}</span>
+      {/* Breakthrough Banner — Xuất hiện chớp nhoáng 1 giây rồi tự tiêu tán */}
+      {breakthroughToast && (
+        <div className={styles.breakthroughToast}>
+          <span className={styles.breakthroughIcon}>{breakthroughToast.icon || '⚡'}</span>
+          <div className={styles.breakthroughContent}>
+            <span className={styles.breakthroughTitle}>{breakthroughToast.title}</span>
+            {breakthroughToast.subtitle && (
+              <span className={styles.breakthroughSubtitle}>{breakthroughToast.subtitle}</span>
+            )}
           </div>
         </div>
       )}
