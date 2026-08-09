@@ -33,21 +33,24 @@ const CHAP_LABEL = {
   "doan": "Đoạn",
 };
 
-const ROMAN_NUM = "(?:M{0,4}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))";
+// Bắt buộc phải có chữ số La Mã viết hoa thực sự (không được rỗng)
+const ROMAN_NUM = "(?:M{1,4}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})|CM|CD|D?C{1,3}(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})|XC|XL|L?X{1,3}(?:IX|IV|V?I{0,3})|IX|IV|V?I{1,3}|V|X|L|C|D|M)";
 const NUM_WORD = "(?:không|một|hai|ba|bốn|tư|năm|sáu|bảy|tám|chín|mười|mươi|trăm|nghìn|ngàn|linh|lẻ|nhất|nhị|tam|tứ|ngũ|lục|thất|bát|cửu|thập|bách|thiên|vạn)";
-const NUM_TOKEN = "(?:[0-9]+|" + NUM_WORD + "(?:\\s+" + NUM_WORD + ")*|" + ROMAN_NUM + ")";
+const NUM_DIGITS = "[0-9]+(?:[\\-–_/.][0-9]+)?";
+// BẮT BUỘC phải có số (chữ số, số chữ hoặc số La Mã), TUYỆT ĐỐI KHÔNG ĐƯỢC RỖNG
+const NUM_TOKEN = "(?:" + NUM_DIGITS + "|(?:" + NUM_WORD + "(?:\\s+" + NUM_WORD + ")*)|" + ROMAN_NUM + ")";
 const MAX_HEADER_LEN = 140;
 
-// 1. Dạng "Thứ 1 Chương (tên truyện) (1. 1) (tên chương)"
+// 1. Dạng "Thứ 1 Chương (tên truyện) (1. 1) (tên chương)" -> bắt buộc có số
 const specialRe = new RegExp("^\\s*[\\[\\(【]?\\s*(?:thứ|đệ|thu|de)\\s+(" + NUM_TOKEN + ")\\s+(chương|chuong|chapter|chap|hồi|hoi|quyển|quyen|phần|phan|tiết|tiet|tập|tap)\\b.*?\\(\\s*\\d+[\\d\\s.,]*\\)\\s*(.*)$", "i");
 
-// 2. Dạng "Đệ 9 chương...", "Thứ 9 chương..."
+// 2. Dạng "Đệ 9 chương...", "Thứ 9 chương..." -> bắt buộc có số
 const deThuRe = new RegExp("^\\s*[\\[\\(【]?\\s*(?:thứ|đệ|thu|de)\\s+(" + NUM_TOKEN + ")\\s+(chương|chuong|chapter|chap|hồi|hoi|quyển|quyen|phần|phan|tiết|tiet|tập|tap)\\b\\s*[\\]\\)】]?\\s*([:\\-–—_.~·:：．、/]?|\\s+)\\s*(.*)$", "i");
 
-// 3. Dạng "Chương 9", "[Chương 9]", "Chương 9.", "Chương 9:", "Chương 9 -", "Chương 9..."
+// 3. Dạng "Chương 9", "[Chương 9]", "Hồi 9", "Quyển 9", "Tập 9", "Phần 9" -> BẮT BUỘC PHẢI CÓ SỐ
 const chapRe = new RegExp("^\\s*[\\[\\(【]?\\s*(chương|chuong|chapter|chap|ch|hồi|hoi|quyển|quyen|phần|phan|tiết|tiet|tập|tap)\\s+(?:thứ\\s+|đệ\\s+)?(" + NUM_TOKEN + ")\\s*[\\]\\)】]?\\s*([:\\-–—_.~·:：．、/]?|\\s+)\\s*(.*)$", "i");
 
-// 4. Dạng "Phiên ngoại", "Ngoại truyện", "Extra", "Side story"
+// 4. Dạng "Phiên ngoại", "Ngoại truyện", "Extra", "Side story" (từ ghép đặc thù)
 const extraRe = new RegExp("^\\s*[\\[\\(【]?\\s*(phiên\\s*ngoại|phien\\s*ngoai|ngoại\\s*truyện|ngoai\\s*truyen|extra|side\\s*story)\\b(?:\\s+(" + NUM_TOKEN + "))?\\s*[\\]\\)】]?\\s*([:\\-–—_.~·:：．、/]?|\\s+)\\s*(.*)$", "i");
 
 const EXTRA_LABEL = {
