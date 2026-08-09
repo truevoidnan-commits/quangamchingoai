@@ -22,7 +22,9 @@
 
 const CULTIVATION_KEY = 'tcl_cultivation_state_v3';
 
-export const EXP_PER_CHAPTER = 40; // 40 Tu Vi cho mỗi chương đọc đủ 60s
+export const MIN_EXP_PER_CYCLE = 50; // Random từ 50 đến 100 Tu Vi mỗi chu kỳ 60s
+export const MAX_EXP_PER_CYCLE = 100;
+export const EXP_PER_CHAPTER = 75; // Giá trị trung bình
 export const THIEN_MENH_PER_EXP = 10;
 export const MAX_ABSORBED_LAMPS = 5;
 
@@ -931,7 +933,8 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   const key = `${novelId}_${chapterId}`;
 
   const isFirstRead = !state.readChapterIds[key];
-  const gainedExp = isFirstRead ? EXP_PER_CHAPTER : Math.round(EXP_PER_CHAPTER * 0.35);
+  // Random mức tăng tu vi từ 50 đến 100 mỗi chu kỳ 60s
+  const gainedExp = Math.floor(Math.random() * (MAX_EXP_PER_CYCLE - MIN_EXP_PER_CYCLE + 1)) + MIN_EXP_PER_CYCLE;
 
   state.readChapterIds[key] = Date.now();
   state.chaptersReadCount = Object.keys(state.readChapterIds).length;
