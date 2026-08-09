@@ -92,7 +92,7 @@ export default function CultivationModal({ isOpen, onClose }) {
               {isNguyenAnhStage ? (
                 <span className={styles.statValCyan}>{(cultivation.totalThienMenh || 0).toLocaleString()} TM</span>
               ) : (
-                <span className={styles.statVal}>{absorbedCount}/5 Đăng</span>
+                <span className={styles.statVal}>{absorbedCount} Đăng</span>
               )}
             </div>
           </div>
@@ -110,7 +110,7 @@ export default function CultivationModal({ isOpen, onClose }) {
             className={`${styles.tabBtn} ${activeTab === 'lamps' ? styles.tabActive : ''}`}
             onClick={() => setActiveTab('lamps')}
           >
-            Mệnh Đăng ({absorbedCount}/5 Đã Hấp Thụ)
+            Mệnh Đăng ({absorbedCount} Đã Hấp Thụ)
           </button>
           {isNguyenAnhStage && (
             <button
@@ -427,9 +427,8 @@ export default function CultivationModal({ isOpen, onClose }) {
         {activeTab === 'lamps' && (
           <div className={styles.lampsSection}>
             <div className={styles.lampsBannerCard}>
-              <img src="/menh-dang-collection.png" alt="Bộ sưu tập Mệnh Đăng" className={styles.lampsArtImg} />
               <div className={styles.lampsBannerInfo}>
-                <h3 className={styles.lampsBannerTitle}>Tam Thập Mệnh Đăng Thần Thoại (30 Thần Đăng)</h3>
+                <h3 className={styles.lampsBannerTitle}>Thất Thập Nhị Mệnh Đăng Thần Thoại (72 Thần Đăng)</h3>
                 <p className={styles.subtext}>
                   • <strong>6 Cấp Phẩm Độ Hiếm</strong>: <span style={{ color: '#e2e8f0' }}>Hạ Phẩm (Trắng)</span> · <span style={{ color: '#10b981' }}>Trung Phẩm (Xanh Lá)</span> · <span style={{ color: '#06b6d4' }}>Thượng Phẩm (Xanh Lam)</span> · <span style={{ color: '#a855f7' }}>Cực Phẩm (Tím)</span> · <span style={{ color: '#f59e0b' }}>Tiên Phẩm (Kim)</span> · <span style={{ color: '#ef4444' }}>Thần Phẩm (Đỏ)</span>.
                   <br />
@@ -442,7 +441,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                   • Ở Nguyên Anh: Đạo Anh từ Mệnh Đăng khi vượt kiếp thất bại <strong>chỉ giảm về 50% Thiên Mệnh</strong> thay vì mất trắng!
                 </p>
                 <div style={{ marginTop: 8 }}>
-                  <span className="badge badge-gold">Đã Hấp Thụ: {absorbedCount}/5 Mệnh Đăng</span>
+                  <span className="badge badge-gold">Đã Hấp Thụ: {absorbedCount} Mệnh Đăng</span>
                 </div>
               </div>
             </div>
@@ -453,7 +452,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                 className={`${styles.tierFilterBtn} ${tierFilter === 'all' ? styles.tierFilterActive : ''}`}
                 onClick={() => setTierFilter('all')}
               >
-                Tất Cả (30)
+                Tất Cả (72)
               </button>
               {Object.entries(LAMP_TIERS || {}).map(([key, t]) => {
                 const count = LIFE_LAMPS.filter(l => l.tier === key).length;
@@ -470,7 +469,7 @@ export default function CultivationModal({ isOpen, onClose }) {
               })}
             </div>
 
-            {/* List of 30 Life Lamps */}
+            {/* List of 72 Life Lamps */}
             <div className={styles.lampCardsGrid}>
               {LIFE_LAMPS.filter(lamp => tierFilter === 'all' || lamp.tier === tierFilter).map(lamp => {
                 const isAbsorbed = (cultivation.absorbedLamps || []).includes(lamp.id);
@@ -531,7 +530,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           }
                           onClick={() => {
                             const realmBenefit = cultivation.realm === 'truc_co' ? '+1 Hỏa chiến lực' : '+1 Cung Thật chiến lực';
-                            if (confirm(`XÁC NHẬN HẤP THỤ [${lamp.name}] (${tierInfo.name})?\n\n• Lưu ý: Một khi hấp thụ sẽ vĩnh viễn dung nhập đạo cơ, KHÔNG THỂ HOÀN TRẢ!\n• Tác dụng: ${realmBenefit}.\n• Giới hạn: ${absorbedCount}/5 Mệnh Đăng.`)) {
+                            if (confirm(`XÁC NHẬN HẤP THỤ [${lamp.name}] (${tierInfo.name})?\n\n• Lưu ý: Một khi hấp thụ sẽ vĩnh viễn dung nhập đạo cơ, KHÔNG THỂ HOÀN TRẢ!\n• Tác dụng: ${realmBenefit}.\n• Đã hấp thụ: ${absorbedCount} Mệnh Đăng.`)) {
                               triggerAction(() => absorbLamp(lamp.id), `Đã hấp thụ thành công ${lamp.name}! (${realmBenefit})`);
                             }
                           }}
@@ -728,8 +727,8 @@ export default function CultivationModal({ isOpen, onClose }) {
             </div>
 
             <div className={styles.ruleCard}>
-              <h4>3. Hệ Thống 30 Mệnh Đăng (6 Cấp Phẩm Độ Hiếm)</h4>
-              <p>• <strong>Phân Cấp Phẩm</strong>: <strong>Hạ Phẩm</strong> (Trắng) · <strong>Trung Phẩm</strong> (Xanh Lá) · <strong>Thượng Phẩm</strong> (Xanh Lam) · <strong>Cực Phẩm</strong> (Tím) · <strong>Tiên Phẩm</strong> (Kim Sắc) · <strong>Thần Phẩm</strong> (Đỏ Thần Thánh).</p>
+              <h4>3. Hệ Thống 72 Mệnh Đăng (6 Cấp Phẩm Độ Hiếm - 12 Đăng/Phẩm)</h4>
+              <p>• <strong>Phân Cấp Phẩm</strong>: <strong>Hạ Phẩm</strong> (Trắng · 12 đèn) · <strong>Trung Phẩm</strong> (Xanh Lá · 12 đèn) · <strong>Thượng Phẩm</strong> (Xanh Lam · 12 đèn) · <strong>Cực Phẩm</strong> (Tím · 12 đèn) · <strong>Tiên Phẩm</strong> (Kim Sắc · 12 đèn) · <strong>Thần Phẩm</strong> (Đỏ Thần Thánh · 12 đèn).</p>
               <p>• <strong>Tỉ lệ rơi</strong>: Cơ duyên ngẫu nhiên quý hiếm (~1.8% mỗi chương đọc đủ 60s). Mệnh Đăng phẩm càng cao càng hiếm có khó tìm!</p>
               <p>• <strong>Giới hạn hấp thụ</strong>: Tối đa <strong>5 Mệnh Đăng</strong>. Một khi đã hấp thụ thì <strong>KHÔNG HOÀN TRẢ</strong>!</p>
               <p>• <strong>Ở Trúc Cơ</strong>: Mỗi Mệnh Đăng hấp thụ = <strong>+1 Hỏa</strong>.</p>
