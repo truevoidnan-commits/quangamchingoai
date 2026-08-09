@@ -390,34 +390,6 @@ export default function CultivationModal({ isOpen, onClose }) {
                 )}
               </div>
             )}
-
-            {/* Quick Test Toolbar */}
-            <div className={styles.devToolsBox}>
-              <span className={styles.devToolsTitle}>Trải nghiệm nhanh tu vi:</span>
-              <div className={styles.devBtnsRow}>
-                <button className="btn-ghost" onClick={() => triggerAction(debugAddChapter, '+60 Tu Vi')}>
-                  ⚡ Đọc 1 Chương
-                </button>
-                <button className="btn-ghost" onClick={() => triggerAction(debugGiveAllLamps, 'Đã nhận đủ 8 Mệnh Đăng!')}>
-                  🎁 Nhận 8 Mệnh Đăng
-                </button>
-                <button className="btn-ghost" onClick={() => triggerAction(() => debugGiveThienMenh(5000), '+5000 Thiên Mệnh!')}>
-                  ✨ +5000 Thiên Mệnh
-                </button>
-                <button
-                  className="btn-danger"
-                  style={{ fontSize: 12, padding: '4px 10px' }}
-                  onClick={() => {
-                    if (confirm('Khởi tạo lại toàn bộ tu vi về ban đầu?')) {
-                      resetCultivation();
-                      setActionMsg('Đã khởi tạo lại tu vi.');
-                    }
-                  }}
-                >
-                  ↺ Reset
-                </button>
-              </div>
-            </div>
           </div>
         )}
 
