@@ -288,21 +288,23 @@
 
 .chapterTitle {
   font-family: inherit;
-  font-size: 1.15em;
+  font-size: 1.3em;
   font-weight: 700;
-  line-height: 1.4;
-  margin-bottom: 28px;
+  line-height: 1.45;
+  margin-bottom: 32px;
   text-align: center;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
 }
 
 .paragraph {
   margin: 0;
-  margin-bottom: 1.2em;
-  text-indent: 2em;
-  text-align: justify;
+  margin-bottom: 1.35em;
+  text-indent: 1.8em;
+  text-align: left;
+  line-height: inherit;
   word-break: break-word;
   hyphens: auto;
+  letter-spacing: 0.01em;
 }
 
 .loadingWrap {
