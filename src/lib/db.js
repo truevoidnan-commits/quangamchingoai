@@ -34,12 +34,39 @@ function getDB() {
 
 export async function getAllNovels() {
   const db = await getDB();
-  return db.getAll('novels');
+  const novels = await db.getAll('novels');
+  
+  // Đảm bảo số chương hiển thị ngoài bìa luôn đồng bộ 100% với số chương thực tế
+  const novelsWithAccurateCount = await Promise.all(
+    novels.map(async (n) => {
+      try {
+        const tx = db.transaction('chapters');
+        const count = await tx.objectStore('chapters').index('novelId').count(IDBKeyRange.only(n.id));
+        return {
+          ...n,
+          chapterCount: count,
+          totalChapters: count,
+        };
+      } catch (e) {
+        return n;
+      }
+    })
+  );
+  return novelsWithAccurateCount;
 }
 
 export async function getNovel(id) {
   const db = await getDB();
-  return db.get('novels', id);
+  const novel = await db.get('novels', id);
+  if (novel) {
+    try {
+      const tx = db.transaction('chapters');
+      const count = await tx.objectStore('chapters').index('novelId').count(IDBKeyRange.only(id));
+      novel.chapterCount = count;
+      novel.totalChapters = count;
+    } catch (e) {}
+  }
+  return novel;
 }
 
 export async function saveNovel(novel) {
@@ -87,19 +114,37 @@ export async function saveChaptersBulk(chapters) {
   await tx.done;
 }
 
-export async function deleteChapterDB(id) {
+export async function deleteChapterDB(id, novelId = null) {
   const db = await getDB();
-  await db.delete('chapters', id);
+  const tx = db.transaction(['novels', 'chapters'], 'readwrite');
+  await tx.objectStore('chapters').delete(id);
+
+  if (novelId) {
+    const novel = await tx.objectStore('novels').get(novelId);
+    if (novel) {
+      const count = await tx.objectStore('chapters').index('novelId').count(IDBKeyRange.only(novelId));
+      novel.chapterCount = count;
+      novel.totalChapters = count;
+      await tx.objectStore('novels').put(novel);
+    }
+  }
+  await tx.done;
 }
 
 export async function deleteAllChapters(novelId) {
   const db = await getDB();
-  const tx = db.transaction('chapters', 'readwrite');
+  const tx = db.transaction(['novels', 'chapters'], 'readwrite');
   const index = tx.objectStore('chapters').index('novelId');
   let cursor = await index.openCursor(IDBKeyRange.only(novelId));
   while (cursor) {
     await cursor.delete();
     cursor = await cursor.continue();
+  }
+  const novel = await tx.objectStore('novels').get(novelId);
+  if (novel) {
+    novel.chapterCount = 0;
+    novel.totalChapters = 0;
+    await tx.objectStore('novels').put(novel);
   }
   await tx.done;
 }

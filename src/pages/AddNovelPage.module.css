@@ -206,6 +206,103 @@
   flex-wrap: wrap;
 }
 
+/* Anomaly sequence check warning */
+.anomalyWarningBox {
+  background: rgba(255, 170, 0, 0.08);
+  border-top: 1px solid rgba(255, 170, 0, 0.35);
+  border-bottom: 1px solid rgba(255, 170, 0, 0.35);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.anomalyHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #ffaa00;
+  letter-spacing: 0.02em;
+}
+
+.anomalyIcon {
+  font-size: 16px;
+}
+
+.anomalyDesc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.anomalyList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.anomalyItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(16, 25, 39, 0.7);
+  border: 1px solid rgba(255, 170, 0, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.anomalyBadge {
+  background: rgba(255, 170, 0, 0.2);
+  color: #ffcc00;
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.anomalyMsg {
+  color: #ffe680;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.toggleAnomalyBtn {
+  background: transparent;
+  border: 1px dashed rgba(255, 170, 0, 0.4);
+  color: #ffaa00;
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: all var(--transition-fast);
+}
+.toggleAnomalyBtn:hover {
+  background: rgba(255, 170, 0, 0.12);
+  color: #ffcc00;
+}
+
+.perfectSequenceBox {
+  background: rgba(34, 195, 240, 0.08);
+  border-top: 1px solid rgba(34, 195, 240, 0.25);
+  border-bottom: 1px solid rgba(34, 195, 240, 0.25);
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--accent-cyan);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.perfectSequenceBox strong {
+  color: #fff275;
+}
+
 .chapterPreviewList {
   padding: 6px 0;
 }

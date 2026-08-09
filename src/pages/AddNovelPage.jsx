@@ -7,6 +7,80 @@ import { parseNovelFile, resizeCoverImage } from '../lib/chapterParser';
 import Footer from '../components/layout/Footer';
 import styles from './AddNovelPage.module.css';
 
+/**
+ * Kiểm tra mạch số thứ tự chương: phát hiện nhảy số (+2, +3...), trùng số hoặc lùi số (-1, -2...)
+ */
+export function analyzeChapterSequence(chapters) {
+  if (!chapters || chapters.length < 2) return { anomalies: [], isPerfect: true };
+
+  const anomalies = [];
+  let prevNum = null;
+  let prevTitle = '';
+
+  for (let i = 0; i < chapters.length; i++) {
+    const ch = chapters[i];
+    if (ch.isExtra) continue;
+
+    const m = ch.title.match(/(?:chương|chuong|chapter|chap|đệ|thu)\s+(\d+)/i) || ch.title.match(/^(\d+)\b/);
+    if (!m) continue;
+
+    const currentNum = parseInt(m[1], 10);
+    if (isNaN(currentNum)) continue;
+
+    if (prevNum !== null) {
+      const diff = currentNum - prevNum;
+      if (diff !== 1) {
+        if (diff > 1) {
+          const missingCount = diff - 1;
+          const missingText = diff === 2 ? `Chương ${prevNum + 1}` : `Chương ${prevNum + 1} ➔ Chương ${currentNum - 1}`;
+          anomalies.push({
+            type: 'jump_forward',
+            fromNum: prevNum,
+            toNum: currentNum,
+            fromTitle: prevTitle,
+            toTitle: ch.title,
+            diff,
+            index: i + 1,
+            missingCount,
+            missingText,
+            message: `Chương ${prevNum} ➔ Chương ${currentNum} (Nhảy +${diff} số, nghi vấn thiếu ${missingCount} chương: ${missingText})`,
+          });
+        } else if (diff === 0) {
+          anomalies.push({
+            type: 'duplicate',
+            fromNum: prevNum,
+            toNum: currentNum,
+            fromTitle: prevTitle,
+            toTitle: ch.title,
+            diff,
+            index: i + 1,
+            message: `Trùng số chương: Có 2 "Chương ${currentNum}" đứng cạnh nhau`,
+          });
+        } else {
+          anomalies.push({
+            type: 'jump_backward',
+            fromNum: prevNum,
+            toNum: currentNum,
+            fromTitle: prevTitle,
+            toTitle: ch.title,
+            diff,
+            index: i + 1,
+            message: `Lùi số chương bất thường: Chương ${prevNum} ➔ Chương ${currentNum} (giảm ${Math.abs(diff)} số)`,
+          });
+        }
+      }
+    }
+
+    prevNum = currentNum;
+    prevTitle = ch.title;
+  }
+
+  return {
+    anomalies,
+    isPerfect: anomalies.length === 0,
+  };
+}
+
 export default function AddNovelPage() {
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
@@ -121,6 +195,10 @@ export default function AddNovelPage() {
       setSaving(false);
     }
   };
+
+  const [showAllAnomalies, setShowAllAnomalies] = useState(false);
+
+  const sequenceAnalysis = analyzeChapterSequence(parsedChapters);
 
   return (
     <div className={styles.page}>
@@ -261,6 +339,41 @@ export default function AddNovelPage() {
                   )}
                 </span>
               </div>
+
+              {/* Anomaly Sequence Check Warning */}
+              {sequenceAnalysis.anomalies.length > 0 ? (
+                <div className={styles.anomalyWarningBox}>
+                  <div className={styles.anomalyHeader}>
+                    <span className={styles.anomalyIcon}>⚠️</span>
+                    <strong>PHÁT HIỆN {sequenceAnalysis.anomalies.length} VỊ TRÍ NHẢY SỐ CHƯƠNG BẤT THƯỜNG:</strong>
+                  </div>
+                  <p className={styles.anomalyDesc}>
+                    Thứ tự số chương không tăng đều đặn (+1). Vui lòng kiểm tra lại các vị trí sau trước khi lưu:
+                  </p>
+                  <div className={styles.anomalyList}>
+                    {sequenceAnalysis.anomalies.slice(0, showAllAnomalies ? sequenceAnalysis.anomalies.length : 5).map((a, idx) => (
+                      <div key={idx} className={styles.anomalyItem}>
+                        <span className={styles.anomalyBadge}>Mục #{a.index}</span>
+                        <span className={styles.anomalyMsg}>{a.message}</span>
+                      </div>
+                    ))}
+                    {sequenceAnalysis.anomalies.length > 5 && (
+                      <button
+                        type="button"
+                        className={styles.toggleAnomalyBtn}
+                        onClick={() => setShowAllAnomalies(!showAllAnomalies)}
+                      >
+                        {showAllAnomalies ? '▲ Thu gọn danh sách cảnh báo' : `▼ Xem toàn bộ ${sequenceAnalysis.anomalies.length} cảnh báo nhảy số...`}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.perfectSequenceBox}>
+                  <span>✨ <strong>Thứ tự số chương liền mạch 100%</strong>: Các chương tăng tiến liên tục (+1) không có nhảy số hay thiếu chương.</span>
+                </div>
+              )}
+
               <div className={styles.chapterPreviewList}>
                 {parsedChapters.slice(0, 5).map((ch, i) => (
                   <div key={i} className={styles.chapterPreviewItem}>

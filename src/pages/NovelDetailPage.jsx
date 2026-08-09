@@ -1,7 +1,7 @@
 import { useState, useEffect, useTransition } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getNovel, getChapters, deleteChapterDB, searchChapters } from '../lib/db';
-import { getReadingProgress } from '../lib/storage';
+import { getReadingProgress, updateLibraryItem } from '../lib/storage';
 import Footer from '../components/layout/Footer';
 import styles from './NovelDetailPage.module.css';
 
@@ -21,16 +21,18 @@ export default function NovelDetailPage() {
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
+    async function load() {
       try {
         const [n, chs] = await Promise.all([getNovel(novelId), getChapters(novelId)]);
         setNovel(n);
-        setChapters(chs || []);
+        setChapters(chs);
+      } catch (err) {
+        console.error(err);
       } finally {
         setLoading(false);
       }
-    })();
+    }
+    load();
   }, [novelId]);
 
   // Handle in-novel full-text search
@@ -71,8 +73,18 @@ export default function NovelDetailPage() {
 
   const handleDeleteChapter = async () => {
     if (!deleteChapter) return;
-    await deleteChapterDB(deleteChapter.id);
-    setChapters(prev => prev.filter(c => c.id !== deleteChapter.id));
+    await deleteChapterDB(deleteChapter.id, novelId);
+    const newChapters = chapters.filter(c => c.id !== deleteChapter.id);
+    setChapters(newChapters);
+    if (novel) {
+      const updatedNovel = {
+        ...novel,
+        chapterCount: newChapters.length,
+        totalChapters: newChapters.length,
+      };
+      setNovel(updatedNovel);
+      updateLibraryItem(novelId, { chapterCount: newChapters.length });
+    }
     setDeleteChapter(null);
   };
 
