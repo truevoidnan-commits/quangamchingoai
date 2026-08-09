@@ -463,6 +463,39 @@
   margin-bottom: 6px;
 }
 
+.tierFilterRow {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin: 6px 0 2px;
+}
+.tierFilterRow::-webkit-scrollbar {
+  height: 3px;
+}
+
+.tierFilterBtn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+.tierFilterBtn:hover {
+  background: var(--bg-elevated);
+}
+.tierFilterActive {
+  background: rgba(34, 195, 240, 0.15) !important;
+  border-color: var(--accent-cyan) !important;
+  color: #fff !important;
+  box-shadow: 0 0 8px rgba(34, 195, 240, 0.4);
+}
+
 .lampCardsGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

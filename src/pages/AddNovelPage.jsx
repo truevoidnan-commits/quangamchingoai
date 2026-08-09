@@ -67,6 +67,12 @@ export default function AddNovelPage() {
       } else {
         setDescription('');
       }
+
+      // Tự động gán ảnh bìa nếu file EPUB có chứa ảnh bìa
+      if (res.coverUrl) {
+        setCoverPreview(res.coverUrl);
+        setCoverUrl(res.coverUrl);
+      }
     } catch (err) {
       setParseError(err.message || 'Lỗi khi đọc file.');
     } finally {

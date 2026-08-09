@@ -61,6 +61,35 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.meditationBadgeWrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.meditationBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(34, 195, 240, 0.1);
+  border: 1px solid rgba(34, 195, 240, 0.35);
+  color: var(--accent-cyan);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  transition: all var(--transition-fast);
+}
+
+.meditationComplete {
+  background: rgba(255, 204, 0, 0.12);
+  border-color: rgba(255, 204, 0, 0.5);
+  color: #ffcc00;
+  box-shadow: 0 0 8px rgba(255, 204, 0, 0.3);
+}
+
+.chapterLabel {
   text-align: center;
 }
 

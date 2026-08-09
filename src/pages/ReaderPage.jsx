@@ -17,7 +17,7 @@ export default function ReaderPage() {
   const searchKeyword = searchParams.get('q') || '';
   const navigate = useNavigate();
   const { settings, updateSettings } = useReadingSettings();
-  const { gainReadingExp, displayName } = useCultivation();
+  const { gainReadingExp, displayName, LAMP_TIERS } = useCultivation();
 
   const [novel, setNovel] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -55,12 +55,32 @@ export default function ReaderPage() {
     })();
   }, [chapterId]);
 
-  // Save reading progress & gain cultivation EXP + Lamp Drop check
+  // Reading time counter (requires at least 60 seconds of reading to gain cultivation EXP)
+  const [readSeconds, setReadSeconds] = useState(0);
+  const [hasGainedExp, setHasGainedExp] = useState(false);
+
+  // Reset timer on chapter change & save reading progress
   useEffect(() => {
+    setReadSeconds(0);
+    setHasGainedExp(false);
     if (chapter) {
       saveReadingProgress(novelId, { chapterId: chapter.id, scrollTop: 0 });
-      
-      // Credit cultivation EXP
+    }
+  }, [chapter?.id, novelId]);
+
+  // Count seconds read
+  useEffect(() => {
+    if (!chapter) return;
+    const timer = setInterval(() => {
+      setReadSeconds(s => s + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [chapter?.id]);
+
+  // Award EXP only when user has stayed on the chapter for >= 60 seconds
+  useEffect(() => {
+    if (readSeconds >= 60 && !hasGainedExp && chapter) {
+      setHasGainedExp(true);
       const wordCount = chapter.content ? chapter.content.length : 0;
       const res = gainReadingExp(novelId, chapter.id, wordCount);
       if (res) {
@@ -74,12 +94,12 @@ export default function ReaderPage() {
             isFirst: res.isFirstRead,
             realm: displayName,
           });
-          const t = setTimeout(() => setExpToast(null), 3500);
+          const t = setTimeout(() => setExpToast(null), 4000);
           return () => clearTimeout(t);
         }
       }
     }
-  }, [chapter, novelId, gainReadingExp, displayName]);
+  }, [readSeconds, hasGainedExp, chapter, novelId, gainReadingExp, displayName]);
 
   // Auto-hide top bar on scroll down
   useEffect(() => {
@@ -137,6 +157,17 @@ export default function ReaderPage() {
           <span className={styles.chapterLabel} title={chapter?.title}>
             {chapter?.title || '...'}
           </span>
+          <div className={styles.meditationBadgeWrap}>
+            {hasGainedExp || readSeconds >= 60 ? (
+              <span className={`${styles.meditationBadge} ${styles.meditationComplete}`} title="Đã hấp thu linh khí chương này">
+                ✨ Đã ngộ đạo
+              </span>
+            ) : (
+              <span className={styles.meditationBadge} title="Tĩnh tâm đọc tối thiểu 60s để hấp thu linh khí">
+                🧘 Ngộ đạo {readSeconds}/60s
+              </span>
+            )}
+          </div>
           <div className={styles.topBtns}>
             <button
               className={styles.topBtn}
@@ -203,9 +234,25 @@ export default function ReaderPage() {
             <div className={styles.lampDropAura} />
             <span className={styles.lampDropBadge}>✦ THƯỢNG CỔ CƠ DUYÊN ✦</span>
             <span className={styles.lampDropIcon}>{droppedLamp.icon}</span>
-            <h3 className={styles.lampDropTitle} style={{ color: droppedLamp.color || '#ffcc00' }}>
-              {droppedLamp.name}
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '4px 0' }}>
+              <h3 className={styles.lampDropTitle} style={{ color: droppedLamp.color || '#ffcc00', margin: 0 }}>
+                {droppedLamp.name}
+              </h3>
+              {droppedLamp.tier && LAMP_TIERS[droppedLamp.tier] && (
+                <span
+                  className="badge"
+                  style={{
+                    backgroundColor: LAMP_TIERS[droppedLamp.tier].bg,
+                    color: LAMP_TIERS[droppedLamp.tier].color,
+                    borderColor: LAMP_TIERS[droppedLamp.tier].border,
+                    fontSize: 10,
+                    padding: '2px 8px',
+                  }}
+                >
+                  {LAMP_TIERS[droppedLamp.tier].name}
+                </span>
+              )}
+            </div>
             <p className={styles.lampDropPoem}>"{droppedLamp.poem}"</p>
             <p className={styles.lampDropDesc}>{droppedLamp.desc}</p>
             <div className={styles.lampDropActions}>

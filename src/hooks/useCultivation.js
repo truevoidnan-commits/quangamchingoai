@@ -17,6 +17,7 @@ import {
   getTotalCombatPowerAnh,
   resetCultivationState,
   LIFE_LAMPS,
+  LAMP_TIERS,
   MAX_ABSORBED_LAMPS,
   EXP_PER_CHAPTER,
   THIEN_MENH_PER_EXP,
@@ -151,6 +152,7 @@ export function useCultivation() {
     debugGiveAllLamps,
     debugGiveThienMenh,
     LIFE_LAMPS,
+    LAMP_TIERS,
     constants: {
       MAX_ABSORBED_LAMPS,
       EXP_PER_CHAPTER,

@@ -18,12 +18,13 @@ export default function CultivationModal({ isOpen, onClose }) {
     attemptTribulationAll,
     debugAddChapter,
     debugGiveAllLamps,
-    debugGiveThienMenh,
     resetCultivation,
     LIFE_LAMPS,
+    LAMP_TIERS,
   } = useCultivation();
 
   const [activeTab, setActiveTab] = useState('status'); // 'status' | 'lamps' | 'nguyen_anh' | 'rules' | 'logs'
+  const [tierFilter, setTierFilter] = useState('all');
   const [actionMsg, setActionMsg] = useState('');
 
   const triggerAction = (fn, successMsg) => {
@@ -428,8 +429,10 @@ export default function CultivationModal({ isOpen, onClose }) {
             <div className={styles.lampsBannerCard}>
               <img src="/menh-dang-collection.png" alt="Bộ sưu tập Mệnh Đăng" className={styles.lampsArtImg} />
               <div className={styles.lampsBannerInfo}>
-                <h3 className={styles.lampsBannerTitle}>Bát Đại Mệnh Đăng Thần Thoại</h3>
+                <h3 className={styles.lampsBannerTitle}>Tam Thập Mệnh Đăng Thần Thoại (30 Thần Đăng)</h3>
                 <p className={styles.subtext}>
+                  • <strong>6 Cấp Phẩm Độ Hiếm</strong>: <span style={{ color: '#e2e8f0' }}>Hạ Phẩm (Trắng)</span> · <span style={{ color: '#10b981' }}>Trung Phẩm (Xanh Lá)</span> · <span style={{ color: '#06b6d4' }}>Thượng Phẩm (Xanh Lam)</span> · <span style={{ color: '#a855f7' }}>Cực Phẩm (Tím)</span> · <span style={{ color: '#f59e0b' }}>Tiên Phẩm (Kim)</span> · <span style={{ color: '#ef4444' }}>Thần Phẩm (Đỏ)</span>.
+                  <br />
                   • <strong>Quy tắc Hấp Thụ</strong>: Tối đa hấp thụ <strong>5 Mệnh Đăng</strong>. Một khi chọn hấp thụ thì <strong>KHÔNG HOÀN TRẢ</strong>!
                   <br />
                   • Ở Trúc Cơ: Mỗi Mệnh Đăng hấp thụ = <strong>+1 Hỏa</strong>.
@@ -444,33 +447,71 @@ export default function CultivationModal({ isOpen, onClose }) {
               </div>
             </div>
 
-            {/* List of 8 Life Lamps */}
+            {/* Tier Filters Bar */}
+            <div className={styles.tierFilterRow}>
+              <button
+                className={`${styles.tierFilterBtn} ${tierFilter === 'all' ? styles.tierFilterActive : ''}`}
+                onClick={() => setTierFilter('all')}
+              >
+                Tất Cả (30)
+              </button>
+              {Object.entries(LAMP_TIERS || {}).map(([key, t]) => {
+                const count = LIFE_LAMPS.filter(l => l.tier === key).length;
+                return (
+                  <button
+                    key={key}
+                    className={`${styles.tierFilterBtn} ${tierFilter === key ? styles.tierFilterActive : ''}`}
+                    onClick={() => setTierFilter(key)}
+                    style={{ borderColor: tierFilter === key ? t.color : 'var(--border-subtle)', color: t.color }}
+                  >
+                    {t.name} ({count})
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* List of 30 Life Lamps */}
             <div className={styles.lampCardsGrid}>
-              {LIFE_LAMPS.map(lamp => {
+              {LIFE_LAMPS.filter(lamp => tierFilter === 'all' || lamp.tier === tierFilter).map(lamp => {
                 const isAbsorbed = (cultivation.absorbedLamps || []).includes(lamp.id);
                 const isInInventory = (cultivation.inventoryLamps || []).includes(lamp.id);
                 const isOwned = isAbsorbed || isInInventory;
+                const tierInfo = LAMP_TIERS[lamp.tier] || { name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.1)', border: 'rgba(226, 232, 240, 0.3)' };
 
                 return (
                   <div
                     key={lamp.id}
                     className={`${styles.lampCard} ${isAbsorbed ? styles.lampEquipped : ''} ${!isOwned ? styles.lampLocked : ''}`}
-                    style={{ borderColor: isOwned ? lamp.color : 'var(--border-subtle)' }}
+                    style={{ borderColor: isOwned ? tierInfo.color : 'var(--border-subtle)' }}
                   >
                     <div className={styles.lampCardTop}>
-                      <span className={styles.lampIcon} style={{ textShadow: `0 0 10px ${lamp.color}` }}>
+                      <span className={styles.lampIcon} style={{ textShadow: `0 0 12px ${tierInfo.color}` }}>
                         {lamp.icon}
                       </span>
                       <div className={styles.lampNameCol}>
-                        <h4 className={styles.lampName} style={{ color: isOwned ? lamp.color : 'var(--text-muted)' }}>
-                          {lamp.name}
-                        </h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <h4 className={styles.lampName} style={{ color: isOwned ? tierInfo.color : 'var(--text-muted)' }}>
+                            {lamp.name}
+                          </h4>
+                          <span
+                            className="badge"
+                            style={{
+                              fontSize: 9,
+                              padding: '1px 6px',
+                              backgroundColor: tierInfo.bg,
+                              color: tierInfo.color,
+                              borderColor: tierInfo.border,
+                            }}
+                          >
+                            {tierInfo.name}
+                          </span>
+                        </div>
                         <span className={styles.lampPoem}>"{lamp.poem}"</span>
                       </div>
                       <div className={styles.lampStatusBadge}>
                         {isAbsorbed && <span className="badge badge-gold">✦ Đã Hấp Thụ</span>}
                         {isInInventory && <span className="badge badge-cyan">Trong Túi</span>}
-                        {!isOwned && <span className="badge" style={{ opacity: 0.5 }}>Chưa Nhặt Được</span>}
+                        {!isOwned && <span className="badge" style={{ opacity: 0.4 }}>Chưa Nhặt Được</span>}
                       </div>
                     </div>
 
@@ -490,7 +531,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           }
                           onClick={() => {
                             const realmBenefit = cultivation.realm === 'truc_co' ? '+1 Hỏa chiến lực' : '+1 Cung Thật chiến lực';
-                            if (confirm(`XÁC NHẬN HẤP THỤ [${lamp.name}]?\n\n• Lưu ý: Một khi hấp thụ sẽ vĩnh viễn dung nhập đạo cơ, KHÔNG THỂ HOÀN TRẢ!\n• Tác dụng: ${realmBenefit}.\n• Giới hạn: ${absorbedCount}/5 Mệnh Đăng.`)) {
+                            if (confirm(`XÁC NHẬN HẤP THỤ [${lamp.name}] (${tierInfo.name})?\n\n• Lưu ý: Một khi hấp thụ sẽ vĩnh viễn dung nhập đạo cơ, KHÔNG THỂ HOÀN TRẢ!\n• Tác dụng: ${realmBenefit}.\n• Giới hạn: ${absorbedCount}/5 Mệnh Đăng.`)) {
                               triggerAction(() => absorbLamp(lamp.id), `Đã hấp thụ thành công ${lamp.name}! (${realmBenefit})`);
                             }
                           }}
@@ -673,7 +714,13 @@ export default function CultivationModal({ isOpen, onClose }) {
         {activeTab === 'rules' && (
           <div className={styles.rulesSection}>
             <div className={styles.ruleCard}>
-              <h4>1. Chiến Lực Theo Từng Cảnh Giới</h4>
+              <h4>1. Quy Tắc Hấp Thu Linh Khí & Đường Cong EXP Lũy Tiến</h4>
+              <p>• <strong>Luật Tĩnh Tâm Ngộ Đạo (60 Giây)</strong>: Đạo hữu phải ở lại đọc chương sách ít nhất <strong>60 giây</strong> mới có thể cảm ngộ thiên địa và hấp thu linh lực (+Tu Vi).</p>
+              <p>• <strong>Đường Cong Tu Vi</strong>: Tu vi càng cao thì lượng linh lực cần để phá cảnh càng lớn (Ngưng Khí 1-10 tầng tăng lũy tiến, Trúc Cơ 120 pháp khiếu cần 8.400 EXP, Kim Đan cần 800 EXP/cung).</p>
+            </div>
+
+            <div className={styles.ruleCard}>
+              <h4>2. Chiến Lực Theo Từng Cảnh Giới</h4>
               <p>• <strong>Ngưng Khí</strong>: Tính bằng <strong>Hổ</strong> (1 Tầng = 1 Hổ, 5 Hổ = 1 Tiêu, 2 Tiêu [10 Hổ] = 1 Bạt).</p>
               <p>• <strong>Trúc Cơ</strong>: Tính bằng <strong>Hỏa</strong> (Mệnh Hỏa, tối đa <strong>10 Hỏa</strong> gồm 5 hỏa tự thân + 5 Mệnh Đăng hấp thụ).</p>
               <p>• <strong>Kim Đan</strong>: Tính bằng <strong>Cung</strong> (Chỉ những cung nào đã hóa thành <strong>Cung Thật</strong> mới tính chiến lực, tối đa <strong>13 Cung</strong>).</p>
@@ -681,8 +728,9 @@ export default function CultivationModal({ isOpen, onClose }) {
             </div>
 
             <div className={styles.ruleCard}>
-              <h4>2. Hệ Thống Mệnh Đăng (8 Đại Thần Đăng)</h4>
-              <p>• Rơi ngẫu nhiên khi đọc sách. Người đọc có thể chọn hấp thụ hoặc cất giữ trong túi.</p>
+              <h4>3. Hệ Thống 30 Mệnh Đăng (6 Cấp Phẩm Độ Hiếm)</h4>
+              <p>• <strong>Phân Cấp Phẩm</strong>: <strong>Hạ Phẩm</strong> (Trắng) · <strong>Trung Phẩm</strong> (Xanh Lá) · <strong>Thượng Phẩm</strong> (Xanh Lam) · <strong>Cực Phẩm</strong> (Tím) · <strong>Tiên Phẩm</strong> (Kim Sắc) · <strong>Thần Phẩm</strong> (Đỏ Thần Thánh).</p>
+              <p>• <strong>Tỉ lệ rơi</strong>: Cơ duyên ngẫu nhiên quý hiếm (~1.8% mỗi chương đọc đủ 60s). Mệnh Đăng phẩm càng cao càng hiếm có khó tìm!</p>
               <p>• <strong>Giới hạn hấp thụ</strong>: Tối đa <strong>5 Mệnh Đăng</strong>. Một khi đã hấp thụ thì <strong>KHÔNG HOÀN TRẢ</strong>!</p>
               <p>• <strong>Ở Trúc Cơ</strong>: Mỗi Mệnh Đăng hấp thụ = <strong>+1 Hỏa</strong>.</p>
               <p>• <strong>Ở Kim Đan</strong>: Mỗi Mệnh Đăng hấp thụ = <strong>+1 Cung Thật</strong> (hóa thực sẵn 100% không tốn EXP).</p>
@@ -690,7 +738,7 @@ export default function CultivationModal({ isOpen, onClose }) {
             </div>
 
             <div className={styles.ruleCard}>
-              <h4>3. Lực Lượng Thiên Mệnh & Độ Kiếp Nguyên Anh</h4>
+              <h4>4. Lực Lượng Thiên Mệnh & Độ Kiếp Nguyên Anh</h4>
               <p>• <strong>Lực Thiên Mệnh</strong>: Đến cảnh giới <strong>Nguyên Anh / Giả Anh mới mở khóa</strong>, các cảnh dưới chưa có.</p>
               <p>• Quy đổi: 1 EXP = 10 Thiên Mệnh khi đọc sách ở Nguyên Anh.</p>
               <p>• <strong>Quy tắc độ kiếp</strong>: Đạt từ 70% Thiên Mệnh mở độ kiếp (50% thành công, mỗi +10% TM = +10% tỉ lệ).</p>
