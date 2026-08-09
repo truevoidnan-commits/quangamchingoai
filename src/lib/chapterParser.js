@@ -1,13 +1,8 @@
 /**
  * Chapter parser — Bộ phân tích và bóc tách chương thông minh cho file .txt và .epub
- * - Nhận diện toàn diện mọi biến thể tiêu đề:
- *   + "Chương 9: ...", "Chương 9. ...", "Chương 9 - ...", "Chương 9 ..."
- *   + "Đệ 9 chương", "Thứ 9 chương", "Hồi 9", "Quyển 9", "Tập 9", "Chapter 9", "Chap 9"
- *   + "[Chương 9]...", "【Chương 9】...", "(Chương 9)..."
- *   + Số La Mã (Chương IX), số chữ (Chương chín, Đệ cửu chương)
- * - Tự động phát hiện và triệt tiêu tiêu đề kép bị dính liền nhau (Chương 9. + Chương 9:)
- * - Tách toàn bộ hàng ngàn chương trong EPUB nhiều chương/file .xhtml
- * - Tự động loại bỏ trang bìa (titlepage, cover) khỏi danh sách chương
+ * - Chuẩn hóa chính xác số lượng chương (loại bỏ hoàn toàn trang bìa/kết/thông tin thừa)
+ * - Tự động triệt tiêu tiêu đề kép bị dính liền
+ * - Chống nhận diện nhầm các câu văn thông thường trong truyện
  * - Tách bạch chuẩn xác từng đoạn văn (<p>), giữ layout thoáng đãng như ứng dụng đọc cao cấp
  */
 import JSZip from 'jszip';
@@ -29,13 +24,16 @@ const NUM_DIGITS = "[0-9]+(?:[\\-–_/.][0-9]+)?";
 const NUM_TOKEN = "(?:" + NUM_DIGITS + "|(?:" + NUM_WORD + "(?:\\s+" + NUM_WORD + ")*)|" + ROMAN_NUM + ")";
 const MAX_HEADER_LEN = 140;
 
-// 1. Dạng "Thứ 1 Chương (tên truyện) (1. 1) (tên chương)" -> CHỈ CHẤP NHẬN CHƯƠNG/CHAPTER
+// Các hư từ tiếng Việt thường xuất hiện khi "Chương X" nằm trong một câu thoại/tự sự thông thường
+const STOP_WORDS = /^(?:của|được|là|trong|này|đã|về|sẽ|có|thì|mà|ở|khi|lại|với|cho|bởi|do|từ|đến|tại|như|đang|ra|vào|lên|xuống|theo|đều|cũng|chỉ|rất|quá|lắm|nào|gì|sao|đâu)\b/i;
+
+// 1. Dạng "Thứ 1 Chương (tên truyện) (1. 1) (tên chương)"
 const specialRe = new RegExp("^\\s*[\\[\\(【]?\\s*(?:thứ|đệ|thu|de)\\s+(" + NUM_TOKEN + ")\\s+(chương|chuong|chapter|chap)\\b.*?\\(\\s*\\d+[\\d\\s.,]*\\)\\s*(.*)$", "i");
 
-// 2. Dạng "Đệ 9 chương...", "Thứ 9 chương..." -> CHỈ CHẤP NHẬN CHƯƠNG/CHAPTER
+// 2. Dạng "Đệ 9 chương...", "Thứ 9 chương..."
 const deThuRe = new RegExp("^\\s*[\\[\\(【]?\\s*(?:thứ|đệ|thu|de)\\s+(" + NUM_TOKEN + ")\\s+(chương|chuong|chapter|chap)\\b\\s*[\\]\\)】]?\\s*([:\\-–—_.~·:：．、/]?|\\s+)\\s*(.*)$", "i");
 
-// 3. Dạng "Chương 9", "[Chương 9]", "Chapter 9", "Chap 9" -> CHỈ CHẤP NHẬN CHƯƠNG/CHAPTER
+// 3. Dạng "Chương 9", "[Chương 9]", "Chapter 9", "Chap 9"
 const chapRe = new RegExp("^\\s*[\\[\\(【]?\\s*(chương|chuong|chapter|chap|ch)\\s+(?:thứ\\s+|đệ\\s+)?(" + NUM_TOKEN + ")\\s*[\\]\\)】]?\\s*([:\\-–—_.~·:：．、/]?|\\s+)\\s*(.*)$", "i");
 
 // 4. Dạng "Phiên ngoại", "Ngoại truyện", "Extra", "Side story"
@@ -56,7 +54,7 @@ const EXTRA_LABEL = {
 export function isExtraChapter(title) {
   if (!title) return false;
   const trimmed = title.trim();
-  return /^\s*[\\[\\(【]?(?:phiên\\s*ngoại|phien\\s*ngoai|ngoại\\s*truyện|ngoai\\s*truyen|extra\\b|side\\s*story\\b)/i.test(trimmed);
+  return /^\s*[\\[\\(【]?(?:phiên\\s*ngoại|phien\\s*ngoai|ngoại\\s*truyện|ngoai\\s*truyen|extra\b|side\\s*story\b)/i.test(trimmed);
 }
 
 /**
@@ -95,7 +93,11 @@ export function tryMatchChapterHeader(line) {
   if (m) {
     const label = CHAP_LABEL[m[2].toLowerCase()] || "Chương";
     const num = m[1].trim();
-    const name = normalizeVietnamese((m[4] || "").trim()).replace(/^[:\s\-–—_.~·:：．、/]+/, '');
+    const sep = m[3] || '';
+    const rawName = (m[4] || "").trim();
+    // Nếu không có dấu phân cách mà nối ngay bằng hư từ -> là câu văn thường
+    if (!sep.trim() && STOP_WORDS.test(rawName)) return null;
+    const name = normalizeVietnamese(rawName).replace(/^[:\s\-–—_.~·:：．、/]+/, '');
     const title = label + " " + num + (name ? ": " + name : "");
     return { label, num, name, title: capFirstLetters(title), extra: false };
   }
@@ -105,7 +107,11 @@ export function tryMatchChapterHeader(line) {
   if (m) {
     const label = CHAP_LABEL[m[1].toLowerCase()] || "Chương";
     const num = m[2].trim();
-    const name = normalizeVietnamese((m[4] || "").trim()).replace(/^[:\s\-–—_.~·:：．、/]+/, '');
+    const sep = m[3] || '';
+    const rawName = (m[4] || "").trim();
+    // Nếu không có dấu phân cách mà nối ngay bằng hư từ -> là câu văn thường
+    if (!sep.trim() && STOP_WORDS.test(rawName)) return null;
+    const name = normalizeVietnamese(rawName).replace(/^[:\s\-–—_.~·:：．、/]+/, '');
     const title = label + " " + num + (name ? ": " + name : "");
     return { label, num, name, title: capFirstLetters(title), extra: false };
   }
@@ -257,7 +263,7 @@ async function extractEpubCover(zip, opfDir, opfDoc, manifest) {
 
 /**
  * Tách HTML thành danh sách các chương độc lập
- * - Quét tìm tất cả các vị trí phân tách chương (Heading, TOC anchor, regex Chương X, Đệ X chương...)
+ * - Quét tìm tất cả các vị trí phân tách chương
  * - Tự động bỏ qua tiêu đề kép trùng lặp (ví dụ: dòng 1 "Chương 9." và dòng 2 "Chương 9:")
  */
 export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems = []) {
@@ -295,7 +301,7 @@ export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems 
     if (el.id && idToTocMap.has(el.id)) {
       const label = idToTocMap.get(el.id);
       const matched = tryMatchChapterHeader(label);
-      return { title: matched ? matched.title : label, num: matched?.num || '', isExtra: isExtraChapter(label) };
+      if (matched) return { title: matched.title, num: matched.num || '', isExtra: matched.extra };
     }
 
     const anchor = el.querySelector('a[id], a[name], [id]');
@@ -304,7 +310,7 @@ export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems 
       if (anchorId && idToTocMap.has(anchorId)) {
         const label = idToTocMap.get(anchorId);
         const matched = tryMatchChapterHeader(label);
-        return { title: matched ? matched.title : label, num: matched?.num || '', isExtra: isExtraChapter(label) };
+        if (matched) return { title: matched.title, num: matched.num || '', isExtra: matched.extra };
       }
     }
 
@@ -313,10 +319,6 @@ export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems 
 
     const matched = tryMatchChapterHeader(rawText);
     if (matched) return { title: matched.title, num: matched.num || '', isExtra: matched.extra };
-
-    if (/^H[1-3]$/i.test(el.tagName) && rawText.length <= 80) {
-      return { title: capFirstLetters(rawText), num: '', isExtra: isExtraChapter(rawText) };
-    }
 
     return null;
   }
@@ -343,7 +345,6 @@ export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems 
   function handleNewHeader(newHeader) {
     // Nếu tiêu đề mới trùng số chương hoặc trùng tên với tiêu đề hiện tại (tiêu đề kép lặp lại dòng 1 & dòng 2)
     if (currentHeader && ((newHeader.num && currentHeader.num === newHeader.num) || newHeader.title === currentHeader.title)) {
-      // Chỉ là dòng tiêu đề kép bị lặp, bỏ qua không cắt chương mới
       return;
     }
     commitChapter();
@@ -406,17 +407,16 @@ export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems 
     commitChapter();
   }
 
-  // Nếu vẫn không có chương nào nhưng có defaultTocTitle hoặc nội dung
+  // CHỈ tạo chương fallback nếu defaultTocTitle THỰC SỰ là một tiêu đề chương hợp lệ
   if (chapters.length === 0) {
     const content = preludeParas.join('\n\n').trim();
-    if (content.length >= 30) {
+    if (content.length >= 30 && defaultTocTitle) {
       const matched = tryMatchChapterHeader(defaultTocTitle);
-      const isIntroPage = /cover|title|info|nav|toc|about|intro/i.test(defaultTocTitle);
-      if (!isIntroPage && defaultTocTitle) {
+      if (matched) {
         chapters.push({
-          title: matched ? matched.title : defaultTocTitle,
+          title: matched.title,
           content: content,
-          isExtra: isExtraChapter(defaultTocTitle),
+          isExtra: matched.extra,
         });
         preludeParas = [];
       }
@@ -583,6 +583,19 @@ export async function parseEpubFile(arrayBuffer, filename = '') {
       }
     } catch (err) {
       // Continue next chapter
+    }
+  }
+
+  // Fallback: nếu toàn bộ file EPUB không có chương nào, tạo 1 chương duy nhất
+  if (parsedChapters.length === 0) {
+    const allContent = preludeBlocks.join('\n\n').trim();
+    if (allContent) {
+      parsedChapters.push({
+        title: bookTitle || filename.replace(/\.[^/.]+$/, '').trim() || 'Nội dung',
+        content: allContent,
+        order: 0,
+        isExtra: false,
+      });
     }
   }
 
