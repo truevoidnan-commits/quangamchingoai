@@ -58,7 +58,38 @@ export function isExtraChapter(title) {
 }
 
 /**
- * Thử khớp một dòng với tiêu đề chương
+ * Trình khớp tiêu đề chuyên biệt dành riêng cho bộ "Hoang Cổ":
+ * CHỈ CHỌN CÁC DÒNG CÓ DẠNG "Chương X - tên chương" ĐỂ LÀM MỐC PHÂN CHIA
+ */
+export function matchHoangCoHeader(line) {
+  const trimmed = line ? line.trim() : '';
+  if (!trimmed || trimmed.length > MAX_HEADER_LEN) return null;
+
+  // Bắt chính xác dạng "Chương X - tên chương" (với dấu gạch ngang -, –, —)
+  const m = trimmed.match(/^\s*chương\s+(\d+)\s*[-–—]\s*(.*)$/i);
+  if (m) {
+    const num = m[1];
+    const rawName = (m[2] || '').trim().replace(/^[-–—:\s]+/, '');
+    const name = normalizeVietnamese(rawName);
+    const title = `Chương ${num}${name ? ' - ' + name : ''}`;
+    return { label: 'Chương', num, name, title: capFirstLetters(title), extra: false };
+  }
+
+  // Hỗ trợ Phiên ngoại dạng "Phiên ngoại X - tên" nếu có
+  const extraMatch = trimmed.match(/^\s*(phiên\s*ngoại|phien\s*ngoai|ngoại\s*truyện|ngoai\s*truyen)\s*(\d+)?\s*[-–—]\s*(.*)$/i);
+  if (extraMatch) {
+    const num = extraMatch[2] ? ' ' + extraMatch[2] : '';
+    const rawName = (extraMatch[3] || '').trim().replace(/^[-–—:\s]+/, '');
+    const name = normalizeVietnamese(rawName);
+    const title = `Phiên ngoại${num}${name ? ' - ' + name : ''}`;
+    return { label: 'Phiên ngoại', num: (extraMatch[2] || '').trim(), name, title: capFirstLetters(title), extra: true };
+  }
+
+  return null;
+}
+
+/**
+ * Thử khớp một dòng với tiêu đề chương (dành cho các bộ truyện thông thường)
  */
 export function tryMatchChapterHeader(line) {
   const trimmed = line ? line.trim() : '';
@@ -264,11 +295,13 @@ async function extractEpubCover(zip, opfDir, opfDoc, manifest) {
 /**
  * Tách HTML thành danh sách các chương độc lập
  * - Quét tìm tất cả các vị trí phân tách chương
- * - Tự động bỏ qua tiêu đề kép trùng lặp (ví dụ: dòng 1 "Chương 9." và dòng 2 "Chương 9:")
+ * - Đối với bộ "Hoang Cổ": CHỈ CHỌN CÁC DÒNG CÓ DẠNG "Chương X - tên chương"
  */
-export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems = []) {
+export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems = [], isHoangCo = false) {
   const body = doc.body;
   if (!body) return { chapters: [], prelude: '' };
+
+  const matcher = isHoangCo ? matchHoangCoHeader : tryMatchChapterHeader;
 
   // 1. Loại bỏ các thẻ rác
   body.querySelectorAll('script, style, nav, aside, svg, link, header, footer, noscript, hr').forEach(n => n.remove());
@@ -300,7 +333,7 @@ export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems 
 
     if (el.id && idToTocMap.has(el.id)) {
       const label = idToTocMap.get(el.id);
-      const matched = tryMatchChapterHeader(label);
+      const matched = matcher(label);
       if (matched) return { title: matched.title, num: matched.num || '', isExtra: matched.extra };
     }
 
@@ -309,7 +342,7 @@ export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems 
       const anchorId = anchor.getAttribute('id') || anchor.getAttribute('name');
       if (anchorId && idToTocMap.has(anchorId)) {
         const label = idToTocMap.get(anchorId);
-        const matched = tryMatchChapterHeader(label);
+        const matched = matcher(label);
         if (matched) return { title: matched.title, num: matched.num || '', isExtra: matched.extra };
       }
     }
@@ -317,7 +350,7 @@ export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems 
     const rawText = normalizeVietnamese(el.textContent || '').trim();
     if (!rawText) return null;
 
-    const matched = tryMatchChapterHeader(rawText);
+    const matched = matcher(rawText);
     if (matched) return { title: matched.title, num: matched.num || '', isExtra: matched.extra };
 
     return null;
@@ -343,7 +376,7 @@ export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems 
   }
 
   function handleNewHeader(newHeader) {
-    // Nếu tiêu đề mới trùng số chương hoặc trùng tên với tiêu đề hiện tại (tiêu đề kép lặp lại dòng 1 & dòng 2)
+    // Nếu tiêu đề mới trùng số chương hoặc trùng tên với tiêu đề hiện tại
     if (currentHeader && ((newHeader.num && currentHeader.num === newHeader.num) || newHeader.title === currentHeader.title)) {
       return;
     }
@@ -364,7 +397,7 @@ export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems 
 
       const subLines = raw.split(/\n+/).map(l => l.trim()).filter(Boolean);
       subLines.forEach(line => {
-        const lineHeader = tryMatchChapterHeader(line);
+        const lineHeader = matcher(line);
         if (lineHeader) {
           handleNewHeader({ title: lineHeader.title, num: lineHeader.num || '', isExtra: lineHeader.extra });
           return;
@@ -392,7 +425,7 @@ export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems 
     const lines = raw.split(/\n+/).map(l => l.trim()).filter(Boolean);
 
     for (const line of lines) {
-      const lineHeader = tryMatchChapterHeader(line);
+      const lineHeader = matcher(line);
       if (lineHeader) {
         handleNewHeader({ title: lineHeader.title, num: lineHeader.num || '', isExtra: lineHeader.extra });
         continue;
@@ -411,7 +444,7 @@ export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems 
   if (chapters.length === 0) {
     const content = preludeParas.join('\n\n').trim();
     if (content.length >= 30 && defaultTocTitle) {
-      const matched = tryMatchChapterHeader(defaultTocTitle);
+      const matched = matcher(defaultTocTitle);
       if (matched) {
         chapters.push({
           title: matched.title,
@@ -436,6 +469,9 @@ export function parseTxtFile(text, filename = '') {
   text = normalizeVietnamese(text);
   const lines = text.replace(/\r\n/g, "\n").split("\n");
 
+  const isHoangCo = /hoang\s*c[oổ]/i.test(filename) || /hoang\s*c[oổ]/i.test(text.slice(0, 1000));
+  const matcher = isHoangCo ? matchHoangCoHeader : tryMatchChapterHeader;
+
   const chaps = [];
   let cur = null;
   let preLines = [];
@@ -448,7 +484,7 @@ export function parseTxtFile(text, filename = '') {
   }
 
   for (const line of lines) {
-    const h = tryMatchChapterHeader(line);
+    const h = matcher(line);
     if (h) {
       // Nếu dòng này là tiêu đề kép lặp lại của chương hiện tại
       if (cur && ((h.num && cur.num === h.num) || h.title === cur.title)) {
@@ -555,6 +591,8 @@ export async function parseEpubFile(arrayBuffer, filename = '') {
   const { fileItemsMap, directMap } = await extractEpubTocMap(zip, opfDir, manifest);
   const coverUrl = opfDoc ? await extractEpubCover(zip, opfDir, opfDoc, manifest) : '';
 
+  const isHoangCo = /hoang\s*c[oổ]/i.test(filename) || /hoang\s*c[oổ]/i.test(bookTitle) || /hoang\s*c[oổ]/i.test(opfPath);
+
   const parsedChapters = [];
   const preludeBlocks = [];
 
@@ -570,7 +608,7 @@ export async function parseEpubFile(arrayBuffer, filename = '') {
       const html = await zfile.async("string");
       const doc = new DOMParser().parseFromString(html, "text/html");
 
-      const { chapters, prelude } = extractChaptersFromHtml(doc, defaultTocTitle, tocItems);
+      const { chapters, prelude } = extractChaptersFromHtml(doc, defaultTocTitle, tocItems, isHoangCo);
 
       if (prelude && parsedChapters.length === 0) {
         preludeBlocks.push(prelude);
