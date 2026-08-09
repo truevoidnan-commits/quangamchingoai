@@ -1,8 +1,9 @@
 /**
  * Chapter parser — Bộ phân tích và bóc tách chương thông minh cho file .txt và .epub
- * - Phân tích cấu trúc EPUB 2 / EPUB 3 chuyên sâu (Spine, NCX, Nav, Manifest, Cover image)
+ * - Hỗ trợ tách hàng ngàn chương trong EPUB siêu lớn (hỗ trợ nhiều chương trong cùng 1 file .xhtml)
+ * - Tự động nhận diện cấu trúc TOC Map (NCX / Nav) và neo liên kết (anchor #hash)
+ * - Tự động loại bỏ trang bìa / trang giới thiệu khỏi danh sách mục lục chương
  * - Tách bạch chuẩn xác từng đoạn văn (<p>), giữ layout thoáng đãng như ứng dụng đọc cao cấp
- * - Khắc phục triệt để lỗi gộp nguyên chương thành một khối văn bản dính liền
  * - Tự động loại bỏ tiêu đề chương bị lặp lại ở đầu văn bản
  * - Chuẩn hóa tiêu đề chương (Thứ X chương, Chương X, Hồi X, Tiết X, Mã số đặc biệt)
  * - Khắc phục hoàn toàn lỗi nhận diện nhầm "ngoại"
@@ -66,7 +67,7 @@ export function tryMatchChapterHeader(line) {
   if (!trimmed || trimmed.length > MAX_HEADER_LEN) return null;
 
   // Tránh câu hội thoại bắt đầu bằng ngoặc kép hoặc gạch đầu dòng thoại
-  if (/^["'“‘«]/.test(trimmed)) return null;
+  if (/^["'“‘«—\-]/.test(trimmed)) return null;
 
   let m = trimmed.match(extraRe);
   if (m) {
@@ -109,71 +110,312 @@ export function tryMatchChapterHeader(line) {
 }
 
 /**
- * Trích xuất từng đoạn văn từ DOM node của EPUB
- * - Tách bạch chuẩn xác từng thẻ <p>, <div>, <br> thành đoạn riêng biệt
- * - Tự động loại bỏ tiêu đề chương bị lặp lại ở đầu văn bản
+ * Xử lý đường dẫn tương đối trong zip của file EPUB
  */
-export function extractHtmlParagraphs(containerNode, chapterTitle = '') {
-  if (!containerNode) return '';
+function resolvePath(baseDir, relativePath) {
+  if (!relativePath) return '';
+  if (relativePath.startsWith('/')) relativePath = relativePath.slice(1);
+  const stack = baseDir ? baseDir.split('/').filter(Boolean) : [];
+  const parts = relativePath.split('/');
+  for (const part of parts) {
+    if (part === '.' || part === '') continue;
+    if (part === '..') {
+      if (stack.length > 0) stack.pop();
+    } else {
+      stack.push(part);
+    }
+  }
+  return stack.join('/');
+}
 
-  // 1. Loại bỏ các thẻ rác không phải nội dung
-  containerNode.querySelectorAll('script, style, nav, aside, svg, link, header, footer, noscript, hr').forEach(n => n.remove());
+/**
+ * Trích xuất toàn bộ TOC từ toc.ncx hoặc nav.xhtml
+ */
+async function extractEpubTocMap(zip, opfDir, manifest) {
+  const fileItemsMap = new Map(); // cleanPath -> [{ id, label, src }]
+  const directMap = new Map();     // fullPathWithHash -> label
+
+  function addTocEntry(rawSrc, rawLabel) {
+    if (!rawSrc || !rawLabel) return;
+    const label = normalizeVietnamese(rawLabel.trim());
+    const cleanSrc = rawSrc.split('#')[0];
+    const hash = rawSrc.includes('#') ? rawSrc.split('#')[1] : '';
+
+    const resolvedClean = resolvePath(opfDir, cleanSrc);
+    const resolvedFull = hash ? `${resolvedClean}#${hash}` : resolvedClean;
+
+    directMap.set(resolvedFull, label);
+
+    if (!fileItemsMap.has(resolvedClean)) {
+      fileItemsMap.set(resolvedClean, []);
+    }
+    fileItemsMap.get(resolvedClean).push({ id: hash, label, src: resolvedFull });
+  }
+
+  // 1. Thử đọc toc.ncx
+  try {
+    let ncxHref = '';
+    for (const [id, item] of Object.entries(manifest)) {
+      if (item.mediaType === 'application/x-dtbncx+xml' || item.href.endsWith('.ncx')) {
+        ncxHref = item.href;
+        break;
+      }
+    }
+
+    if (ncxHref) {
+      const fullNcxPath = resolvePath(opfDir, ncxHref);
+      const ncxFile = zip.file(fullNcxPath) || zip.file(decodeURIComponent(fullNcxPath));
+      if (ncxFile) {
+        const ncxXml = await ncxFile.async('string');
+        const doc = new DOMParser().parseFromString(ncxXml, 'application/xml');
+        doc.querySelectorAll('navPoint').forEach(np => {
+          const label = np.querySelector('navLabel text')?.textContent;
+          const src = np.querySelector('content')?.getAttribute('src');
+          if (label && src) addTocEntry(src, label);
+        });
+      }
+    }
+  } catch (e) {}
+
+  // 2. Thử đọc nav.xhtml (EPUB 3)
+  try {
+    let navHref = '';
+    for (const [id, item] of Object.entries(manifest)) {
+      if (item.properties?.includes('nav') || item.href.includes('nav')) {
+        navHref = item.href;
+        break;
+      }
+    }
+    if (navHref) {
+      const fullNavPath = resolvePath(opfDir, navHref);
+      const navFile = zip.file(fullNavPath) || zip.file(decodeURIComponent(fullNavPath));
+      if (navFile) {
+        const navHtml = await navFile.async('string');
+        const doc = new DOMParser().parseFromString(navHtml, 'text/html');
+        doc.querySelectorAll('nav[epub\\:type="toc"] a, nav.toc a, ol a').forEach(a => {
+          const label = a.textContent;
+          const href = a.getAttribute('href');
+          if (label && href) addTocEntry(href, label);
+        });
+      }
+    }
+  } catch (e) {}
+
+  return { fileItemsMap, directMap };
+}
+
+/**
+ * Trích xuất ảnh bìa tự động từ EPUB
+ */
+async function extractEpubCover(zip, opfDir, opfDoc, manifest) {
+  try {
+    let coverHref = '';
+
+    for (const [id, item] of Object.entries(manifest)) {
+      if (item.properties?.includes('cover-image')) {
+        coverHref = item.href;
+        break;
+      }
+    }
+
+    if (!coverHref) {
+      const coverMeta = opfDoc.querySelector('metadata meta[name="cover"]');
+      const coverId = coverMeta?.getAttribute('content');
+      if (coverId && manifest[coverId]) {
+        coverHref = manifest[coverId].href;
+      }
+    }
+
+    if (!coverHref) {
+      for (const [id, item] of Object.entries(manifest)) {
+        if (/cover/i.test(id) || /cover/i.test(item.href)) {
+          if (/image\//i.test(item.mediaType) || /\.(jpg|jpeg|png|webp)/i.test(item.href)) {
+            coverHref = item.href;
+            break;
+          }
+        }
+      }
+    }
+
+    if (coverHref) {
+      const fullPath = resolvePath(opfDir, coverHref);
+      const imgFile = zip.file(fullPath) || zip.file(decodeURIComponent(fullPath));
+      if (imgFile) {
+        const base64 = await imgFile.async('base64');
+        const ext = coverHref.split('.').pop().toLowerCase();
+        const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+        return `data:${mime};base64,${base64}`;
+      }
+    }
+  } catch (e) {}
+  return '';
+}
+
+/**
+ * Tách HTML thành danh sách các chương độc lập
+ * - Quét tìm tất cả các vị trí phân tách chương (Heading, TOC anchor, regex Chương X, Thứ X chương...)
+ */
+export function extractChaptersFromHtml(doc, defaultTocTitle = '', fileTocItems = []) {
+  const body = doc.body;
+  if (!body) return { chapters: [], prelude: '' };
+
+  // 1. Loại bỏ các thẻ rác
+  body.querySelectorAll('script, style, nav, aside, svg, link, header, footer, noscript, hr').forEach(n => n.remove());
 
   // 2. Thay thế tất cả <br> thành ký tự xuống dòng
-  containerNode.querySelectorAll('br').forEach(br => {
+  body.querySelectorAll('br').forEach(br => {
     br.replaceWith(document.createTextNode('\n'));
   });
 
-  const normTitle = normalizeVietnamese(chapterTitle || '').trim().toLowerCase();
-
-  function isDuplicateTitle(text) {
-    if (!text) return false;
-    const t = normalizeVietnamese(text).trim().toLowerCase();
-    if (normTitle && (t === normTitle || t.includes(normTitle) || normTitle.includes(t))) return true;
-    if (tryMatchChapterHeader(text)) return true;
-    return false;
+  // 3. Xây dựng bảng ID -> TOC Title
+  const idToTocMap = new Map();
+  if (fileTocItems && fileTocItems.length > 0) {
+    fileTocItems.forEach(item => {
+      if (item.id) idToTocMap.set(item.id, item.label);
+    });
   }
 
-  // 3. Xóa các thẻ Heading nếu nội dung trùng với chapterTitle
-  containerNode.querySelectorAll('h1, h2, h3, h4, .chapter-title, .title').forEach(h => {
-    const hText = normalizeVietnamese(h.textContent || '').trim();
-    if (isDuplicateTitle(hText)) {
-      h.remove();
-    }
+  // 4. Lấy tất cả các thẻ leaf block
+  const leafBlocks = Array.from(body.querySelectorAll('p, div, blockquote, li, h1, h2, h3, h4, h5, h6')).filter(el => {
+    if (el.tagName === 'DIV' && el.querySelector('p, div, blockquote, li')) return false;
+    return true;
   });
 
-  const paragraphs = [];
+  // Helper nhận diện element có phải là Chapter Header không
+  function checkElementForHeader(el) {
+    if (!el) return null;
 
-  // 4. Lấy tất cả các thẻ đoạn văn (<p>, <div>, <blockquote>, <li>, etc.)
-  const blockElements = Array.from(containerNode.querySelectorAll('p, div, blockquote, li, h1, h2, h3, h4, h5, h6'));
+    // Check ID trực tiếp trên element hoặc anchor con
+    if (el.id && idToTocMap.has(el.id)) {
+      const label = idToTocMap.get(el.id);
+      const matched = tryMatchChapterHeader(label);
+      return { title: matched ? matched.title : label, isExtra: isExtraChapter(label) };
+    }
 
-  if (blockElements.length > 0) {
-    blockElements.forEach(el => {
-      // Tránh lấy trùng text từ thẻ div cha nếu nó chứa thẻ con p
-      if (el.tagName === 'DIV' && el.querySelector('p, div, blockquote, li')) return;
+    const anchor = el.querySelector('a[id], a[name], [id]');
+    if (anchor) {
+      const anchorId = anchor.getAttribute('id') || anchor.getAttribute('name');
+      if (anchorId && idToTocMap.has(anchorId)) {
+        const label = idToTocMap.get(anchorId);
+        const matched = tryMatchChapterHeader(label);
+        return { title: matched ? matched.title : label, isExtra: isExtraChapter(label) };
+      }
+    }
+
+    const rawText = normalizeVietnamese(el.textContent || '').trim();
+    if (!rawText) return null;
+
+    // Check nếu text là tiêu đề chương
+    const matched = tryMatchChapterHeader(rawText);
+    if (matched) return { title: matched.title, isExtra: matched.extra };
+
+    // Nếu là thẻ Heading ngắn (< 80 ký tự)
+    if (/^H[1-3]$/i.test(el.tagName) && rawText.length <= 80) {
+      return { title: capFirstLetters(rawText), isExtra: isExtraChapter(rawText) };
+    }
+
+    return null;
+  }
+
+  const chapters = [];
+  let currentHeader = null;
+  let currentParas = [];
+  let preludeParas = [];
+
+  function commitChapter() {
+    if (currentHeader && currentParas.length > 0) {
+      const content = currentParas.join('\n\n').trim();
+      if (content.length >= 20 || currentHeader.title) {
+        chapters.push({
+          title: capFirstLetters(currentHeader.title),
+          content: content || 'Nội dung chương trống.',
+          isExtra: currentHeader.isExtra || isExtraChapter(currentHeader.title),
+        });
+      }
+    }
+    currentParas = [];
+  }
+
+  if (leafBlocks.length > 0) {
+    leafBlocks.forEach(el => {
+      const headerInfo = checkElementForHeader(el);
+      if (headerInfo) {
+        commitChapter();
+        currentHeader = headerInfo;
+        return;
+      }
 
       const raw = normalizeVietnamese(el.textContent || '').trim();
       if (!raw) return;
 
       const subLines = raw.split(/\n+/).map(l => l.trim()).filter(Boolean);
       subLines.forEach(line => {
-        if (paragraphs.length === 0 && isDuplicateTitle(line)) return;
-        paragraphs.push(line);
+        const lineHeader = tryMatchChapterHeader(line);
+        if (lineHeader) {
+          commitChapter();
+          currentHeader = { title: lineHeader.title, isExtra: lineHeader.extra };
+          return;
+        }
+
+        if (currentHeader) {
+          // Bỏ qua nếu dòng này trùng với tiêu đề chương hiện tại
+          const normLine = line.toLowerCase();
+          const normTitle = currentHeader.title.toLowerCase();
+          if (normLine === normTitle || normTitle.includes(normLine) || normLine.includes(normTitle)) {
+            return;
+          }
+          currentParas.push(line);
+        } else {
+          preludeParas.push(line);
+        }
       });
     });
+    commitChapter();
   }
 
-  // 5. Fallback nếu không có thẻ block nào (plain text có xuống dòng)
-  if (paragraphs.length === 0) {
-    const raw = normalizeVietnamese(containerNode.textContent || '');
+  // Fallback nếu không có thẻ block hoặc không tìm thấy header nào
+  if (chapters.length === 0) {
+    const raw = normalizeVietnamese(body.textContent || '');
     const lines = raw.split(/\n+/).map(l => l.trim()).filter(Boolean);
+
     for (const line of lines) {
-      if (paragraphs.length === 0 && isDuplicateTitle(line)) continue;
-      paragraphs.push(line);
+      const lineHeader = tryMatchChapterHeader(line);
+      if (lineHeader) {
+        commitChapter();
+        currentHeader = { title: lineHeader.title, isExtra: lineHeader.extra };
+        continue;
+      }
+
+      if (currentHeader) {
+        currentParas.push(line);
+      } else {
+        preludeParas.push(line);
+      }
+    }
+    commitChapter();
+  }
+
+  // Nếu vẫn không có chương nào nhưng có defaultTocTitle hoặc nội dung
+  if (chapters.length === 0) {
+    const content = preludeParas.join('\n\n').trim();
+    if (content.length >= 30) {
+      const matched = tryMatchChapterHeader(defaultTocTitle);
+      const isIntroPage = /cover|title|info|nav|toc|about|intro/i.test(defaultTocTitle);
+      if (!isIntroPage && defaultTocTitle) {
+        chapters.push({
+          title: matched ? matched.title : defaultTocTitle,
+          content: content,
+          isExtra: isExtraChapter(defaultTocTitle),
+        });
+        preludeParas = [];
+      }
     }
   }
 
-  return paragraphs.join('\n\n');
+  return {
+    chapters,
+    prelude: preludeParas.join('\n\n').trim(),
+  };
 }
 
 /**
@@ -222,142 +464,6 @@ export function parseTxtFile(text, filename = '') {
       isExtra: false,
     }],
   };
-}
-
-/**
- * Xử lý đường dẫn tương đối trong zip của file EPUB
- */
-function resolvePath(baseDir, relativePath) {
-  if (!relativePath) return '';
-  if (relativePath.startsWith('/')) relativePath = relativePath.slice(1);
-  const stack = baseDir ? baseDir.split('/').filter(Boolean) : [];
-  const parts = relativePath.split('/');
-  for (const part of parts) {
-    if (part === '.' || part === '') continue;
-    if (part === '..') {
-      if (stack.length > 0) stack.pop();
-    } else {
-      stack.push(part);
-    }
-  }
-  return stack.join('/');
-}
-
-/**
- * Trích xuất toàn bộ TOC từ toc.ncx hoặc nav.xhtml
- */
-async function extractEpubTocMap(zip, opfDir, manifest) {
-  const tocMap = new Map();
-
-  // 1. Thử đọc toc.ncx
-  try {
-    let ncxHref = '';
-    for (const [id, item] of Object.entries(manifest)) {
-      if (item.mediaType === 'application/x-dtbncx+xml' || item.href.endsWith('.ncx')) {
-        ncxHref = item.href;
-        break;
-      }
-    }
-
-    if (ncxHref) {
-      const fullNcxPath = resolvePath(opfDir, ncxHref);
-      const ncxFile = zip.file(fullNcxPath) || zip.file(decodeURIComponent(fullNcxPath));
-      if (ncxFile) {
-        const ncxXml = await ncxFile.async('string');
-        const doc = new DOMParser().parseFromString(ncxXml, 'application/xml');
-        doc.querySelectorAll('navPoint').forEach(np => {
-          const label = np.querySelector('navLabel text')?.textContent?.trim();
-          const src = np.querySelector('content')?.getAttribute('src');
-          if (label && src) {
-            const cleanSrc = src.split('#')[0];
-            const resolvedSrc = resolvePath(opfDir, cleanSrc);
-            if (!tocMap.has(resolvedSrc)) {
-              tocMap.set(resolvedSrc, normalizeVietnamese(label));
-            }
-          }
-        });
-      }
-    }
-  } catch (e) {}
-
-  // 2. Thử đọc nav.xhtml (EPUB 3)
-  try {
-    let navHref = '';
-    for (const [id, item] of Object.entries(manifest)) {
-      if (item.properties?.includes('nav') || item.href.includes('nav')) {
-        navHref = item.href;
-        break;
-      }
-    }
-    if (navHref) {
-      const fullNavPath = resolvePath(opfDir, navHref);
-      const navFile = zip.file(fullNavPath) || zip.file(decodeURIComponent(fullNavPath));
-      if (navFile) {
-        const navHtml = await navFile.async('string');
-        const doc = new DOMParser().parseFromString(navHtml, 'text/html');
-        doc.querySelectorAll('nav[epub\\:type="toc"] a, nav.toc a, ol a').forEach(a => {
-          const label = a.textContent?.trim();
-          const href = a.getAttribute('href');
-          if (label && href) {
-            const cleanHref = href.split('#')[0];
-            const resolved = resolvePath(opfDir, cleanHref);
-            if (!tocMap.has(resolved)) {
-              tocMap.set(resolved, normalizeVietnamese(label));
-            }
-          }
-        });
-      }
-    }
-  } catch (e) {}
-
-  return tocMap;
-}
-
-/**
- * Trích xuất ảnh bìa tự động từ EPUB
- */
-async function extractEpubCover(zip, opfDir, opfDoc, manifest) {
-  try {
-    let coverHref = '';
-
-    for (const [id, item] of Object.entries(manifest)) {
-      if (item.properties?.includes('cover-image')) {
-        coverHref = item.href;
-        break;
-      }
-    }
-
-    if (!coverHref) {
-      const coverMeta = opfDoc.querySelector('metadata meta[name="cover"]');
-      const coverId = coverMeta?.getAttribute('content');
-      if (coverId && manifest[coverId]) {
-        coverHref = manifest[coverId].href;
-      }
-    }
-
-    if (!coverHref) {
-      for (const [id, item] of Object.entries(manifest)) {
-        if (/cover/i.test(id) || /cover/i.test(item.href)) {
-          if (/image\//i.test(item.mediaType) || /\.(jpg|jpeg|png|webp)/i.test(item.href)) {
-            coverHref = item.href;
-            break;
-          }
-        }
-      }
-    }
-
-    if (coverHref) {
-      const fullPath = resolvePath(opfDir, coverHref);
-      const imgFile = zip.file(fullPath) || zip.file(decodeURIComponent(fullPath));
-      if (imgFile) {
-        const base64 = await imgFile.async('base64');
-        const ext = coverHref.split('.').pop().toLowerCase();
-        const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-        return `data:${mime};base64,${base64}`;
-      }
-    }
-  } catch (e) {}
-  return '';
 }
 
 /**
@@ -424,78 +530,35 @@ export async function parseEpubFile(arrayBuffer, filename = '') {
       .forEach(p => spineHrefs.push(p.startsWith(opfDir) ? p.slice(opfDir.length) : p));
   }
 
-  const tocMap = await extractEpubTocMap(zip, opfDir, manifest);
+  const { fileItemsMap, directMap } = await extractEpubTocMap(zip, opfDir, manifest);
   const coverUrl = opfDoc ? await extractEpubCover(zip, opfDir, opfDoc, manifest) : '';
 
   const parsedChapters = [];
-  let currentOrder = 0;
+  const preludeBlocks = [];
 
   for (const rawHref of spineHrefs) {
     const fullPath = resolvePath(opfDir, rawHref);
     const zfile = zip.file(fullPath) || zip.file(decodeURIComponent(fullPath));
     if (!zfile) continue;
 
+    // Bỏ qua nếu là file cover/nav thuần túy không chứa chương
+    const isSpecialPage = /cover|titlepage|nav\.|toc\./i.test(fullPath);
+    const tocItems = fileItemsMap.get(fullPath) || fileItemsMap.get(rawHref) || [];
+    const defaultTocTitle = directMap.get(fullPath) || (tocItems.length === 1 ? tocItems[0].label : '');
+
     try {
       const html = await zfile.async("string");
       const doc = new DOMParser().parseFromString(html, "text/html");
 
-      const body = doc.body;
-      if (!body) continue;
+      const { chapters, prelude } = extractChaptersFromHtml(doc, defaultTocTitle, tocItems);
 
-      const tocTitle = tocMap.get(fullPath) || tocMap.get(rawHref) || '';
-      const headings = Array.from(body.querySelectorAll('h1, h2, h3, h4'));
+      if (prelude && parsedChapters.length === 0) {
+        preludeBlocks.push(prelude);
+      }
 
-      if (headings.length > 1) {
-        // Tách các chương con trong cùng 1 file HTML
-        let currentSubTitle = '';
-        let currentSubContainer = document.createElement('div');
-
-        function pushSubChapter() {
-          const subContent = extractHtmlParagraphs(currentSubContainer, currentSubTitle);
-          if (subContent.trim().length >= 30) {
-            const matchedHeader = tryMatchChapterHeader(currentSubTitle);
-            const finalTitle = matchedHeader ? matchedHeader.title : (currentSubTitle || `Chương ${currentOrder + 1}`);
-            parsedChapters.push({
-              title: capFirstLetters(finalTitle),
-              content: subContent,
-              order: currentOrder++,
-              isExtra: isExtraChapter(finalTitle),
-            });
-          }
-        }
-
-        Array.from(body.childNodes).forEach(node => {
-          if (/^H[1-4]$/i.test(node.nodeName)) {
-            pushSubChapter();
-            currentSubTitle = normalizeVietnamese(node.textContent?.trim() || '');
-            currentSubContainer = document.createElement('div');
-          } else {
-            currentSubContainer.appendChild(node.cloneNode(true));
-          }
-        });
-        pushSubChapter();
-      } else {
-        // 1 file HTML = 1 chương
-        let docTitle = tocTitle;
-        if (!docTitle) {
-          const h = doc.querySelector("h1, h2, h3, .chapter-title, .title");
-          if (h) docTitle = normalizeVietnamese(h.textContent.trim());
-        }
-
-        const matchedHeader = tryMatchChapterHeader(docTitle);
-        const finalTitle = matchedHeader ? matchedHeader.title : (docTitle || `Chương ${currentOrder + 1}`);
-
-        // Trích xuất từng đoạn văn <p> riêng biệt và loại bỏ tiêu đề lặp lại
-        const content = extractHtmlParagraphs(body, finalTitle);
-
-        // Bỏ qua trang bìa / trang mục lục trống (< 30 ký tự)
-        if (content.trim().length < 30 && !docTitle) continue;
-
-        parsedChapters.push({
-          title: capFirstLetters(finalTitle),
-          content: content.trim() ? content : 'Nội dung chương trống.',
-          order: currentOrder++,
-          isExtra: isExtraChapter(finalTitle),
+      if (chapters.length > 0) {
+        chapters.forEach(chap => {
+          parsedChapters.push(chap);
         });
       }
     } catch (err) {
@@ -503,14 +566,21 @@ export async function parseEpubFile(arrayBuffer, filename = '') {
     }
   }
 
+  // Đánh lại số thứ tự order
+  const finalChapters = parsedChapters.map((c, idx) => ({
+    ...c,
+    order: idx,
+  }));
+
   const fallbackTitle = filename ? filename.replace(/\.[^/.]+$/, '').trim() : '';
   const finalBookTitle = bookTitle || fallbackTitle;
+  const finalDescription = bookDesc || preludeBlocks.join('\n\n').trim();
 
   return {
     title: finalBookTitle,
-    description: bookDesc || '',
+    description: finalDescription || '',
     coverUrl: coverUrl || '',
-    chapters: parsedChapters,
+    chapters: finalChapters,
   };
 }
 
