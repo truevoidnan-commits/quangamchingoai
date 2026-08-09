@@ -3,19 +3,23 @@ import { useLongPress } from '../../hooks/useLongPress';
 import styles from './NovelCard.module.css';
 
 /**
- * NovelCard — 3:4 ratio cover card with long-press context menu
+ * NovelCard — 3:4 ratio cover card with persistent long-press context menu
  */
 export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode = 'grid' }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
+  const suppressClickRef = useRef(false);
 
-  const longPressHandlers = useLongPress(() => {
+  const { handlers } = useLongPress(() => {
+    suppressClickRef.current = true;
     setMenuOpen(true);
-  });
+  }, 450);
 
-  const handleClick = (e) => {
+  const handleClick = () => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
     if (menuOpen) {
-      setMenuOpen(false);
       return;
     }
     onClick?.(novel);
@@ -29,8 +33,10 @@ export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode =
 
   const handleDelete = (e) => {
     e.stopPropagation();
-    setMenuOpen(false);
-    onDelete?.(novel);
+    if (confirm(`Bạn có chắc chắn muốn xóa truyện "${novel.title}" khỏi thư viện?`)) {
+      setMenuOpen(false);
+      onDelete?.(novel);
+    }
   };
 
   const closeMenu = (e) => {
@@ -42,7 +48,7 @@ export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode =
     return (
       <div
         className={`${styles.listItem} ${menuOpen ? styles.menuActive : ''}`}
-        {...longPressHandlers}
+        {...handlers}
         onClick={handleClick}
         role="button"
         tabIndex={0}
@@ -69,7 +75,7 @@ export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode =
   return (
     <div
       className={`${styles.card} ${menuOpen ? styles.menuActive : ''}`}
-      {...longPressHandlers}
+      {...handlers}
       onClick={handleClick}
       role="button"
       tabIndex={0}
@@ -92,7 +98,7 @@ export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode =
         <span className={styles.chapterCount}>{novel.chapterCount} chương</span>
       </div>
 
-      {/* Context menu overlay */}
+      {/* Persistent Context menu overlay upon long-press */}
       {menuOpen && (
         <div className={styles.contextMenu} onClick={e => e.stopPropagation()}>
           <button className={styles.menuItem} onClick={handleEdit}>
@@ -102,7 +108,7 @@ export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode =
             🗑️ Xóa truyện
           </button>
           <button className={styles.menuCancel} onClick={closeMenu}>
-            Hủy
+            ✕ Hủy
           </button>
         </div>
       )}

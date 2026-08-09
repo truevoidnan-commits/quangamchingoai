@@ -45,12 +45,27 @@ export default function AddNovelPage() {
     setParsing(true);
     setParseError('');
     setParsedChapters([]);
+
+    // Tự động gán tên truyện mặc định là tên file (bỏ đuôi .txt, .epub)
+    const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '').trim();
+    if (fileNameWithoutExt) {
+      setTitle(fileNameWithoutExt);
+    }
+
     try {
-      const chapters = await parseNovelFile(file);
+      const res = await parseNovelFile(file);
+      const chapters = res.chapters || [];
       if (chapters.length === 0) {
         setParseError('Không tìm thấy chương nào trong file. Hãy kiểm tra định dạng tiêu đề chương.');
       } else {
         setParsedChapters(chapters);
+      }
+
+      // Tự động gán phần giới thiệu nếu có nội dung trước chương 1
+      if (res.description) {
+        setDescription(res.description);
+      } else {
+        setDescription('');
       }
     } catch (err) {
       setParseError(err.message || 'Lỗi khi đọc file.');
