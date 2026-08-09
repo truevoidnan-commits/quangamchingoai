@@ -1,0 +1,88 @@
+.inner {
+  padding: 8px 0 20px;
+}
+
+.item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 14px 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background var(--transition-fast);
+  color: var(--text-primary);
+}
+
+.item:hover {
+  background: var(--accent-cyan-dim);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.active {
+  background: rgba(34, 195, 240, 0.08);
+  border-left: 3px solid var(--accent-cyan);
+  padding-left: 17px;
+}
+
+.active .itemTitle {
+  color: var(--accent-cyan);
+}
+
+.extra .itemTitle {
+  color: var(--text-secondary);
+}
+
+.itemTitle {
+  flex: 1;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activeIndicator {
+  color: var(--accent-cyan);
+  font-size: 10px;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+/* Section divider */
+.sectionDivider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  margin: 4px 0;
+}
+
+.sectionLine {
+  flex: 1;
+  height: 1px;
+  background: var(--border-gold);
+}
+
+.sectionLabel {
+  font-size: 11px;
+  color: var(--accent-gold);
+  opacity: 0.75;
+  white-space: nowrap;
+  font-family: var(--font-serif);
+  letter-spacing: 0.05em;
+}
+
+.empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}

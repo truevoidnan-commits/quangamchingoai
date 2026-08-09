@@ -1,0 +1,134 @@
+.inner {
+  padding: 16px 20px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.preview {
+  padding: 16px 20px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  line-height: 1.8;
+  border: 1px solid var(--border-subtle);
+  transition: all 0.3s ease;
+  font-family: var(--font-serif);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.label strong {
+  color: var(--accent-cyan);
+}
+
+/* Slider */
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sliderMin {
+  font-size: 13px;
+  color: var(--text-muted);
+  min-width: 16px;
+  text-align: center;
+}
+
+.sliderMax {
+  font-size: 20px;
+  color: var(--text-muted);
+  min-width: 20px;
+  text-align: center;
+}
+
+.slider {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-full);
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  box-shadow: var(--glow-cyan-sm);
+  cursor: pointer;
+  transition: box-shadow var(--transition-fast);
+}
+.slider::-webkit-slider-thumb:hover {
+  box-shadow: var(--glow-cyan);
+}
+
+.slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, var(--accent-cyan), var(--bg-elevated));
+}
+
+/* Font buttons */
+.fontRow {
+  display: flex;
+  gap: 10px;
+}
+
+.fontBtn {
+  flex: 1;
+  padding: 10px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.fontBtn:hover {
+  border-color: var(--border-cyan);
+  color: var(--text-primary);
+}
+.fontActive {
+  border-color: var(--accent-cyan) !important;
+  color: var(--accent-cyan) !important;
+  background: var(--accent-cyan-dim) !important;
+  box-shadow: var(--glow-cyan-sm);
+}
+
+/* Theme swatches */
+.themeRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.themeBtn {
+  padding: 12px 8px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all var(--transition-fast);
+}
+.themeBtn:hover {
+  filter: brightness(1.1);
+}
+.themeActive {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.15);
+}

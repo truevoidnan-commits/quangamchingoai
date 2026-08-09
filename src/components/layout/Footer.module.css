@@ -1,0 +1,22 @@
+.footer {
+  margin-top: auto;
+  padding: 0 20px 24px;
+}
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-subtle), transparent);
+  margin-bottom: 16px;
+}
+
+.credit {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+}
+
+.name {
+  color: var(--accent-gold);
+  opacity: 0.7;
+}

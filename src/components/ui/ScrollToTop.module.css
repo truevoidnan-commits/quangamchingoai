@@ -1,0 +1,33 @@
+.fab {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-cyan);
+  color: var(--accent-cyan);
+  font-size: 18px;
+  font-weight: bold;
+  box-shadow: var(--glow-cyan-sm), var(--shadow-elevated);
+  z-index: 50;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.fab:hover {
+  background: var(--accent-cyan-dim);
+  box-shadow: var(--glow-cyan);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .fab {
+    bottom: 90px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+}

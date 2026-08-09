@@ -1,0 +1,354 @@
+/* ========================================
+   THIÊN CƠ LÂU – Global Styles
+   Design: Minh Đỗ
+   ======================================== */
+
+/* --- CSS Custom Properties --- */
+:root {
+  /* Background layers (brightened, modern deep-navy) */
+  --bg-primary: #101927;
+  --bg-surface: #172338;
+  --bg-elevated: #1f304c;
+  --bg-card: #19273e;
+  --bg-overlay: rgba(16, 25, 39, 0.88);
+
+  /* Accent: Neon Cyan */
+  --accent-cyan: #22c3f0;
+  --accent-cyan-dim: rgba(34, 195, 240, 0.18);
+  --accent-cyan-mid: rgba(34, 195, 240, 0.45);
+  --accent-cyan-bright: #67dbfb;
+
+  /* Accent: Pure Neon Gold */
+  --accent-gold: #ffcc00;
+  --accent-gold-2: #ffd54f;
+  --accent-gold-dim: rgba(255, 204, 0, 0.16);
+  --accent-gold-mid: rgba(255, 204, 0, 0.45);
+
+  /* Text */
+  --text-primary: #f0f6fc;
+  --text-secondary: #c2d8ee;
+  --text-muted: #7e9ec0;
+  --text-gold: #ffcc00;
+  --text-cyan: #22c3f0;
+
+  /* Borders */
+  --border-subtle: rgba(34, 195, 240, 0.18);
+  --border-cyan: rgba(34, 195, 240, 0.45);
+  --border-gold: rgba(255, 204, 0, 0.45);
+
+  /* Glows */
+  --glow-cyan: 0 0 12px rgba(34, 195, 240, 0.6), 0 0 28px rgba(34, 195, 240, 0.3);
+  --glow-cyan-sm: 0 0 8px rgba(34, 195, 240, 0.5);
+  --glow-gold: 0 0 10px rgba(255, 204, 0, 0.85), 0 0 25px rgba(255, 180, 0, 0.45);
+  --glow-gold-sm: 0 0 6px rgba(255, 204, 0, 0.75);
+
+  /* Shadows */
+  --shadow-card: 0 6px 26px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.2);
+  --shadow-elevated: 0 12px 48px rgba(0, 0, 0, 0.45);
+
+  /* Typography */
+  --font-serif: 'Noto Serif', 'Noto Serif SC', Georgia, serif;
+  --font-sans: 'Noto Sans', system-ui, sans-serif;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 40px;
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 400ms ease;
+
+  /* Layout */
+  --header-height: 60px;
+  --max-content-width: 700px;
+  --sidebar-width: 320px;
+}
+
+/* --- Reset & Base --- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-primary);
+  background-image: 
+    linear-gradient(180deg, rgba(16, 25, 39, 0.7) 0%, rgba(16, 25, 39, 0.88) 55%, rgba(16, 25, 39, 0.96) 100%),
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(34, 195, 240, 0.12), transparent),
+    url('/bg-thien-co-lau.png');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* --- Scrollbar Styling --- */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--accent-cyan-mid);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-cyan);
+}
+
+/* --- Selection --- */
+::selection {
+  background: var(--accent-cyan-dim);
+  color: var(--accent-cyan-bright);
+}
+
+/* --- Links --- */
+a {
+  color: var(--accent-cyan);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+a:hover {
+  color: var(--accent-cyan-bright);
+}
+
+/* --- Inputs & Textareas --- */
+input, textarea, select {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  width: 100%;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: var(--glow-cyan-sm);
+}
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted);
+}
+textarea {
+  resize: vertical;
+  min-height: 200px;
+  line-height: 1.7;
+}
+
+/* --- Buttons --- */
+button {
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border: none;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-base);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-cyan), #1aa8d3);
+  color: #070b12;
+  padding: 10px 20px;
+  font-weight: 600;
+  box-shadow: var(--glow-cyan-sm);
+}
+.btn-primary:hover {
+  box-shadow: var(--glow-cyan);
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  border: 1px solid var(--border-subtle);
+}
+.btn-ghost:hover {
+  background: var(--accent-cyan-dim);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-2), var(--accent-gold));
+  color: #1a1000;
+  padding: 10px 22px;
+  font-weight: 700;
+  font-family: var(--font-serif);
+  box-shadow: var(--glow-gold-sm);
+}
+.btn-gold:hover {
+  box-shadow: var(--glow-gold);
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.btn-danger {
+  background: rgba(220, 60, 60, 0.15);
+  color: #ff6b6b;
+  padding: 8px 16px;
+  border: 1px solid rgba(220, 60, 60, 0.3);
+}
+.btn-danger:hover {
+  background: rgba(220, 60, 60, 0.25);
+  border-color: rgba(220, 60, 60, 0.5);
+}
+
+.btn-icon {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  width: 36px;
+  height: 36px;
+}
+.btn-icon:hover {
+  background: var(--accent-cyan-dim);
+  color: var(--accent-cyan);
+}
+
+/* --- Utility classes --- */
+.text-gold {
+  color: var(--accent-gold);
+  text-shadow: var(--glow-gold-sm);
+}
+
+.text-cyan {
+  color: var(--accent-cyan);
+}
+
+.text-muted {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.serif {
+  font-family: var(--font-serif);
+}
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-cyan-mid), transparent);
+  margin: var(--spacing-md) 0;
+}
+
+.divider-gold {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-gold-mid), transparent);
+  margin: var(--spacing-md) 0;
+}
+
+.neon-border {
+  border: 1px solid var(--border-cyan);
+  box-shadow: inset 0 0 12px rgba(34, 195, 240, 0.05), var(--glow-cyan-sm);
+}
+
+/* --- Loading spinner --- */
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--border-subtle);
+  border-top-color: var(--accent-cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* --- Badge --- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.badge-extra {
+  background: var(--accent-gold-dim);
+  color: var(--accent-gold);
+  border: 1px solid var(--border-gold);
+}
+
+.badge-cyan {
+  background: var(--accent-cyan-dim);
+  color: var(--accent-cyan);
+  border: 1px solid var(--border-cyan);
+}
+
+/* --- Page transition wrapper --- */
+.page-enter {
+  animation: pageEnter 0.3s ease forwards;
+}
+
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Responsive breakpoints --- */
+@media (max-width: 768px) {
+  :root {
+    --header-height: 52px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --spacing-xl: 24px;
+    --spacing-lg: 16px;
+  }
+}

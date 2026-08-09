@@ -1,0 +1,127 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(16, 25, 39, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
+  flex-shrink: 0;
+}
+.logo:hover {
+  opacity: 0.85;
+}
+
+.logoIcon {
+  font-size: 14px;
+  color: #ffcc00;
+  text-shadow: 0 0 8px rgba(255, 204, 0, 0.8);
+}
+
+.logoText {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #ffcc00;
+  text-shadow: 
+    0 0 3px #ffcc00,
+    0 0 10px rgba(255, 204, 0, 0.75),
+    0 0 20px rgba(255, 180, 0, 0.35);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Cultivation Pill Button */
+.cultivationBadge {
+  background: linear-gradient(135deg, rgba(255, 204, 0, 0.12), rgba(34, 195, 240, 0.08));
+  border: 1px solid var(--border-gold);
+  color: #ffcc00;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-family: var(--font-serif);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.2);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+.cultivationBadge:hover {
+  transform: translateY(-1px);
+  border-color: #ffcc00;
+  box-shadow: var(--glow-gold-sm);
+  background: rgba(255, 204, 0, 0.2);
+}
+
+.badgeIcon {
+  font-size: 14px;
+}
+
+.badgeText {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.compact .inner {
+  height: 52px;
+}
+
+.compact .logoText {
+  font-size: 15px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navBtn {
+  font-size: 13px;
+  padding: 6px 14px;
+}
+
+.neonLine {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--accent-cyan-mid) 30%, var(--accent-cyan) 50%, var(--accent-cyan-mid) 70%, transparent 100%);
+  box-shadow: 0 0 8px rgba(34, 195, 240, 0.3);
+}
+
+@media (max-width: 600px) {
+  .inner {
+    padding: 0 12px;
+  }
+  .logoText {
+    font-size: 15px;
+    letter-spacing: 0.04em;
+  }
+  .cultivationBadge {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}

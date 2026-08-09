@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1f304c"/>
+      <stop offset="100%" stop-color="#101927"/>
+    </radialGradient>
+    <filter id="glowGold" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="12.5" fill="none" stroke="#22c3f0" stroke-width="1.5" opacity="0.8"/>
+  
+  <!-- Stylized Celestial Tower / Novel Icon -->
+  <g filter="url(#glowGold)" stroke="#ffd644" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Roof peak -->
+    <path d="M32 12 L20 22 L44 22 Z" fill="#ffd644" fill-opacity="0.2"/>
+    <!-- Middle tier -->
+    <path d="M16 25 L48 25 M22 25 L22 36 M42 25 L42 36"/>
+    <!-- Base tier -->
+    <path d="M12 37 L52 37 M18 37 L18 50 M46 37 L46 50"/>
+    <path d="M14 50 L50 50"/>
+    <!-- Center star gem -->
+    <circle cx="32" cy="30" r="2.5" fill="#67dbfb" stroke="#22c3f0" stroke-width="1"/>
+  </g>
+</svg>
