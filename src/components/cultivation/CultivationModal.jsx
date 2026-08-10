@@ -15,6 +15,8 @@ export default function CultivationModal({ isOpen, onClose }) {
     anchorPalace,
     sellArtifact,
     buyArtifact,
+    activateKimDanTrial,
+    endKimDanTrial,
     breakthroughToTrucCo,
     breakthroughToKimDan,
     attemptUnlock121,
@@ -58,10 +60,45 @@ export default function CultivationModal({ isOpen, onClose }) {
   const absorbedCount = (cultivation.absorbedLamps || []).length;
   const artifactCount = (cultivation.inventoryArtifacts || []).length;
   const isNguyenAnhStage = cultivation.realm === 'gia_anh' || cultivation.realm === 'nguyen_anh';
+  const currentTienTinh = cultivation.tienTinh !== undefined ? cultivation.tienTinh : (cultivation.dangDiem || 0);
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title="✦ ĐẠO LỘ TU TIÊN ✦" fullHeight>
       <div className={styles.container}>
+        {/* BANNER THẺ TRẢI NGHIỆM KIM ĐAN (NẾU ĐANG KÍCH HOẠT) */}
+        {cultivation.isKimDanTrial && (
+          <div className={styles.trialActiveBanner}>
+            <div className={styles.trialBannerLeft}>
+              <span className={styles.trialBannerIcon}>✨</span>
+              <div>
+                <h4 style={{ margin: 0, color: '#ffcc00', fontSize: 13 }}>ĐANG TRẢI NGHIỆM CẢNH GIỚI KIM ĐAN (TẠM THỜI)</h4>
+                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                  Đang trải nghiệm Tòa Thiên Lâu 9 Cung và Nút Thắt Trấn Cung Bảo Vật. Kết thúc bất cứ lúc nào để về lại cảnh giới cũ!
+                </p>
+              </div>
+            </div>
+            <button
+              className="btn-ghost"
+              style={{
+                borderColor: '#ef4444',
+                color: '#ef4444',
+                background: 'rgba(239, 68, 68, 0.12)',
+                fontSize: 11.5,
+                padding: '6px 12px',
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+              onClick={() => {
+                if (confirm('KẾT THÚC TRẢI NGHIỆM KIM ĐAN:\n\nBạn có muốn kết thúc trải nghiệm và khôi phục lại cảnh giới & tu vi ban đầu?')) {
+                  triggerAction(endKimDanTrial);
+                }
+              }}
+            >
+              ↩️ Kết Thúc Trải Nghiệm
+            </button>
+          </div>
+        )}
+
         {/* Realm Hero Card with Dedicated Visual Animation */}
         <div className={styles.realmHeroCard}>
           <div className={styles.realmGlowCircle} />
@@ -69,7 +106,7 @@ export default function CultivationModal({ isOpen, onClose }) {
           <div className={styles.realmBadge}>
             {cultivation.realm === 'ngung_khi' && 'CẢNH GIỚI: NGƯNG KHÍ'}
             {cultivation.realm === 'truc_co' && 'CẢNH GIỚI: TRÚC CƠ'}
-            {cultivation.realm === 'kim_dan' && 'CẢNH GIỚI: KIM ĐAN'}
+            {cultivation.realm === 'kim_dan' && (cultivation.isKimDanTrial ? 'CẢNH GIỚI: KIM ĐAN (TRẢI NGHIỆM)' : 'CẢNH GIỚI: KIM ĐAN')}
             {cultivation.realm === 'gia_anh' && 'CẢNH GIỚI: GIẢ ANH'}
             {cultivation.realm === 'nguyen_anh' && 'CẢNH GIỚI: NGUYÊN ANH'}
           </div>
@@ -85,8 +122,8 @@ export default function CultivationModal({ isOpen, onClose }) {
               <span className={styles.statVal}>{cultivation.chaptersReadCount}</span>
             </div>
             <div className={styles.statBox}>
-              <span className={styles.statLabel}>Tổng Tu Vi</span>
-              <span className={styles.statVal}>{cultivation.totalExp.toLocaleString()}</span>
+              <span className={styles.statLabel}>Số dư Tiên Tinh</span>
+              <span className={styles.statValCyan}>{currentTienTinh.toLocaleString()} TT</span>
             </div>
             <div className={styles.statBox}>
               <span className={styles.statLabel}>Chiến Lực</span>
@@ -158,6 +195,32 @@ export default function CultivationModal({ isOpen, onClose }) {
            ======================================================== */}
         {activeTab === 'status' && (
           <div className={styles.statusSection}>
+            {/* THẺ TRẢI NGHIỆM KIM ĐAN (KHI CHƯA Ở KIM ĐAN) */}
+            {!cultivation.isKimDanTrial && cultivation.realm !== 'kim_dan' && cultivation.realm !== 'gia_anh' && cultivation.realm !== 'nguyen_anh' && (
+              <div className={styles.trialCardOffer}>
+                <div className={styles.trialCardOfferInfo}>
+                  <span className={styles.trialOfferIcon}>📜</span>
+                  <div>
+                    <h4 style={{ color: '#ffcc00', margin: 0, fontSize: 13 }}>THẺ TRẢI NGHIỆM CẢNH GIỚI KIM ĐAN</h4>
+                    <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                      Dùng thử cảnh giới Kim Đan, trải nghiệm Tòa Thiên Lâu Đa Tầng, Kim Đan Xoay Tròn và Khảm Nạm 96 Trấn Cung Bảo Vật (Kết thúc bất cứ lúc nào để trở về cảnh giới ban đầu).
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className="btn-gold"
+                  style={{ fontSize: 11.5, padding: '7px 14px', fontWeight: 700 }}
+                  onClick={() => {
+                    if (confirm('SỬ DỤNG THẺ TRẢI NGHIỆM KIM ĐAN:\n\n• Tạm thời thăng hoa lên cảnh giới Kim Đan (4 Cung Thật, Cung 5 đạt 99.99% chờ khảm nạm Trấn Cung Bảo Vật).\n• Cung cấp sẵn bảo vật và Tiên Tinh dùng thử.\n• Khi kết thúc sẽ khôi phục 100% cảnh giới và tu vi ban đầu của bạn!\n\nĐạo hữu có muốn kích hoạt trải nghiệm ngay?')) {
+                      triggerAction(activateKimDanTrial);
+                    }
+                  }}
+                >
+                  ✨ Dùng Thẻ Trải Nghiệm
+                </button>
+              </div>
+            )}
+
             {/* NGƯNG KHÍ VIEW */}
             {cultivation.realm === 'ngung_khi' && (
               <div className={styles.realmDetailCard}>
@@ -488,7 +551,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                       >
                         <div className={styles.btnContentWrap}>
                           <span className={styles.btnMainTitle}>👑 KHẢM NẠM VẬT TRẤN ÁP NGAY</span>
-                          <span className={styles.btnSubInfo}>Chọn bảo vật trong túi hoặc đổi bằng Đăng Điểm để đạt 100% Cung Thật</span>
+                          <span className={styles.btnSubInfo}>Chọn bảo vật trong túi hoặc đổi bằng Tiên Tinh để đạt 100% Cung Thật</span>
                         </div>
                       </button>
                     </div>
@@ -523,7 +586,7 @@ export default function CultivationModal({ isOpen, onClose }) {
         )}
 
         {/* ========================================================
-            TAB 2: HỆ THỐNG 72 MỆNH ĐĂNG & ĐỔI BÁN ĐĂNG ĐIỂM
+            TAB 2: HỆ THỐNG 72 MỆNH ĐĂNG & ĐỔI BÁN TIÊN TINH
            ======================================================== */}
         {activeTab === 'lamps' && (
           <div className={styles.lampsSection}>
@@ -532,16 +595,16 @@ export default function CultivationModal({ isOpen, onClose }) {
               <div className={styles.lampHeroGlow} />
               <div className={styles.lampHeroTop}>
                 <div>
-                  <h3 className={styles.cardHeader}>Bách Khoa 72 Mệnh Đăng · Thu Thập & Đăng Điểm</h3>
+                  <h3 className={styles.cardHeader}>Bách Khoa 72 Mệnh Đăng · Thu Thập & Tiên Tinh</h3>
                   <p className={styles.subtext}>
                     • Đã Hấp Thụ: <strong>{absorbedCount}/5 Mệnh Đăng</strong> (Tối đa 5 Đèn, không thể hoàn trả).
                     <br />
-                    • Đổi Tu Vi : Đăng Điểm là <strong>1:5</strong>. Có thể bán đèn trong túi lấy Đăng Điểm hoặc dùng Đăng Điểm mua đèn!
+                    • Đổi Tu Vi : Tiên Tinh là <strong>1:5</strong>. Có thể bán đèn trong túi lấy Tiên Tinh hoặc dùng Tiên Tinh mua đèn!
                   </p>
                 </div>
                 <div className={styles.dangDiemBank}>
-                  <span className={styles.dangDiemLabel}>Số dư Đăng Điểm:</span>
-                  <span className={styles.dangDiemVal}>{(cultivation.dangDiem || 0).toLocaleString()} ĐĐ</span>
+                  <span className={styles.dangDiemLabel}>Số dư Tiên Tinh:</span>
+                  <span className={styles.dangDiemVal}>{currentTienTinh.toLocaleString()} TT</span>
                 </div>
               </div>
             </div>
@@ -575,13 +638,12 @@ export default function CultivationModal({ isOpen, onClose }) {
                 const isAbsorbed = (cultivation.absorbedLamps || []).includes(lamp.id);
                 const isInInventory = (cultivation.inventoryLamps || []).includes(lamp.id);
                 const isOwned = isAbsorbed || isInInventory;
-                const tierInfo = LAMP_TIERS[lamp.tier] || { name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.1)', border: 'rgba(226, 232, 240, 0.3)', priceExp: 500, priceTM: 50, dangDiem: 2500 };
+                const tierInfo = LAMP_TIERS[lamp.tier] || { name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.1)', border: 'rgba(226, 232, 240, 0.3)', priceExp: 500, priceTM: 50, tienTinh: 2500 };
 
-                // Tính toán chi phí Đăng Điểm & phần thiếu cần bù
-                const totalCostDangDiem = tierInfo.dangDiem || (tierInfo.priceExp * 5);
-                const userDangDiem = cultivation.dangDiem || 0;
-                const canCoverWithPoints = userDangDiem >= totalCostDangDiem;
-                const deficitExp = Math.max(0, Math.ceil((totalCostDangDiem - userDangDiem) / 5));
+                // Tính toán chi phí Tiên Tinh & phần thiếu cần bù
+                const totalCostTienTinh = tierInfo.tienTinh || tierInfo.dangDiem || (tierInfo.priceExp * 5);
+                const canCoverWithPoints = currentTienTinh >= totalCostTienTinh;
+                const deficitExp = Math.max(0, Math.ceil((totalCostTienTinh - currentTienTinh) / 5));
                 const deficitTM = Math.ceil(deficitExp / 10);
 
                 return (
@@ -655,7 +717,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                             : '🏮 Hấp Thụ (+1 Cung)'}
                         </button>
 
-                        {/* Nút Bán Mệnh Đăng lấy Đăng Điểm */}
+                        {/* Nút Bán Mệnh Đăng lấy Tiên Tinh */}
                         <button
                           className="btn-ghost"
                           style={{
@@ -667,35 +729,34 @@ export default function CultivationModal({ isOpen, onClose }) {
                             flex: 1,
                           }}
                           onClick={() => {
-                            const earned = tierInfo.dangDiem || (tierInfo.priceExp * 5);
                             if (
                               confirm(
-                                `XÁC NHẬN BÁN MỆNH ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Nhận lại: +${earned.toLocaleString()} Đăng Điểm (Tỉ lệ 1:5)\n\nĐạo hữu có muốn bán chiếc đèn này để tích lũy Đăng Điểm?`
+                                `XÁC NHẬN BÁN MỆNH ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Nhận lại: +${totalCostTienTinh.toLocaleString()} Tiên Tinh (Tỉ lệ 1:5)\n\nĐạo hữu có muốn bán chiếc đèn này để tích lũy Tiên Tinh?`
                               )
                             ) {
-                              triggerAction(() => sellLamp(lamp.id), `Đã bán thành công ${lamp.name}! Nhận +${earned.toLocaleString()} Đăng Điểm.`);
+                              triggerAction(() => sellLamp(lamp.id), `Đã bán thành công ${lamp.name}! Nhận +${totalCostTienTinh.toLocaleString()} Tiên Tinh.`);
                             }
                           }}
                         >
-                          💰 Bán (+{totalCostDangDiem.toLocaleString()} ĐĐ)
+                          💰 Bán (+{totalCostTienTinh.toLocaleString()} TT)
                         </button>
                       </div>
                     )}
 
-                    {/* Nút Đổi Mệnh Đăng bằng Đăng Điểm & Đốt Tu Vi bù khi chưa sở hữu */}
+                    {/* Nút Đổi Mệnh Đăng bằng Tiên Tinh & Đốt Tu Vi bù khi chưa sở hữu */}
                     {!isOwned && (
                       <div className={styles.lampActions}>
                         <button
                           className={styles.burnExpBtn}
                           onClick={() => {
                             const paymentMsg = canCoverWithPoints
-                              ? `Tiêu hao: ${totalCostDangDiem.toLocaleString()} Đăng Điểm (Không tổn hao tu vi)`
-                              : userDangDiem > 0
-                              ? `Tiêu hao: ${userDangDiem.toLocaleString()} Đăng Điểm + Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} Thiên Mệnh` : `${deficitExp.toLocaleString()} Tu Vi`} bù thiếu`
+                              ? `Tiêu hao: ${totalCostTienTinh.toLocaleString()} Tiên Tinh (Không tổn hao tu vi)`
+                              : currentTienTinh > 0
+                              ? `Tiêu hao: ${currentTienTinh.toLocaleString()} Tiên Tinh + Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} Thiên Mệnh` : `${deficitExp.toLocaleString()} Tu Vi`} bù thiếu`
                               : `Tiêu hao: Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} Thiên Mệnh` : `${deficitExp.toLocaleString()} Tu Vi`}`;
 
                             const consequenceText = canCoverWithPoints
-                              ? 'An toàn: Đủ Đăng Điểm chi trả, không ảnh hưởng cảnh giới!'
+                              ? 'An toàn: Đủ Tiên Tinh chi trả, không ảnh hưởng cảnh giới!'
                               : cultivation.realm === 'ngung_khi'
                               ? 'Cảnh báo: Tu vi bù thiếu có thể làm rơi tầng Ngưng Khí!'
                               : cultivation.realm === 'truc_co'
@@ -714,9 +775,9 @@ export default function CultivationModal({ isOpen, onClose }) {
                           }}
                         >
                           {canCoverWithPoints
-                            ? `✨ Đổi Đèn (${totalCostDangDiem.toLocaleString()} ĐĐ)`
-                            : userDangDiem > 0
-                            ? `🔥 ${userDangDiem.toLocaleString()} ĐĐ + Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} TM` : `${deficitExp.toLocaleString()} Tu Vi`}`
+                            ? `✨ Đổi Đèn (${totalCostTienTinh.toLocaleString()} TT)`
+                            : currentTienTinh > 0
+                            ? `🔥 ${currentTienTinh.toLocaleString()} TT + Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} TM` : `${deficitExp.toLocaleString()} Tu Vi`}`
                             : `🔥 Đốt ${isNguyenAnhStage ? `${(tierInfo.priceTM || 50).toLocaleString()} TM` : `${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`} Đổi Đèn`}
                         </button>
                       </div>
@@ -729,7 +790,7 @@ export default function CultivationModal({ isOpen, onClose }) {
         )}
 
         {/* ========================================================
-            TAB 3: VẬT TRẤN ÁP THIÊN CUNG (TRẤN CUNG BẢO VẬT)
+            TAB 3: 96 VẬT TRẤN ÁP THIÊN CUNG (TRẤN CUNG BẢO VẬT)
            ======================================================== */}
         {activeTab === 'artifacts' && (
           <div className={styles.lampsSection}>
@@ -738,18 +799,18 @@ export default function CultivationModal({ isOpen, onClose }) {
               <div className={styles.lampHeroGlow} />
               <div className={styles.lampHeroTop}>
                 <div>
-                  <h3 className={styles.cardHeader}>Trấn Cung Bảo Vật · Khảm Nạm & Giao Dịch</h3>
+                  <h3 className={styles.cardHeader}>Trấn Cung Bảo Vật (96 Bảo Vật) · Khảm Nạm & Tiên Tinh</h3>
                   <p className={styles.subtext}>
                     • Trong Túi Trữ Vật: <strong>{artifactCount} Vật Trấn Áp</strong>.
                     <br />
                     • Khi Thiên Cung tự thân đạt <strong>99.99%</strong>, khảm nạm 1 Vật Trấn Áp để đạt <strong>100% Cung Thật</strong>!
                     <br />
-                    • Có thể bán Vật Trấn Áp không dùng để lấy Đăng Điểm hoặc dùng Đăng Điểm đổi bảo vật mới!
+                    • Có thể bán Vật Trấn Áp không dùng để lấy Tiên Tinh hoặc dùng Tiên Tinh đổi bảo vật mới!
                   </p>
                 </div>
                 <div className={styles.dangDiemBank}>
-                  <span className={styles.dangDiemLabel}>Số dư Đăng Điểm:</span>
-                  <span className={styles.dangDiemVal}>{(cultivation.dangDiem || 0).toLocaleString()} ĐĐ</span>
+                  <span className={styles.dangDiemLabel}>Số dư Tiên Tinh:</span>
+                  <span className={styles.dangDiemVal}>{currentTienTinh.toLocaleString()} TT</span>
                 </div>
               </div>
             </div>
@@ -760,7 +821,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                 className={`${styles.tierFilterBtn} ${artifactTierFilter === 'all' ? styles.tierFilterActive : ''}`}
                 onClick={() => setArtifactTierFilter('all')}
               >
-                Tất Cả (30)
+                Tất Cả ({(SUPPRESSING_ARTIFACTS || []).length})
               </button>
               {Object.entries(LAMP_TIERS || {}).map(([key, t]) => {
                 const count = (SUPPRESSING_ARTIFACTS || []).filter(a => a.tier === key).length;
@@ -777,16 +838,15 @@ export default function CultivationModal({ isOpen, onClose }) {
               })}
             </div>
 
-            {/* List of 30 Suppressing Artifacts */}
+            {/* List of 96 Suppressing Artifacts */}
             <div className={styles.lampCardsGrid}>
               {(SUPPRESSING_ARTIFACTS || []).filter(a => artifactTierFilter === 'all' || a.tier === artifactTierFilter).map(art => {
                 const invCount = (cultivation.inventoryArtifacts || []).filter(id => id === art.id).length;
                 const isInInventory = invCount > 0;
                 const tierInfo = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
-                const costDangDiem = tierInfo.dangDiem || (tierInfo.priceExp * 5);
-                const userPoints = cultivation.dangDiem || 0;
-                const canCover = userPoints >= costDangDiem;
-                const deficitExp = Math.max(0, Math.ceil((costDangDiem - userPoints) / 5));
+                const costTienTinh = tierInfo.tienTinh || tierInfo.dangDiem || (tierInfo.priceExp * 5);
+                const canCover = currentTienTinh >= costTienTinh;
+                const deficitExp = Math.max(0, Math.ceil((costTienTinh - currentTienTinh) / 5));
 
                 return (
                   <div
@@ -849,7 +909,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                             </button>
                           )}
 
-                          {/* Nút Bán lấy Đăng Điểm */}
+                          {/* Nút Bán lấy Tiên Tinh */}
                           <button
                             className="btn-ghost"
                             style={{
@@ -861,12 +921,12 @@ export default function CultivationModal({ isOpen, onClose }) {
                               flex: 1,
                             }}
                             onClick={() => {
-                              if (confirm(`BÁN VẬT TRẤN ÁP:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name}\n• Nhận lại: +${costDangDiem.toLocaleString()} Đăng Điểm\n\nBạn có muốn bán vật phẩm này?`)) {
-                                triggerAction(() => sellArtifact(art.id), `Đã bán ${art.name}, nhận +${costDangDiem.toLocaleString()} Đăng Điểm!`);
+                              if (confirm(`BÁN VẬT TRẤN ÁP:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name}\n• Nhận lại: +${costTienTinh.toLocaleString()} Tiên Tinh\n\nBạn có muốn bán vật phẩm này?`)) {
+                                triggerAction(() => sellArtifact(art.id), `Đã bán ${art.name}, nhận +${costTienTinh.toLocaleString()} Tiên Tinh!`);
                               }
                             }}
                           >
-                            💰 Bán (+{costDangDiem.toLocaleString()} ĐĐ)
+                            💰 Bán (+{costTienTinh.toLocaleString()} TT)
                           </button>
                         </>
                       ) : (
@@ -875,9 +935,9 @@ export default function CultivationModal({ isOpen, onClose }) {
                           className={styles.burnExpBtn}
                           onClick={() => {
                             const paymentMsg = canCover
-                              ? `Tiêu hao: ${costDangDiem.toLocaleString()} Đăng Điểm`
-                              : userPoints > 0
-                              ? `Tiêu hao: ${userPoints.toLocaleString()} ĐĐ + Đốt ${deficitExp.toLocaleString()} Tu Vi bù thiếu`
+                              ? `Tiêu hao: ${costTienTinh.toLocaleString()} Tiên Tinh`
+                              : currentTienTinh > 0
+                              ? `Tiêu hao: ${currentTienTinh.toLocaleString()} TT + Đốt ${deficitExp.toLocaleString()} Tu Vi bù thiếu`
                               : `Tiêu hao: Đốt ${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`;
 
                             if (confirm(`ĐỔI VẬT TRẤN ÁP:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name} (${art.type})\n• ${paymentMsg}\n\nĐạo hữu có muốn đổi bảo vật này vào Túi Trữ Vật?`)) {
@@ -886,9 +946,9 @@ export default function CultivationModal({ isOpen, onClose }) {
                           }}
                         >
                           {canCover
-                            ? `✨ Đổi (${costDangDiem.toLocaleString()} ĐĐ)`
-                            : userPoints > 0
-                            ? `🔥 ${userPoints.toLocaleString()} ĐĐ + Đốt ${deficitExp.toLocaleString()} EXP`
+                            ? `✨ Đổi (${costTienTinh.toLocaleString()} TT)`
+                            : currentTienTinh > 0
+                            ? `🔥 ${currentTienTinh.toLocaleString()} TT + Đốt ${deficitExp.toLocaleString()} EXP`
                             : `🔥 Đốt ${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi Đổi`}
                         </button>
                       )}
@@ -1067,10 +1127,10 @@ export default function CultivationModal({ isOpen, onClose }) {
             </div>
 
             <div className={styles.ruleCard}>
-              <h4>4. Hệ Thống 72 Mệnh Đăng & 30 Vật Trấn Áp</h4>
+              <h4>4. Hệ Thống 72 Mệnh Đăng & 96 Vật Trấn Áp</h4>
               <p>• <strong>Phân Cấp Phẩm</strong>: <strong>Hạ Phẩm</strong> (Trắng) · <strong>Trung Phẩm</strong> (Xanh Lá) · <strong>Thượng Phẩm</strong> (Xanh Lam) · <strong>Cực Phẩm</strong> (Tím) · <strong>Tiên Phẩm</strong> (Kim Sắc) · <strong>Thần Phẩm</strong> (Đỏ Thần Thánh).</p>
               <p>• <strong>Tỉ lệ rơi</strong>: Cơ duyên nhặt được Mệnh Đăng (~7.5%) và Vật Trấn Áp (~12%) khi ngộ đạo 60s.</p>
-              <p>• <strong>Tỉ Lệ Đăng Điểm</strong>: 1 Tu Vi = 5 Đăng Điểm. Có thể bán đèn / trấn vật không dùng để tích lũy Đăng Điểm mua bảo vật cấp cao!</p>
+              <p>• <strong>Tỉ Lệ Tiên Tinh</strong>: 1 Tu Vi = 5 Tiên Tinh. Có thể bán đèn / trấn vật không dùng để tích lũy Tiên Tinh mua bảo vật cấp cao!</p>
             </div>
 
             <div className={styles.ruleCard}>
@@ -1121,7 +1181,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                   <div className={styles.emptyAnchorNotice}>
                     <p>Trong Túi Trữ Vật chưa có Vật Trấn Áp nào!</p>
                     <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                      Bạn có thể đọc thêm chương để nhặt cơ duyên hoặc sang tab <strong>"Trấn Cung Vật"</strong> để đổi bằng Đăng Điểm!
+                      Bạn có thể đọc thêm chương để nhặt cơ duyên hoặc sang tab <strong>"Trấn Cung Vật"</strong> để đổi bằng Tiên Tinh!
                     </p>
                     <button
                       className="btn-gold"
@@ -1183,14 +1243,14 @@ export default function CultivationModal({ isOpen, onClose }) {
             <span>💀 NGHỊCH THIÊN HÓA PHÀM · TẢN ĐI TU VI</span>
           </div>
           <p className={styles.dangerZoneDesc}>
-            Tản đi toàn bộ tu vi hiện có, tán sạch toàn bộ 72 Mệnh Đăng và 30 Vật Trấn Áp đã thu thập và khảm nạm để hóa phàm trùng tu đạo lộ lại từ đầu.
+            Tản đi toàn bộ tu vi hiện có, tán sạch toàn bộ 72 Mệnh Đăng và 96 Vật Trấn Áp đã thu thập và khảm nạm để hóa phàm trùng tu đạo lộ lại từ đầu.
           </p>
           <button
             className={styles.resetCultivationBtn}
             onClick={() => {
               if (
                 confirm(
-                  '⚠️ CẢNH BÁO TẢN ĐI TU VI:\n\nBạn có chắc chắn muốn TẢN ĐI TOÀN BỘ TU VI?\n\n• Toàn bộ cảnh giới, chiến lực, EXP và Thiên Mệnh sẽ về 0 (Phàm Nhân / Ngưng Khí 1 Tầng).\n• Toàn bộ Mệnh Đăng và Vật Trấn Áp trong túi và đã khảm nạm sẽ MẤT HẾT VĨNH VIỄN!\n• Hành động này KHÔNG THỂ HOÀN TÁC!\n\nĐạo hữu có muốn tản công trùng tu lại từ đầu?'
+                  '⚠️ CẢNH BÁO TẢN ĐI TU VI:\n\nBạn có chắc chắn muốn TẢN ĐI TOÀN BỘ TU VI?\n\n• Toàn bộ cảnh giới, chiến lực, EXP, Tiên Tinh và Thiên Mệnh sẽ về 0 (Phàm Nhân / Ngưng Khí 1 Tầng).\n• Toàn bộ Mệnh Đăng và Vật Trấn Áp trong túi và đã khảm nạm sẽ MẤT HẾT VĨNH VIỄN!\n• Hành động này KHÔNG THỂ HOÀN TÁC!\n\nĐạo hữu có muốn tản công trùng tu lại từ đầu?'
                 )
               ) {
                 triggerAction(resetCultivation, 'Đã tản đi toàn bộ tu vi! Hóa phàm trùng tu đạo lộ từ đầu.');

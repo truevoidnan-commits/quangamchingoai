@@ -5,11 +5,17 @@ import {
   addReadingProgress,
   absorbLifeLamp,
   burnExpForLamp,
+  sellLampForTienTinh,
+  buyLampWithTienTinhAndExp,
   sellLampForPoints,
   buyLampWithPointsAndExp,
   anchorPalaceWithArtifact,
+  sellArtifactForTienTinh,
+  buyArtifactWithTienTinhAndExp,
   sellArtifactForPoints,
   buyArtifactWithPointsAndExp,
+  activateKimDanTrial,
+  endKimDanTrial,
   breakthroughToTrucCo,
   breakthroughToKimDan,
   attemptUnlock121st,
@@ -25,6 +31,8 @@ import {
   LIFE_LAMPS,
   SUPPRESSING_ARTIFACTS,
   LAMP_TIERS,
+  TIEN_TINH_RATIO,
+  DANG_DIEM_RATIO,
   MAX_ABSORBED_LAMPS,
   EXP_PER_CHAPTER,
   THIEN_MENH_PER_EXP,
@@ -135,6 +143,18 @@ export function useCultivation() {
     return res;
   }, []);
 
+  const handleActivateKimDanTrial = useCallback(() => {
+    const res = activateKimDanTrial();
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
+  const handleEndKimDanTrial = useCallback(() => {
+    const res = endKimDanTrial();
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
   const handleReset = useCallback(() => {
     const next = resetCultivationState();
     setCultivation({ ...next });
@@ -190,6 +210,8 @@ export function useCultivation() {
     anchorPalace: handleAnchorPalace,
     sellArtifact: handleSellArtifact,
     buyArtifact: handleBuyArtifact,
+    activateKimDanTrial: handleActivateKimDanTrial,
+    endKimDanTrial: handleEndKimDanTrial,
     breakthroughToTrucCo: handleBreakthroughTrucCo,
     breakthroughToKimDan: handleBreakthroughKimDan,
     attemptUnlock121: handleUnlock121,
@@ -205,6 +227,8 @@ export function useCultivation() {
     LIFE_LAMPS,
     SUPPRESSING_ARTIFACTS,
     LAMP_TIERS,
+    TIEN_TINH_RATIO,
+    DANG_DIEM_RATIO,
     constants: {
       MAX_ABSORBED_LAMPS,
       EXP_PER_CHAPTER,

@@ -1119,6 +1119,64 @@
   gap: 2px;
 }
 
+/* ========================================================
+   KIM DAN TRIAL CARD STYLES
+   ======================================================== */
+.trialActiveBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(239, 68, 68, 0.15));
+  border: 1.5px solid #ffcc00;
+  box-shadow: 0 0 16px rgba(255, 204, 0, 0.35);
+  margin-bottom: 12px;
+  animation: pulseCore 2.5s infinite alternate;
+}
+
+.trialBannerLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trialBannerIcon {
+  font-size: 22px;
+  filter: drop-shadow(0 0 6px #ffcc00);
+}
+
+.trialCardOffer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(34, 195, 240, 0.08);
+  border: 1px dashed rgba(34, 195, 240, 0.45);
+  margin-bottom: 14px;
+}
+
+.trialCardOfferInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trialOfferIcon {
+  font-size: 22px;
+}
+
+@media (max-width: 600px) {
+  .trialActiveBanner,
+  .trialCardOffer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .statsRow {
