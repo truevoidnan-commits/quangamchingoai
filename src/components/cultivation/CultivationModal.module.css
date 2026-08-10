@@ -329,6 +329,81 @@
   margin-top: 4px;
 }
 
+/* 10 Khung Ngưng Khí (5 trên 5 dưới) */
+.ngungKhiTiersGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin: 12px 0 6px;
+}
+
+.ngungKhiTierCard {
+  background: rgba(16, 25, 39, 0.75);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 7px 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-align: center;
+  transition: all var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.ngungKhiTierCardReached {
+  background: rgba(2, 132, 199, 0.15);
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+}
+
+.ngungKhiTierCardCurrent {
+  background: rgba(2, 132, 199, 0.28);
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+  animation: pulseCurrentRing 2s infinite ease-in-out;
+}
+
+.ngungKhiTierCardMax {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: #ffcc00;
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.45);
+}
+
+.tierCardLevel {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.ngungKhiTierCardReached .tierCardLevel {
+  color: #38bdf8;
+}
+
+.ngungKhiTierCardMax .tierCardLevel {
+  color: #ffcc00;
+}
+
+.tierCardPower {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.ngungKhiTierCardReached .tierCardPower {
+  color: #ffffff;
+  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.6));
+}
+
+.ngungKhiTierCardMax .tierCardPower {
+  color: #ffcc00;
+  filter: drop-shadow(0 0 6px rgba(255, 204, 0, 0.7));
+}
+
 /* Flames */
 .flameRow {
   display: grid;

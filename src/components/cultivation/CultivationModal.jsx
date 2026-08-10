@@ -314,7 +314,28 @@ export default function CultivationModal({ isOpen, onClose }) {
 
 
 
-                {/* Breakthrough Button */}
+                {/* 10 Khung Tầng Ngưng Khí (5 Khung Trên, 5 Khung Dưới) */}
+                <div className={styles.ngungKhiTiersGrid}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(lvl => {
+                    const isReached = (cultivation.ngungKhiLevel || 1) >= lvl;
+                    const isCurrent = (cultivation.ngungKhiLevel || 1) === lvl;
+                    const isMax = lvl === 10 && isReached;
+                    const powerStr =
+                      lvl === 10 ? '1 Bạt' : lvl === 5 ? '1 Tiêu' : lvl > 5 ? `1 Tiêu ${lvl - 5} Hổ` : `${lvl} Hổ`;
+
+                    return (
+                      <div
+                        key={lvl}
+                        className={`${styles.ngungKhiTierCard} ${isReached ? styles.ngungKhiTierCardReached : ''} ${
+                          isCurrent ? styles.ngungKhiTierCardCurrent : ''
+                        } ${isMax ? styles.ngungKhiTierCardMax : ''}`}
+                      >
+                        <span className={styles.tierCardLevel}>Tầng {lvl}</span>
+                        <span className={styles.tierCardPower}>{powerStr}</span>
+                      </div>
+                    );
+                  })}
+                </div>
                 <div className={styles.actionsGroup}>
                   {cultivation.readyBreakthroughTrucCo && (
                     <button
