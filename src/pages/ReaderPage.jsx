@@ -91,7 +91,6 @@ export default function ReaderPage() {
 
   // Chu kỳ ngộ đạo 60s lặp lại liên tục (cứ 60s tăng tu vi âm thầm & bắt đầu vòng mới)
   const [cycleSeconds, setCycleSeconds] = useState(0);
-  const [cycleCount, setCycleCount] = useState(0);
 
   // Reset timer on chapter change & save reading progress
   useEffect(() => {
@@ -100,6 +99,37 @@ export default function ReaderPage() {
       saveReadingProgress(novelId, { chapterId: chapter.id, scrollTop: window.scrollY });
     }
   }, [chapter?.id, novelId]);
+
+  // Bộ đếm ngộ đạo thực tế (mỗi giây tăng 1s, đủ 60s tự động cộng tu vi và rơi cơ duyên)
+  useEffect(() => {
+    if (!chapter || loading) return;
+
+    const interval = setInterval(() => {
+      setCycleSeconds(prev => {
+        if (prev + 1 >= 60) {
+          try {
+            const res = gainReadingExp(novelId, chapter.id, 2000);
+            if (res) {
+              if (res.breakthrough) {
+                setBreakthroughToast(res.breakthrough);
+                setTimeout(() => setBreakthroughToast(null), 5000);
+              }
+              if (res.droppedLamp) {
+                setDroppedLamp(res.droppedLamp);
+                setTimeout(() => setDroppedLamp(null), 6000);
+              }
+            }
+          } catch (err) {
+            console.error('Lỗi cộng tu vi ngộ đạo:', err);
+          }
+          return 0;
+        }
+        return prev + 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [chapter?.id, loading, novelId, gainReadingExp]);
 
   // Lưu lại vị trí cuộn (% đọc) real-time khi người đọc lướt trang
   useEffect(() => {
