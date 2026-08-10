@@ -430,28 +430,79 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 })}
               </div>
 
-              {/* Meditating Celestial Infant Body */}
+              {/* Meditating Celestial Infant Body (Đạo Anh Thần Thể Tọa Thiền) */}
               <div className={styles.infantEntity}>
-                <span className={styles.infantCrown}>👑</span>
+                <span className={styles.infantCrown} style={{ filter: 'drop-shadow(0 0 10px #22c3f0)' }}>🧘</span>
                 <span className={styles.infantBody}>✨</span>
               </div>
             </div>
 
-            {/* Orbiting Dao Anh Guardians */}
+            {/* Orbiting Dao Anh Guardians with Trấn Cung Bảo Vật & Công Pháp */}
             <div className={styles.daoAnhsOrbitList}>
-              {(daoAnhs || []).slice(0, 8).map((da, idx) => {
-                const angle = (idx / Math.max(1, Math.min(8, daoAnhs.length))) * 360;
+              {(daoAnhs || []).slice(0, 9).map((da, idx) => {
+                const totalCount = Math.max(1, Math.min(9, daoAnhs.length));
+                const angle = (idx / totalCount) * 360;
+                const palaceIdx = da.palaceIndex ?? idx;
+                const anchor = cultivation?.palaceAnchors?.[palaceIdx];
+                const isLamp = da.fromLamp || palaceIdx >= (maxThienCung - (cultivation?.absorbedLamps || []).length);
+                const lampId = isLamp ? (cultivation?.absorbedLamps || [])[palaceIdx - (maxThienCung - (cultivation?.absorbedLamps || []).length)] : null;
+                const lamp = lampId ? LIFE_LAMPS.find(l => l.id === lampId) : null;
+                const lampTier = lamp ? (LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham) : null;
+
+                // Hoạt ảnh Bảo Vật Trấn Áp / Công Pháp trấn thủ cung
+                let artifactIcon = '🗡️';
+                let artifactColor = '#ffcc00';
+                let artifactName = da.name;
+
+                if (anchor) {
+                  artifactIcon = anchor.icon;
+                  artifactColor = anchor.color || '#38bdf8';
+                  artifactName = anchor.shortName || anchor.name;
+                } else if (lamp) {
+                  artifactIcon = lamp.icon;
+                  artifactColor = lampTier?.color || '#ffcc00';
+                  artifactName = lamp.shortName || lamp.name;
+                } else {
+                  // Mẫu Trấn Cung Bảo Vật & Công Pháp đa dạng luân chuyển
+                  const defaultArtifacts = [
+                    { icon: '🌌', color: '#ff4d4f', name: 'Hỗn Độn Sơ Khai' },
+                    { icon: '🗡️', color: '#38bdf8', name: 'Tru Tiên Kiếm' },
+                    { icon: '📜', color: '#ffcc00', name: 'Vô Thượng Tâm Kinh' },
+                    { icon: '🏺', color: '#a855f7', name: 'Thôn Thiên Ma Bình' },
+                    { icon: '⚡', color: '#22c3f0', name: 'Bôn Lôi Kiếm Quyết' },
+                    { icon: '🪷', color: '#34d399', name: 'Hỗn Độn Thanh Liên' },
+                    { icon: '⏳', color: '#f59e0b', name: 'Khởi Nguyên Thời Không' },
+                    { icon: '🛡️', color: '#60a5fa', name: 'Kim Cương Thần Thể' },
+                    { icon: '🔮', color: '#ec4899', name: 'Vận Mệnh Thần Châu' },
+                  ];
+                  const item = defaultArtifacts[palaceIdx % defaultArtifacts.length];
+                  artifactIcon = item.icon;
+                  artifactColor = item.color;
+                  artifactName = item.name;
+                }
+
                 return (
                   <div
                     key={da.id}
                     className={`${styles.orbitDaoAnhMini} ${da.fromLamp ? styles.orbitLampProtected : ''}`}
                     style={{
                       transform: `rotate(${angle}deg) translate(100px) rotate(-${angle}deg)`,
+                      borderColor: artifactColor,
+                      boxShadow: `0 0 10px ${artifactColor}55`,
                     }}
-                    title={`${da.name} (Kiếp ${da.currentKiep}/5)`}
+                    title={`${da.name} · Trấn Vật: ${artifactName} (Kiếp ${da.currentKiep}/5)`}
                   >
-                    <span className={styles.miniIcon}>{da.fromLamp ? '🏮' : '👑'}</span>
-                    <span className={styles.miniKiep}>{da.currentKiep}K</span>
+                    <span
+                      className={styles.miniIcon}
+                      style={{
+                        filter: `drop-shadow(0 0 6px ${artifactColor})`,
+                      }}
+                    >
+                      {artifactIcon}
+                    </span>
+                    <span className={styles.miniKiep} style={{ color: artifactColor }}>
+                      {da.currentKiep}K
+                    </span>
                   </div>
                 );
               })}

@@ -293,10 +293,109 @@ export default function CultivationModal({ isOpen, onClose }) {
               <div className={styles.realmDetailCard}>
                 <h3 className={styles.cardHeader}>Đạo Cơ Pháp Khiếu</h3>
                 <p className={styles.subtext}>
-                  • Chiến lực ở Trúc Cơ tính bằng <strong>Mệnh Hỏa</strong> (Cứ mỗi 30 pháp khiếu thắp sáng 1 Mệnh Hỏa tự thân, tối đa 4 Hỏa từ 120 khiếu).
+                  • Chiến lực tính bằng <strong>Hỏa</strong> (Mệnh Hỏa).
                   <br />
-                  • <strong>Pháp Khiếu 121</strong>: Cơ duyên bí mật mở ra Mệnh Hỏa thứ 5 đạt Cực Cảnh!
+                  • Mệnh Hỏa tự thân: <strong>{selfHoa} Hỏa</strong> ({cultivation.phapKhieu}/120 khiếu) {cultivation.has121st ? '+ 1 Hỏa (Khiếu 121)' : ''}.
+                  <br />
+                  • Mệnh Đăng đã hấp thụ: <strong>{absorbedCount} Đăng</strong> (+{absorbedCount} Hỏa chiến lực).
                 </p>
+
+                {/* 5 Vị Trí Mệnh Hỏa & Mệnh Đăng Thay Thế */}
+                <div className={styles.flameSlotsRow}>
+                  {[1, 2, 3, 4].map(idx => {
+                    const lampId = (cultivation.absorbedLamps || [])[idx - 1];
+                    if (lampId) {
+                      const lamp = LIFE_LAMPS.find(l => l.id === lampId);
+                      const tier = lamp ? (LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham) : null;
+                      return (
+                        <div
+                          key={idx}
+                          className={`${styles.flameSlotCard} ${styles.flameSlotLamp}`}
+                          style={{ borderColor: tier?.color || '#ffcc00', boxShadow: `0 0 12px ${tier?.border || 'rgba(255, 204, 0, 0.4)'}` }}
+                          title={`[${tier?.name}] ${lamp?.name || 'Mệnh Đăng'}`}
+                        >
+                          <span className={styles.slotIconAnimated} style={{ filter: `drop-shadow(0 0 6px ${tier?.color})` }}>
+                            {lamp?.icon || '🏮'}
+                          </span>
+                          <span className={styles.slotTitleText} style={{ color: tier?.color }}>
+                            {lamp?.shortName || lamp?.name || `Đăng ${idx}`}
+                          </span>
+                          <span className={styles.slotStatusText} style={{ color: tier?.color }}>
+                            ✦ Đã Hấp Thụ
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    const isLit = selfHoa >= idx;
+                    return (
+                      <div
+                        key={idx}
+                        className={`${styles.flameSlotCard} ${isLit ? styles.flameSlotLit : styles.flameSlotUnlit}`}
+                      >
+                        <span
+                          className={styles.slotIconAnimated}
+                          style={{ filter: isLit ? 'drop-shadow(0 0 6px #f97316)' : 'none' }}
+                        >
+                          {isLit ? '🔥' : '🕯️'}
+                        </span>
+                        <span className={styles.slotTitleText} style={{ color: isLit ? '#f97316' : 'var(--text-secondary)' }}>
+                          Mệnh Hỏa {idx}
+                        </span>
+                        <span className={styles.slotStatusText} style={{ color: isLit ? '#10b981' : 'var(--text-muted)' }}>
+                          {isLit ? 'Đã Thắp' : 'Chưa Mở'}
+                        </span>
+                      </div>
+                    );
+                  })}
+
+                  {/* Slot 5 (Khiếu 121 / Cực Cảnh hoặc Mệnh Đăng 5) */}
+                  {(() => {
+                    const lampId5 = (cultivation.absorbedLamps || [])[4];
+                    if (lampId5) {
+                      const lamp5 = LIFE_LAMPS.find(l => l.id === lampId5);
+                      const tier5 = lamp5 ? (LAMP_TIERS[lamp5.tier] || LAMP_TIERS.ha_pham) : null;
+                      return (
+                        <div
+                          className={`${styles.flameSlotCard} ${styles.flameSlotLamp}`}
+                          style={{ borderColor: tier5?.color || '#ffcc00', boxShadow: `0 0 12px ${tier5?.border || 'rgba(255, 204, 0, 0.4)'}` }}
+                          title={`[${tier5?.name}] ${lamp5?.name || 'Mệnh Đăng 5'}`}
+                        >
+                          <span className={styles.slotIconAnimated} style={{ filter: `drop-shadow(0 0 6px ${tier5?.color})` }}>
+                            {lamp5?.icon || '🏮'}
+                          </span>
+                          <span className={styles.slotTitleText} style={{ color: tier5?.color }}>
+                            {lamp5?.shortName || lamp5?.name || 'Đăng 5'}
+                          </span>
+                          <span className={styles.slotStatusText} style={{ color: tier5?.color }}>
+                            ✦ Đã Hấp Thụ
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    const isSecretLit = !!cultivation.has121st;
+                    const isSecretFailed = !!cultivation.failed121st;
+                    return (
+                      <div
+                        className={`${styles.flameSlotCard} ${styles.flameSlotSecret} ${isSecretLit ? styles.flameSlotSecretLit : ''}`}
+                      >
+                        <span
+                          className={styles.slotIconAnimated}
+                          style={{ filter: isSecretLit ? 'drop-shadow(0 0 8px #eab308)' : 'none' }}
+                        >
+                          {isSecretLit ? '🔥' : isSecretFailed ? '❌' : '🔒'}
+                        </span>
+                        <span className={styles.slotTitleText} style={{ color: isSecretLit ? '#eab308' : 'var(--text-secondary)' }}>
+                          Khiếu 121
+                        </span>
+                        <span className={styles.slotStatusText} style={{ color: isSecretLit ? '#eab308' : isSecretFailed ? '#ef4444' : 'var(--text-muted)' }}>
+                          {isSecretLit ? '✦ Cực Cảnh' : isSecretFailed ? 'Đã Khóa' : 'Bí Mật'}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
 
                 {/* Phap Khieu Progress */}
                 <div className={styles.progressContainer}>
@@ -311,37 +410,6 @@ export default function CultivationModal({ isOpen, onClose }) {
                     />
                   </div>
                 </div>
-
-                {/* Absorbed Life Lamps as Extra Flames */}
-                {absorbedCount > 0 && (
-                  <div className={styles.absorbedLampsSection}>
-                    <span className={styles.sectionMiniTitle}>🏮 Mệnh Đăng Hộ Thể Đã Hấp Thụ ({absorbedCount}/5):</span>
-                    <div className={styles.absorbedLampsGrid}>
-                      {(cultivation.absorbedLamps || []).map(lampId => {
-                        const lamp = LIFE_LAMPS.find(l => l.id === lampId);
-                        const tier = lamp ? (LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham) : null;
-                        return (
-                          <div
-                            key={lampId}
-                            className={styles.absorbedLampMiniCard}
-                            style={{
-                              borderColor: tier?.color || '#ffcc00',
-                              backgroundColor: tier?.bg || 'rgba(16, 25, 39, 0.8)',
-                            }}
-                          >
-                            <span className={styles.absorbedLampIcon}>{lamp?.icon || '🏮'}</span>
-                            <div className={styles.absorbedLampMeta}>
-                              <span className={styles.absorbedLampName} style={{ color: tier?.color }}>
-                                {lamp?.shortName || lamp?.name || lampId}
-                              </span>
-                              <span className={styles.absorbedLampTierBadge}>{tier?.name} · +1 Hỏa</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
 
                 {/* Secret 121st progress if at 120 khiếu */}
                 {cultivation.phapKhieu >= 120 && !cultivation.has121st && (

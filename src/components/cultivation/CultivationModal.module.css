@@ -1177,6 +1177,82 @@
   }
 }
 
+/* 5 Flame / Absorbed Lamp Slots Row */
+.flameSlotsRow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin: 12px 0 16px;
+}
+
+.flameSlotCard {
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 204, 0, 0.25);
+  border-radius: var(--radius-md);
+  padding: 10px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 4px;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.flameSlotLit {
+  background: rgba(249, 115, 22, 0.08);
+  border-color: rgba(249, 115, 22, 0.55);
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.25);
+}
+
+.flameSlotUnlit {
+  opacity: 0.5;
+  border-color: var(--border-subtle);
+  background: rgba(16, 25, 39, 0.5);
+}
+
+.flameSlotLamp {
+  background: rgba(34, 195, 240, 0.08);
+  box-shadow: 0 0 12px rgba(34, 195, 240, 0.25);
+  border-style: solid;
+}
+
+.flameSlotSecret {
+  border: 1px dashed rgba(255, 204, 0, 0.6);
+  background: rgba(255, 204, 0, 0.06);
+}
+
+.flameSlotSecretLit {
+  border: 1px solid #eab308 !important;
+  background: rgba(234, 179, 8, 0.15) !important;
+  box-shadow: 0 0 14px rgba(234, 179, 8, 0.4) !important;
+}
+
+.slotIconAnimated {
+  font-size: 20px;
+  line-height: 1;
+  display: inline-block;
+  animation: pulseCore 2.4s infinite ease-in-out;
+}
+
+.slotTitleText {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.slotStatusText {
+  font-size: 8.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .statsRow {
@@ -1194,5 +1270,17 @@
   .thienMenhBank {
     width: 100%;
     text-align: left;
+  }
+  .flameSlotsRow {
+    gap: 4px;
+  }
+  .flameSlotCard {
+    padding: 8px 2px;
+  }
+  .slotTitleText {
+    font-size: 9px;
+  }
+  .slotStatusText {
+    font-size: 8px;
   }
 }
