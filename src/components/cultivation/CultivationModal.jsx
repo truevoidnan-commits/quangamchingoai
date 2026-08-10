@@ -312,23 +312,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                   </div>
                 </div>
 
-                {/* 10 Meridian Rings Preview */}
-                <div className={styles.levelsGrid}>
-                  {Array.from({ length: 10 }).map((_, idx) => {
-                    const lvl = idx + 1;
-                    const isReached = cultivation.ngungKhiLevel >= lvl;
-                    const isCurrent = cultivation.ngungKhiLevel === lvl;
-                    return (
-                      <div
-                        key={lvl}
-                        className={`${styles.levelPill} ${isReached ? styles.pillReached : ''} ${isCurrent ? styles.pillCurrent : ''}`}
-                      >
-                        <span>Tầng {lvl}</span>
-                        <strong>{lvl === 10 ? '1 Bạt' : lvl >= 5 ? `1 Tiêu ${lvl - 5 || ''}` : `${lvl} Hổ`}</strong>
-                      </div>
-                    );
-                  })}
-                </div>
+
 
                 {/* Breakthrough Button */}
                 <div className={styles.actionsGroup}>
