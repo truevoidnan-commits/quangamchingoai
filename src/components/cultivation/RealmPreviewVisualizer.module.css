@@ -528,6 +528,43 @@
   text-overflow: ellipsis;
 }
 
+/* Tầng Lầu Đang Ở Nút Thắt 99.99% (Chờ Vật Trấn Áp) */
+.floorBottleneck .floorRoofLine {
+  background: linear-gradient(90deg, transparent, #f97316 20%, #f97316 80%, transparent);
+}
+
+.floorBottleneck .floorChamber {
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid #f97316;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
+  animation: pulseCore 1.6s ease-in-out infinite;
+}
+
+.floorBottleneck .floorNumberBadge {
+  color: #f97316;
+}
+
+.bottleneckChamberContent {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+}
+
+.bottleneckIcon {
+  font-size: 11px;
+  animation: flameFlicker 1.2s infinite alternate;
+}
+
+.bottleneckText {
+  font-family: var(--font-serif);
+  font-size: 9px;
+  font-weight: 700;
+  color: #f97316;
+  text-shadow: 0 0 4px rgba(249, 115, 22, 0.6);
+  white-space: nowrap;
+}
+
 /* Tầng Lầu Hư Ảo (Mây Mù Bao Phủ) */
 .floorHollow .floorRoofLine {
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);

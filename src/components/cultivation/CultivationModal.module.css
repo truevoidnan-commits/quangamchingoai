@@ -984,6 +984,141 @@
   transform: translateY(0);
 }
 
+/* ========================================================
+   PALACE BOTTLENECK & ANCHOR MODAL
+   ======================================================== */
+.palaceBottleneck {
+  border-color: #f97316 !important;
+  background: rgba(249, 115, 22, 0.12) !important;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.35) !important;
+}
+
+.miniAnchorBtn {
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  border: 1px solid #ffcc00;
+  border-radius: var(--radius-sm);
+  color: #ffffff;
+  font-family: var(--font-serif);
+  font-size: 9.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
+  transition: all 0.2s ease;
+}
+.miniAnchorBtn:hover {
+  background: linear-gradient(135deg, #ea580c, #c2410c);
+  transform: scale(1.03);
+}
+
+.bottleneckNoticeCard {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(249, 115, 22, 0.08);
+  border: 1px solid rgba(249, 115, 22, 0.45);
+  box-shadow: 0 0 14px rgba(249, 115, 22, 0.2);
+}
+
+.bottleneckNoticeHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Anchor Selection Modal Overlay */
+.anchorModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.anchorModalContent {
+  width: 100%;
+  max-width: 460px;
+  max-height: 80vh;
+  background: var(--bg-surface);
+  border: 1.5px solid #ffcc00;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.9), 0 0 15px rgba(255, 204, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: pulseCore 0.3s ease-out;
+}
+
+.anchorModalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: rgba(16, 25, 39, 0.9);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.modalCloseBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.2s ease;
+}
+.modalCloseBtn:hover {
+  color: #fff;
+}
+
+.anchorItemsList {
+  padding: 14px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.emptyAnchorNotice {
+  text-align: center;
+  padding: 20px 10px;
+  color: var(--text-secondary);
+}
+
+.anchorItemCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.anchorItemCard:hover {
+  background: var(--bg-elevated);
+  transform: translateY(-1px);
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.3);
+}
+
+.anchorItemIcon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.anchorItemMeta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .statsRow {

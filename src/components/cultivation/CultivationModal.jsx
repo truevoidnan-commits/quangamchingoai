@@ -12,6 +12,9 @@ export default function CultivationModal({ isOpen, onClose }) {
     absorbLamp,
     burnExpForLamp,
     sellLamp,
+    anchorPalace,
+    sellArtifact,
+    buyArtifact,
     breakthroughToTrucCo,
     breakthroughToKimDan,
     attemptUnlock121,
@@ -21,13 +24,18 @@ export default function CultivationModal({ isOpen, onClose }) {
     attemptTribulationAll,
     debugAddChapter,
     debugGiveAllLamps,
+    debugGiveAllArtifacts,
     resetCultivation,
     LIFE_LAMPS,
+    SUPPRESSING_ARTIFACTS,
     LAMP_TIERS,
+    constants,
   } = useCultivation();
 
-  const [activeTab, setActiveTab] = useState('status'); // 'status' | 'lamps' | 'nguyen_anh' | 'rules' | 'logs'
+  const [activeTab, setActiveTab] = useState('status'); // 'status' | 'lamps' | 'artifacts' | 'nguyen_anh' | 'rules' | 'logs'
   const [tierFilter, setTierFilter] = useState('all');
+  const [artifactTierFilter, setArtifactTierFilter] = useState('all');
+  const [anchorModalPalace, setAnchorModalPalace] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
 
   const triggerAction = (fn, successMsg) => {
@@ -48,6 +56,7 @@ export default function CultivationModal({ isOpen, onClose }) {
 
   const selfHoa = cultivation.selfMenhHoa || Math.floor(cultivation.phapKhieu / 30);
   const absorbedCount = (cultivation.absorbedLamps || []).length;
+  const artifactCount = (cultivation.inventoryArtifacts || []).length;
   const isNguyenAnhStage = cultivation.realm === 'gia_anh' || cultivation.realm === 'nguyen_anh';
 
   return (
@@ -110,6 +119,12 @@ export default function CultivationModal({ isOpen, onClose }) {
           >
             Mệnh Đăng ({absorbedCount} Đã Hấp Thụ)
           </button>
+          <button
+            className={`${styles.tabBtn} ${activeTab === 'artifacts' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('artifacts')}
+          >
+            Trấn Cung Vật ({artifactCount})
+          </button>
           {isNguyenAnhStage && (
             <button
               className={`${styles.tabBtn} ${activeTab === 'nguyen_anh' ? styles.tabActive : ''}`}
@@ -139,7 +154,7 @@ export default function CultivationModal({ isOpen, onClose }) {
         )}
 
         {/* ========================================================
-            TAB 1: CẢNH GIỚI TIẾN TRÌNH (STATUS)
+            TAB 1: TIẾN ĐỘ CẢNH GIỚI (STATUS)
            ======================================================== */}
         {activeTab === 'status' && (
           <div className={styles.statusSection}>
@@ -147,61 +162,70 @@ export default function CultivationModal({ isOpen, onClose }) {
             {cultivation.realm === 'ngung_khi' && (
               <div className={styles.realmDetailCard}>
                 <h3 className={styles.cardHeader}>
-                  Ngưng Khí Thập Tầng · Chiến Lực: <span style={{ color: '#ffcc00' }}>{combatPowerDisplay}</span>
+                  Khí Hải Ngưng Khí · Chiến Lực: <span style={{ color: '#ffcc00' }}>{combatPowerDisplay}</span>
                 </h3>
                 <p className={styles.subtext}>
-                  • Chiến lực tính bằng <strong>Hổ</strong> (1 tầng = 1 Hổ, 5 Hổ = 1 Tiêu, 2 Tiêu [10 Hổ] = 1 Bạt).
+                  • Cảnh giới ban đầu gồm 10 tầng khí hải (1 Tầng = 1 Hổ, 5 Hổ = 1 Tiêu, 2 Tiêu = 1 Bạt).
                   <br />
-                  • Đọc thêm chương để hấp thu thiên địa linh khí thăng cấp kinh mạch.
+                  • Đọc chương truyện để hấp thu thiên địa linh khí, rèn luyện kinh mạch.
                 </p>
 
-                <div className={styles.gridSteps}>
-                  {Array.from({ length: 10 }).map((_, i) => {
-                    const lvl = i + 1;
+                {/* Progress bar to next level */}
+                <div className={styles.progressContainer}>
+                  <div className={styles.progressInfo}>
+                    <span>Tiến độ tầng {cultivation.ngungKhiLevel}/10:</span>
+                    <strong>{cultivation.expCurrentRealm} / {constants.NGUNG_KHI_THRESHOLDS[cultivation.ngungKhiLevel] || constants.NGUNG_KHI_THRESHOLDS[10]} Tu Vi</strong>
+                  </div>
+                  <div className={styles.progressBarBg}>
+                    <div
+                      className={styles.progressBarFillCyan}
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          (cultivation.expCurrentRealm / (constants.NGUNG_KHI_THRESHOLDS[cultivation.ngungKhiLevel] || 4500)) * 100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* 10 Meridian Rings Preview */}
+                <div className={styles.levelsGrid}>
+                  {Array.from({ length: 10 }).map((_, idx) => {
+                    const lvl = idx + 1;
                     const isReached = cultivation.ngungKhiLevel >= lvl;
                     const isCurrent = cultivation.ngungKhiLevel === lvl;
-                    const hoStr = lvl === 10 ? '1 Bạt' : lvl >= 5 ? `1 Tiêu ${lvl - 5 > 0 ? `${lvl - 5}H` : ''}` : `${lvl} Hổ`;
-
                     return (
                       <div
                         key={lvl}
-                        className={`${styles.stepDot} ${isReached ? styles.stepDotReached : ''} ${isCurrent ? styles.stepDotCurrent : ''}`}
+                        className={`${styles.levelPill} ${isReached ? styles.pillReached : ''} ${isCurrent ? styles.pillCurrent : ''}`}
                       >
-                        <span className={styles.stepNum}>{lvl}</span>
-                        <span className={styles.stepName}>{hoStr}</span>
+                        <span>Tầng {lvl}</span>
+                        <strong>{lvl === 10 ? '1 Bạt' : lvl >= 5 ? `1 Tiêu ${lvl - 5 || ''}` : `${lvl} Hổ`}</strong>
                       </div>
                     );
                   })}
                 </div>
 
-                <div className={styles.progressContainer}>
-                  <div className={styles.progressInfo}>
-                    <span>Tiến độ Ngưng Khí:</span>
-                    <strong>{Math.min(100, Math.round((cultivation.expCurrentRealm / 1500) * 100))}%</strong>
-                  </div>
-                  <div className={styles.progressBarBg}>
-                    <div
-                      className={styles.progressBarFill}
-                      style={{ width: `${Math.min(100, (cultivation.expCurrentRealm / 1500) * 100)}%` }}
-                    />
-                  </div>
+                {/* Breakthrough Button */}
+                <div className={styles.actionsGroup}>
+                  {cultivation.readyBreakthroughTrucCo && (
+                    <button
+                      className={`btn-gold ${styles.breakthroughBtn}`}
+                      onClick={() =>
+                        triggerAction(
+                          breakthroughToTrucCo,
+                          'Trúc Cơ thành công! Tẩy kinh phạt tủy, mở ra Pháp Khiếu đầu tiên!'
+                        )
+                      }
+                    >
+                      <div className={styles.btnContentWrap}>
+                        <span className={styles.btnMainTitle}>🔥 ĐỘT PHÁ TRÚC CƠ</span>
+                        <span className={styles.btnSubInfo}>Đạt Ngưng Khí Tầng 10 Đại Viên Mãn</span>
+                      </div>
+                    </button>
+                  )}
                 </div>
-
-                {cultivation.readyBreakthroughTrucCo ? (
-                  <button
-                    className={`btn-gold ${styles.breakthroughBtn}`}
-                    onClick={() => triggerAction(breakthroughToTrucCo, 'Trúc Cơ Thành Công! Tẩy kinh phạt tủy mở Pháp Khiếu đầu tiên!')}
-                  >
-                    <div className={styles.btnContentWrap}>
-                      <span className={styles.btnMainTitle}>🔥 ĐỘT PHÁ TRÚC CƠ</span>
-                      <span className={styles.btnSubInfo}>Khai Mở 120 Pháp Khiếu · Thắp Sáng Mệnh Hỏa</span>
-                    </div>
-                  </button>
-                ) : (
-                  <p className={styles.hintText}>
-                    💡 Cần đọc thêm để đạt <strong>Ngưng Khí Tầng 10 Đại Viên Mãn (1 Bạt)</strong> trước khi Trúc Cơ.
-                  </p>
-                )}
               </div>
             )}
 
@@ -209,89 +233,71 @@ export default function CultivationModal({ isOpen, onClose }) {
             {cultivation.realm === 'truc_co' && (
               <div className={styles.realmDetailCard}>
                 <h3 className={styles.cardHeader}>
-                  Trúc Cơ: {cultivation.phapKhieu}/120 Pháp Khiếu · Chiến Lực: <span style={{ color: '#ffcc00' }}>{combatPowerDisplay} (Tối đa 10 Hỏa)</span>
+                  Đạo Cơ Pháp Khiếu · Chiến Lực: <span style={{ color: '#ffcc00' }}>{combatPowerDisplay} (Tối đa 10 Hỏa)</span>
                 </h3>
                 <p className={styles.subtext}>
-                  • Chiến lực tính bằng <strong>Hỏa</strong> (Mệnh Hỏa).
+                  • Chiến lực ở Trúc Cơ tính bằng <strong>Mệnh Hỏa</strong> (Cứ mỗi 30 pháp khiếu thắp sáng 1 Mệnh Hỏa tự thân, tối đa 4 Hỏa từ 120 khiếu).
                   <br />
-                  • Mệnh Hỏa tự thân: <strong>{selfHoa} Hỏa</strong> ({cultivation.phapKhieu}/120 khiếu) {cultivation.has121st && '+ 1 Hỏa (Khiếu 121)'}.
-                  <br />
-                  • Mệnh Đăng đã hấp thụ: <strong>{absorbedCount} Đăng</strong> (+{absorbedCount} Hỏa chiến lực).
+                  • <strong>Pháp Khiếu 121</strong>: Cơ duyên bí mật mở ra Mệnh Hỏa thứ 5 đạt Cực Cảnh!
                 </p>
 
-                {/* 5 Flames Visual: 4 Mệnh Hỏa Tự Thân + 1 Khiếu 121 */}
-                <div style={{ marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Mệnh Hỏa Tự Thân (Tối đa 5 Hỏa):</span>
-                </div>
-                <div className={styles.flameRow}>
-                  {[1, 2, 3, 4].map((num) => {
-                    const isLit = selfHoa >= num;
-                    return (
-                      <div
-                        key={num}
-                        className={`${styles.flameCard} ${isLit ? styles.flameLit : ''}`}
-                      >
-                        <span className={styles.flameIcon}>{isLit ? '🔥' : '🕯️'}</span>
-                        <span className={styles.flameName}>
-                          Mệnh Hỏa {num}
-                        </span>
-                        <span className={styles.flameStatus}>
-                          {isLit ? 'Đã Thắp' : `${(num - 1) * 30 + 1}-${num * 30}`}
-                        </span>
-                      </div>
-                    );
-                  })}
+                {/* Flame Slots List */}
+                <div className={styles.flameSlotsList}>
+                  <span className={styles.sectionMiniTitle}>🔥 Mệnh Hỏa Tự Thân & Pháp Khiếu:</span>
+                  <div className={styles.flameSlotsGrid}>
+                    {[1, 2, 3, 4].map(idx => {
+                      const isLit = selfHoa >= idx;
+                      return (
+                        <div
+                          key={idx}
+                          className={`${styles.flameSlotCard} ${isLit ? styles.flameLit : styles.flameUnlit}`}
+                        >
+                          <span className={styles.flameIcon}>{isLit ? '🔥' : '🕯️'}</span>
+                          <span className={styles.flameTitle}>Hỏa Thứ {idx}</span>
+                          <span className={styles.flameRange}>Khiếu {(idx - 1) * 30 + 1}-{idx * 30}</span>
+                          <span className={styles.flameStatus}>{isLit ? '✦ Đã Thắp' : 'Chưa Mở'}</span>
+                        </div>
+                      );
+                    })}
 
-                  {/* Khiếu 121 Card */}
-                  <div
-                    className={`${styles.flameCard} ${cultivation.has121st ? styles.flameLit : ''} ${styles.flameSecret}`}
-                    style={cultivation.has121st ? { borderColor: '#ec4899', background: 'rgba(236, 72, 153, 0.12)', boxShadow: '0 0 10px rgba(236, 72, 153, 0.4)' } : {}}
-                  >
-                    <span className={styles.flameIcon} style={cultivation.has121st ? { filter: 'drop-shadow(0 0 8px #ec4899)' } : {}}>
-                      {cultivation.has121st ? '⚡' : '🕯️'}
-                    </span>
-                    <span className={styles.flameName} style={cultivation.has121st ? { color: '#ec4899' } : {}}>
-                      Khiếu 121
-                    </span>
-                    <span className={styles.flameStatus}>
-                      {cultivation.has121st ? '✦ Cực Cảnh' : cultivation.failed121st ? 'Đã Khóa' : 'Bí Ẩn'}
-                    </span>
+                    {/* Secret 121st Slot */}
+                    <div
+                      className={`${styles.flameSlotCard} ${styles.secretSlotCard} ${cultivation.has121st ? styles.secretLit : ''}`}
+                    >
+                      <span className={styles.flameIcon}>{cultivation.has121st ? '⚡' : '🔒'}</span>
+                      <span className={styles.flameTitle}>Hỏa Thứ 5 (Cực Cảnh)</span>
+                      <span className={styles.flameRange}>Khiếu Thứ 121</span>
+                      <span className={styles.flameStatus}>
+                        {cultivation.has121st ? '✦ ĐẠT CỰC CẢNH' : cultivation.failed121st ? 'Đã Đóng Kín' : 'Bí Mật (50%)'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Absorbed Life Lamps Visual Cards (+1 Hỏa mỗi Đăng) */}
+                {/* Absorbed Life Lamps as Extra Flames */}
                 {absorbedCount > 0 && (
-                  <div style={{ marginTop: 8, marginBottom: 6 }}>
-                    <div style={{ marginBottom: 4 }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: '#ffcc00' }}>
-                        Mệnh Đăng Hộ Thể Đã Hấp Thụ ({absorbedCount}/5 Đăng · +{absorbedCount} Hỏa):
-                      </span>
-                    </div>
-                    <div className={styles.flameRow} style={{ gridTemplateColumns: `repeat(${Math.max(1, Math.min(5, absorbedCount))}, 1fr)` }}>
-                      {(cultivation.absorbedLamps || []).map((lampId) => {
+                  <div className={styles.absorbedLampsSection}>
+                    <span className={styles.sectionMiniTitle}>🏮 Mệnh Đăng Hộ Thể Đã Hấp Thụ ({absorbedCount}/5):</span>
+                    <div className={styles.absorbedLampsGrid}>
+                      {(cultivation.absorbedLamps || []).map(lampId => {
                         const lamp = LIFE_LAMPS.find(l => l.id === lampId);
-                        if (!lamp) return null;
-                        const tierInfo = LAMP_TIERS[lamp.tier] || { name: 'Hạ Phẩm', color: '#ffcc00', bg: 'rgba(255, 204, 0, 0.1)', border: 'rgba(255, 204, 0, 0.4)' };
-
+                        const tier = lamp ? (LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham) : null;
                         return (
                           <div
-                            key={lamp.id}
-                            className={`${styles.flameCard} ${styles.flameLit}`}
+                            key={lampId}
+                            className={styles.absorbedLampMiniCard}
                             style={{
-                              borderColor: tierInfo.color,
-                              background: tierInfo.bg || 'rgba(16, 25, 39, 0.9)',
-                              boxShadow: `0 0 10px ${tierInfo.border}`,
+                              borderColor: tier?.color || '#ffcc00',
+                              backgroundColor: tier?.bg || 'rgba(16, 25, 39, 0.8)',
                             }}
                           >
-                            <span className={styles.flameIcon} style={{ textShadow: `0 0 8px ${tierInfo.color}` }}>
-                              {lamp.icon || '🏮'}
-                            </span>
-                            <span className={styles.flameName} style={{ color: tierInfo.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
-                              {lamp.shortName || lamp.name}
-                            </span>
-                            <span className={styles.flameStatus} style={{ color: tierInfo.color, fontWeight: 700 }}>
-                              +1 Hỏa
-                            </span>
+                            <span className={styles.absorbedLampIcon}>{lamp?.icon || '🏮'}</span>
+                            <div className={styles.absorbedLampMeta}>
+                              <span className={styles.absorbedLampName} style={{ color: tier?.color }}>
+                                {lamp?.shortName || lamp?.name || lampId}
+                              </span>
+                              <span className={styles.absorbedLampTierBadge}>{tier?.name} · +1 Hỏa</span>
+                            </div>
                           </div>
                         );
                       })}
@@ -395,6 +401,8 @@ export default function CultivationModal({ isOpen, onClose }) {
                   • Chiến lực ở Kim Đan tính bằng <strong>Cung</strong> (Chỉ những cung nào đã hóa thành <strong>Cung Thật</strong> mới tính là chiến lực chân chính).
                   <br />
                   • Đã Hóa Thực: <strong>{cultivation.realizedThienCung}/{cultivation.maxThienCung} Cung Thật</strong>.
+                  <br />
+                  • <strong>Quy Tắc Trấn Cung</strong>: Cung tự thân khi đạt 99.99% tích lũy linh lực sẽ dừng lại, cần khảm nạm <strong>1 Vật Trấn Áp</strong> để đạt 100% Cung Thật!
                 </p>
 
                 {/* Palace Grid */}
@@ -404,19 +412,23 @@ export default function CultivationModal({ isOpen, onClose }) {
                     const isRealized = cultivation.realizedThienCung >= palaceNum;
                     const isLampPalace = i >= (cultivation.maxThienCung - (cultivation.absorbedLamps || []).length);
                     const da = (cultivation.daoAnhs || []).find(d => d.palaceIndex === i);
+                    const anchor = cultivation.palaceAnchors?.[i];
+                    const isBottleneck = !isRealized && i === cultivation.realizedThienCung && cultivation.currentThienCungExp >= 799;
 
                     return (
                       <div
                         key={palaceNum}
-                        className={`${styles.palaceCard} ${isRealized ? styles.palaceRealized : ''} ${da ? styles.palaceDaoAnh : ''}`}
+                        className={`${styles.palaceCard} ${isRealized ? styles.palaceRealized : isBottleneck ? styles.palaceBottleneck : ''} ${da ? styles.palaceDaoAnh : ''}`}
                       >
-                        <span className={styles.palaceIcon}>{da ? '👑' : isLampPalace ? '🏮' : isRealized ? '🏛️' : '☁️'}</span>
+                        <span className={styles.palaceIcon}>{da ? '👑' : anchor ? anchor.icon : isLampPalace ? '🏮' : isRealized ? '🏛️' : isBottleneck ? '🔑' : '☁️'}</span>
                         <span className={styles.palaceName}>
-                          {da ? `${da.name} (${da.currentKiep}K)` : `Thiên Cung ${palaceNum}`}
+                          {da ? `${da.name} (${da.currentKiep}K)` : anchor ? `Cung ${palaceNum} (${anchor.shortName})` : `Thiên Cung ${palaceNum}`}
                         </span>
                         <span className={styles.palaceStatus}>
-                          {da ? `✦ ${da.currentKiep} Anh` : isLampPalace ? 'Chân Cung Đăng (Thật)' : isRealized ? '✦ Cung Thật' : 'Hư Ảo'}
+                          {da ? `✦ ${da.currentKiep} Anh` : anchor ? `✦ Trấn: ${anchor.name}` : isLampPalace ? 'Chân Cung Đăng (Thật)' : isRealized ? '✦ Cung Thật' : isBottleneck ? '⚠️ Cần Trấn Vật (99.9%)' : 'Hư Ảo'}
                         </span>
+
+                        {/* Button Hóa Đạo Anh khi toàn bộ cung đã hóa thật 100% */}
                         {isRealized && !da && (
                           cultivation.realizedThienCung === cultivation.maxThienCung ? (
                             <button
@@ -439,31 +451,68 @@ export default function CultivationModal({ isOpen, onClose }) {
                             </span>
                           )
                         )}
+
+                        {/* Button Khảm Nạm nhanh khi cung đang ở 99.99% */}
+                        {isBottleneck && (
+                          <button
+                            className={styles.miniAnchorBtn}
+                            onClick={() => setAnchorModalPalace(i)}
+                          >
+                            🔑 Khảm Nạm Trấn Vật
+                          </button>
+                        )}
                       </div>
                     );
                   })}
                 </div>
 
+                {/* Progress or Bottleneck Banner */}
                 {cultivation.realizedThienCung < cultivation.maxThienCung ? (
-                  <div className={styles.progressContainer}>
-                    <div className={styles.progressInfo}>
-                      <span>Tiến độ Hóa Thực Thiên Cung {cultivation.realizedThienCung + 1} thành Cung Thật:</span>
-                      <strong>{cultivation.currentThienCungExp}/500 Linh Lực</strong>
+                  cultivation.currentThienCungExp >= 799 ? (
+                    <div className={styles.bottleneckNoticeCard}>
+                      <div className={styles.bottleneckNoticeHead}>
+                        <span style={{ fontSize: 18 }}>⚠️</span>
+                        <div>
+                          <h4 style={{ color: '#f97316', margin: 0, fontSize: 13.5 }}>
+                            THIÊN CUNG {cultivation.realizedThienCung + 1} ĐÃ ĐẠT 99.99% TÍCH LŨY!
+                          </h4>
+                          <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                            Linh lực đã đạt cực hạn (799/800 EXP). Cần khảm nạm một <strong>Vật Trấn Áp (Pháp Khí, Dị Khí, Công Pháp...)</strong> để phá vỡ bình cảnh, hoàn tất <strong>100% Cung Thật</strong>!
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        className={`btn-gold ${styles.breakthroughBtn}`}
+                        onClick={() => setAnchorModalPalace(cultivation.realizedThienCung)}
+                        style={{ marginTop: 8 }}
+                      >
+                        <div className={styles.btnContentWrap}>
+                          <span className={styles.btnMainTitle}>👑 KHẢM NẠM VẬT TRẤN ÁP NGAY</span>
+                          <span className={styles.btnSubInfo}>Chọn bảo vật trong túi hoặc đổi bằng Đăng Điểm để đạt 100% Cung Thật</span>
+                        </div>
+                      </button>
                     </div>
-                    <div className={styles.progressBarBg}>
-                      <div
-                        className={styles.progressBarFillCyan}
-                        style={{ width: `${Math.min(100, (cultivation.currentThienCungExp / 500) * 100)}%` }}
-                      />
+                  ) : (
+                    <div className={styles.progressContainer}>
+                      <div className={styles.progressInfo}>
+                        <span>Tiến độ Hóa Thực Thiên Cung {cultivation.realizedThienCung + 1} thành Cung Thật:</span>
+                        <strong>{cultivation.currentThienCungExp}/800 Linh Lực</strong>
+                      </div>
+                      <div className={styles.progressBarBg}>
+                        <div
+                          className={styles.progressBarFillCyan}
+                          style={{ width: `${Math.min(100, (cultivation.currentThienCungExp / 800) * 100)}%` }}
+                        />
+                      </div>
+                      <p className={styles.hintText}>📖 Đọc thêm chương để ngưng tụ linh lực Hóa Thực Thiên Cung tiếp theo (+1 Cung chiến lực)!</p>
                     </div>
-                    <p className={styles.hintText}>📖 Đọc thêm chương để ngưng tụ linh lực Hóa Thực Thiên Cung tiếp theo (+1 Cung chiến lực)!</p>
-                  </div>
+                  )
                 ) : (
                   <div className={styles.maxRankBadge}>
                     ✨ TOÀN BỘ {cultivation.maxThienCung} THIÊN CUNG ĐÃ HÓA THÀNH CUNG THẬT 100%!
                     {cultivation.realm === 'kim_dan' && (
                       <p style={{ marginTop: 6, fontSize: 12, color: 'var(--accent-cyan)', fontWeight: 'normal' }}>
-                        👉 Nhấn "Hóa Đạo Anh" trên từng cung để mở khóa cảnh giới <strong>Nguyên Anh (Chiến lực tính bằng Anh)</strong>!
+                        👉 Nhấn "👑 Hóa Đạo Anh" trên từng cung để ngưng tụ Đạo Anh Thần Thể mở khóa cảnh giới <strong>Nguyên Anh (Chiến lực tính bằng Anh)</strong>!
                       </p>
                     )}
                   </div>
@@ -474,27 +523,25 @@ export default function CultivationModal({ isOpen, onClose }) {
         )}
 
         {/* ========================================================
-            TAB 2: KHO MỆNH ĐĂNG (LIFE LAMPS)
+            TAB 2: HỆ THỐNG 72 MỆNH ĐĂNG & ĐỔI BÁN ĐĂNG ĐIỂM
            ======================================================== */}
         {activeTab === 'lamps' && (
           <div className={styles.lampsSection}>
-            {/* Top guide banner for Mệnh Đăng tab */}
+            {/* Top Points Balance & Info Card */}
             <div className={styles.lampHeroCard}>
               <div className={styles.lampHeroGlow} />
-              <div style={{ position: 'relative', zIndex: 2 }}>
-                <h3 className={styles.cardHeader}>Bát Đại Thần Đăng Thượng Cổ (Thất Thập Nhị Mệnh Đăng)</h3>
-                <p className={styles.subtext}>
-                  • <strong>Bán & Tích Đăng Điểm (Tỉ lệ 1:5)</strong>: Có thể bán các Mệnh Đăng chưa dùng trong Túi Trữ Vật để thu hồi Đăng Điểm.
-                  <br />
-                  • <strong>Đổi Mệnh Đăng Mới</strong>: Dùng Đăng Điểm đổi đèn, nếu Đăng Điểm không đủ sẽ tự động trừ hết Đăng Điểm và <strong>đốt phần Tu Vi / Thiên Mệnh còn thiếu để bù</strong>!
-                  <br />
-                  • <strong>6 Cấp Phẩm</strong>: Hạ (2.500 ĐĐ) · Trung (6.000 ĐĐ) · Thượng (12.500 ĐĐ) · Cực (25.000 ĐĐ) · Tiên (50.000 ĐĐ) · Thần (125.000 ĐĐ).
-                </p>
-                <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <span className="badge badge-gold">Đã Hấp Thụ: {absorbedCount} Mệnh Đăng</span>
-                  <span className="badge badge-cyan" style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px' }}>
-                    🏮 Đăng Điểm: {(cultivation.dangDiem || 0).toLocaleString()} ĐĐ
-                  </span>
+              <div className={styles.lampHeroTop}>
+                <div>
+                  <h3 className={styles.cardHeader}>Bách Khoa 72 Mệnh Đăng · Thu Thập & Đăng Điểm</h3>
+                  <p className={styles.subtext}>
+                    • Đã Hấp Thụ: <strong>{absorbedCount}/5 Mệnh Đăng</strong> (Tối đa 5 Đèn, không thể hoàn trả).
+                    <br />
+                    • Đổi Tu Vi : Đăng Điểm là <strong>1:5</strong>. Có thể bán đèn trong túi lấy Đăng Điểm hoặc dùng Đăng Điểm mua đèn!
+                  </p>
+                </div>
+                <div className={styles.dangDiemBank}>
+                  <span className={styles.dangDiemLabel}>Số dư Đăng Điểm:</span>
+                  <span className={styles.dangDiemVal}>{(cultivation.dangDiem || 0).toLocaleString()} ĐĐ</span>
                 </div>
               </div>
             </div>
@@ -682,7 +729,179 @@ export default function CultivationModal({ isOpen, onClose }) {
         )}
 
         {/* ========================================================
-            TAB 3: ĐỘ KIẾP ĐÀI (NGUYÊN ANH & ĐẠO ANH)
+            TAB 3: VẬT TRẤN ÁP THIÊN CUNG (TRẤN CUNG BẢO VẬT)
+           ======================================================== */}
+        {activeTab === 'artifacts' && (
+          <div className={styles.lampsSection}>
+            {/* Top Artifacts Hero Card */}
+            <div className={styles.lampHeroCard}>
+              <div className={styles.lampHeroGlow} />
+              <div className={styles.lampHeroTop}>
+                <div>
+                  <h3 className={styles.cardHeader}>Trấn Cung Bảo Vật · Khảm Nạm & Giao Dịch</h3>
+                  <p className={styles.subtext}>
+                    • Trong Túi Trữ Vật: <strong>{artifactCount} Vật Trấn Áp</strong>.
+                    <br />
+                    • Khi Thiên Cung tự thân đạt <strong>99.99%</strong>, khảm nạm 1 Vật Trấn Áp để đạt <strong>100% Cung Thật</strong>!
+                    <br />
+                    • Có thể bán Vật Trấn Áp không dùng để lấy Đăng Điểm hoặc dùng Đăng Điểm đổi bảo vật mới!
+                  </p>
+                </div>
+                <div className={styles.dangDiemBank}>
+                  <span className={styles.dangDiemLabel}>Số dư Đăng Điểm:</span>
+                  <span className={styles.dangDiemVal}>{(cultivation.dangDiem || 0).toLocaleString()} ĐĐ</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tier Filters Bar */}
+            <div className={styles.tierFilterRow}>
+              <button
+                className={`${styles.tierFilterBtn} ${artifactTierFilter === 'all' ? styles.tierFilterActive : ''}`}
+                onClick={() => setArtifactTierFilter('all')}
+              >
+                Tất Cả (30)
+              </button>
+              {Object.entries(LAMP_TIERS || {}).map(([key, t]) => {
+                const count = (SUPPRESSING_ARTIFACTS || []).filter(a => a.tier === key).length;
+                return (
+                  <button
+                    key={key}
+                    className={`${styles.tierFilterBtn} ${artifactTierFilter === key ? styles.tierFilterActive : ''}`}
+                    onClick={() => setArtifactTierFilter(key)}
+                    style={{ borderColor: artifactTierFilter === key ? t.color : 'var(--border-subtle)', color: t.color }}
+                  >
+                    {t.name} ({count})
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* List of 30 Suppressing Artifacts */}
+            <div className={styles.lampCardsGrid}>
+              {(SUPPRESSING_ARTIFACTS || []).filter(a => artifactTierFilter === 'all' || a.tier === artifactTierFilter).map(art => {
+                const invCount = (cultivation.inventoryArtifacts || []).filter(id => id === art.id).length;
+                const isInInventory = invCount > 0;
+                const tierInfo = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
+                const costDangDiem = tierInfo.dangDiem || (tierInfo.priceExp * 5);
+                const userPoints = cultivation.dangDiem || 0;
+                const canCover = userPoints >= costDangDiem;
+                const deficitExp = Math.max(0, Math.ceil((costDangDiem - userPoints) / 5));
+
+                return (
+                  <div
+                    key={art.id}
+                    className={`${styles.lampCard} ${isInInventory ? styles.lampEquipped : styles.lampLocked}`}
+                    style={{ borderColor: isInInventory ? tierInfo.color : 'var(--border-subtle)' }}
+                  >
+                    <div className={styles.lampCardTop}>
+                      <span className={styles.lampIcon} style={{ textShadow: `0 0 12px ${tierInfo.color}` }}>
+                        {art.icon}
+                      </span>
+                      <div className={styles.lampNameCol}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <h4 className={styles.lampName} style={{ color: isInInventory ? tierInfo.color : 'var(--text-muted)' }}>
+                            {art.name}
+                          </h4>
+                          <span
+                            className="badge"
+                            style={{
+                              fontSize: 9,
+                              padding: '1px 6px',
+                              backgroundColor: tierInfo.bg,
+                              color: tierInfo.color,
+                              borderColor: tierInfo.border,
+                            }}
+                          >
+                            {tierInfo.name} · {art.type}
+                          </span>
+                        </div>
+                        <span className={styles.lampPoem}>"{art.poem}"</span>
+                      </div>
+                      <div className={styles.lampStatusBadge}>
+                        {isInInventory ? (
+                          <span className="badge badge-gold">Sở Hữu x{invCount}</span>
+                        ) : (
+                          <span className="badge" style={{ opacity: 0.45 }}>Chưa Có</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <p className={styles.lampDesc}>{art.desc}</p>
+
+                    {/* Actions */}
+                    <div className={styles.lampActions} style={{ display: 'flex', gap: 6 }}>
+                      {isInInventory ? (
+                        <>
+                          {/* Nút Khảm Nạm nếu đang ở Kim Đan và có cung cần trấn áp */}
+                          {cultivation.realm === 'kim_dan' && cultivation.currentThienCungExp >= 799 && (
+                            <button
+                              className="btn-gold"
+                              style={{ fontSize: 11.5, padding: '6px 10px', flex: 1.3 }}
+                              onClick={() => {
+                                triggerAction(
+                                  () => anchorPalace(cultivation.realizedThienCung, art.id),
+                                  `Đã khảm nạm ${art.name} vào Thiên Cung ${cultivation.realizedThienCung + 1} thành Cung Thật 100%!`
+                                );
+                              }}
+                            >
+                              👑 Khảm Nạm Ngay
+                            </button>
+                          )}
+
+                          {/* Nút Bán lấy Đăng Điểm */}
+                          <button
+                            className="btn-ghost"
+                            style={{
+                              fontSize: 11.5,
+                              padding: '6px 10px',
+                              color: '#10b981',
+                              borderColor: 'rgba(16, 185, 129, 0.5)',
+                              background: 'rgba(16, 185, 129, 0.08)',
+                              flex: 1,
+                            }}
+                            onClick={() => {
+                              if (confirm(`BÁN VẬT TRẤN ÁP:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name}\n• Nhận lại: +${costDangDiem.toLocaleString()} Đăng Điểm\n\nBạn có muốn bán vật phẩm này?`)) {
+                                triggerAction(() => sellArtifact(art.id), `Đã bán ${art.name}, nhận +${costDangDiem.toLocaleString()} Đăng Điểm!`);
+                              }
+                            }}
+                          >
+                            💰 Bán (+{costDangDiem.toLocaleString()} ĐĐ)
+                          </button>
+                        </>
+                      ) : (
+                        /* Nút Đổi Vật Trấn Áp */
+                        <button
+                          className={styles.burnExpBtn}
+                          onClick={() => {
+                            const paymentMsg = canCover
+                              ? `Tiêu hao: ${costDangDiem.toLocaleString()} Đăng Điểm`
+                              : userPoints > 0
+                              ? `Tiêu hao: ${userPoints.toLocaleString()} ĐĐ + Đốt ${deficitExp.toLocaleString()} Tu Vi bù thiếu`
+                              : `Tiêu hao: Đốt ${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`;
+
+                            if (confirm(`ĐỔI VẬT TRẤN ÁP:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name} (${art.type})\n• ${paymentMsg}\n\nĐạo hữu có muốn đổi bảo vật này vào Túi Trữ Vật?`)) {
+                              triggerAction(() => buyArtifact(art.id));
+                            }
+                          }}
+                        >
+                          {canCover
+                            ? `✨ Đổi (${costDangDiem.toLocaleString()} ĐĐ)`
+                            : userPoints > 0
+                            ? `🔥 ${userPoints.toLocaleString()} ĐĐ + Đốt ${deficitExp.toLocaleString()} EXP`
+                            : `🔥 Đốt ${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi Đổi`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            TAB 4: ĐỘ KIẾP ĐÀI (NGUYÊN ANH & ĐẠO ANH)
            ======================================================== */}
         {activeTab === 'nguyen_anh' && isNguyenAnhStage && (
           <div className={styles.tribulationSection}>
@@ -701,90 +920,76 @@ export default function CultivationModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* Mass Tribulation Button (Vạn Kiếp Tề Phi) */}
-              {(cultivation.daoAnhs || []).length > 0 && (
-                <button
-                  className={`btn-gold ${styles.massTribulationBtn}`}
-                  onClick={() => triggerAction(attemptTribulationAll)}
-                >
-                  <div className={styles.btnContentWrap}>
-                    <span className={styles.btnMainTitle}>⚡ VẠN KIẾP TỀ PHI</span>
-                    <span className={styles.btnSubInfo}>Độ Kiếp Tất Cả Đạo Anh Đủ Điều Kiện · Thưởng +50% Thiên Mệnh</span>
-                  </div>
-                </button>
-              )}
+              {/* Vạn Kiếp Tề Phi button */}
+              <button
+                className={`btn-gold ${styles.massTribulationBtn}`}
+                onClick={() => triggerAction(attemptTribulationAll)}
+              >
+                ⚡ VẠN KIẾP TỀ PHI (TOÀN BỘ ĐẠO ANH CÙNG VƯỢT KIẾP · THƯỞNG +50% THIÊN MỆNH)
+              </button>
             </div>
 
             {/* List of Dao Anhs */}
-            {(cultivation.daoAnhs || []).length === 0 ? (
-              <div className={styles.emptyDaoAnhs}>
-                <p>Chưa có Đạo Anh nào được ngưng kết.</p>
-                <p className={styles.hintText}>
-                  Hãy vào tab <strong>Cảnh Giới</strong> và bấm "Hóa Đạo Anh" trên các Thiên Cung đã hóa thực để tạo Đạo Anh!
-                </p>
+            {(!cultivation.daoAnhs || cultivation.daoAnhs.length === 0) ? (
+              <div className={styles.emptyDaoAnhNotice}>
+                <p>Chưa có Đạo Anh nào. Hãy Hóa Thực toàn bộ Thiên Cung ở Kim Đan rồi Hóa Đạo Anh để bắt đầu hành trình Độ Kiếp!</p>
               </div>
             ) : (
-              <div className={styles.daoAnhList}>
+              <div className={styles.daoAnhCardsGrid}>
                 {cultivation.daoAnhs.map(da => {
-                  const percent = Math.floor((da.currentThienMenh / da.maxThienMenh) * 100);
-                  const isEligible = da.currentKiep < 5 && percent >= 70;
-                  const successChance = Math.min(100, 50 + Math.max(0, percent - 70));
+                  const percent = Math.min(100, Math.floor((da.currentThienMenh / da.maxThienMenh) * 100));
+                  const isEligible = percent >= 70;
+                  const successChance = Math.min(100, 50 + (percent - 70));
 
                   return (
                     <div
                       key={da.id}
-                      className={`${styles.daoAnhCard} ${da.fromLamp ? styles.daoAnhLampProtected : ''}`}
+                      className={`${styles.daoAnhCard} ${da.currentKiep >= 5 ? styles.daoAnhMax : ''} ${da.fromLamp ? styles.daoAnhLampProtected : ''}`}
                     >
                       <div className={styles.daoAnhTop}>
-                        <div className={styles.daoAnhTitleRow}>
-                          <span className={styles.daoAnhIcon}>{da.fromLamp ? '🏮' : '👑'}</span>
-                          <div>
-                            <h4 className={styles.daoAnhName}>{da.name}</h4>
-                            <span className={styles.daoAnhMeta}>
-                              {da.fromLamp ? '✦ Đạo Anh Mệnh Đăng (Bảo vệ 50% TM khi thất bại)' : 'Đạo Anh Thiên Cung Thường'}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className={styles.daoAnhPowerBadge}>
-                          <span className={styles.kiepBadge}>Kiếp {da.currentKiep}/5</span>
-                          <span className={styles.powerNum}>{da.currentKiep} Anh</span>
+                        <span className={styles.daoAnhIcon}>{da.fromLamp ? '🏮' : '👑'}</span>
+                        <div className={styles.daoAnhInfo}>
+                          <h4 className={styles.daoAnhTitle}>{da.name}</h4>
+                          <span className={styles.daoAnhBadge}>
+                            Kiếp {da.currentKiep}/5 · {da.currentKiep} Anh Chiến Lực
+                            {da.fromLamp && ' · (Mệnh Đăng Bảo Hộ)'}
+                          </span>
                         </div>
                       </div>
 
-                      {/* 5 Kiep Dots */}
-                      <div className={styles.kiepDotsRow}>
+                      {/* Kiep Progress Rings */}
+                      <div className={styles.kiepRingsRow}>
                         {[1, 2, 3, 4, 5].map(k => (
                           <div
                             key={k}
-                            className={`${styles.kiepDot} ${da.currentKiep >= k ? styles.kiepDotPassed : ''}`}
+                            className={`${styles.kiepDot} ${da.currentKiep >= k ? styles.kiepPassed : ''}`}
+                            title={`Kiếp thứ ${k}`}
                           >
-                            <span>Kiếp {k}</span>
+                            <span>{k}K</span>
                           </div>
                         ))}
                       </div>
 
                       {da.currentKiep < 5 ? (
                         <>
-                          {/* Progress bar */}
+                          {/* Progress Bar Thiên Mệnh */}
                           <div className={styles.progressContainer}>
                             <div className={styles.progressInfo}>
-                              <span>Thiên Mệnh Tích Tụ (Kiếp {da.currentKiep + 1}):</span>
-                              <strong>
-                                {da.currentThienMenh.toLocaleString()}/{da.maxThienMenh.toLocaleString()} ({percent}%)
-                              </strong>
+                              <span>Tiến độ nạp Thiên Mệnh:</span>
+                              <strong>{da.currentThienMenh.toLocaleString()}/{da.maxThienMenh.toLocaleString()} TM ({percent}%)</strong>
                             </div>
                             <div className={styles.progressBarBg}>
                               <div
                                 className={styles.progressBarFillCyan}
-                                style={{ width: `${Math.min(100, percent)}%` }}
+                                style={{ width: `${percent}%` }}
                               />
                             </div>
                           </div>
 
-                          {/* Controls Row */}
-                          <div className={styles.daoAnhControls}>
-                            <div className={styles.injectBtnsRow}>
+                          {/* Action Buttons */}
+                          <div className={styles.daoAnhActions}>
+                            {/* Quick Inject Buttons */}
+                            <div className={styles.injectGroup}>
                               <button
                                 className="btn-ghost"
                                 style={{ fontSize: 11, padding: '4px 8px' }}
@@ -796,7 +1001,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                               <button
                                 className="btn-ghost"
                                 style={{ fontSize: 11, padding: '4px 8px' }}
-                                onClick={() => triggerAction(() => injectThienMenh(da.id, 1000), `Đã nạp +1000 Thiên Mệnh vào ${da.name}`)}
+                                onClick={() => triggerAction(() => injectThienMenh(da.id, 1000), `Đã nạp +1.000 Thiên Mệnh vào ${da.name}`)}
                                 disabled={(cultivation.totalThienMenh || 0) < 1000 || da.currentThienMenh >= da.maxThienMenh}
                               >
                                 +1000 TM
@@ -836,7 +1041,7 @@ export default function CultivationModal({ isOpen, onClose }) {
         )}
 
         {/* ========================================================
-            TAB 4: QUY TẮC TU TIÊN (RULES)
+            TAB 5: QUY TẮC TU TIÊN (RULES)
            ======================================================== */}
         {activeTab === 'rules' && (
           <div className={styles.rulesSection}>
@@ -855,17 +1060,21 @@ export default function CultivationModal({ isOpen, onClose }) {
             </div>
 
             <div className={styles.ruleCard}>
-              <h4>3. Hệ Thống 72 Mệnh Đăng (6 Cấp Phẩm Độ Hiếm - 12 Đăng/Phẩm)</h4>
-              <p>• <strong>Phân Cấp Phẩm</strong>: <strong>Hạ Phẩm</strong> (Trắng · 12 đèn) · <strong>Trung Phẩm</strong> (Xanh Lá · 12 đèn) · <strong>Thượng Phẩm</strong> (Xanh Lam · 12 đèn) · <strong>Cực Phẩm</strong> (Tím · 12 đèn) · <strong>Tiên Phẩm</strong> (Kim Sắc · 12 đèn) · <strong>Thần Phẩm</strong> (Đỏ Thần Thánh · 12 đèn).</p>
-              <p>• <strong>Tỉ lệ rơi</strong>: Cơ duyên ngẫu nhiên quý hiếm (~7.5% mỗi chu kỳ 60s). Mệnh Đăng phẩm càng cao càng hiếm có khó tìm!</p>
-              <p>• <strong>Giới hạn hấp thụ</strong>: Tối đa <strong>5 Mệnh Đăng</strong>. Một khi đã hấp thụ thì <strong>KHÔNG HOÀN TRẢ</strong>!</p>
-              <p>• <strong>Ở Trúc Cơ</strong>: Mỗi Mệnh Đăng hấp thụ = <strong>+1 Hỏa</strong>.</p>
-              <p>• <strong>Ở Kim Đan</strong>: Mỗi Mệnh Đăng hấp thụ = <strong>+1 Cung Thật</strong> (hóa thực sẵn 100% không tốn EXP).</p>
-              <p>• <strong>Ở Nguyên Anh</strong>: Đạo Anh từ Mệnh Đăng khi vượt kiếp thất bại <strong>chỉ giảm về 50% Thiên Mệnh</strong> thay vì mất trắng!</p>
+              <h4>3. Kim Đan Thiên Cung & Vật Trấn Áp</h4>
+              <p>• <strong>Cung Tự Thân</strong>: Khi tích lũy linh lực đến <strong>99.99% (799/800 EXP)</strong> sẽ dừng lại, cần khảm nạm <strong>1 Vật Trấn Áp</strong> từ Túi Trữ Vật để đạt <strong>100% Cung Thật</strong>.</p>
+              <p>• <strong>Chân Cung Mệnh Đăng</strong>: Cung hình thành từ Mệnh Đăng luôn luôn đạt <strong>100% Cung Thật</strong> tự động vì chính Mệnh Đăng là thần vật trấn áp tối thượng.</p>
+              <p>• <strong>Hóa Đạo Anh</strong>: Bắt buộc toàn bộ 100% Thiên Cung phải hóa thành Cung Thật và tích lũy đủ 1.000 Tu Vi/cung để khai sinh Đạo Anh.</p>
             </div>
 
             <div className={styles.ruleCard}>
-              <h4>4. Lực Lượng Thiên Mệnh & Độ Kiếp Nguyên Anh</h4>
+              <h4>4. Hệ Thống 72 Mệnh Đăng & 30 Vật Trấn Áp</h4>
+              <p>• <strong>Phân Cấp Phẩm</strong>: <strong>Hạ Phẩm</strong> (Trắng) · <strong>Trung Phẩm</strong> (Xanh Lá) · <strong>Thượng Phẩm</strong> (Xanh Lam) · <strong>Cực Phẩm</strong> (Tím) · <strong>Tiên Phẩm</strong> (Kim Sắc) · <strong>Thần Phẩm</strong> (Đỏ Thần Thánh).</p>
+              <p>• <strong>Tỉ lệ rơi</strong>: Cơ duyên nhặt được Mệnh Đăng (~7.5%) và Vật Trấn Áp (~12%) khi ngộ đạo 60s.</p>
+              <p>• <strong>Tỉ Lệ Đăng Điểm</strong>: 1 Tu Vi = 5 Đăng Điểm. Có thể bán đèn / trấn vật không dùng để tích lũy Đăng Điểm mua bảo vật cấp cao!</p>
+            </div>
+
+            <div className={styles.ruleCard}>
+              <h4>5. Lực Lượng Thiên Mệnh & Độ Kiếp Nguyên Anh</h4>
               <p>• <strong>Lực Thiên Mệnh</strong>: Đến cảnh giới <strong>Nguyên Anh / Giả Anh mới mở khóa</strong>, các cảnh dưới chưa có.</p>
               <p>• Quy đổi: 1 EXP = 10 Thiên Mệnh khi đọc sách ở Nguyên Anh.</p>
               <p>• <strong>Quy tắc độ kiếp</strong>: Đạt từ 70% Thiên Mệnh mở độ kiếp (50% thành công, mỗi +10% TM = +10% tỉ lệ).</p>
@@ -875,7 +1084,7 @@ export default function CultivationModal({ isOpen, onClose }) {
         )}
 
         {/* ========================================================
-            TAB 5: NHẬT KÝ CƠ DUYÊN (LOGS)
+            TAB 6: NHẬT KÝ CƠ DUYÊN (LOGS)
            ======================================================== */}
         {activeTab === 'logs' && (
           <div className={styles.logsSection}>
@@ -889,6 +1098,84 @@ export default function CultivationModal({ isOpen, onClose }) {
         )}
 
         {/* ========================================================
+            MODAL KHẢM NẠM VẬT TRẤN ÁP
+           ======================================================== */}
+        {anchorModalPalace !== null && (
+          <div className={styles.anchorModalOverlay} onClick={() => setAnchorModalPalace(null)}>
+            <div className={styles.anchorModalContent} onClick={e => e.stopPropagation()}>
+              <div className={styles.anchorModalHeader}>
+                <div>
+                  <h3 style={{ margin: 0, color: '#ffcc00', fontSize: 16 }}>
+                    👑 KHẢM NẠM VẬT TRẤN ÁP · THIÊN CUNG {anchorModalPalace + 1}
+                  </h3>
+                  <p style={{ margin: '4px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                    Chọn một Pháp Khí, Công Pháp hoặc Dị Khí trong Túi Trữ Vật để trấn áp, hoàn tất 100% Cung Thật (+1 Cung chiến lực).
+                  </p>
+                </div>
+                <button className={styles.modalCloseBtn} onClick={() => setAnchorModalPalace(null)}>✕</button>
+              </div>
+
+              {/* Danh sách vật phẩm có trong túi */}
+              <div className={styles.anchorItemsList}>
+                {(cultivation.inventoryArtifacts || []).length === 0 ? (
+                  <div className={styles.emptyAnchorNotice}>
+                    <p>Trong Túi Trữ Vật chưa có Vật Trấn Áp nào!</p>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      Bạn có thể đọc thêm chương để nhặt cơ duyên hoặc sang tab <strong>"Trấn Cung Vật"</strong> để đổi bằng Đăng Điểm!
+                    </p>
+                    <button
+                      className="btn-gold"
+                      style={{ marginTop: 10, fontSize: 12 }}
+                      onClick={() => {
+                        setAnchorModalPalace(null);
+                        setActiveTab('artifacts');
+                      }}
+                    >
+                      👉 Đi Đến Cửa Hàng Trấn Cung Vật
+                    </button>
+                  </div>
+                ) : (
+                  (cultivation.inventoryArtifacts || []).map((artId, idx) => {
+                    const art = (SUPPRESSING_ARTIFACTS || []).find(a => a.id === artId);
+                    if (!art) return null;
+                    const tierInfo = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
+
+                    return (
+                      <div
+                        key={`${artId}_${idx}`}
+                        className={styles.anchorItemCard}
+                        style={{ borderColor: tierInfo.color }}
+                        onClick={() => {
+                          triggerAction(
+                            () => anchorPalace(anchorModalPalace, art.id),
+                            `Đã khảm nạm thành công [${art.name}] vào Thiên Cung ${anchorModalPalace + 1}!`
+                          );
+                          setAnchorModalPalace(null);
+                        }}
+                      >
+                        <span className={styles.anchorItemIcon}>{art.icon}</span>
+                        <div className={styles.anchorItemMeta}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <strong style={{ color: tierInfo.color }}>{art.name}</strong>
+                            <span className="badge" style={{ fontSize: 8.5, padding: '1px 5px', color: tierInfo.color, borderColor: tierInfo.border, backgroundColor: tierInfo.bg }}>
+                              {tierInfo.name}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{art.type} · "{art.poem}"</span>
+                        </div>
+                        <button className="btn-gold" style={{ fontSize: 11, padding: '4px 10px' }}>
+                          Khảm Nạm
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
             DANGER ZONE: TẢN ĐI TU VI (TRÙNG TU TỪ ĐẦU)
            ======================================================== */}
         <div className={styles.dangerZoneCard}>
@@ -896,14 +1183,14 @@ export default function CultivationModal({ isOpen, onClose }) {
             <span>💀 NGHỊCH THIÊN HÓA PHÀM · TẢN ĐI TU VI</span>
           </div>
           <p className={styles.dangerZoneDesc}>
-            Tản đi toàn bộ tu vi hiện có, tán sạch toàn bộ 72 Mệnh Đăng đã thu thập và hấp thụ để hóa phàm trùng tu đạo lộ lại từ đầu.
+            Tản đi toàn bộ tu vi hiện có, tán sạch toàn bộ 72 Mệnh Đăng và 30 Vật Trấn Áp đã thu thập và khảm nạm để hóa phàm trùng tu đạo lộ lại từ đầu.
           </p>
           <button
             className={styles.resetCultivationBtn}
             onClick={() => {
               if (
                 confirm(
-                  '⚠️ CẢNH BÁO TẢN ĐI TU VI:\n\nBạn có chắc chắn muốn TẢN ĐI TOÀN BỘ TU VI?\n\n• Toàn bộ cảnh giới, chiến lực, EXP và Thiên Mệnh sẽ về 0 (Phàm Nhân / Ngưng Khí 1 Tầng).\n• Toàn bộ Mệnh Đăng trong túi và Mệnh Đăng đã hấp thụ sẽ MẤT HẾT VĨNH VIỄN!\n• Hành động này KHÔNG THỂ HOÀN TÁC!\n\nĐạo hữu có muốn tản công trùng tu lại từ đầu?'
+                  '⚠️ CẢNH BÁO TẢN ĐI TU VI:\n\nBạn có chắc chắn muốn TẢN ĐI TOÀN BỘ TU VI?\n\n• Toàn bộ cảnh giới, chiến lực, EXP và Thiên Mệnh sẽ về 0 (Phàm Nhân / Ngưng Khí 1 Tầng).\n• Toàn bộ Mệnh Đăng và Vật Trấn Áp trong túi và đã khảm nạm sẽ MẤT HẾT VĨNH VIỄN!\n• Hành động này KHÔNG THỂ HOÀN TÁC!\n\nĐạo hữu có muốn tản công trùng tu lại từ đầu?'
                 )
               ) {
                 triggerAction(resetCultivation, 'Đã tản đi toàn bộ tu vi! Hóa phàm trùng tu đạo lộ từ đầu.');

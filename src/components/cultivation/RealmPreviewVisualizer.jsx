@@ -341,12 +341,14 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 const isRealized = realizedThienCung >= floorNum;
                 const isLampPalace = (floorNum - 1) >= maxThienCung - (cultivation?.absorbedLamps || []).length;
                 const da = (daoAnhs || []).find(d => d.palaceIndex === (floorNum - 1));
+                const anchor = cultivation?.palaceAnchors?.[floorNum - 1];
+                const isBottleneck = !isRealized && floorNum === realizedThienCung + 1 && (cultivation?.currentThienCungExp || 0) >= 799;
 
                 return (
                   <div
                     key={floorNum}
-                    className={`${styles.towerFloorRow} ${isRealized ? styles.floorRealized : styles.floorHollow} ${isLampPalace ? styles.floorLamp : ''}`}
-                    title={`Tầng ${floorNum} (Thiên Cung ${floorNum}): ${isRealized ? 'Hóa Thực Cung Thật (Có Kim Đan)' : 'Hư Ảo (Mây mù bao phủ)'}`}
+                    className={`${styles.towerFloorRow} ${isRealized ? styles.floorRealized : isBottleneck ? styles.floorBottleneck : styles.floorHollow} ${isLampPalace ? styles.floorLamp : ''}`}
+                    title={`Tầng ${floorNum} (Thiên Cung ${floorNum}): ${isRealized ? (anchor ? `Hóa Thực 100% (Trấn Áp: ${anchor.name})` : isLampPalace ? 'Chân Cung Đăng (Hóa Thực 100%)' : 'Hóa Thực Cung Thật') : isBottleneck ? 'Đạt 99.99% (Đang chờ Khảm Nạm Vật Trấn Áp)' : 'Hư Ảo (Mây mù bao phủ)'}`}
                   >
                     {/* Mái ngói nhỏ của tầng */}
                     <div className={styles.floorRoofLine} />
@@ -356,7 +358,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                       {/* Số tầng bên trái */}
                       <span className={styles.floorNumberBadge}>T{floorNum}</span>
 
-                      {/* Nội điện: Đã hóa thật thì có Kim Đan tỏa sáng, chưa hóa thật thì có Mây Mù bao phủ */}
+                      {/* Nội điện: Đã hóa thật thì có Kim Đan tỏa sáng, 99.99% thì báo chờ vật trấn áp, chưa hóa thật thì có Mây Mù bao phủ */}
                       {isRealized ? (
                         <div className={styles.realizedChamberContent}>
                           {/* Viên Kim Đan tỏa sáng bên trong */}
@@ -365,8 +367,13 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                             <span className={styles.orbShimmerSparkle}>✨</span>
                           </div>
                           <span className={styles.chamberTitle}>
-                            {da ? `${da.name}` : isLampPalace ? 'Chân Cung Đăng' : `Cung Thật ${floorNum}`}
+                            {da ? `${da.name}` : anchor ? `${anchor.icon} ${anchor.shortName}` : isLampPalace ? '🏮 Chân Cung Đăng' : `Cung Thật ${floorNum}`}
                           </span>
+                        </div>
+                      ) : isBottleneck ? (
+                        <div className={styles.bottleneckChamberContent}>
+                          <span className={styles.bottleneckIcon}>⚠️</span>
+                          <span className={styles.bottleneckText}>99.99% · Cần Vật Trấn Áp</span>
                         </div>
                       ) : (
                         <div className={styles.hollowChamberContent}>
@@ -377,7 +384,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
 
                       {/* Biểu tượng trạng thái bên phải */}
                       <span className={styles.floorRightBadge}>
-                        {da ? '👑' : isLampPalace ? '🏮' : isRealized ? '🏛️' : '🌫️'}
+                        {da ? '👑' : anchor ? anchor.icon : isLampPalace ? '🏮' : isRealized ? '🏛️' : isBottleneck ? '🔑' : '🌫️'}
                       </span>
                     </div>
                   </div>

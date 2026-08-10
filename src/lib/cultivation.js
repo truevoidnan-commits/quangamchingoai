@@ -804,6 +804,354 @@ export const LIFE_LAMPS = [
   },
 ];
 
+// =========================================================================
+// DANH SÁCH 30 VẬT TRẤN ÁP THIÊN CUNG (TRẤN CUNG BẢO VẬT · 6 CẤP PHẨM)
+// - Dùng để trấn áp Thiên Cung khi đạt ngưỡng 99.99% để đạt 100% Hóa Thực thành Cung Thật
+// =========================================================================
+export const SUPPRESSING_ARTIFACTS = [
+  // ---------- I. HẠ PHẨM (TRẮNG · 5 BẢO VẬT) ----------
+  {
+    id: 'bang_phach',
+    name: 'Huyền Băng Hàn Phách',
+    shortName: 'Hàn Phách',
+    tier: 'ha_pham',
+    type: 'Bảo Vật Hàn Băng',
+    icon: '❄️',
+    color: '#e2e8f0',
+    desc: 'Khối hàn phách ngưng tụ vạn năm dưới đáy tuyết sơn, trấn áp hỏa khí, giữ tâm linh tĩnh lặng.',
+    poem: 'Hàn phách băng tâm, vạn cổ bất suy.',
+  },
+  {
+    id: 'tinh_thiet',
+    name: 'Bách Luyện Tinh Thiết',
+    shortName: 'Tinh Thiết',
+    tier: 'ha_pham',
+    type: 'Pháp Khí Bách Luyện',
+    icon: '⚔️',
+    color: '#e2e8f0',
+    desc: 'Thiết khoáng trải qua trăm lần tôi luyện trong địa hỏa, kiên cố bất khả xâm phạm.',
+    poem: 'Bách luyện thành cương, kiên định như thạch.',
+  },
+  {
+    id: 'thanh_phong',
+    name: 'Thanh Phong Linh Khí',
+    shortName: 'Thanh Phong',
+    tier: 'ha_pham',
+    type: 'Thiên Địa Dị Khí',
+    icon: '🌪️',
+    color: '#e2e8f0',
+    desc: 'Một luồng linh phong thuần khiết thu thập trên chín tầng mây, giúp đan điện lưu chuyển thông suốt.',
+    poem: 'Thanh phong nhập điện, linh mạch tự thông.',
+  },
+  {
+    id: 'kho_moc',
+    name: 'Khô Mộc Hồi Xuân Quyết',
+    shortName: 'Khô Mộc Quyết',
+    tier: 'ha_pham',
+    type: 'Công Pháp Cổ Xưa',
+    icon: '📜',
+    color: '#e2e8f0',
+    desc: 'Tàn thiên công pháp thượng cổ ghi lại bí quyết niết bàn tái sinh sinh mệnh.',
+    poem: 'Khô mộc phùng xuân, sinh cơ bất tuyệt.',
+  },
+  {
+    id: 'dia_hoa',
+    name: 'Địa Hỏa Tinh Thạch',
+    shortName: 'Địa Hỏa Thạch',
+    tier: 'ha_pham',
+    type: 'Địa Mạch Linh Thạch',
+    icon: '🪨',
+    color: '#e2e8f0',
+    desc: 'Hòn đá hấp thu địa hỏa ngàn năm sâu trong lòng đất, tỏa nhiệt lượng ổn định nuôi dưỡng Kim Đan.',
+    poem: 'Địa hỏa thai nghén, kim đan dục thành.',
+  },
+
+  // ---------- II. TRUNG PHẨM (XANH LÁ · 5 BẢO VẬT) ----------
+  {
+    id: 'thai_hu',
+    name: 'Thái Hư Kiếm Khí',
+    shortName: 'Thái Hư Kiếm',
+    tier: 'trung_pham',
+    type: 'Linh Kiếm Khí',
+    icon: '🗡️',
+    color: '#10b981',
+    desc: 'Kiếm khí ngưng tụ từ hư vô không gian, sắc bén vô song, chém đứt mọi tạp niệm tà ma.',
+    poem: 'Thái Hư kiếm xuất, vạn tà quy tịch.',
+  },
+  {
+    id: 'tu_van',
+    name: 'Tử Vân Tiên Kim',
+    shortName: 'Tử Vân Kim',
+    tier: 'trung_pham',
+    type: 'Tiên Thiên Linh Kim',
+    icon: '🪙',
+    color: '#10b981',
+    desc: 'Khoáng thạch màu tím phát ra ánh hào quang mây lành, là thần vật trấn áp điện các bậc nhất.',
+    poem: 'Tử khí đông lai, tiên kim hộ thể.',
+  },
+  {
+    id: 'am_loi',
+    name: 'U Minh Âm Lôi Châu',
+    shortName: 'Âm Lôi Châu',
+    tier: 'trung_pham',
+    type: 'Pháp Bảo Lôi Điện',
+    icon: '🔮',
+    color: '#10b981',
+    desc: 'Viên lôi châu ngưng tụ sấm sét u minh, vừa có tính hủy diệt vừa rèn luyện đan điện thêm kiên cố.',
+    poem: 'Âm lôi chấn động, cửu u khiếp đảm.',
+  },
+  {
+    id: 'huyet_chi',
+    name: 'Cửu Diệp Huyết Chi',
+    shortName: 'Huyết Chi',
+    tier: 'trung_pham',
+    type: 'Thần Dược Ngàn Năm',
+    icon: '🍄',
+    color: '#10b981',
+    desc: 'Linh chi 9 lá hấp thu tinh hoa nhật nguyệt, bổ sung khí huyết và sinh mệnh lực vô tận.',
+    poem: 'Cửu diệp sinh hoa, thọ nguyên trường cửu.',
+  },
+  {
+    id: 'ngu_hanh',
+    name: 'Ngũ Hành Khí Linh',
+    shortName: 'Ngũ Hành Linh',
+    tier: 'trung_pham',
+    type: 'Khí Linh Tự Nhiên',
+    icon: '🌀',
+    color: '#10b981',
+    desc: 'Linh thể dung hợp năm luồng linh khí Kim Mộc Thủy Hỏa Thổ, giúp thiên cung cân bằng tuyệt đối.',
+    poem: 'Ngũ hành tương sinh, sinh sinh bất tức.',
+  },
+
+  // ---------- III. THƯỢNG PHẨM (XANH LAM · 5 BẢO VẬT) ----------
+  {
+    id: 'tran_ma_dinh',
+    name: 'Bát Hoang Trấn Ma Đỉnh',
+    shortName: 'Trấn Ma Đỉnh',
+    tier: 'thuong_pham',
+    type: 'Cổ Khí Bát Hoang',
+    icon: '🏺',
+    color: '#06b6d4',
+    desc: 'Thần đỉnh cổ xưa dùng để trấn áp ma đầu tám phương, đặt vào thiên cung vững vàng như bàn thạch.',
+    poem: 'Bát hoang thần đỉnh, vạn ma phục tùng.',
+  },
+  {
+    id: 'bat_quai_do',
+    name: 'Thái Cực Bát Quái Đồ',
+    shortName: 'Bát Quái Đồ',
+    tier: 'thuong_pham',
+    type: 'Trận Đồ Thượng Cổ',
+    icon: '☯️',
+    color: '#06b6d4',
+    desc: 'Bản đồ bát quái diễn biến âm dương càn khôn, tạo thành trận pháp hộ cung vĩnh cửu.',
+    poem: 'Âm dương nhị khí, hóa sinh càn khôn.',
+  },
+  {
+    id: 'huyen_suong',
+    name: 'Cửu Thiên Huyền Sương',
+    shortName: 'Huyền Sương',
+    tier: 'thuong_pham',
+    type: 'Thiên Cực Linh Khí',
+    icon: '❄️',
+    color: '#06b6d4',
+    desc: 'Sương lạnh ngưng kết từ tầng mây thứ chín của thượng giới, đóng băng mọi hiểm họa rủi ro.',
+    poem: 'Cửu thiên hàn sương, tịch diệt chư thiên.',
+  },
+  {
+    id: 'nghich_lan',
+    name: 'Thanh Long Nghịch Lân',
+    shortName: 'Nghịch Lân',
+    tier: 'thuong_pham',
+    type: 'Thần Thú Di Vật',
+    icon: '🐉',
+    color: '#06b6d4',
+    desc: 'Vảy ngược bất khả xâm phạm của Thượng Cổ Thanh Long, mang uy áp long tộc vô thượng.',
+    poem: 'Long hữu nghịch lân, xúc chi tất nộ.',
+  },
+  {
+    id: 'huyen_hoang',
+    name: 'Huyền Hoàng Địa Khí',
+    shortName: 'Huyền Hoàng Khí',
+    tier: 'thuong_pham',
+    type: 'Đại Địa Bản Nguyên',
+    icon: '🌍',
+    color: '#06b6d4',
+    desc: 'Khí Huyền Hoàng dày nặng ngưng tụ từ lòng đất mẹ, mang sức mạnh nâng đỡ cả thiên cung lầu các.',
+    poem: 'Thiên địa huyền hoàng, vũ trụ hồng hoang.',
+  },
+
+  // ---------- IV. CỰC PHẨM (TÍM · 5 BẢO VẬT) ----------
+  {
+    id: 'thon_thien',
+    name: 'Thôn Thiên Ma Bình',
+    shortName: 'Thôn Thiên Bình',
+    tier: 'cuc_pham',
+    type: 'Thần Ma Cổ Bảo',
+    icon: '⚱️',
+    color: '#a855f7',
+    desc: 'Bình ma thượng cổ có khả năng nuốt chửng trời đất, tinh lọc mọi linh khí hỗn tạp thành thuần khiết.',
+    poem: 'Thôn thiên nạp địa, chuyển hóa càn khôn.',
+  },
+  {
+    id: 'chu_tuoc_cung',
+    name: 'Chu Tước Chân Hỏa Cung',
+    shortName: 'Chu Tước Cung',
+    tier: 'cuc_pham',
+    type: 'Thần Binh Nam Phương',
+    icon: '🏹',
+    color: '#a855f7',
+    desc: 'Cung thần đúc từ xương cánh Chu Tước, bắn ra chân hỏa thiêu đốt chư thiên ma chướng.',
+    poem: 'Chu tước đề minh, liệt hỏa trùng thiên.',
+  },
+  {
+    id: 'luan_hoi_an',
+    name: 'Lục Đạo Luân Hồi Ấn',
+    shortName: 'Luân Hồi Ấn',
+    tier: 'cuc_pham',
+    type: 'Tiên Bảo Minh Giới',
+    icon: '🏛️',
+    color: '#a855f7',
+    desc: 'Ngọc ấn nắm giữ bí mật sáu nẻo luân hồi, giúp tu sĩ bảo hộ linh hồn bất diệt khi ngộ đạo.',
+    poem: 'Lục đạo luân hồi, duy ngã độc tôn.',
+  },
+  {
+    id: 'hon_don_tuc',
+    name: 'Hỗn Độn Sinh Tức',
+    shortName: 'Sinh Tức Khí',
+    tier: 'cuc_pham',
+    type: 'Hỗn Độn Khí Tức',
+    icon: '🌌',
+    color: '#a855f7',
+    desc: 'Hơi thở sinh mệnh còn sót lại từ thời hỗn độn, giúp thiên cung không ngừng tự mở rộng quy mô.',
+    poem: 'Hỗn độn sơ khai, sinh tức vô cùng.',
+  },
+  {
+    id: 'nghich_cot',
+    name: 'Chân Long Nghịch Cốt',
+    shortName: 'Chân Long Cốt',
+    tier: 'cuc_pham',
+    type: 'Chí Tôn Thần Cốt',
+    icon: '🦴',
+    color: '#a855f7',
+    desc: 'Mẩu xương cốt chân long nghìn trượng, biến kết cấu thiên cung thành thần thánh bất hoại.',
+    poem: 'Long cốt trấn cung, vạn kiếp kim thân.',
+  },
+
+  // ---------- V. TIÊN PHẨM (VÀNG KIM · 5 BẢO VẬT) ----------
+  {
+    id: 'tru_tien_tieu',
+    name: 'Tru Tiên Kiếm Tiêu',
+    shortName: 'Tru Tiên Tiêu',
+    tier: 'tien_pham',
+    type: 'Thượng Tiên Thần Binh',
+    icon: '⚔️',
+    color: '#f59e0b',
+    desc: 'Vỏ kiếm của thanh kiếm Tru Tiên sát phạt đệ nhất tam giới, tỏa sát khí trấn áp vạn tiên.',
+    poem: 'Tru Tiên kiếm xuất, quỷ khốc thần sầu.',
+  },
+  {
+    id: 'khai_thien_do',
+    name: 'Bàn Cổ Khai Thiên Đồ',
+    shortName: 'Khai Thiên Đồ',
+    tier: 'tien_pham',
+    type: 'Đại Đạo Tiên Đồ',
+    icon: '📜',
+    color: '#f59e0b',
+    desc: 'Bức họa khắc họa cảnh tượng Bàn Cổ vung rìu chém mở thiên địa, ẩn chứa đại đạo chí cao.',
+    poem: 'Khai thiên tích địa, định lập càn khôn.',
+  },
+  {
+    id: 'kim_dan_lo',
+    name: 'Tử Phủ Kim Đan Lô',
+    shortName: 'Kim Đan Lô',
+    tier: 'tien_pham',
+    type: 'Thái Thượng Thần Lô',
+    icon: '🪔',
+    color: '#f59e0b',
+    desc: 'Lò luyện đan thượng phẩm của Thái Thượng Lão Quân, không ngừng tôi luyện viên Kim Đan đạt cực cảnh.',
+    poem: 'Tử phủ đan lô, cửu chuyển thành tiên.',
+  },
+  {
+    id: 'tien_hon_chau',
+    name: 'Bất Diệt Tiên Hồn Châu',
+    shortName: 'Tiên Hồn Châu',
+    tier: 'tien_pham',
+    type: 'Bất Diệt Tiên Bảo',
+    icon: '💎',
+    color: '#f59e0b',
+    desc: 'Bảo châu nuôi dưỡng chân hồn thần thức, khiến tu vi vĩnh viễn không bị thoái lui hay suy kiệt.',
+    poem: 'Tiên hồn bất diệt, nhật nguyệt đồng huy.',
+  },
+  {
+    id: 'than_ma_lenh',
+    name: 'Thái Ất Thần Ma Lệnh',
+    shortName: 'Thần Ma Lệnh',
+    tier: 'tien_pham',
+    type: 'Thái Cổ Lệnh Bài',
+    icon: '🛡️',
+    color: '#f59e0b',
+    desc: 'Lệnh bài điều động thần ma chư thiên thượng cổ, trấn giữ cửa cung bất khả xâm phạm.',
+    poem: 'Thần ma hiệu lệnh, mạc cảm bất tòng.',
+  },
+
+  // ---------- VI. THẦN PHẨM (ĐỎ · 5 BẢO VẬT TỐI THƯỢNG) ----------
+  {
+    id: 'hong_mong_khi',
+    name: 'Hồng Mông Tử Khí',
+    shortName: 'Hồng Mông Khí',
+    tier: 'than_pham',
+    type: 'Đại Đạo Bản Nguyên',
+    icon: '🟣',
+    color: '#ef4444',
+    desc: 'Luồng khí tím nguyên thủy sinh ra trước khi trời đất phân định, là nền tảng để chứng đạo thành Thánh.',
+    poem: 'Hồng mông tử khí, chứng đạo thành thần.',
+  },
+  {
+    id: 'van_menh_chau',
+    name: 'Thiên Đạo Vận Mệnh Châu',
+    shortName: 'Vận Mệnh Châu',
+    tier: 'than_pham',
+    type: 'Vũ Trụ Vận Mệnh',
+    icon: '🔮',
+    color: '#ef4444',
+    desc: 'Viên ngọc xoay vần số phận của hàng tỉ tinh cầu vũ trụ, mang lại phúc duyên bất tận cho tu sĩ.',
+    poem: 'Vận mệnh sở quy, vạn kiếp bất diệt.',
+  },
+  {
+    id: 'hon_don_so_khai',
+    name: 'Hỗn Độn Sơ Khai Khí',
+    shortName: 'Sơ Khai Khí',
+    tier: 'than_pham',
+    type: 'Khai Thiên Dị Khí',
+    icon: '🌌',
+    color: '#ef4444',
+    desc: 'Khí bản nguyên đầu tiên của vạn vật vũ trụ, có thể nuôi dưỡng Kim Đan biến hóa thành Thần Đan vô địch.',
+    poem: 'Sơ khai nhất khí, diễn hóa vạn linh.',
+  },
+  {
+    id: 'ngoc_diep',
+    name: 'Tạo Hóa Ngọc Điệp Tàn Phiến',
+    shortName: 'Ngọc Điệp',
+    tier: 'than_pham',
+    type: 'Đạo Tổ Di Vật',
+    icon: '🪞',
+    color: '#ef4444',
+    desc: 'Mảnh vỡ ngọc điệp của Đạo Tổ ghi chép 3000 đại đạo, mở ra con đường tu tiên siêu việt cảnh giới.',
+    poem: 'Tạo hóa ngọc điệp, thông hiểu vạn đạo.',
+  },
+  {
+    id: 'bat_hu_dinh',
+    name: 'Vạn Cổ Bất Hủ Đỉnh',
+    shortName: 'Bất Hủ Đỉnh',
+    tier: 'than_pham',
+    type: 'Chí Tôn Thần Khí',
+    icon: '👑',
+    color: '#ef4444',
+    desc: 'Chiếc đỉnh thần tồn tại trường tồn cùng thời gian vũ trụ, vĩnh viễn không bao giờ bị tàn phá hay lay chuyển.',
+    poem: 'Vạn cổ bất hủ, duy ngã trường tồn.',
+  },
+];
+
 const DEFAULT_STATE = {
   totalExp: 0,
   expCurrentRealm: 0,
@@ -825,9 +1173,13 @@ const DEFAULT_STATE = {
   attemptExp121: 0,
 
   // Mệnh Đăng & Đăng Điểm
-  dangDiem: 0, // Đăng Điểm thu được từ việc phân giải/bán Mệnh Đăng không dùng
+  dangDiem: 0, // Đăng Điểm thu được từ việc phân giải/bán Mệnh Đăng hoặc Vật Trấn Áp
   inventoryLamps: [], // Danh sách id đèn trong túi
   absorbedLamps: [],  // Danh sách id đèn đã hấp thụ (tối đa 5, không hoàn trả)
+
+  // Vật Trấn Áp Thiên Cung (Kim Đan)
+  inventoryArtifacts: [], // Danh sách id vật trấn áp trong túi trữ vật
+  palaceAnchors: {},      // Khảm nạm vật trấn áp vào từng Thiên Cung { [palaceIndex]: artifactData }
 
   // Kim Đan (Thiên Cung)
   maxThienCung: 6, // 6 đến 13
@@ -991,6 +1343,32 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     }
   }
 
+  // 12% tỉ lệ nhặt được Vật Trấn Áp Thiên Cung
+  let droppedArtifact = null;
+  const artifactRoll = Math.random();
+  if (artifactRoll < 0.12) {
+    const tierRoll = Math.random();
+    let selectedTier = 'ha_pham';
+    if (tierRoll < 0.45) selectedTier = 'ha_pham';
+    else if (tierRoll < 0.73) selectedTier = 'trung_pham';
+    else if (tierRoll < 0.88) selectedTier = 'thuong_pham';
+    else if (tierRoll < 0.96) selectedTier = 'cuc_pham';
+    else if (tierRoll < 0.992) selectedTier = 'tien_pham';
+    else selectedTier = 'than_pham';
+
+    const candidateArtifacts = SUPPRESSING_ARTIFACTS.filter(a => a.tier === selectedTier);
+    if (candidateArtifacts.length > 0) {
+      const randomIdx = Math.floor(Math.random() * candidateArtifacts.length);
+      droppedArtifact = candidateArtifacts[randomIdx];
+      state.inventoryArtifacts = [...(state.inventoryArtifacts || []), droppedArtifact.id];
+      const tierInfo = LAMP_TIERS[droppedArtifact.tier] || LAMP_TIERS.ha_pham;
+      state.logs.unshift({
+        text: `✨ Kỳ duyên xuất hiện! Nhặt được Vật Trấn Áp [${tierInfo.name}] ${droppedArtifact.name} (${droppedArtifact.type}) - Đã cất vào túi trữ vật!`,
+        time: Date.now(),
+      });
+    }
+  }
+
   // Xử lý tiến độ theo từng cảnh giới với đường cong EXP lũy tiến
   if (state.realm === 'ngung_khi') {
     state.expCurrentRealm += gainedExp;
@@ -1051,26 +1429,42 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     }
   } else if (state.realm === 'kim_dan') {
     if (state.realizedThienCung < state.maxThienCung) {
-      state.currentThienCungExp += gainedExp;
-      if (state.currentThienCungExp >= EXP_PER_THIEN_CUNG) {
-        state.currentThienCungExp -= EXP_PER_THIEN_CUNG;
+      const lampBonusCount = (state.absorbedLamps || []).length;
+      const lampPalaceStartIndex = state.maxThienCung - lampBonusCount;
+      const isCurrentLampPalace = state.realizedThienCung >= lampPalaceStartIndex;
+
+      if (isCurrentLampPalace) {
+        // Cung hình thành từ Mệnh Đăng luôn luôn đạt 100% Hóa Thực tự động (Vật Trấn Áp chính là Mệnh Đăng)
         state.realizedThienCung += 1;
+        state.currentThienCungExp = 0;
         breakthrough = {
           type: 'cung',
-          title: `HÓA THỰC CUNG THỨ ${state.realizedThienCung}!`,
+          title: `HÓA THỰC CHÂN CUNG MỆNH ĐĂNG!`,
           subtitle: `Chiến lực: ${state.realizedThienCung} Cung Thật`,
-          icon: '🏛️',
+          icon: '🏮',
         };
         state.logs.unshift({
-          text: `Thiên địa dị tượng! Đã Hóa Thực thành công Thiên Cung thứ ${state.realizedThienCung}/${state.maxThienCung} thành Cung Thật (+1 Cung chiến lực)!`,
+          text: `Mệnh Đăng Thượng Cổ tỏa hào quang! Đã Hóa Thực thành công Chân Cung thứ ${state.realizedThienCung}/${state.maxThienCung} thành Cung Thật 100% (+1 Cung chiến lực)!`,
           time: Date.now(),
         });
+      } else {
+        // Cung tự thân: Tích lũy tới 99.99% (799/800 EXP) và dừng lại chờ Vật Trấn Áp
+        const bottleneckExp = EXP_PER_THIEN_CUNG - 1;
+        if (state.currentThienCungExp < bottleneckExp) {
+          state.currentThienCungExp = Math.min(bottleneckExp, state.currentThienCungExp + gainedExp);
+          if (state.currentThienCungExp >= bottleneckExp) {
+            state.logs.unshift({
+              text: `⚠️ THIÊN CUNG ĐẠT 99.99%! Thiên Cung ${state.realizedThienCung + 1} đã tích lũy đủ linh lực, cần khảm nạm một Vật Trấn Áp để đạt 100% Hóa Thực thành Cung Thật!`,
+              time: Date.now(),
+            });
+          }
+        }
       }
     }
   }
 
   saveCultivationState(state);
-  return { state, gainedExp, gainedThienMenh, isFirstRead, droppedLamp, breakthrough };
+  return { state, gainedExp, gainedThienMenh, isFirstRead, droppedLamp, droppedArtifact, breakthrough };
 }
 
 /**
@@ -1307,6 +1701,170 @@ export function buyLampWithPointsAndExp(lampId) {
 }
 
 export const burnExpForLamp = buyLampWithPointsAndExp;
+
+/**
+ * KHẢM NẠM VẬT TRẤN ÁP VÀO THIÊN CUNG (Đạt 100% Hóa Thực Cung Thật)
+ * - Khi Thiên Cung đạt 99.99% (799/800 EXP), tu sĩ cần khảm nạm 1 Vật Trấn Áp từ Túi Trữ Vật.
+ * - Vật Trấn Áp sẽ trấn thủ thiên cung vĩnh viễn, đưa Thiên Cung đạt 100% Cung Thật (+1 Cung chiến lực).
+ * - Thiên Cung từ Mệnh Đăng luôn luôn đạt 100% không cần khảm nạm.
+ */
+export function anchorPalaceWithArtifact(palaceIndex, artifactId) {
+  const state = getCultivationState();
+  if (state.realm !== 'kim_dan' && state.realm !== 'gia_anh' && state.realm !== 'nguyen_anh') {
+    throw new Error('Chỉ cảnh giới Kim Đan mới có thể khảm nạm Vật Trấn Áp vào Thiên Cung.');
+  }
+
+  const lampBonusCount = (state.absorbedLamps || []).length;
+  const lampPalaceStartIndex = state.maxThienCung - lampBonusCount;
+  const isLampPalace = palaceIndex >= lampPalaceStartIndex;
+
+  if (isLampPalace) {
+    throw new Error('Thiên Cung này hình thành từ Mệnh Đăng, đã sở hữu Thần Đăng trấn áp vĩnh cửu không cần khảm nạm.');
+  }
+
+  if (palaceIndex < state.realizedThienCung) {
+    throw new Error('Thiên Cung này đã Hóa Thực thành Cung Thật hoàn tất.');
+  }
+
+  if (palaceIndex > state.realizedThienCung) {
+    throw new Error('Hãy tích lũy và Hóa Thực tuần tự từ Thiên Cung trước.');
+  }
+
+  // Cần đạt ngưỡng nút thắt (EXP_PER_THIEN_CUNG - 1 = 799/800 EXP)
+  const bottleneckExp = EXP_PER_THIEN_CUNG - 1;
+  if (state.currentThienCungExp < bottleneckExp) {
+    throw new Error(`Thiên Cung này chưa đạt ngưỡng tích lũy 99.99% (${state.currentThienCungExp}/${EXP_PER_THIEN_CUNG} EXP). Hãy đọc thêm chương để tích lũy linh lực trước khi trấn áp.`);
+  }
+
+  // Tìm artifact trong túi trữ vật
+  const invArtifacts = state.inventoryArtifacts || [];
+  const artIndex = invArtifacts.findIndex(id => id === artifactId);
+  if (artIndex === -1) {
+    throw new Error('Không tìm thấy Vật Trấn Áp này trong Túi Trữ Vật.');
+  }
+
+  const artObj = SUPPRESSING_ARTIFACTS.find(a => a.id === artifactId);
+  if (!artObj) throw new Error('Dữ liệu Vật Trấn Áp không hợp lệ.');
+
+  const tierInfo = LAMP_TIERS[artObj.tier] || LAMP_TIERS.ha_pham;
+
+  // Trừ vật phẩm khỏi túi trữ vật
+  invArtifacts.splice(artIndex, 1);
+  state.inventoryArtifacts = invArtifacts;
+
+  // Khảm nạm vào Thiên Cung
+  if (!state.palaceAnchors) state.palaceAnchors = {};
+  state.palaceAnchors[palaceIndex] = {
+    id: artObj.id,
+    name: artObj.name,
+    shortName: artObj.shortName || artObj.name,
+    tier: artObj.tier,
+    type: artObj.type,
+    icon: artObj.icon,
+    color: artObj.color,
+    anchoredAt: Date.now(),
+  };
+
+  // Hoàn tất 100% Hóa Thực Cung Thật
+  state.realizedThienCung += 1;
+  state.currentThienCungExp = 0;
+
+  state.logs.unshift({
+    text: `👑 TRẤN CUNG THÀNH CÔNG! Đã dùng [${tierInfo.name}] ${artObj.name} (${artObj.type}) trấn áp Thiên Cung ${palaceIndex + 1}, hoàn tất Hóa Thực thành Cung Thật 100% (+1 Cung chiến lực)!`,
+    time: Date.now(),
+  });
+
+  saveCultivationState(state);
+  return {
+    state,
+    artifact: artObj,
+    message: `👑 Trấn Cung Thành Công! Đã dùng [${artObj.name}] hoàn tất 100% Cung Thật thứ ${state.realizedThienCung}!`,
+  };
+}
+
+/**
+ * BÁN VẬT TRẤN ÁP TRONG TÚI TRỮ VẬT LẤY ĐĂNG ĐIỂM
+ */
+export function sellArtifactForPoints(artifactId) {
+  const state = getCultivationState();
+  const art = SUPPRESSING_ARTIFACTS.find(a => a.id === artifactId);
+  if (!art) throw new Error('Vật Trấn Áp không tồn tại.');
+
+  const inv = state.inventoryArtifacts || [];
+  const idx = inv.indexOf(artifactId);
+  if (idx === -1) {
+    throw new Error(`Bạn không có [${art.name}] trong Túi Trữ Vật để bán.`);
+  }
+
+  const tier = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
+  const gainedDangDiem = tier.dangDiem || (tier.priceExp * DANG_DIEM_RATIO);
+
+  inv.splice(idx, 1);
+  state.inventoryArtifacts = inv;
+  state.dangDiem = (state.dangDiem || 0) + gainedDangDiem;
+
+  state.logs.unshift({
+    text: `💰 Đã phân giải bán Vật Trấn Áp [${tier.name}] ${art.name} thu hồi +${gainedDangDiem.toLocaleString()} Đăng Điểm (Hiện có: ${state.dangDiem.toLocaleString()} ĐĐ).`,
+    time: Date.now(),
+  });
+
+  saveCultivationState(state);
+  return {
+    state,
+    gainedDangDiem,
+    message: `Đã bán [${tier.name}] ${art.name}, nhận +${gainedDangDiem.toLocaleString()} Đăng Điểm!`,
+  };
+}
+
+/**
+ * MUA VẬT TRẤN ÁP BẰNG ĐĂNG ĐIỂM & ĐỐT TU VI BÙ THIẾU
+ */
+export function buyArtifactWithPointsAndExp(artifactId) {
+  const state = getCultivationState();
+  const art = SUPPRESSING_ARTIFACTS.find(a => a.id === artifactId);
+  if (!art) throw new Error('Vật Trấn Áp không tồn tại.');
+
+  const tier = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
+  const priceDangDiem = tier.dangDiem || (tier.priceExp * DANG_DIEM_RATIO);
+  const userPoints = state.dangDiem || 0;
+
+  if (userPoints >= priceDangDiem) {
+    state.dangDiem -= priceDangDiem;
+    state.inventoryArtifacts = [...(state.inventoryArtifacts || []), artifactId];
+    state.logs.unshift({
+      text: `✨ Đã dùng ${priceDangDiem.toLocaleString()} Đăng Điểm mua [${tier.name}] ${art.name} (Đã thêm vào túi trữ vật)!`,
+      time: Date.now(),
+    });
+    saveCultivationState(state);
+    return {
+      state,
+      usedPoints: priceDangDiem,
+      burnedExp: 0,
+      message: `✨ Đổi thành công [${tier.name}] ${art.name} bằng ${priceDangDiem.toLocaleString()} Đăng Điểm!`,
+    };
+  }
+
+  // Đăng điểm không đủ -> Dùng hết Đăng Điểm + Đốt phần Tu Vi còn thiếu
+  const remainingPoints = priceDangDiem - userPoints;
+  const neededExp = Math.ceil(remainingPoints / DANG_DIEM_RATIO);
+
+  state.dangDiem = 0;
+  burnExpGeneral(state, neededExp);
+
+  state.inventoryArtifacts = [...(state.inventoryArtifacts || []), artifactId];
+  state.logs.unshift({
+    text: `🔥 NGHỊCH THIÊN HOÁN BẢO! Dùng toàn bộ ${userPoints.toLocaleString()} Đăng Điểm + Đốt ${neededExp.toLocaleString()} Tu Vi mua [${tier.name}] ${art.name}!`,
+    time: Date.now(),
+  });
+
+  saveCultivationState(state);
+  return {
+    state,
+    usedPoints: userPoints,
+    burnedExp: neededExp,
+    message: `🔥 Đổi thành công [${tier.name}] ${art.name} (Dùng ${userPoints.toLocaleString()} ĐĐ + Đốt ${neededExp.toLocaleString()} Tu Vi)!`,
+  };
+}
 
 /**
  * Đột phá Ngưng Khí lên Trúc Cơ
@@ -1657,9 +2215,11 @@ export function resetCultivationState() {
     readChapterIds: {},
     inventoryLamps: [],
     absorbedLamps: [],
+    inventoryArtifacts: [],
+    palaceAnchors: {},
     daoAnhs: [],
     logs: [
-      { text: '💀 Đã tản đi toàn bộ tu vi, tán sạch 72 Mệnh Đăng, hóa phàm trùng tu đạo lộ lại từ đầu.', time: Date.now() },
+      { text: '💀 Đã tản đi toàn bộ tu vi, tán sạch 72 Mệnh Đăng và Vật Trấn Áp, hóa phàm trùng tu đạo lộ lại từ đầu.', time: Date.now() },
     ],
   };
   saveCultivationState(freshState);

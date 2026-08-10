@@ -7,6 +7,9 @@ import {
   burnExpForLamp,
   sellLampForPoints,
   buyLampWithPointsAndExp,
+  anchorPalaceWithArtifact,
+  sellArtifactForPoints,
+  buyArtifactWithPointsAndExp,
   breakthroughToTrucCo,
   breakthroughToKimDan,
   attemptUnlock121st,
@@ -20,6 +23,7 @@ import {
   getTotalCombatPowerAnh,
   resetCultivationState,
   LIFE_LAMPS,
+  SUPPRESSING_ARTIFACTS,
   LAMP_TIERS,
   MAX_ABSORBED_LAMPS,
   EXP_PER_CHAPTER,
@@ -67,6 +71,24 @@ export function useCultivation() {
 
   const handleSellLamp = useCallback((lampId) => {
     const res = sellLampForPoints(lampId);
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
+  const handleAnchorPalace = useCallback((palaceIndex, artifactId) => {
+    const res = anchorPalaceWithArtifact(palaceIndex, artifactId);
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
+  const handleSellArtifact = useCallback((artifactId) => {
+    const res = sellArtifactForPoints(artifactId);
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
+  const handleBuyArtifact = useCallback((artifactId) => {
+    const res = buyArtifactWithPointsAndExp(artifactId);
     setCultivation({ ...res.state });
     return res;
   }, []);
@@ -134,6 +156,13 @@ export function useCultivation() {
     setCultivation({ ...state });
   }, []);
 
+  const debugGiveAllArtifacts = useCallback(() => {
+    const state = getCultivationState();
+    state.inventoryArtifacts = SUPPRESSING_ARTIFACTS.map(a => a.id);
+    saveCultivationState(state);
+    setCultivation({ ...state });
+  }, []);
+
   const debugGiveThienMenh = useCallback((amount = 5000) => {
     const state = getCultivationState();
     state.isThienMenhUnlocked = true;
@@ -158,6 +187,9 @@ export function useCultivation() {
     burnExpForLamp: handleBurnExpForLamp,
     buyLamp: handleBurnExpForLamp,
     sellLamp: handleSellLamp,
+    anchorPalace: handleAnchorPalace,
+    sellArtifact: handleSellArtifact,
+    buyArtifact: handleBuyArtifact,
     breakthroughToTrucCo: handleBreakthroughTrucCo,
     breakthroughToKimDan: handleBreakthroughKimDan,
     attemptUnlock121: handleUnlock121,
@@ -168,8 +200,10 @@ export function useCultivation() {
     resetCultivation: handleReset,
     debugAddChapter,
     debugGiveAllLamps,
+    debugGiveAllArtifacts,
     debugGiveThienMenh,
     LIFE_LAMPS,
+    SUPPRESSING_ARTIFACTS,
     LAMP_TIERS,
     constants: {
       MAX_ABSORBED_LAMPS,
