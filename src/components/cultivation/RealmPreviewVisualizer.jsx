@@ -21,29 +21,48 @@ export default function RealmPreviewVisualizer({ cultivation }) {
   const realizedThienCung = cultivation?.realizedThienCung || 1;
   const daoAnhs = cultivation?.daoAnhs || [];
 
-  // Tạo danh sách 120 điểm sao tinh đồ phân bố thanh nhã theo các chòm sao
-  const constellationStars = useMemo(() => {
+  // Tạo danh sách 120 điểm sao tinh đồ theo 4 Nhánh Chòm Sao Xoắn Ốc Thiên Hà (mỗi nhánh 30 sao = 1-120)
+  const { constellationStars, constellationPaths } = useMemo(() => {
     const stars = [];
-    const branches = 6; // 6 nhánh tinh tú xung quanh
-    const starsPerBranch = 20; // 20 sao mỗi nhánh = 120 sao
+    const paths = [];
+    const arms = 4; // 4 nhánh chòm sao (tương ứng 4 giai đoạn Trúc Cơ: 1-30, 31-60, 61-90, 91-120)
+    const starsPerArm = 30;
 
-    for (let b = 0; b < branches; b++) {
-      const baseAngle = (b / branches) * (2 * Math.PI);
-      for (let s = 0; s < starsPerBranch; s++) {
-        const dist = 42 + (s / starsPerBranch) * 58; // bán kính từ 42px đến 100px
-        const curveAngle = baseAngle + Math.sin((s / starsPerBranch) * Math.PI) * 0.35;
-        const cx = 100 + Math.cos(curveAngle) * dist;
-        const cy = 110 + Math.sin(curveAngle) * dist * 0.85;
-        const idx = b * starsPerBranch + s;
+    for (let a = 0; a < arms; a++) {
+      const armBaseAngle = (a / arms) * (2 * Math.PI) - Math.PI / 4;
+      const armPoints = [];
+
+      for (let s = 0; s < starsPerArm; s++) {
+        const progress = s / (starsPerArm - 1);
+        // Xoắn ốc thiên hà từ bán kính 38px ra 95px, uốn lượn mượt mà
+        const spiralAngle = armBaseAngle + progress * (Math.PI * 0.7);
+        const radius = 38 + progress * 56;
+        const cx = 100 + Math.cos(spiralAngle) * radius;
+        const cy = 110 + Math.sin(spiralAngle) * (radius * 0.88);
+
+        const idx = a * starsPerArm + s; // 0 đến 119
+        const isLit = idx < phapKhieu;
+
         stars.push({
           idx,
+          armIndex: a,
+          starNum: idx + 1,
           cx,
           cy,
-          isLit: idx < phapKhieu,
+          isLit,
         });
+
+        armPoints.push(`${cx.toFixed(1)},${cy.toFixed(1)}`);
       }
+
+      paths.push({
+        armIndex: a,
+        d: `M ${armPoints.join(' L ')}`,
+        isAnyLit: phapKhieu > a * starsPerArm,
+      });
     }
-    return stars;
+
+    return { constellationStars: stars, constellationPaths: paths };
   }, [phapKhieu]);
 
   // 4 Vị Trí Xung Quanh (Tây Bắc, Đông Bắc, Tây Nam, Đông Nam)
@@ -159,30 +178,36 @@ export default function RealmPreviewVisualizer({ cultivation }) {
             <svg viewBox="0 0 200 220" className={styles.starChartSvg}>
               <defs>
                 <radialGradient id="starChartGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#22c3f0" stopOpacity="0.18" />
-                  <stop offset="60%" stopColor="#0284c7" stopOpacity="0.06" />
+                  <stop offset="0%" stopColor="#00f2fe" stopOpacity="0.22" />
+                  <stop offset="50%" stopColor="#0284c7" stopOpacity="0.08" />
                   <stop offset="100%" stopColor="transparent" stopOpacity="0" />
                 </radialGradient>
               </defs>
 
               {/* Tinh bàn thiên văn */}
-              <circle cx="100" cy="110" r="95" fill="url(#starChartGlow)" stroke="rgba(34, 195, 240, 0.15)" strokeWidth="1" strokeDasharray="3,3" />
-              <circle cx="100" cy="110" r="70" stroke="rgba(255, 204, 0, 0.12)" strokeWidth="1" />
-              <circle cx="100" cy="110" r="45" stroke="rgba(34, 195, 240, 0.15)" strokeWidth="1" strokeDasharray="2,2" />
+              <circle cx="100" cy="110" r="95" fill="url(#starChartGlow)" stroke="rgba(56, 189, 248, 0.18)" strokeWidth="1" strokeDasharray="3,3" />
+              <circle cx="100" cy="110" r="70" stroke="rgba(56, 189, 248, 0.14)" strokeWidth="1" />
+              <circle cx="100" cy="110" r="42" stroke="rgba(0, 242, 254, 0.2)" strokeWidth="1" strokeDasharray="2,2" />
 
-              {/* Trục bát quái tinh bàn */}
-              <line x1="100" y1="15" x2="100" y2="205" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
-              <line x1="15" y1="110" x2="185" y2="110" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
+              {/* Đường Nối Tinh Đồ Giữa Các Ngôi Sao (Constellation Spiral Lines) */}
+              {constellationPaths.map((path) => (
+                <path
+                  key={path.armIndex}
+                  d={path.d}
+                  fill="none"
+                  className={path.isAnyLit ? styles.constellationLineLit : styles.constellationLineDim}
+                />
+              ))}
 
-              {/* 120 Ngôi Sao Pháp Khiếu */}
+              {/* 120 Ngôi Sao Pháp Khiếu Màu Xanh Dương Sáng */}
               {constellationStars.map((star) => (
                 <circle
                   key={star.idx}
                   cx={star.cx}
                   cy={star.cy}
-                  r={star.isLit ? 2 : 1}
+                  r={star.isLit ? 2.5 : 1.2}
                   className={`${styles.starDot} ${star.isLit ? styles.starLit : styles.starDim}`}
-                  style={{ animationDelay: `${(star.idx % 12) * 0.12}s` }}
+                  style={{ animationDelay: `${(star.idx % 15) * 0.1}s` }}
                 />
               ))}
             </svg>
