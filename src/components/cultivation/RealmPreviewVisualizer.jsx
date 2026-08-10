@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
+import { LIFE_LAMPS, LAMP_TIERS } from '../../lib/cultivation';
 import styles from './RealmPreviewVisualizer.module.css';
 
 /**
  * RealmPreviewVisualizer — Bộ Hoạt Ảnh Tu Vi Chuyên Biệt Theo Từng Cảnh Giới:
  * 1. Ngưng Khí: Khí Hải Đan Điền & 10 Vòng Linh Mạch luân chuyển.
- * 2. Trúc Cơ: Nhân Thể Pháp Khiếu (120 khiếu sáng rực) + Trụ Mệnh Hỏa + Khiếu 121 Tử Phủ Cực Cảnh.
+ * 2. Trúc Cơ: Nhân Thể Pháp Khiếu (120 khiếu sáng rực) + Trụ Mệnh Hỏa + Khiếu 121 Tử Phủ Cực Cảnh + Mệnh Đăng đã hấp thụ (hiện đúng biểu tượng thần đăng).
  * 3. Kim Đan: Kim Đan trung tâm + Thiên Cung từ Hư Ảo chuyển sang Hóa Thực Hoàng Kim.
  * 4. Nguyên Anh: Thiên Cung mở cửa, Đạo Anh Thần Thể tĩnh tọa với Vòng Hào Quang 5 Kiếp Luân Hồi.
  */
@@ -14,11 +15,59 @@ export default function RealmPreviewVisualizer({ cultivation }) {
   const selfHoa = cultivation?.selfMenhHoa || Math.floor(phapKhieu / 30);
   const has121st = !!cultivation?.has121st;
   const absorbedCount = (cultivation?.absorbedLamps || []).length;
-  const totalHoa = selfHoa + (has121st ? 1 : 0) + absorbedCount;
   const ngungKhiLevel = cultivation?.ngungKhiLevel || 1;
   const maxThienCung = cultivation?.maxThienCung || 6;
   const realizedThienCung = cultivation?.realizedThienCung || 1;
   const daoAnhs = cultivation?.daoAnhs || [];
+
+  // Tạo danh sách các ngọn lửa & Mệnh Đăng bay quanh nhân thể ở Trúc Cơ
+  const trucCoOrbitElements = useMemo(() => {
+    const elements = [];
+
+    // 1. Mệnh Hỏa Tự Thân (1 đến 4 Hỏa)
+    for (let i = 0; i < selfHoa; i++) {
+      elements.push({
+        id: `self_${i}`,
+        type: 'self_flame',
+        icon: '🔥',
+        name: `Hỏa ${i + 1}`,
+        color: '#f97316',
+        glow: 'rgba(249, 115, 22, 0.85)',
+      });
+    }
+
+    // 2. Pháp Khiếu 121 Cực Cảnh (nếu đã mở)
+    if (has121st) {
+      elements.push({
+        id: '121_flame',
+        type: '121_flame',
+        icon: '⚡',
+        name: '121 Cực Cảnh',
+        color: '#ec4899',
+        glow: 'rgba(236, 72, 153, 0.95)',
+      });
+    }
+
+    // 3. Mệnh Đăng Đã Hấp Thụ (thay thế hoạt ảnh lửa bằng chính Mệnh Đăng)
+    (cultivation?.absorbedLamps || []).forEach(lampId => {
+      const lamp = LIFE_LAMPS.find(l => l.id === lampId);
+      if (lamp) {
+        const tier = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
+        elements.push({
+          id: lamp.id,
+          type: 'absorbed_lamp',
+          icon: lamp.icon || '🏮',
+          name: lamp.shortName || lamp.name,
+          tierName: tier.name,
+          color: tier.color || '#ffcc00',
+          glow: tier.border || 'rgba(255, 204, 0, 0.9)',
+          bg: tier.bg,
+        });
+      }
+    });
+
+    return elements;
+  }, [selfHoa, has121st, cultivation?.absorbedLamps]);
 
   return (
     <div className={styles.visualizerWrapper}>
@@ -59,23 +108,50 @@ export default function RealmPreviewVisualizer({ cultivation }) {
         </div>
       )}
 
-      {/* 2. TRÚC CƠ VISUALIZER: NHÂN THỂ PHÁP KHIẾU & MỆNH HỎA */}
+      {/* 2. TRÚC CƠ VISUALIZER: NHÂN THỂ PHÁP KHIẾU & MỆNH HỎA / MỆNH ĐĂNG HẤP THỤ */}
       {realm === 'truc_co' && (
         <div className={styles.trucCoStage}>
-          {/* Flame aura surrounding the body */}
+          {/* Flame & Absorbed Life Lamps Aura surrounding the body */}
           <div className={styles.flameAuraContainer}>
-            {Array.from({ length: Math.min(10, totalHoa) }).map((_, i) => {
-              const angle = (i / Math.min(10, totalHoa)) * 360;
+            {trucCoOrbitElements.map((el, i) => {
+              const totalCount = Math.max(1, trucCoOrbitElements.length);
+              const angle = (i / totalCount) * 360;
+              const isLamp = el.type === 'absorbed_lamp';
+
               return (
                 <div
-                  key={i}
-                  className={styles.orbitingFlame}
+                  key={el.id}
+                  className={`${styles.orbitingFlame} ${isLamp ? styles.orbitingLampContainer : ''}`}
                   style={{
                     transform: `rotate(${angle}deg) translate(95px) rotate(-${angle}deg)`,
                     animationDelay: `${i * 0.3}s`,
                   }}
+                  title={el.name}
                 >
-                  <span className={styles.flameSymbol}>🔥</span>
+                  {isLamp ? (
+                    <div
+                      className={styles.absorbedLampHaloWrap}
+                      style={{
+                        borderColor: el.color,
+                        boxShadow: `0 0 14px ${el.glow}`,
+                        backgroundColor: el.bg || 'rgba(16, 25, 39, 0.85)',
+                      }}
+                    >
+                      <span className={styles.lampSymbol} style={{ filter: `drop-shadow(0 0 8px ${el.color})` }}>
+                        {el.icon}
+                      </span>
+                    </div>
+                  ) : (
+                    <span
+                      className={styles.flameSymbol}
+                      style={{
+                        filter: `drop-shadow(0 0 10px ${el.glow})`,
+                        color: el.color,
+                      }}
+                    >
+                      {el.icon}
+                    </span>
+                  )}
                 </div>
               );
             })}

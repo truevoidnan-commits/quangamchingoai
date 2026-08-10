@@ -219,28 +219,85 @@ export default function CultivationModal({ isOpen, onClose }) {
                   • Mệnh Đăng đã hấp thụ: <strong>{absorbedCount} Đăng</strong> (+{absorbedCount} Hỏa chiến lực).
                 </p>
 
-                {/* 5 Flames Visual */}
+                {/* 5 Flames Visual: 4 Mệnh Hỏa Tự Thân + 1 Khiếu 121 */}
+                <div style={{ marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Mệnh Hỏa Tự Thân (Tối đa 5 Hỏa):</span>
+                </div>
                 <div className={styles.flameRow}>
-                  {[1, 2, 3, 4, 5].map((num) => {
-                    const totalHoa = (selfHoa + (cultivation.has121st ? 1 : 0) + absorbedCount);
-                    const isLit = totalHoa >= num;
-                    const isSecret = num === 5;
+                  {[1, 2, 3, 4].map((num) => {
+                    const isLit = selfHoa >= num;
                     return (
                       <div
                         key={num}
-                        className={`${styles.flameCard} ${isLit ? styles.flameLit : ''} ${isSecret ? styles.flameSecret : ''}`}
+                        className={`${styles.flameCard} ${isLit ? styles.flameLit : ''}`}
                       >
                         <span className={styles.flameIcon}>{isLit ? '🔥' : '🕯️'}</span>
                         <span className={styles.flameName}>
-                          {isSecret ? 'Khiếu 121' : `Mệnh Hỏa ${num}`}
+                          Mệnh Hỏa {num}
                         </span>
                         <span className={styles.flameStatus}>
-                          {isLit ? (isSecret ? '✦ Cực Cảnh' : 'Đã Thắp') : isSecret ? 'Bí Ẩn' : `${(num - 1) * 30 + 1}-${num * 30}`}
+                          {isLit ? 'Đã Thắp' : `${(num - 1) * 30 + 1}-${num * 30}`}
                         </span>
                       </div>
                     );
                   })}
+
+                  {/* Khiếu 121 Card */}
+                  <div
+                    className={`${styles.flameCard} ${cultivation.has121st ? styles.flameLit : ''} ${styles.flameSecret}`}
+                    style={cultivation.has121st ? { borderColor: '#ec4899', background: 'rgba(236, 72, 153, 0.12)', boxShadow: '0 0 10px rgba(236, 72, 153, 0.4)' } : {}}
+                  >
+                    <span className={styles.flameIcon} style={cultivation.has121st ? { filter: 'drop-shadow(0 0 8px #ec4899)' } : {}}>
+                      {cultivation.has121st ? '⚡' : '🕯️'}
+                    </span>
+                    <span className={styles.flameName} style={cultivation.has121st ? { color: '#ec4899' } : {}}>
+                      Khiếu 121
+                    </span>
+                    <span className={styles.flameStatus}>
+                      {cultivation.has121st ? '✦ Cực Cảnh' : cultivation.failed121st ? 'Đã Khóa' : 'Bí Ẩn'}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Absorbed Life Lamps Visual Cards (+1 Hỏa mỗi Đăng) */}
+                {absorbedCount > 0 && (
+                  <div style={{ marginTop: 8, marginBottom: 6 }}>
+                    <div style={{ marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#ffcc00' }}>
+                        Mệnh Đăng Hộ Thể Đã Hấp Thụ ({absorbedCount}/5 Đăng · +{absorbedCount} Hỏa):
+                      </span>
+                    </div>
+                    <div className={styles.flameRow} style={{ gridTemplateColumns: `repeat(${Math.max(1, Math.min(5, absorbedCount))}, 1fr)` }}>
+                      {(cultivation.absorbedLamps || []).map((lampId) => {
+                        const lamp = LIFE_LAMPS.find(l => l.id === lampId);
+                        if (!lamp) return null;
+                        const tierInfo = LAMP_TIERS[lamp.tier] || { name: 'Hạ Phẩm', color: '#ffcc00', bg: 'rgba(255, 204, 0, 0.1)', border: 'rgba(255, 204, 0, 0.4)' };
+
+                        return (
+                          <div
+                            key={lamp.id}
+                            className={`${styles.flameCard} ${styles.flameLit}`}
+                            style={{
+                              borderColor: tierInfo.color,
+                              background: tierInfo.bg || 'rgba(16, 25, 39, 0.9)',
+                              boxShadow: `0 0 10px ${tierInfo.border}`,
+                            }}
+                          >
+                            <span className={styles.flameIcon} style={{ textShadow: `0 0 8px ${tierInfo.color}` }}>
+                              {lamp.icon || '🏮'}
+                            </span>
+                            <span className={styles.flameName} style={{ color: tierInfo.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
+                              {lamp.shortName || lamp.name}
+                            </span>
+                            <span className={styles.flameStatus} style={{ color: tierInfo.color, fontWeight: 700 }}>
+                              +1 Hỏa
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Phap Khieu Progress */}
                 <div className={styles.progressContainer}>

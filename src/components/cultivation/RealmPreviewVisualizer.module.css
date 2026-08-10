@@ -124,10 +124,32 @@
   animation: rotateOrbit 12s linear infinite;
 }
 
+.orbitingLampContainer {
+  z-index: 8;
+}
+
 .flameSymbol {
   font-size: 20px;
   filter: drop-shadow(0 0 10px rgba(255, 120, 0, 0.8));
   animation: flameFlicker 1.5s ease-in-out infinite alternate;
+}
+
+.absorbedLampHaloWrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid #ffcc00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: floatSlow 2s ease-in-out infinite alternate;
+  transition: all 0.3s ease;
+}
+
+.lampSymbol {
+  font-size: 16px;
+  display: inline-block;
+  animation: flameFlicker 1.8s ease-in-out infinite alternate;
 }
 
 .bodySilhouetteWrap {
