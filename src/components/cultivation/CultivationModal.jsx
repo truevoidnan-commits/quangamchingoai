@@ -9,6 +9,7 @@ export default function CultivationModal({ isOpen, onClose }) {
     displayName,
     combatPowerDisplay,
     absorbLamp,
+    burnExpForLamp,
     breakthroughToTrucCo,
     breakthroughToKimDan,
     attemptUnlock121,
@@ -409,19 +410,17 @@ export default function CultivationModal({ isOpen, onClose }) {
            ======================================================== */}
         {activeTab === 'lamps' && (
           <div className={styles.lampsSection}>
-            <div className={styles.lampsBannerCard}>
-              <div className={styles.lampsBannerInfo}>
-                <h3 className={styles.lampsBannerTitle}>Thất Thập Nhị Mệnh Đăng Thần Thoại (72 Thần Đăng)</h3>
+            {/* Top guide banner for Mệnh Đăng tab */}
+            <div className={styles.lampHeroCard}>
+              <div className={styles.lampHeroGlow} />
+              <div style={{ position: 'relative', zIndex: 2 }}>
+                <h3 className={styles.cardHeader}>Bát Đại Thần Đăng Thượng Cổ (Thất Thập Nhị Mệnh Đăng)</h3>
                 <p className={styles.subtext}>
-                  • <strong>6 Cấp Phẩm Độ Hiếm</strong>: <span style={{ color: '#e2e8f0' }}>Hạ Phẩm (Trắng)</span> · <span style={{ color: '#10b981' }}>Trung Phẩm (Xanh Lá)</span> · <span style={{ color: '#06b6d4' }}>Thượng Phẩm (Xanh Lam)</span> · <span style={{ color: '#a855f7' }}>Cực Phẩm (Tím)</span> · <span style={{ color: '#f59e0b' }}>Tiên Phẩm (Kim)</span> · <span style={{ color: '#ef4444' }}>Thần Phẩm (Đỏ)</span>.
+                  • <strong>6 Cấp Phẩm Độ Hiếm</strong>: <span style={{ color: '#e2e8f0' }}>Hạ Phẩm (500 EXP)</span> · <span style={{ color: '#10b981' }}>Trung Phẩm (1.200 EXP)</span> · <span style={{ color: '#06b6d4' }}>Thượng Phẩm (2.500 EXP)</span> · <span style={{ color: '#a855f7' }}>Cực Phẩm (5.000 EXP)</span> · <span style={{ color: '#f59e0b' }}>Tiên Phẩm (10.000 EXP)</span> · <span style={{ color: '#ef4444' }}>Thần Phẩm (25.000 EXP)</span>.
                   <br />
-                  • <strong>Quy tắc Hấp Thụ</strong>: Tối đa hấp thụ <strong>5 Mệnh Đăng</strong>. Một khi chọn hấp thụ thì <strong>KHÔNG HOÀN TRẢ</strong>!
+                  • <strong>Bí Thuật Đốt Tu Vi Đổi Đèn</strong>: Đạo hữu có thể hiến tế Tu Vi / Thiên Mệnh để cưỡng ép ngưng tụ Mệnh Đăng chưa nhặt được. Khi đốt: <strong>Ngưng Khí rơi tầng</strong>, <strong>Trúc Cơ ngắt bớt pháp khiếu</strong> (Khiếu 121 không ảnh hưởng), <strong>Kim Đan hư hóa thiên cung tự thân</strong> (Chân Cung từ Mệnh Đăng bất tử), <strong>Nguyên Anh tiêu hao Thiên Mệnh (1:10)</strong>.
                   <br />
-                  • Ở Trúc Cơ: Mỗi Mệnh Đăng hấp thụ = <strong>+1 Hỏa</strong>.
-                  <br />
-                  • Ở Kim Đan: Mỗi Mệnh Đăng hấp thụ = <strong>+1 Cung Thật</strong> (hóa thực sẵn 100% không tốn EXP).
-                  <br />
-                  • Ở Nguyên Anh: Đạo Anh từ Mệnh Đăng khi vượt kiếp thất bại <strong>chỉ giảm về 50% Thiên Mệnh</strong> thay vì mất trắng!
+                  • <strong>Quy tắc Hấp Thụ</strong>: Tối đa hấp thụ <strong>5 Mệnh Đăng</strong> (Trúc Cơ: +1 Hỏa · Kim Đan: +1 Cung Thật · Nguyên Anh: Bảo vệ 50% Thiên Mệnh).
                 </p>
                 <div style={{ marginTop: 8 }}>
                   <span className="badge badge-gold">Đã Hấp Thụ: {absorbedCount} Mệnh Đăng</span>
@@ -458,7 +457,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                 const isAbsorbed = (cultivation.absorbedLamps || []).includes(lamp.id);
                 const isInInventory = (cultivation.inventoryLamps || []).includes(lamp.id);
                 const isOwned = isAbsorbed || isInInventory;
-                const tierInfo = LAMP_TIERS[lamp.tier] || { name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.1)', border: 'rgba(226, 232, 240, 0.3)' };
+                const tierInfo = LAMP_TIERS[lamp.tier] || { name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.1)', border: 'rgba(226, 232, 240, 0.3)', priceExp: 500, priceTM: 5000 };
 
                 return (
                   <div
@@ -493,7 +492,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                       <div className={styles.lampStatusBadge}>
                         {isAbsorbed && <span className="badge badge-gold">✦ Đã Hấp Thụ</span>}
                         {isInInventory && <span className="badge badge-cyan">Trong Túi</span>}
-                        {!isOwned && <span className="badge" style={{ opacity: 0.4 }}>Chưa Nhặt Được</span>}
+                        {!isOwned && <span className="badge" style={{ opacity: 0.45 }}>Chưa Sở Hữu</span>}
                       </div>
                     </div>
 
@@ -529,6 +528,38 @@ export default function CultivationModal({ isOpen, onClose }) {
                             : cultivation.realm === 'truc_co'
                             ? '🏮 Hấp Thụ (+1 Hỏa · Không Hoàn Trả)'
                             : '🏮 Hấp Thụ (+1 Cung Thật · Không Hoàn Trả)'}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Nút Đốt Tu Vi Đổi Mệnh Đăng khi chưa sở hữu */}
+                    {!isOwned && (
+                      <div className={styles.lampActions}>
+                        <button
+                          className={styles.burnExpBtn}
+                          onClick={() => {
+                            const costText = isNguyenAnhStage
+                              ? `${(tierInfo.priceTM || 50).toLocaleString()} Thiên Mệnh`
+                              : `${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`;
+                            const consequenceText =
+                              cultivation.realm === 'ngung_khi'
+                                ? 'Cảnh báo: Tu vi giảm có thể rơi tầng Ngưng Khí!'
+                                : cultivation.realm === 'truc_co'
+                                ? 'Cảnh báo: Tu vi giảm sẽ ngắt bớt Pháp Khiếu (Pháp Khiếu 121 không bị ảnh hưởng)!'
+                                : cultivation.realm === 'kim_dan'
+                                ? 'Cảnh báo: Tu vi giảm sẽ làm Thiên Cung tự thân bị hư hóa trở lại (Chân Cung Mệnh Đăng bất tử)!'
+                                : 'Cảnh báo: Tiêu hao Thiên Mệnh (rút từ kho hoặc Đạo Anh)!';
+
+                            if (
+                              confirm(
+                                `🔥 BÍ THUẬT NGHỊCH MỆNH HOÁN ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Chi phí: ${costText}\n• ${consequenceText}\n\nĐạo hữu có muốn thi triển bí thuật đốt tu vi để ngưng tụ Mệnh Đăng này vào Túi Trữ Vật?`
+                              )
+                            ) {
+                              triggerAction(() => burnExpForLamp(lamp.id));
+                            }
+                          }}
+                        >
+                          🔥 Đốt {isNguyenAnhStage ? `${(tierInfo.priceTM || 50).toLocaleString()} TM` : `${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`} Đổi Đèn
                         </button>
                       </div>
                     )}

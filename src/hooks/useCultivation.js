@@ -4,6 +4,7 @@ import {
   saveCultivationState,
   addReadingProgress,
   absorbLifeLamp,
+  burnExpForLamp,
   breakthroughToTrucCo,
   breakthroughToKimDan,
   attemptUnlock121st,
@@ -54,6 +55,12 @@ export function useCultivation() {
     const next = absorbLifeLamp(lampId);
     setCultivation({ ...next });
     return next;
+  }, []);
+
+  const handleBurnExpForLamp = useCallback((lampId) => {
+    const res = burnExpForLamp(lampId);
+    setCultivation({ ...res.state });
+    return res;
   }, []);
 
   const handleBreakthroughTrucCo = useCallback(() => {
@@ -140,6 +147,7 @@ export function useCultivation() {
     totalMenhHoa,
     gainReadingExp,
     absorbLamp: handleAbsorbLamp,
+    burnExpForLamp: handleBurnExpForLamp,
     breakthroughToTrucCo: handleBreakthroughTrucCo,
     breakthroughToKimDan: handleBreakthroughKimDan,
     attemptUnlock121: handleUnlock121,

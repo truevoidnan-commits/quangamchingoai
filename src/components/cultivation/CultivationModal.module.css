@@ -607,6 +607,51 @@
   margin-top: auto;
 }
 
+.burnExpBtn {
+  width: 100%;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.22), rgba(249, 115, 22, 0.32));
+  border: 1px solid rgba(249, 115, 22, 0.65);
+  color: #fb923c;
+  border-radius: var(--radius-md);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: normal !important;
+  text-align: center;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.15);
+}
+.burnExpBtn:hover {
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.4), rgba(249, 115, 22, 0.5));
+  border-color: #fb923c;
+  color: #fff;
+  box-shadow: 0 0 18px rgba(249, 115, 22, 0.4);
+  transform: translateY(-1px);
+}
+.burnExpBtn:active {
+  transform: translateY(0);
+}
+
+.lampHeroCard {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  overflow: hidden;
+}
+
+.lampHeroGlow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(circle, rgba(255, 204, 0, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
 /* ========================================================
    TAB 3: TRIBULATION SECTION (NGUYÊN ANH & ĐẠO ANH)
    ======================================================== */
