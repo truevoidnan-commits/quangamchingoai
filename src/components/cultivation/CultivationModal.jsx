@@ -63,15 +63,15 @@ export default function CultivationModal({ isOpen, onClose }) {
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title="✦ ĐẠO LỘ TU TIÊN ✦" fullHeight>
       <div className={styles.container}>
-        {/* BANNER THẺ TRẢI NGHIỆM NGUYÊN ANH (NẾU ĐANG KÍCH HOẠT) */}
-        {isTrialActive && (
+        {/* BANNER THẺ TRẢI NGHIỆM KIM ĐAN (NẾU ĐANG KÍCH HOẠT) */}
+        {cultivation.isKimDanTrial && (
           <div className={styles.trialActiveBanner}>
             <div className={styles.trialBannerLeft}>
-              <span className={styles.trialBannerIcon}>👑</span>
+              <span className={styles.trialBannerIcon}>✨</span>
               <div>
-                <h4 style={{ margin: 0, color: '#ffcc00', fontSize: 13 }}>ĐANG TRẢI NGHIỆM CẢNH GIỚI NGUYÊN ANH (TẠM THỜI)</h4>
+                <h4 style={{ margin: 0, color: '#ffcc00', fontSize: 13 }}>ĐANG TRẢI NGHIỆM CẢNH GIỚI KIM ĐAN (TẠM THỜI)</h4>
                 <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
-                  Đang trải nghiệm Độ Kiếp Đài Nguyên Anh (9 Đạo Anh, 25.000 Thiên Mệnh, Vạn Kiếp Tề Phi). Kết thúc bất cứ lúc nào để về lại cảnh giới cũ!
+                  Đang trải nghiệm Tòa Thiên Lâu 9 Cung và Khảm Nạm Trấn Cung Vật. Kết thúc bất cứ lúc nào để về lại cảnh giới cũ (Thẻ sẽ tiêu biến vĩnh viễn)!
                 </p>
               </div>
             </div>
@@ -87,12 +87,12 @@ export default function CultivationModal({ isOpen, onClose }) {
                 flexShrink: 0,
               }}
               onClick={() => {
-                if (confirm('KẾT THÚC TRẢI NGHIỆM NGUYÊN ANH:\n\nBạn có muốn kết thúc trải nghiệm và khôi phục lại cảnh giới & tu vi ban đầu?')) {
-                  triggerAction(endNguyenAnhTrial);
+                if (confirm('KẾT THÚC TRẢI NGHIỆM KIM ĐAN:\n\n• Bạn có muốn kết thúc trải nghiệm và khôi phục lại cảnh giới & tu vi ban đầu?\n• Lưu ý: Thẻ trải nghiệm sẽ tiêu biến vĩnh viễn và không xuất hiện lại nữa!')) {
+                  triggerAction(endKimDanTrial);
                 }
               }}
             >
-              ↩️ Kết Thúc Trải Nghiệm
+              ↩️ Kết Thúc & Hủy Thẻ
             </button>
           </div>
         )}
@@ -104,9 +104,9 @@ export default function CultivationModal({ isOpen, onClose }) {
           <div className={styles.realmBadge}>
             {cultivation.realm === 'ngung_khi' && 'CẢNH GIỚI: NGƯNG KHÍ'}
             {cultivation.realm === 'truc_co' && 'CẢNH GIỚI: TRÚC CƠ'}
-            {cultivation.realm === 'kim_dan' && 'CẢNH GIỚI: KIM ĐAN'}
+            {cultivation.realm === 'kim_dan' && (cultivation.isKimDanTrial ? 'CẢNH GIỚI: KIM ĐAN (TRẢI NGHIỆM)' : 'CẢNH GIỚI: KIM ĐAN')}
             {cultivation.realm === 'gia_anh' && 'CẢNH GIỚI: GIẢ ANH'}
-            {cultivation.realm === 'nguyen_anh' && (isTrialActive ? 'CẢNH GIỚI: NGUYÊN ANH (TRẢI NGHIỆM)' : 'CẢNH GIỚI: NGUYÊN ANH')}
+            {cultivation.realm === 'nguyen_anh' && 'CẢNH GIỚI: NGUYÊN ANH'}
           </div>
 
           <h2 className={styles.realmTitle}>{displayName}</h2>
@@ -193,15 +193,15 @@ export default function CultivationModal({ isOpen, onClose }) {
            ======================================================== */}
         {activeTab === 'status' && (
           <div className={styles.statusSection}>
-            {/* THẺ TRẢI NGHIỆM NGUYÊN ANH (KHI CHƯA Ở NGUYÊN ANH) */}
-            {!isTrialActive && cultivation.realm !== 'nguyen_anh' && (
+            {/* THẺ TRẢI NGHIỆM KIM ĐAN (KHI CHƯA DÙNG VÀ CHƯA Ở KIM ĐAN) */}
+            {!cultivation.hasUsedKimDanTrial && !cultivation.isKimDanTrial && cultivation.realm !== 'kim_dan' && cultivation.realm !== 'gia_anh' && cultivation.realm !== 'nguyen_anh' && (
               <div className={styles.trialCardOffer}>
                 <div className={styles.trialCardOfferInfo}>
-                  <span className={styles.trialOfferIcon}>👑</span>
+                  <span className={styles.trialOfferIcon}>📜</span>
                   <div>
-                    <h4 style={{ color: '#ffcc00', margin: 0, fontSize: 13 }}>THẺ TRẢI NGHIỆM CẢNH GIỚI NGUYÊN ANH</h4>
+                    <h4 style={{ color: '#ffcc00', margin: 0, fontSize: 13 }}>THẺ TRẢI NGHIỆM CẢNH GIỚI KIM ĐAN (1 LẦN DUY NHẤT)</h4>
                     <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
-                      Dùng thử cảnh giới Nguyên Anh Đỉnh Phong, trải nghiệm Độ Kiếp Đài, 9 Đạo Anh, 25.000 Lực Thiên Mệnh và Vạn Kiếp Tề Phi (Khi kết thúc sẽ khôi phục cảnh giới ban đầu).
+                      Dùng thử cảnh giới Kim Đan, trải nghiệm Tòa Thiên Lâu 9 Cung và Khảm Nạm Trấn Cung Bảo Vật (Kết thúc sẽ khôi phục cảnh giới ban đầu và thẻ sẽ tiêu biến vĩnh viễn).
                     </p>
                   </div>
                 </div>
@@ -209,8 +209,8 @@ export default function CultivationModal({ isOpen, onClose }) {
                   className="btn-gold"
                   style={{ fontSize: 11.5, padding: '7px 14px', fontWeight: 700 }}
                   onClick={() => {
-                    if (confirm('SỬ DỤNG THẺ TRẢI NGHIỆM NGUYÊN ANH:\n\n• Tạm thời thăng hoa lên cảnh giới Nguyên Anh Đỉnh Phong (9 Đạo Anh hùng hậu, mở khóa Độ Kiếp Đài).\n• Cung cấp sẵn 25.000 Lực Thiên Mệnh và 10.000 Tiên Tinh để trải nghiệm.\n• Khi kết thúc sẽ khôi phục 100% cảnh giới và tu vi ban đầu của bạn!\n\nĐạo hữu có muốn kích hoạt trải nghiệm ngay?')) {
-                      triggerAction(activateNguyenAnhTrial);
+                    if (confirm('SỬ DỤNG THẺ TRẢI NGHIỆM KIM ĐAN:\n\n• Tạm thời thăng hoa lên cảnh giới Kim Đan (4 Cung Thật, Cung 5 đạt 99.99% chờ khảm nạm Trấn Cung Bảo Vật).\n• Cung cấp sẵn bảo vật và Tiên Tinh dùng thử.\n• Khi kết thúc sẽ khôi phục 100% cảnh giới và tu vi ban đầu của bạn!\n• Lưu ý: Thẻ chỉ dùng 1 lần duy nhất, kết thúc xong sẽ tiêu biến vĩnh viễn không xuất hiện lại nữa!\n\nĐạo hữu có muốn kích hoạt trải nghiệm ngay?')) {
+                      triggerAction(activateKimDanTrial);
                     }
                   }}
                 >

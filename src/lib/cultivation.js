@@ -950,9 +950,9 @@ const DEFAULT_STATE = {
   inventoryArtifacts: [], // Danh sách id vật trấn áp trong túi trữ vật
   palaceAnchors: {},      // Khảm nạm vật trấn áp vào từng Thiên Cung { [palaceIndex]: artifactData }
 
-  // Thẻ Trải Nghiệm Nguyên Anh
-  isNguyenAnhTrial: false,
+  // Thẻ Trải Nghiệm Kim Đan (Dùng 1 lần duy nhất, kết thúc sẽ tiêu biến vĩnh viễn)
   isKimDanTrial: false,
+  hasUsedKimDanTrial: false,
   preTrialBackup: null,
 
   // Kim Đan (Thiên Cung)
@@ -1670,15 +1670,19 @@ export function buyArtifactWithTienTinhAndExp(artifactId) {
 export const buyArtifactWithPointsAndExp = buyArtifactWithTienTinhAndExp;
 
 /**
- * KÍCH HOẠT THẺ TRẢI NGHIỆM CẢNH GIỚI NGUYÊN ANH
+ * KÍCH HOẠT THẺ TRẢI NGHIỆM CẢNH GIỚI KIM ĐAN
  * - Lưu bản sao toàn bộ trạng thái trước khi trải nghiệm (preTrialBackup).
- * - Tạm thời nâng cảnh giới lên Nguyên Anh với 9 Đạo Anh hùng hậu, mở khóa Độ Kiếp Đài.
- * - Cung cấp sẵn 25.000 Lực Thiên Mệnh và 10.000 Tiên Tinh để trải nghiệm nạp Thiên Mệnh, Vạn Kiếp Tề Phi và Chiến Lực tính bằng Anh!
+ * - Tạm thời nâng cảnh giới lên Kim Đan 4 Cung Thật, 9 Thiên Cung, tiến độ cung thứ 5 đạt 99.99% (799/800 EXP).
+ * - Cung cấp sẵn 2 vật phẩm trấn áp và 5.000 Tiên Tinh để trải nghiệm toàn bộ cơ chế Kim Đan & Trấn Cung!
+ * - Sau khi dùng và kết thúc, thẻ sẽ tự hủy vĩnh viễn không xuất hiện lại nữa!
  */
-export function activateNguyenAnhTrial() {
+export function activateKimDanTrial() {
   const state = getCultivationState();
-  if (state.isNguyenAnhTrial || state.isKimDanTrial) {
-    throw new Error('Đạo hữu hiện đang trong trạng thái trải nghiệm!');
+  if (state.hasUsedKimDanTrial) {
+    throw new Error('Thẻ trải nghiệm Kim Đan đã được sử dụng trước đó và đã tiêu biến vĩnh viễn!');
+  }
+  if (state.isKimDanTrial) {
+    throw new Error('Đạo hữu hiện đang trong trạng thái trải nghiệm Kim Đan!');
   }
 
   // Backup trạng thái thực tế của người dùng
@@ -1703,53 +1707,41 @@ export function activateNguyenAnhTrial() {
   };
 
   state.preTrialBackup = preTrialBackup;
-  state.isNguyenAnhTrial = true;
-  state.isKimDanTrial = false;
-  state.realm = 'nguyen_anh';
-  state.isThienMenhUnlocked = true;
+  state.isKimDanTrial = true;
+  state.hasUsedKimDanTrial = true;
+  state.realm = 'kim_dan';
   state.maxThienCung = 9;
-  state.realizedThienCung = 9;
-  state.currentThienCungExp = 0;
+  state.realizedThienCung = 4;
+  state.currentThienCungExp = 799; // Cung 5 ở 99.99% chờ khảm nạm Trấn Cung Vật
   
-  // Thiết lập sẵn 9 Đạo Anh với tiến độ luân hồi phong phú
-  state.daoAnhs = [
-    { id: 'da_trial_1', palaceIndex: 0, name: 'Đạo Anh Thứ 1', currentKiep: 4, currentThienMenh: 18000, maxThienMenh: 22000, fromLamp: false },
-    { id: 'da_trial_2', palaceIndex: 1, name: 'Đạo Anh Thứ 2', currentKiep: 3, currentThienMenh: 11000, maxThienMenh: 13000, fromLamp: false },
-    { id: 'da_trial_3', palaceIndex: 2, name: 'Đạo Anh Thứ 3', currentKiep: 3, currentThienMenh: 9500, maxThienMenh: 13000, fromLamp: false },
-    { id: 'da_trial_4', palaceIndex: 3, name: 'Đạo Anh Thứ 4', currentKiep: 2, currentThienMenh: 6000, maxThienMenh: 7000, fromLamp: false },
-    { id: 'da_trial_5', palaceIndex: 4, name: 'Đạo Anh Thứ 5', currentKiep: 2, currentThienMenh: 5500, maxThienMenh: 7000, fromLamp: false },
-    { id: 'da_trial_6', palaceIndex: 5, name: 'Đạo Anh Thứ 6', currentKiep: 1, currentThienMenh: 2500, maxThienMenh: 3000, fromLamp: false },
-    { id: 'da_trial_7', palaceIndex: 6, name: 'Đạo Anh Thứ 7', currentKiep: 1, currentThienMenh: 2800, maxThienMenh: 3000, fromLamp: false },
-    { id: 'da_trial_8', palaceIndex: 7, name: 'Đạo Anh Thứ 8', currentKiep: 1, currentThienMenh: 2100, maxThienMenh: 3000, fromLamp: false },
-    { id: 'da_trial_9', palaceIndex: 8, name: 'Đạo Anh Thứ 9', currentKiep: 1, currentThienMenh: 2900, maxThienMenh: 3000, fromLamp: false },
-  ];
-
-  state.totalThienMenh = 25000;
-  state.tienTinh = Math.max(state.tienTinh || 0, 10000);
+  if (!state.inventoryArtifacts || state.inventoryArtifacts.length === 0) {
+    state.inventoryArtifacts = ['thai_hu', 'bang_phach'];
+  }
+  state.tienTinh = Math.max(state.tienTinh || 0, 5000);
   state.dangDiem = state.tienTinh;
 
   state.logs.unshift({
-    text: '📜 ĐÃ SỬ DỤNG [THẺ TRẢI NGHIỆM NGUYÊN ANH]! Thăng hoa lên cảnh giới Nguyên Anh Đỉnh Phong (9 Đạo Anh, mở khóa Độ Kiếp Đài & 25.000 Thiên Mệnh).',
+    text: '📜 ĐÃ SỬ DỤNG [THẺ TRẢI NGHIỆM KIM ĐAN]! Thăng hoa lên Kim Đan Cảnh (4 Cung Thật, Cung 5 đạt 99.99% chờ khảm nạm). Thẻ sẽ tiêu biến vĩnh viễn sau khi kết thúc.',
     time: Date.now(),
   });
 
   saveCultivationState(state);
   return {
     state,
-    message: '✨ Đã kích hoạt Thẻ Trải Nghiệm Nguyên Anh thành công! Đạo hữu có thể trải nghiệm toàn bộ Độ Kiếp Đài, Thiên Mệnh và Vạn Kiếp Tề Phi.',
+    message: '✨ Đã kích hoạt Thẻ Trải Nghiệm Kim Đan thành công! Bạn có thể trải nghiệm toàn bộ Tòa Thiên Lâu Kim Đan và Trấn Cung Bảo Vật.',
   };
 }
 
-export const activateKimDanTrial = activateNguyenAnhTrial;
+export const activateNguyenAnhTrial = activateKimDanTrial;
 
 /**
- * KẾT THÚC TRẢI NGHIỆM NGUYÊN ANH (TRỞ VỀ CẢNH GIỚI BAN ĐẦU)
+ * KẾT THÚC TRẢI NGHIỆM KIM ĐAN (TRỞ VỀ CẢNH GIỚI BAN ĐẦU)
  * - Khôi phục 100% cảnh giới và trạng thái tu vi ban đầu được sao lưu trước đó.
- * - Thẻ trải nghiệm dùng xong sẽ tự động tiêu biến.
+ * - Thẻ trải nghiệm dùng xong sẽ tự động tiêu biến vĩnh viễn không xuất hiện lại nữa!
  */
-export function endNguyenAnhTrial() {
+export function endKimDanTrial() {
   const state = getCultivationState();
-  if ((!state.isNguyenAnhTrial && !state.isKimDanTrial) || !state.preTrialBackup) {
+  if (!state.isKimDanTrial || !state.preTrialBackup) {
     throw new Error('Đạo hữu hiện không trong trạng thái trải nghiệm!');
   }
 
@@ -1772,23 +1764,23 @@ export function endNguyenAnhTrial() {
   state.totalThienMenh = backup.totalThienMenh;
   state.daoAnhs = backup.daoAnhs || [];
 
-  state.isNguyenAnhTrial = false;
   state.isKimDanTrial = false;
+  state.hasUsedKimDanTrial = true; // Tiêu biến vĩnh viễn, không xuất hiện lại nữa!
   state.preTrialBackup = null;
 
   state.logs.unshift({
-    text: '↩️ Đã kết thúc trải nghiệm Nguyên Anh. Thẻ trải nghiệm tiêu biến, khôi phục cảnh giới và đạo cơ ban đầu.',
+    text: '↩️ Đã kết thúc trải nghiệm Kim Đan. Thẻ trải nghiệm đã tiêu biến vĩnh viễn, khôi phục 100% cảnh giới và đạo cơ ban đầu.',
     time: Date.now(),
   });
 
   saveCultivationState(state);
   return {
     state,
-    message: '↩️ Đã kết thúc trải nghiệm Nguyên Anh và trở về cảnh giới ban đầu!',
+    message: '↩️ Đã kết thúc trải nghiệm Kim Đan và trở về cảnh giới ban đầu! Thẻ trải nghiệm đã tiêu biến.',
   };
 }
 
-export const endKimDanTrial = endNguyenAnhTrial;
+export const endNguyenAnhTrial = endKimDanTrial;
 
 /**
  * Đột phá Ngưng Khí lên Trúc Cơ
