@@ -15,6 +15,8 @@ export default function CultivationModal({ isOpen, onClose }) {
     anchorPalace,
     sellArtifact,
     buyArtifact,
+    activateKimDanTrial,
+    endKimDanTrial,
     activateNguyenAnhTrial,
     endNguyenAnhTrial,
     breakthroughToTrucCo,

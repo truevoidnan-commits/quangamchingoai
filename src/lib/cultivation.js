@@ -1681,34 +1681,33 @@ export function activateKimDanTrial() {
   if (state.hasUsedKimDanTrial) {
     throw new Error('Thẻ trải nghiệm Kim Đan đã được sử dụng trước đó và đã tiêu biến vĩnh viễn!');
   }
-  if (state.isKimDanTrial) {
-    throw new Error('Đạo hữu hiện đang trong trạng thái trải nghiệm Kim Đan!');
+
+  // Backup trạng thái thực tế của người dùng nếu chưa có backup
+  if (!state.preTrialBackup) {
+    const preTrialBackup = {
+      realm: state.realm === 'kim_dan' ? 'truc_co' : state.realm,
+      totalExp: state.totalExp,
+      expCurrentRealm: state.expCurrentRealm,
+      ngungKhiLevel: state.ngungKhiLevel,
+      readyBreakthroughTrucCo: state.readyBreakthroughTrucCo,
+      phapKhieu: state.phapKhieu,
+      selfMenhHoa: state.selfMenhHoa,
+      has121st: state.has121st,
+      failed121st: state.failed121st,
+      attemptExp121: state.attemptExp121,
+      maxThienCung: state.maxThienCung,
+      realizedThienCung: state.realizedThienCung,
+      currentThienCungExp: state.currentThienCungExp,
+      palaceAnchors: { ...(state.palaceAnchors || {}) },
+      isThienMenhUnlocked: state.isThienMenhUnlocked,
+      totalThienMenh: state.totalThienMenh,
+      daoAnhs: [...(state.daoAnhs || [])],
+    };
+    state.preTrialBackup = preTrialBackup;
   }
 
-  // Backup trạng thái thực tế của người dùng
-  const preTrialBackup = {
-    realm: state.realm,
-    totalExp: state.totalExp,
-    expCurrentRealm: state.expCurrentRealm,
-    ngungKhiLevel: state.ngungKhiLevel,
-    readyBreakthroughTrucCo: state.readyBreakthroughTrucCo,
-    phapKhieu: state.phapKhieu,
-    selfMenhHoa: state.selfMenhHoa,
-    has121st: state.has121st,
-    failed121st: state.failed121st,
-    attemptExp121: state.attemptExp121,
-    maxThienCung: state.maxThienCung,
-    realizedThienCung: state.realizedThienCung,
-    currentThienCungExp: state.currentThienCungExp,
-    palaceAnchors: { ...(state.palaceAnchors || {}) },
-    isThienMenhUnlocked: state.isThienMenhUnlocked,
-    totalThienMenh: state.totalThienMenh,
-    daoAnhs: [...(state.daoAnhs || [])],
-  };
-
-  state.preTrialBackup = preTrialBackup;
   state.isKimDanTrial = true;
-  state.hasUsedKimDanTrial = true;
+  state.isNguyenAnhTrial = false;
   state.realm = 'kim_dan';
   state.maxThienCung = 9;
   state.realizedThienCung = 4;
@@ -1741,30 +1740,38 @@ export const activateNguyenAnhTrial = activateKimDanTrial;
  */
 export function endKimDanTrial() {
   const state = getCultivationState();
-  if (!state.isKimDanTrial || !state.preTrialBackup) {
+  if (!state.isKimDanTrial && !state.preTrialBackup) {
     throw new Error('Đạo hữu hiện không trong trạng thái trải nghiệm!');
   }
 
-  const backup = state.preTrialBackup;
-  state.realm = backup.realm;
-  state.totalExp = backup.totalExp;
-  state.expCurrentRealm = backup.expCurrentRealm;
-  state.ngungKhiLevel = backup.ngungKhiLevel;
-  state.readyBreakthroughTrucCo = backup.readyBreakthroughTrucCo;
-  state.phapKhieu = backup.phapKhieu;
-  state.selfMenhHoa = backup.selfMenhHoa;
-  state.has121st = backup.has121st;
-  state.failed121st = backup.failed121st;
-  state.attemptExp121 = backup.attemptExp121;
-  state.maxThienCung = backup.maxThienCung;
-  state.realizedThienCung = backup.realizedThienCung;
-  state.currentThienCungExp = backup.currentThienCungExp;
-  state.palaceAnchors = backup.palaceAnchors || {};
-  state.isThienMenhUnlocked = backup.isThienMenhUnlocked;
-  state.totalThienMenh = backup.totalThienMenh;
-  state.daoAnhs = backup.daoAnhs || [];
+  if (state.preTrialBackup) {
+    const backup = state.preTrialBackup;
+    state.realm = backup.realm || 'truc_co';
+    state.totalExp = backup.totalExp || 0;
+    state.expCurrentRealm = backup.expCurrentRealm || 0;
+    state.ngungKhiLevel = backup.ngungKhiLevel || 1;
+    state.readyBreakthroughTrucCo = backup.readyBreakthroughTrucCo || false;
+    state.phapKhieu = backup.phapKhieu || 0;
+    state.selfMenhHoa = backup.selfMenhHoa || 0;
+    state.has121st = backup.has121st || false;
+    state.failed121st = backup.failed121st || false;
+    state.attemptExp121 = backup.attemptExp121 || 0;
+    state.maxThienCung = backup.maxThienCung || 6;
+    state.realizedThienCung = backup.realizedThienCung || 0;
+    state.currentThienCungExp = backup.currentThienCungExp || 0;
+    state.palaceAnchors = backup.palaceAnchors || {};
+    state.isThienMenhUnlocked = backup.isThienMenhUnlocked || false;
+    state.totalThienMenh = backup.totalThienMenh || 0;
+    state.daoAnhs = backup.daoAnhs || [];
+  } else {
+    state.realm = 'truc_co';
+    state.maxThienCung = 6;
+    state.realizedThienCung = 0;
+    state.currentThienCungExp = 0;
+  }
 
   state.isKimDanTrial = false;
+  state.isNguyenAnhTrial = false;
   state.hasUsedKimDanTrial = true; // Tiêu biến vĩnh viễn, không xuất hiện lại nữa!
   state.preTrialBackup = null;
 
