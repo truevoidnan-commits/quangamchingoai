@@ -1155,11 +1155,11 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   let droppedLamp = null;
   let breakthrough = null;
 
-  // ĐẾN NGUYÊN ANH (HOẶC GIẢ ANH): Mệnh Đăng và Vật Trấn Áp sẽ KHÔNG RƠI NỮA!
-  const isNguyenAnhStage = state.realm === 'gia_anh' || state.realm === 'nguyen_anh';
+  // ĐẾN CHÍNH THỨC NGUYÊN ANH: Mệnh Đăng và Vật Trấn Áp sẽ KHÔNG RƠI NỮA! (Giả Anh vẫn rơi bình thường)
+  const isNguyenAnh = state.realm === 'nguyen_anh';
 
-  // TỈ LỆ RƠI MỆNH ĐĂNG THEO 6 CẤP BẬC HIẾM (~7.5% mỗi chu kỳ 60s) - Chỉ rơi trước Nguyên Anh
-  if (!isNguyenAnhStage) {
+  // TỈ LỆ RƠI MỆNH ĐĂNG THEO 6 CẤP BẬC HIẾM (~7.5% mỗi chu kỳ 60s) - Vẫn rơi ở Giả Anh, chỉ ngừng khi lên Nguyên Anh
+  if (!isNguyenAnh) {
     const allOwnedLamps = [...(state.inventoryLamps || []), ...(state.absorbedLamps || [])];
     if (allOwnedLamps.length < LIFE_LAMPS.length) {
       const unownedLamps = LIFE_LAMPS.filter(l => !allOwnedLamps.includes(l.id));
@@ -1193,8 +1193,8 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     }
   }
 
-  // 12% tỉ lệ nhặt được Vật Trấn Áp Thiên Cung - Chỉ rơi trước Nguyên Anh
-  if (!isNguyenAnhStage) {
+  // 12% tỉ lệ nhặt được Vật Trấn Áp Thiên Cung - Vẫn rơi ở Giả Anh, chỉ ngừng khi lên Nguyên Anh
+  if (!isNguyenAnh) {
     const artifactRoll = Math.random();
     if (artifactRoll < 0.12) {
       const tierRoll = Math.random();
