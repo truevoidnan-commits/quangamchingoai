@@ -1155,65 +1155,68 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   let droppedLamp = null;
   let breakthrough = null;
 
-  // TỈ LỆ RƠI MỆNH ĐĂNG THEO 6 CẤP BẬC HIẾM (~7.5% mỗi chu kỳ 60s)
-  const allOwnedLamps = [...(state.inventoryLamps || []), ...(state.absorbedLamps || [])];
-  if (allOwnedLamps.length < LIFE_LAMPS.length) {
-    const unownedLamps = LIFE_LAMPS.filter(l => !allOwnedLamps.includes(l.id));
+  // ĐẾN NGUYÊN ANH (HOẶC GIẢ ANH): Mệnh Đăng và Vật Trấn Áp sẽ KHÔNG RƠI NỮA!
+  const isNguyenAnhStage = state.realm === 'gia_anh' || state.realm === 'nguyen_anh';
 
-    if (unownedLamps.length > 0) {
-      const dropRoll = Math.random();
-      // Tỉ lệ rơi: 7.5% cơ bản mỗi chu kỳ 60s (tăng hấp dẫn phù hợp 72 Mệnh Đăng)
-      if (dropRoll < 0.075) {
-        // Chọn tier ngẫu nhiên theo trọng số phẩm cấp tương quan
-        const tierRoll = Math.random();
-        let selectedTier = 'ha_pham';
-        if (tierRoll < 0.45) selectedTier = 'ha_pham';
-        else if (tierRoll < 0.73) selectedTier = 'trung_pham';
-        else if (tierRoll < 0.88) selectedTier = 'thuong_pham';
-        else if (tierRoll < 0.96) selectedTier = 'cuc_pham';
-        else if (tierRoll < 0.992) selectedTier = 'tien_pham';
-        else selectedTier = 'than_pham';
+  // TỈ LỆ RƠI MỆNH ĐĂNG THEO 6 CẤP BẬC HIẾM (~7.5% mỗi chu kỳ 60s) - Chỉ rơi trước Nguyên Anh
+  if (!isNguyenAnhStage) {
+    const allOwnedLamps = [...(state.inventoryLamps || []), ...(state.absorbedLamps || [])];
+    if (allOwnedLamps.length < LIFE_LAMPS.length) {
+      const unownedLamps = LIFE_LAMPS.filter(l => !allOwnedLamps.includes(l.id));
 
-        // Tìm đèn chưa sở hữu thuộc tier đó (nếu không có thì lấy bất kỳ)
-        let candidateLamps = unownedLamps.filter(l => l.tier === selectedTier);
-        if (candidateLamps.length === 0) candidateLamps = unownedLamps;
+      if (unownedLamps.length > 0) {
+        const dropRoll = Math.random();
+        if (dropRoll < 0.075) {
+          const tierRoll = Math.random();
+          let selectedTier = 'ha_pham';
+          if (tierRoll < 0.45) selectedTier = 'ha_pham';
+          else if (tierRoll < 0.73) selectedTier = 'trung_pham';
+          else if (tierRoll < 0.88) selectedTier = 'thuong_pham';
+          else if (tierRoll < 0.96) selectedTier = 'cuc_pham';
+          else if (tierRoll < 0.992) selectedTier = 'tien_pham';
+          else selectedTier = 'than_pham';
 
-        const randomIndex = Math.floor(Math.random() * candidateLamps.length);
-        droppedLamp = candidateLamps[randomIndex];
-        state.inventoryLamps = [...(state.inventoryLamps || []), droppedLamp.id];
+          let candidateLamps = unownedLamps.filter(l => l.tier === selectedTier);
+          if (candidateLamps.length === 0) candidateLamps = unownedLamps;
 
-        const tierInfo = LAMP_TIERS[droppedLamp.tier] || LAMP_TIERS.ha_pham;
-        state.logs.unshift({
-          text: `Cơ duyên nghịch thiên! Đạt được [${tierInfo.name}] ${droppedLamp.name} (Đã thêm vào túi trữ vật)!`,
-          time: Date.now(),
-        });
+          const randomIndex = Math.floor(Math.random() * candidateLamps.length);
+          droppedLamp = candidateLamps[randomIndex];
+          state.inventoryLamps = [...(state.inventoryLamps || []), droppedLamp.id];
+
+          const tierInfo = LAMP_TIERS[droppedLamp.tier] || LAMP_TIERS.ha_pham;
+          state.logs.unshift({
+            text: `Cơ duyên nghịch thiên! Đạt được [${tierInfo.name}] ${droppedLamp.name} (Đã thêm vào túi trữ vật)!`,
+            time: Date.now(),
+          });
+        }
       }
     }
   }
 
-  // 12% tỉ lệ nhặt được Vật Trấn Áp Thiên Cung
-  let droppedArtifact = null;
-  const artifactRoll = Math.random();
-  if (artifactRoll < 0.12) {
-    const tierRoll = Math.random();
-    let selectedTier = 'ha_pham';
-    if (tierRoll < 0.45) selectedTier = 'ha_pham';
-    else if (tierRoll < 0.73) selectedTier = 'trung_pham';
-    else if (tierRoll < 0.88) selectedTier = 'thuong_pham';
-    else if (tierRoll < 0.96) selectedTier = 'cuc_pham';
-    else if (tierRoll < 0.992) selectedTier = 'tien_pham';
-    else selectedTier = 'than_pham';
+  // 12% tỉ lệ nhặt được Vật Trấn Áp Thiên Cung - Chỉ rơi trước Nguyên Anh
+  if (!isNguyenAnhStage) {
+    const artifactRoll = Math.random();
+    if (artifactRoll < 0.12) {
+      const tierRoll = Math.random();
+      let selectedTier = 'ha_pham';
+      if (tierRoll < 0.45) selectedTier = 'ha_pham';
+      else if (tierRoll < 0.73) selectedTier = 'trung_pham';
+      else if (tierRoll < 0.88) selectedTier = 'thuong_pham';
+      else if (tierRoll < 0.96) selectedTier = 'cuc_pham';
+      else if (tierRoll < 0.992) selectedTier = 'tien_pham';
+      else selectedTier = 'than_pham';
 
-    const candidateArtifacts = SUPPRESSING_ARTIFACTS.filter(a => a.tier === selectedTier);
-    if (candidateArtifacts.length > 0) {
-      const randomIdx = Math.floor(Math.random() * candidateArtifacts.length);
-      droppedArtifact = candidateArtifacts[randomIdx];
-      state.inventoryArtifacts = [...(state.inventoryArtifacts || []), droppedArtifact.id];
-      const tierInfo = LAMP_TIERS[droppedArtifact.tier] || LAMP_TIERS.ha_pham;
-      state.logs.unshift({
-        text: `✨ Kỳ duyên xuất hiện! Nhặt được Vật Trấn Áp [${tierInfo.name}] ${droppedArtifact.name} (${droppedArtifact.type}) - Đã cất vào túi trữ vật!`,
-        time: Date.now(),
-      });
+      const candidateArtifacts = SUPPRESSING_ARTIFACTS.filter(a => a.tier === selectedTier);
+      if (candidateArtifacts.length > 0) {
+        const randomIdx = Math.floor(Math.random() * candidateArtifacts.length);
+        droppedArtifact = candidateArtifacts[randomIdx];
+        state.inventoryArtifacts = [...(state.inventoryArtifacts || []), droppedArtifact.id];
+        const tierInfo = LAMP_TIERS[droppedArtifact.tier] || LAMP_TIERS.ha_pham;
+        state.logs.unshift({
+          text: `✨ Kỳ duyên xuất hiện! Nhặt được Vật Trấn Áp [${tierInfo.name}] ${droppedArtifact.name} (${droppedArtifact.type}) - Đã cất vào túi trữ vật!`,
+          time: Date.now(),
+        });
+      }
     }
   }
 
