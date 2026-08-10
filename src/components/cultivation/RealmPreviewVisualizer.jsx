@@ -430,18 +430,106 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 })}
               </div>
 
-              {/* Meditating Celestial Infant Body (Đạo Anh Thần Thể Tọa Thiền) */}
+              {/* Meditating Celestial Infant Body (Đạo Anh Thần Thể Tọa Thiền Bằng Vector SVG) */}
               <div className={styles.infantEntity}>
-                <span className={styles.infantCrown} style={{ filter: 'drop-shadow(0 0 10px #22c3f0)' }}>🧘</span>
-                <span className={styles.infantBody}>✨</span>
+                <div className={styles.spiritSvgWrap}>
+                  <svg viewBox="0 0 100 120" className={styles.spiritSvg}>
+                    <defs>
+                      <linearGradient id="spiritGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#67e8f9" stopOpacity="0.95" />
+                        <stop offset="35%" stopColor="#06b6d4" stopOpacity="0.9" />
+                        <stop offset="70%" stopColor="#0284c7" stopOpacity="0.85" />
+                        <stop offset="100%" stopColor="#1e293b" stopOpacity="0.95" />
+                      </linearGradient>
+
+                      <linearGradient id="lotusGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.8" />
+                        <stop offset="50%" stopColor="#ffcc00" stopOpacity="1" />
+                        <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.8" />
+                      </linearGradient>
+
+                      <radialGradient id="haloGlow" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor="#22c3f0" stopOpacity="0.6" />
+                        <stop offset="60%" stopColor="#0284c7" stopOpacity="0.2" />
+                        <stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                      </radialGradient>
+                    </defs>
+
+                    {/* Back Aura Circle & Celestial Rings */}
+                    <circle cx="50" cy="42" r="32" fill="url(#haloGlow)" />
+                    <circle cx="50" cy="42" r="24" fill="none" stroke="rgba(34, 195, 240, 0.4)" strokeWidth="1" strokeDasharray="3,3" className={styles.spiritRingSpin} />
+
+                    {/* Floating Immortal Ribbons */}
+                    <path
+                      d="M 22 75 Q 14 55 24 38 Q 30 28 36 34 Q 28 48 32 68 Z"
+                      fill="rgba(34, 195, 240, 0.3)"
+                      className={styles.spiritRibbonLeft}
+                    />
+                    <path
+                      d="M 78 75 Q 86 55 76 38 Q 70 28 64 34 Q 72 48 68 68 Z"
+                      fill="rgba(34, 195, 240, 0.3)"
+                      className={styles.spiritRibbonRight}
+                    />
+
+                    {/* Lotus Seat (Đài Sen Tọa Lạc) */}
+                    <g className={styles.lotusSeat}>
+                      <path d="M 50 102 Q 35 106 20 98 Q 30 108 50 110 Q 70 108 80 98 Q 65 106 50 102 Z" fill="url(#lotusGrad)" opacity="0.9" />
+                      <path d="M 50 104 C 36 102 24 94 22 84 C 30 92 42 98 50 104 Z" fill="#ffcc00" opacity="0.85" />
+                      <path d="M 50 104 C 30 100 14 88 12 76 C 24 86 38 96 50 104 Z" fill="#f59e0b" opacity="0.6" />
+                      <path d="M 50 104 C 64 102 76 94 78 84 C 70 92 58 98 50 104 Z" fill="#ffcc00" opacity="0.85" />
+                      <path d="M 50 104 C 70 100 86 88 88 76 C 76 86 62 96 50 104 Z" fill="#f59e0b" opacity="0.6" />
+                      <path d="M 50 82 C 44 92 42 98 50 106 C 58 98 56 92 50 82 Z" fill="#fff" opacity="0.95" />
+                    </g>
+
+                    {/* Meditating Daoist Body (Dáng Ngồi Kiết Già Tiên Phong Đạo Cốt) */}
+                    <g>
+                      {/* Head */}
+                      <circle cx="50" cy="32" r="10" fill="url(#spiritGrad)" stroke="#22c3f0" strokeWidth="1" />
+                      {/* Topknot */}
+                      <path d="M 46 22 Q 50 14 54 22 Z" fill="#67e8f9" stroke="#38bdf8" strokeWidth="0.8" />
+                      <circle cx="50" cy="14" r="2.5" fill="#ffcc00" />
+
+                      {/* Third Eye / Forehead Mark */}
+                      <circle cx="50" cy="30" r="1.5" fill="#ffcc00" className={styles.thirdEyeMark} />
+
+                      {/* Torso & Robes in Meditation */}
+                      <path
+                        d="M 43 43 C 34 46 28 56 26 68 C 24 78 20 86 18 90 C 26 94 36 94 50 94 C 64 94 74 94 82 90 C 80 86 76 78 74 68 C 72 56 66 46 57 43 Z"
+                        fill="url(#spiritGrad)"
+                        stroke="#22c3f0"
+                        strokeWidth="1.2"
+                      />
+
+                      {/* Crossed Legs (Hai Chân Xếp Kiết Già) */}
+                      <path
+                        d="M 22 86 Q 36 100 50 98 Q 64 100 78 86 Q 64 92 50 90 Q 36 92 22 86 Z"
+                        fill="#0284c7"
+                        stroke="#38bdf8"
+                        strokeWidth="0.8"
+                      />
+
+                      {/* Meditating Hands in Mudra (Hai Tay Bắt Quyết Thủ Ấn) */}
+                      <ellipse cx="50" cy="74" rx="8" ry="4" fill="#67e8f9" stroke="#22c3f0" strokeWidth="0.8" />
+
+                      {/* Dantian Energy Core Glow */}
+                      <circle cx="50" cy="70" r="4" fill="#ffcc00" className={styles.spiritDanDienCore} />
+                    </g>
+                  </svg>
+                </div>
               </div>
             </div>
 
-            {/* Orbiting Dao Anh Guardians with Trấn Cung Bảo Vật & Công Pháp */}
+            {/* Orbiting Dao Anh Guardians with Trấn Cung Bảo Vật & Công Pháp (Ellipse Orbit to avoid covering bottom badge) */}
             <div className={styles.daoAnhsOrbitList}>
               {(daoAnhs || []).slice(0, 9).map((da, idx) => {
                 const totalCount = Math.max(1, Math.min(9, daoAnhs.length));
-                const angle = (idx / totalCount) * 360;
+                const angleDeg = (idx / totalCount) * 360 - 90;
+                const angleRad = (angleDeg * Math.PI) / 180;
+                const radiusX = 102; // Ngang
+                const radiusY = 66;  // Dọc (thu gọn để không chạm hoặc đè lên badge phía dưới)
+                const posX = Math.cos(angleRad) * radiusX;
+                const posY = Math.sin(angleRad) * radiusY;
+
                 const palaceIdx = da.palaceIndex ?? idx;
                 const anchor = cultivation?.palaceAnchors?.[palaceIdx];
                 const isLamp = da.fromLamp || palaceIdx >= (maxThienCung - (cultivation?.absorbedLamps || []).length);
@@ -486,7 +574,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                     key={da.id}
                     className={`${styles.orbitDaoAnhMini} ${da.fromLamp ? styles.orbitLampProtected : ''}`}
                     style={{
-                      transform: `rotate(${angle}deg) translate(100px) rotate(-${angle}deg)`,
+                      transform: `translate(${posX.toFixed(1)}px, ${posY.toFixed(1)}px)`,
                       borderColor: artifactColor,
                       boxShadow: `0 0 10px ${artifactColor}55`,
                     }}

@@ -957,7 +957,7 @@ const DEFAULT_STATE = {
 
   // Kim Đan (Thiên Cung)
   maxThienCung: 6, // 6 đến 13
-  realizedThienCung: 1, // Số cung đã hóa thực thành Cung Thật
+  realizedThienCung: 0, // Số cung đã hóa thực thành Cung Thật (0 Cung tự thân ban đầu, chỉ có từ Mệnh Đăng hoặc đã trấn áp)
   currentThienCungExp: 0, // EXP đang nạp vào cung tiếp theo
 
   // Giả Anh & Nguyên Anh
@@ -1048,7 +1048,7 @@ export function getCombatPowerDisplay(state) {
   }
 
   if (state.realm === 'kim_dan') {
-    const realPalaces = state.realizedThienCung || 1;
+    const realPalaces = state.realizedThienCung !== undefined ? state.realizedThienCung : 0;
     return `${realPalaces} Cung`;
   }
 
@@ -1881,11 +1881,11 @@ export function breakthroughToKimDan() {
   state.realm = 'kim_dan';
   state.expCurrentRealm = 0;
   state.maxThienCung = totalThienCung;
-  state.realizedThienCung = Math.max(1, lampBonusCung);
+  state.realizedThienCung = lampBonusCung; // Chỉ các cung hình thành từ Mệnh Đăng mới là Cung Thật (100%), toàn bộ cung tự thân ban đầu đều HƯ ẢO (0%)!
   state.currentThienCungExp = 0;
 
   state.logs.unshift({
-    text: `Đột phá Kim Đan thành công! Sở hữu trần ${totalThienCung} Thiên Cung (${baseThienCung} Cung tự thân + ${lampBonusCung} Chân Cung Mệnh Đăng). Chiến lực tính bằng Cung!`,
+    text: `Đột phá Kim Đan thành công! Sở hữu trần ${totalThienCung} Thiên Cung (${baseThienCung} Cung tự thân hư ảo + ${lampBonusCung} Chân Cung Mệnh Đăng thật). Chiến lực tính bằng Cung Thật!`,
     time: Date.now(),
   });
 

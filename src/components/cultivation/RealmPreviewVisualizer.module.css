@@ -686,17 +686,52 @@
   align-items: center;
   gap: 1px;
   z-index: 5;
-  animation: floatSlow 2.5s ease-in-out infinite;
 }
 
-.infantCrown {
-  font-size: 16px;
-  filter: drop-shadow(0 0 8px #ffcc00);
+.spiritSvgWrap {
+  width: 76px;
+  height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  filter: drop-shadow(0 0 14px rgba(34, 195, 240, 0.55));
+  animation: floatSlow 3s ease-in-out infinite alternate;
 }
 
-.infantBody {
-  font-size: 26px;
-  filter: drop-shadow(0 0 12px #22c3f0);
+.spiritSvg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.spiritRingSpin {
+  transform-origin: 50px 42px;
+  animation: rotateSlow 16s linear infinite;
+}
+
+.spiritRibbonLeft {
+  transform-origin: 22px 75px;
+  animation: floatSlow 2.4s ease-in-out infinite alternate;
+}
+
+.spiritRibbonRight {
+  transform-origin: 78px 75px;
+  animation: floatSlow 2.7s ease-in-out infinite alternate-reverse;
+}
+
+.spiritDanDienCore {
+  filter: drop-shadow(0 0 6px #ffcc00);
+  animation: pulseCore 1.4s infinite ease-in-out;
+}
+
+.thirdEyeMark {
+  filter: drop-shadow(0 0 4px #ffcc00);
+  animation: pulseCore 1.8s infinite;
+}
+
+.lotusSeat {
+  filter: drop-shadow(0 0 8px rgba(255, 204, 0, 0.6));
 }
 
 .daoAnhsOrbitList {
@@ -710,10 +745,10 @@
 
 .orbitDaoAnhMini {
   position: absolute;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: rgba(16, 25, 39, 0.9);
+  background: rgba(16, 25, 39, 0.94);
   border: 1px solid #22c3f0;
   display: flex;
   flex-direction: column;
@@ -721,6 +756,7 @@
   justify-content: center;
   box-shadow: 0 0 10px rgba(34, 195, 240, 0.4);
   pointer-events: auto;
+  transition: transform 0.3s ease;
 }
 
 .orbitLampProtected {
