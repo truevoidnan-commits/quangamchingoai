@@ -950,7 +950,9 @@ const DEFAULT_STATE = {
   inventoryArtifacts: [], // Danh sách id vật trấn áp trong túi trữ vật
   palaceAnchors: {},      // Khảm nạm vật trấn áp vào từng Thiên Cung { [palaceIndex]: artifactData }
 
-  // Thẻ Trải Nghiệm Kim Đan (Dùng 1 lần duy nhất, kết thúc sẽ tiêu biến vĩnh viễn)
+  // Thẻ Trải Nghiệm (Dùng 1 lần duy nhất, kết thúc sẽ tiêu biến vĩnh viễn)
+  isNgungKhiTrial: false,
+  hasUsedNgungKhiTrial: false,
   isKimDanTrial: false,
   hasUsedKimDanTrial: false,
   preTrialBackup: null,
@@ -1061,8 +1063,45 @@ export function getCombatPowerDisplay(state) {
 }
 
 /**
+ * Kiểm tra xem cảnh giới hiện tại đã đạt Đại Viên Mãn (cực hạn) chưa:
+ * - Ngưng Khí: Tầng 10 và đủ điều kiện Trúc Cơ
+ * - Trúc Cơ: 120 pháp khiếu (4 hỏa) và (đã mở 121 / đã khóa 121 / đã tích lũy max EXP xung kích 121)
+ * - Kim Đan: 100% Thiên Cung đã hóa thực thành Cung Thật (realizedThienCung >= maxThienCung)
+ * - Nguyên Anh: Toàn bộ Đạo Anh đã đạt Kiếp thứ 5
+ */
+export function isGrandCompletion(state) {
+  if (!state) state = getCultivationState();
+
+  if (state.realm === 'ngung_khi') {
+    return state.ngungKhiLevel >= 10 && (state.readyBreakthroughTrucCo || state.expCurrentRealm >= NGUNG_KHI_THRESHOLDS[10]);
+  }
+
+  if (state.realm === 'truc_co') {
+    if (state.phapKhieu >= 120) {
+      if (state.has121st || state.failed121st || state.attemptExp121 >= EXP_FOR_121_ATTEMPT) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  if (state.realm === 'kim_dan') {
+    return state.realizedThienCung >= state.maxThienCung;
+  }
+
+  if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
+    if (!state.daoAnhs || state.daoAnhs.length === 0) return false;
+    return state.daoAnhs.every(da => (da.currentKiep || 0) >= 5);
+  }
+
+  return false;
+}
+
+/**
  * Ghi nhận tiến độ đọc chương và cộng Tu Vi & Rơi Mệnh Đăng quý hiếm
  * Chỉ được gọi khi người đọc đã ở lại chương ít nhất 60 giây!
+ * QUY TẮC ĐẠI VIÊN MÃN: Nếu cảnh giới đã đạt Đại Viên Mãn mà chưa đột phá,
+ * toàn bộ Tu Vi thu được sẽ tự động chuyển hóa thành TIÊN TINH!
  */
 export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   const state = getCultivationState();
@@ -1074,7 +1113,22 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
 
   state.readChapterIds[key] = Date.now();
   state.chaptersReadCount = Object.keys(state.readChapterIds).length;
-  state.totalExp += gainedExp;
+
+  const isGrand = isGrandCompletion(state);
+  let convertedToTienTinh = 0;
+
+  if (isGrand) {
+    // ĐẠI VIÊN MÃN: Tu vi không cộng vào cảnh giới nữa mà tự động chuyển hóa thành Tiên Tinh!
+    convertedToTienTinh = gainedExp;
+    state.tienTinh = (state.tienTinh || 0) + gainedExp;
+    state.dangDiem = state.tienTinh;
+    state.logs.unshift({
+      text: `✨ ĐẠI VIÊN MÃN HÓA TIÊN TINH! Cảnh giới đã đạt cực hạn viên mãn, +${gainedExp} Tu Vi thu được tự động chuyển hóa thành +${gainedExp} Tiên Tinh!`,
+      time: Date.now(),
+    });
+  } else {
+    state.totalExp += gainedExp;
+  }
 
   // LỰC THIÊN MỆNH: Chỉ mở khóa và tích lũy khi ở Giả Anh hoặc Nguyên Anh!
   let gainedThienMenh = 0;
@@ -1149,94 +1203,96 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     }
   }
 
-  // Xử lý tiến độ theo từng cảnh giới với đường cong EXP lũy tiến
-  if (state.realm === 'ngung_khi') {
-    state.expCurrentRealm += gainedExp;
+  // Xử lý tiến độ theo từng cảnh giới với đường cong EXP lũy tiến (Chỉ tăng khi CHƯA ĐẠT ĐẠI VIÊN MÃN)
+  if (!isGrand) {
+    if (state.realm === 'ngung_khi') {
+      state.expCurrentRealm += gainedExp;
 
-    for (let lvl = 10; lvl >= 1; lvl--) {
-      if (state.expCurrentRealm >= NGUNG_KHI_THRESHOLDS[lvl - 1]) {
-        if (lvl > state.ngungKhiLevel) {
-          state.ngungKhiLevel = lvl;
-          const cpStr = getCombatPowerDisplay({ ...state, ngungKhiLevel: lvl });
-          breakthrough = {
-            type: 'layer',
-            title: `ĐỘT PHÁ NGƯNG KHÍ TẦNG ${lvl}!`,
-            subtitle: `Chiến lực: ${cpStr}`,
-            icon: '⚡',
-          };
-          state.logs.unshift({
-            text: `Đột phá thành công! Tiến nhập Ngưng Khí Tầng ${lvl} (Chiến lực: ${cpStr}).`,
-            time: Date.now(),
-          });
-        }
-        break;
-      }
-    }
-
-    if (state.expCurrentRealm >= NGUNG_KHI_THRESHOLDS[10] && !state.readyBreakthroughTrucCo) {
-      state.readyBreakthroughTrucCo = true;
-      breakthrough = {
-        type: 'realm',
-        title: 'NGƯNG KHÍ ĐẠI VIÊN MÃN!',
-        subtitle: 'Đã sẵn sàng đột phá Trúc Cơ',
-        icon: '🔥',
-      };
-    }
-  } else if (state.realm === 'truc_co') {
-    state.expCurrentRealm += gainedExp;
-
-    if (state.phapKhieu < 120) {
-      const opened = Math.min(120, Math.floor(state.expCurrentRealm / EXP_PER_PHAP_KHIEU));
-      if (opened > state.phapKhieu) {
-        state.phapKhieu = opened;
-        const newSelfHoa = Math.floor(state.phapKhieu / 30);
-        if (newSelfHoa > state.selfMenhHoa) {
-          state.selfMenhHoa = newSelfHoa;
-          breakthrough = {
-            type: 'hoa',
-            title: `THẮP SÁNG ${newSelfHoa} HỎA TỰ THÂN!`,
-            subtitle: `Pháp khiếu: ${state.phapKhieu}/120 khiếu`,
-            icon: '🔥',
-          };
-          state.logs.unshift({
-            text: `Thắp sáng Mệnh Hỏa tự thân thứ ${newSelfHoa}! Pháp khiếu đã khai mở ${state.phapKhieu}/120 khiếu.`,
-            time: Date.now(),
-          });
-        }
-      }
-    } else if (state.phapKhieu === 120 && !state.has121st && !state.failed121st) {
-      state.attemptExp121 += gainedExp;
-    }
-  } else if (state.realm === 'kim_dan') {
-    if (state.realizedThienCung < state.maxThienCung) {
-      const lampBonusCount = (state.absorbedLamps || []).length;
-      const lampPalaceStartIndex = state.maxThienCung - lampBonusCount;
-      const isCurrentLampPalace = state.realizedThienCung >= lampPalaceStartIndex;
-
-      if (isCurrentLampPalace) {
-        // Cung hình thành từ Mệnh Đăng luôn luôn đạt 100% Hóa Thực tự động (Vật Trấn Áp chính là Mệnh Đăng)
-        state.realizedThienCung += 1;
-        state.currentThienCungExp = 0;
-        breakthrough = {
-          type: 'cung',
-          title: `HÓA THỰC CHÂN CUNG MỆNH ĐĂNG!`,
-          subtitle: `Chiến lực: ${state.realizedThienCung} Cung Thật`,
-          icon: '🏮',
-        };
-        state.logs.unshift({
-          text: `Mệnh Đăng Thượng Cổ tỏa hào quang! Đã Hóa Thực thành công Chân Cung thứ ${state.realizedThienCung}/${state.maxThienCung} thành Cung Thật 100% (+1 Cung chiến lực)!`,
-          time: Date.now(),
-        });
-      } else {
-        // Cung tự thân: Tích lũy tới 99.99% (799/800 EXP) và dừng lại chờ Vật Trấn Áp
-        const bottleneckExp = EXP_PER_THIEN_CUNG - 1;
-        if (state.currentThienCungExp < bottleneckExp) {
-          state.currentThienCungExp = Math.min(bottleneckExp, state.currentThienCungExp + gainedExp);
-          if (state.currentThienCungExp >= bottleneckExp) {
+      for (let lvl = 10; lvl >= 1; lvl--) {
+        if (state.expCurrentRealm >= NGUNG_KHI_THRESHOLDS[lvl - 1]) {
+          if (lvl > state.ngungKhiLevel) {
+            state.ngungKhiLevel = lvl;
+            const cpStr = getCombatPowerDisplay({ ...state, ngungKhiLevel: lvl });
+            breakthrough = {
+              type: 'layer',
+              title: `ĐỘT PHÁ NGƯNG KHÍ TẦNG ${lvl}!`,
+              subtitle: `Chiến lực: ${cpStr}`,
+              icon: '⚡',
+            };
             state.logs.unshift({
-              text: `⚠️ THIÊN CUNG ĐẠT 99.99%! Thiên Cung ${state.realizedThienCung + 1} đã tích lũy đủ linh lực, cần khảm nạm một Vật Trấn Áp để đạt 100% Hóa Thực thành Cung Thật!`,
+              text: `Đột phá thành công! Tiến nhập Ngưng Khí Tầng ${lvl} (Chiến lực: ${cpStr}).`,
               time: Date.now(),
             });
+          }
+          break;
+        }
+      }
+
+      if (state.expCurrentRealm >= NGUNG_KHI_THRESHOLDS[10] && !state.readyBreakthroughTrucCo) {
+        state.readyBreakthroughTrucCo = true;
+        breakthrough = {
+          type: 'realm',
+          title: 'NGƯNG KHÍ ĐẠI VIÊN MÃN!',
+          subtitle: 'Đã sẵn sàng đột phá Trúc Cơ',
+          icon: '🔥',
+        };
+      }
+    } else if (state.realm === 'truc_co') {
+      state.expCurrentRealm += gainedExp;
+
+      if (state.phapKhieu < 120) {
+        const opened = Math.min(120, Math.floor(state.expCurrentRealm / EXP_PER_PHAP_KHIEU));
+        if (opened > state.phapKhieu) {
+          state.phapKhieu = opened;
+          const newSelfHoa = Math.floor(state.phapKhieu / 30);
+          if (newSelfHoa > state.selfMenhHoa) {
+            state.selfMenhHoa = newSelfHoa;
+            breakthrough = {
+              type: 'hoa',
+              title: `THẮP SÁNG ${newSelfHoa} HỎA TỰ THÂN!`,
+              subtitle: `Pháp khiếu: ${state.phapKhieu}/120 khiếu`,
+              icon: '🔥',
+            };
+            state.logs.unshift({
+              text: `Thắp sáng Mệnh Hỏa tự thân thứ ${newSelfHoa}! Pháp khiếu đã khai mở ${state.phapKhieu}/120 khiếu.`,
+              time: Date.now(),
+            });
+          }
+        }
+      } else if (state.phapKhieu === 120 && !state.has121st && !state.failed121st) {
+        state.attemptExp121 = Math.min(EXP_FOR_121_ATTEMPT, (state.attemptExp121 || 0) + gainedExp);
+      }
+    } else if (state.realm === 'kim_dan') {
+      if (state.realizedThienCung < state.maxThienCung) {
+        const lampBonusCount = (state.absorbedLamps || []).length;
+        const lampPalaceStartIndex = state.maxThienCung - lampBonusCount;
+        const isCurrentLampPalace = state.realizedThienCung >= lampPalaceStartIndex;
+
+        if (isCurrentLampPalace) {
+          // Cung hình thành từ Mệnh Đăng luôn luôn đạt 100% Hóa Thực tự động (Vật Trấn Áp chính là Mệnh Đăng)
+          state.realizedThienCung += 1;
+          state.currentThienCungExp = 0;
+          breakthrough = {
+            type: 'cung',
+            title: `HÓA THỰC CHÂN CUNG MỆNH ĐĂNG!`,
+            subtitle: `Chiến lực: ${state.realizedThienCung} Cung Thật`,
+            icon: '🏮',
+          };
+          state.logs.unshift({
+            text: `Mệnh Đăng Thượng Cổ tỏa hào quang! Đã Hóa Thực thành công Chân Cung thứ ${state.realizedThienCung}/${state.maxThienCung} thành Cung Thật 100% (+1 Cung chiến lực)!`,
+            time: Date.now(),
+          });
+        } else {
+          // Cung tự thân: Tích lũy tới 99.99% (799/800 EXP) và dừng lại chờ Vật Trấn Áp
+          const bottleneckExp = EXP_PER_THIEN_CUNG - 1;
+          if (state.currentThienCungExp < bottleneckExp) {
+            state.currentThienCungExp = Math.min(bottleneckExp, state.currentThienCungExp + gainedExp);
+            if (state.currentThienCungExp >= bottleneckExp) {
+              state.logs.unshift({
+                text: `⚠️ THIÊN CUNG ĐẠT 99.99%! Thiên Cung ${state.realizedThienCung + 1} đã tích lũy đủ linh lực, cần khảm nạm một Vật Trấn Áp để đạt 100% Hóa Thực thành Cung Thật!`,
+                time: Date.now(),
+              });
+            }
           }
         }
       }
@@ -1244,7 +1300,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   }
 
   saveCultivationState(state);
-  return { state, gainedExp, gainedThienMenh, isFirstRead, droppedLamp, droppedArtifact, breakthrough };
+  return { state, gainedExp, gainedThienMenh, convertedToTienTinh, isFirstRead, droppedLamp, droppedArtifact, breakthrough };
 }
 
 /**
@@ -1668,6 +1724,113 @@ export function buyArtifactWithTienTinhAndExp(artifactId) {
 }
 
 export const buyArtifactWithPointsAndExp = buyArtifactWithTienTinhAndExp;
+
+/**
+ * KÍCH HOẠT THẺ TRẢI NGHIỆM CẢNH GIỚI NGƯNG KHÍ
+ * - Lưu bản sao toàn bộ trạng thái trước khi trải nghiệm (preTrialBackup).
+ * - Tạm thời nâng cảnh giới lên Ngưng Khí Tầng 10 (Đại Viên Mãn - 1 Bạt / 10 Hổ, sẵn sàng Trúc Cơ).
+ * - Cung cấp sẵn 1.000 Tiên Tinh để trải nghiệm.
+ * - Sau khi dùng và kết thúc, thẻ sẽ tự hủy vĩnh viễn không xuất hiện lại nữa!
+ */
+export function activateNgungKhiTrial() {
+  const state = getCultivationState();
+  if (state.hasUsedNgungKhiTrial) {
+    throw new Error('Thẻ trải nghiệm Ngưng Khí đã được sử dụng trước đó và đã tiêu biến vĩnh viễn!');
+  }
+
+  // Backup trạng thái thực tế của người dùng nếu chưa có backup
+  if (!state.preTrialBackup) {
+    const preTrialBackup = {
+      realm: state.realm,
+      totalExp: state.totalExp,
+      expCurrentRealm: state.expCurrentRealm,
+      ngungKhiLevel: state.ngungKhiLevel,
+      readyBreakthroughTrucCo: state.readyBreakthroughTrucCo,
+      phapKhieu: state.phapKhieu,
+      selfMenhHoa: state.selfMenhHoa,
+      has121st: state.has121st,
+      failed121st: state.failed121st,
+      attemptExp121: state.attemptExp121,
+      maxThienCung: state.maxThienCung,
+      realizedThienCung: state.realizedThienCung,
+      currentThienCungExp: state.currentThienCungExp,
+      palaceAnchors: { ...(state.palaceAnchors || {}) },
+      isThienMenhUnlocked: state.isThienMenhUnlocked,
+      totalThienMenh: state.totalThienMenh,
+      daoAnhs: [...(state.daoAnhs || [])],
+    };
+    state.preTrialBackup = preTrialBackup;
+  }
+
+  state.isNgungKhiTrial = true;
+  state.isKimDanTrial = false;
+  state.isNguyenAnhTrial = false;
+  state.realm = 'ngung_khi';
+  state.ngungKhiLevel = 10;
+  state.expCurrentRealm = NGUNG_KHI_THRESHOLDS[10];
+  state.readyBreakthroughTrucCo = true;
+  state.tienTinh = Math.max(state.tienTinh || 0, 1000);
+  state.dangDiem = state.tienTinh;
+
+  state.logs.unshift({
+    text: '📜 ĐÃ SỬ DỤNG [THẺ TRẢI NGHIỆM NGƯNG KHÍ]! Thăng hoa lên Ngưng Khí Tầng 10 (Đại Viên Mãn - 1 Bạt / 10 Hổ, sẵn sàng Trúc Cơ). Thẻ sẽ tiêu biến vĩnh viễn sau khi kết thúc.',
+    time: Date.now(),
+  });
+
+  saveCultivationState(state);
+  return {
+    state,
+    message: '✨ Đã kích hoạt Thẻ Trải Nghiệm Ngưng Khí thành công! Đạt Ngưng Khí Tầng 10 Đại Viên Mãn (1 Bạt).',
+  };
+}
+
+/**
+ * KẾT THÚC TRẢI NGHIỆM NGƯNG KHÍ (TRỞ VỀ CẢNH GIỚI BAN ĐẦU)
+ * - Khôi phục 100% cảnh giới và trạng thái tu vi ban đầu được sao lưu trước đó.
+ * - Thẻ trải nghiệm dùng xong sẽ tự động tiêu biến vĩnh viễn không xuất hiện lại nữa!
+ */
+export function endNgungKhiTrial() {
+  const state = getCultivationState();
+  if (!state.isNgungKhiTrial && !state.preTrialBackup) {
+    throw new Error('Đạo hữu hiện không trong trạng thái trải nghiệm!');
+  }
+
+  if (state.preTrialBackup) {
+    const backup = state.preTrialBackup;
+    state.realm = backup.realm || 'ngung_khi';
+    state.totalExp = backup.totalExp || 0;
+    state.expCurrentRealm = backup.expCurrentRealm || 0;
+    state.ngungKhiLevel = backup.ngungKhiLevel || 1;
+    state.readyBreakthroughTrucCo = backup.readyBreakthroughTrucCo || false;
+    state.phapKhieu = backup.phapKhieu || 0;
+    state.selfMenhHoa = backup.selfMenhHoa || 0;
+    state.has121st = backup.has121st || false;
+    state.failed121st = backup.failed121st || false;
+    state.attemptExp121 = backup.attemptExp121 || 0;
+    state.maxThienCung = backup.maxThienCung || 6;
+    state.realizedThienCung = backup.realizedThienCung || 0;
+    state.currentThienCungExp = backup.currentThienCungExp || 0;
+    state.palaceAnchors = backup.palaceAnchors || {};
+    state.isThienMenhUnlocked = backup.isThienMenhUnlocked || false;
+    state.totalThienMenh = backup.totalThienMenh || 0;
+    state.daoAnhs = backup.daoAnhs || [];
+  }
+
+  state.isNgungKhiTrial = false;
+  state.hasUsedNgungKhiTrial = true; // Tiêu biến vĩnh viễn, không xuất hiện lại nữa!
+  state.preTrialBackup = null;
+
+  state.logs.unshift({
+    text: '↩️ Đã kết thúc trải nghiệm Ngưng Khí. Thẻ trải nghiệm đã tiêu biến vĩnh viễn, khôi phục 100% cảnh giới và đạo cơ ban đầu.',
+    time: Date.now(),
+  });
+
+  saveCultivationState(state);
+  return {
+    state,
+    message: '↩️ Đã kết thúc trải nghiệm Ngưng Khí và trở về cảnh giới ban đầu! Thẻ trải nghiệm đã tiêu biến.',
+  };
+}
 
 /**
  * KÍCH HOẠT THẺ TRẢI NGHIỆM CẢNH GIỚI KIM ĐAN

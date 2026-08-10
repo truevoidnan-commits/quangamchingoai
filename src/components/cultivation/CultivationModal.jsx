@@ -17,6 +17,8 @@ export default function CultivationModal({ isOpen, onClose }) {
     buyArtifact,
     activateKimDanTrial,
     endKimDanTrial,
+    activateNgungKhiTrial,
+    endNgungKhiTrial,
     activateNguyenAnhTrial,
     endNguyenAnhTrial,
     breakthroughToTrucCo,
@@ -59,12 +61,46 @@ export default function CultivationModal({ isOpen, onClose }) {
   const absorbedCount = (cultivation.absorbedLamps || []).length;
   const artifactCount = (cultivation.inventoryArtifacts || []).length;
   const isNguyenAnhStage = cultivation.realm === 'gia_anh' || cultivation.realm === 'nguyen_anh';
-  const isTrialActive = cultivation.isNguyenAnhTrial || cultivation.isKimDanTrial;
+  const isTrialActive = cultivation.isNgungKhiTrial || cultivation.isKimDanTrial || cultivation.isNguyenAnhTrial;
   const currentTienTinh = cultivation.tienTinh !== undefined ? cultivation.tienTinh : (cultivation.dangDiem || 0);
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title="✦ ĐẠO LỘ TU TIÊN ✦" fullHeight>
       <div className={styles.container}>
+        {/* BANNER THẺ TRẢI NGHIỆM NGƯNG KHÍ (NẾU ĐANG KÍCH HOẠT) */}
+        {cultivation.isNgungKhiTrial && (
+          <div className={styles.trialActiveBanner}>
+            <div className={styles.trialBannerLeft}>
+              <span className={styles.trialBannerIcon}>⚡</span>
+              <div>
+                <h4 style={{ margin: 0, color: '#38bdf8', fontSize: 13 }}>ĐANG TRẢI NGHIỆM NGƯNG KHÍ TẦNG 10 (TẠM THỜI)</h4>
+                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                  Đang trải nghiệm Ngưng Khí Đại Viên Mãn (1 Bạt / 10 Hổ, sẵn sàng Trúc Cơ). Kết thúc bất cứ lúc nào để về lại cảnh giới cũ (Thẻ sẽ tiêu biến vĩnh viễn)!
+                </p>
+              </div>
+            </div>
+            <button
+              className="btn-ghost"
+              style={{
+                borderColor: '#ef4444',
+                color: '#ef4444',
+                background: 'rgba(239, 68, 68, 0.12)',
+                fontSize: 11.5,
+                padding: '6px 12px',
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+              onClick={() => {
+                if (confirm('KẾT THÚC TRẢI NGHIỆM NGƯNG KHÍ:\n\n• Bạn có muốn kết thúc trải nghiệm và khôi phục lại cảnh giới & tu vi ban đầu?\n• Lưu ý: Thẻ trải nghiệm sẽ tiêu biến vĩnh viễn và không xuất hiện lại nữa!')) {
+                  triggerAction(endNgungKhiTrial);
+                }
+              }}
+            >
+              ↩️ Kết Thúc & Hủy Thẻ
+            </button>
+          </div>
+        )}
+
         {/* BANNER THẺ TRẢI NGHIỆM KIM ĐAN (NẾU ĐANG KÍCH HOẠT) */}
         {cultivation.isKimDanTrial && (
           <div className={styles.trialActiveBanner}>
@@ -104,7 +140,7 @@ export default function CultivationModal({ isOpen, onClose }) {
           <div className={styles.realmGlowCircle} />
 
           <div className={styles.realmBadge}>
-            {cultivation.realm === 'ngung_khi' && 'CẢNH GIỚI: NGƯNG KHÍ'}
+            {cultivation.realm === 'ngung_khi' && (cultivation.isNgungKhiTrial ? 'CẢNH GIỚI: NGƯNG KHÍ (TRẢI NGHIỆM)' : 'CẢNH GIỚI: NGƯNG KHÍ')}
             {cultivation.realm === 'truc_co' && 'CẢNH GIỚI: TRÚC CƠ'}
             {cultivation.realm === 'kim_dan' && (cultivation.isKimDanTrial ? 'CẢNH GIỚI: KIM ĐAN (TRẢI NGHIỆM)' : 'CẢNH GIỚI: KIM ĐAN')}
             {cultivation.realm === 'gia_anh' && 'CẢNH GIỚI: GIẢ ANH'}
@@ -195,6 +231,32 @@ export default function CultivationModal({ isOpen, onClose }) {
            ======================================================== */}
         {activeTab === 'status' && (
           <div className={styles.statusSection}>
+            {/* THẺ TRẢI NGHIỆM NGƯNG KHÍ (KHI CHƯA DÙNG VÀ ĐANG Ở NGƯNG KHÍ < TẦNG 10) */}
+            {!cultivation.hasUsedNgungKhiTrial && !cultivation.isNgungKhiTrial && !cultivation.isKimDanTrial && cultivation.realm === 'ngung_khi' && (cultivation.ngungKhiLevel || 1) < 10 && (
+              <div className={styles.trialCardOffer} style={{ borderColor: 'rgba(56, 189, 248, 0.4)', boxShadow: '0 0 12px rgba(56, 189, 248, 0.25)', marginBottom: 12 }}>
+                <div className={styles.trialCardOfferInfo}>
+                  <span className={styles.trialOfferIcon}>⚡</span>
+                  <div>
+                    <h4 style={{ color: '#38bdf8', margin: 0, fontSize: 13 }}>THẺ TRẢI NGHIỆM NGƯNG KHÍ ĐẠI VIÊN MÃN (1 LẦN DUY NHẤT)</h4>
+                    <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                      Dùng thử cảnh giới Ngưng Khí Tầng 10 (1 Bạt / 10 Hổ) sẵn sàng Trúc Cơ và tặng 1.000 Tiên Tinh (Kết thúc sẽ khôi phục cảnh giới ban đầu và thẻ sẽ tiêu biến vĩnh viễn).
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className="btn-cyan"
+                  style={{ fontSize: 11.5, padding: '7px 14px', fontWeight: 700 }}
+                  onClick={() => {
+                    if (confirm('SỬ DỤNG THẺ TRẢI NGHIỆM NGƯNG KHÍ:\n\n• Tạm thời thăng hoa lên Ngưng Khí Tầng 10 (Đại Viên Mãn - 1 Bạt / 10 Hổ, sẵn sàng Trúc Cơ).\n• Cung cấp sẵn 1.000 Tiên Tinh dùng thử.\n• Khi kết thúc sẽ khôi phục 100% cảnh giới và tu vi ban đầu của bạn!\n• Lưu ý: Thẻ chỉ dùng 1 lần duy nhất, kết thúc xong sẽ tiêu biến vĩnh viễn không xuất hiện lại nữa!\n\nĐạo hữu có muốn kích hoạt trải nghiệm ngay?')) {
+                      triggerAction(activateNgungKhiTrial);
+                    }
+                  }}
+                >
+                  ⚡ Dùng Thẻ Ngưng Khí
+                </button>
+              </div>
+            )}
+
             {/* THẺ TRẢI NGHIỆM KIM ĐAN (KHI CHƯA DÙNG VÀ CHƯA Ở KIM ĐAN) */}
             {!cultivation.hasUsedKimDanTrial && !cultivation.isKimDanTrial && cultivation.realm !== 'kim_dan' && cultivation.realm !== 'gia_anh' && cultivation.realm !== 'nguyen_anh' && (
               <div className={styles.trialCardOffer}>
