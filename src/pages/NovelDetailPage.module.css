@@ -432,6 +432,69 @@
   animation: scaleIn 0.2s ease;
 }
 
+/* Jump to chapter bar */
+.jumpBarWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  border-radius: var(--radius-md);
+  padding: 2px 10px;
+  transition: all 0.2s ease;
+}
+.jumpBarWrap:focus-within {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.25);
+}
+
+.jumpIcon {
+  font-size: 14px;
+  color: var(--accent-gold);
+  margin-right: 8px;
+}
+
+.jumpInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 12.5px;
+  padding: 7px 0;
+  outline: none;
+  font-family: inherit;
+}
+.jumpInput::placeholder {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.jumpClearBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px;
+}
+.jumpClearBtn:hover {
+  color: var(--text-primary);
+}
+
+/* Chapter state highlights */
+.chapterLastRead {
+  border-left: 3px solid var(--accent-gold) !important;
+  background: rgba(255, 204, 0, 0.08) !important;
+}
+
+.chapterJumpHighlighted {
+  border: 1.5px solid #06b6d4 !important;
+  background: rgba(6, 182, 212, 0.15) !important;
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.4) !important;
+  animation: pulseCore 1.5s infinite alternate;
+}
+
 /* RESPONSIVE */
 @media (max-width: 600px) {
   .heroMain {

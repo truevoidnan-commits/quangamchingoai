@@ -62,6 +62,53 @@ export default function NovelDetailPage() {
   const mainChapters = chapters.filter(c => !c.isExtra);
   const extraChapters = chapters.filter(c => c.isExtra);
 
+  // Jump to chapter state
+  const [jumpInput, setJumpInput] = useState('');
+  const [highlightedChapterId, setHighlightedChapterId] = useState(null);
+
+  // Tự động cuộn đến chương đang đọc dở khi vào trang thông tin truyện
+  useEffect(() => {
+    if (!loading && chapters.length > 0 && progress?.chapterId) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`chapter-item-${progress.chapterId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, chapters.length, progress?.chapterId]);
+
+  // Xử lý nhảy nhanh đến số chương mong muốn
+  const handleJumpToChapter = (val) => {
+    setJumpInput(val);
+    if (!val.trim()) {
+      setHighlightedChapterId(null);
+      return;
+    }
+    const num = parseInt(val.trim(), 10);
+    if (isNaN(num)) return;
+
+    // Tìm theo số thứ tự chương hoặc tên chương
+    let found = chapters.find(c => {
+      const m = c.title.match(/(?:chương|ch\.|hồi|c)\s*(\d+)/i);
+      if (m && parseInt(m[1], 10) === num) return true;
+      return false;
+    });
+
+    if (!found && num >= 1 && num <= chapters.length) {
+      found = chapters[num - 1];
+    }
+
+    if (found) {
+      setHighlightedChapterId(found.id);
+      const el = document.getElementById(`chapter-item-${found.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  };
+
   // Find resume chapter
   const resumeChapter = progress.chapterId
     ? chapters.find(c => c.id === progress.chapterId)
@@ -192,6 +239,35 @@ export default function NovelDetailPage() {
           )}
         </div>
 
+        {/* Ô Nhảy Nhanh Đến Số Chương */}
+        {!isSearchActive && chapters.length > 0 && (
+          <div className={styles.jumpBarWrap}>
+            <span className={styles.jumpIcon}>⚡</span>
+            <input
+              type="number"
+              min="1"
+              max={chapters.length}
+              value={jumpInput}
+              onChange={e => handleJumpToChapter(e.target.value)}
+              placeholder={`Nhập số chương để nhảy đến (1 - ${chapters.length})...`}
+              className={styles.jumpInput}
+              id="jump-to-chapter-input"
+            />
+            {jumpInput && (
+              <button
+                className={styles.jumpClearBtn}
+                onClick={() => {
+                  setJumpInput('');
+                  setHighlightedChapterId(null);
+                }}
+                title="Xóa"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Search bar inside novel */}
         <div className={styles.novelSearchWrap}>
           <span className={styles.searchIcon}>🔍</span>
@@ -279,6 +355,8 @@ export default function NovelDetailPage() {
                 key={ch.id}
                 chapter={ch}
                 novelId={novelId}
+                isLastRead={progress?.chapterId === ch.id}
+                isHighlighted={highlightedChapterId === ch.id}
                 onDelete={() => setDeleteChapter(ch)}
               />
             ))}
@@ -297,6 +375,8 @@ export default function NovelDetailPage() {
                     chapter={ch}
                     novelId={novelId}
                     isExtra
+                    isLastRead={progress?.chapterId === ch.id}
+                    isHighlighted={highlightedChapterId === ch.id}
                     onDelete={() => setDeleteChapter(ch)}
                   />
                 ))}
@@ -327,16 +407,20 @@ export default function NovelDetailPage() {
   );
 }
 
-function ChapterRow({ chapter, novelId, isExtra, onDelete }) {
+function ChapterRow({ chapter, novelId, isExtra, isLastRead, isHighlighted, onDelete }) {
   const navigate = useNavigate();
   return (
-    <div className={`${styles.chapterRow} ${isExtra ? styles.chapterExtra : ''}`}>
+    <div
+      id={`chapter-item-${chapter.id}`}
+      className={`${styles.chapterRow} ${isExtra ? styles.chapterExtra : ''} ${isLastRead ? styles.chapterLastRead : ''} ${isHighlighted ? styles.chapterJumpHighlighted : ''}`}
+    >
       <button
         className={styles.chapterBtn}
         onClick={() => navigate(`/novel/${novelId}/read/${chapter.id}`)}
       >
         <span className={styles.chapterTitle}>{chapter.title}</span>
-        {isExtra && <span className="badge badge-extra">Ngoại truyện</span>}
+        {isLastRead && <span className="badge badge-gold" style={{ marginLeft: 6 }}>✦ Đang đọc</span>}
+        {isExtra && <span className="badge badge-extra" style={{ marginLeft: 6 }}>Ngoại truyện</span>}
       </button>
       <div className={styles.chapterActions}>
         <button

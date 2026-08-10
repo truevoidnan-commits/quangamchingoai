@@ -48,12 +48,46 @@ export default function ReaderPage() {
       try {
         const ch = await getChapter(chapterId);
         setChapter(ch);
-        window.scrollTo({ top: 0 });
       } finally {
         setLoading(false);
       }
     })();
   }, [chapterId]);
+
+  // Khôi phục vị trí đọc chính xác (ví dụ 56%) khi vào lại chương
+  useEffect(() => {
+    if (!chapter || loading) return;
+
+    let restored = false;
+    const tryRestore = () => {
+      const savedRaw = localStorage.getItem(`scroll_pos_${novelId}_${chapter.id}`);
+      if (savedRaw) {
+        try {
+          const { percent } = JSON.parse(savedRaw);
+          if (percent && percent > 0.01) {
+            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            if (maxScroll > 100) {
+              const targetY = percent * maxScroll;
+              window.scrollTo({ top: targetY, behavior: 'instant' });
+              restored = true;
+            }
+          }
+        } catch (e) {}
+      }
+      if (!restored) {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+    };
+
+    // Delay ngắn để trình duyệt render xong toàn bộ đoạn văn và layout
+    const timer1 = setTimeout(tryRestore, 80);
+    const timer2 = setTimeout(tryRestore, 250);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [chapter?.id, loading, novelId]);
 
   // Chu kỳ ngộ đạo 60s lặp lại liên tục (cứ 60s tăng tu vi âm thầm & bắt đầu vòng mới)
   const [cycleSeconds, setCycleSeconds] = useState(0);
@@ -63,48 +97,48 @@ export default function ReaderPage() {
   useEffect(() => {
     setCycleSeconds(0);
     if (chapter) {
-      saveReadingProgress(novelId, { chapterId: chapter.id, scrollTop: 0 });
+      saveReadingProgress(novelId, { chapterId: chapter.id, scrollTop: window.scrollY });
     }
   }, [chapter?.id, novelId]);
 
-  // Đếm chu kỳ 60 giây ngộ đạo tu vi lặp lại vô tận
+  // Lưu lại vị trí cuộn (% đọc) real-time khi người đọc lướt trang
   useEffect(() => {
-    if (!chapter) return;
-    const timer = setInterval(() => {
-      setCycleSeconds(prev => {
-        if (prev + 1 >= 60) {
-          // Hoàn thành chu kỳ 60s: Tự động cộng tu vi âm thầm
-          const wordCount = chapter.content ? chapter.content.length : 0;
-          const res = gainReadingExp(novelId, chapter.id, wordCount);
-          if (res) {
-            if (res.droppedLamp) {
-              setDroppedLamp(res.droppedLamp);
-            }
-            // Chỉ khi đột phá tầng / cảnh giới mới hiện thông báo 1 giây rồi tự tiêu tán
-            if (res.breakthrough) {
-              setBreakthroughToast(res.breakthrough);
-              setTimeout(() => setBreakthroughToast(null), 1200);
-            }
-          }
-          setCycleCount(c => c + 1);
-          return 0; // Bắt đầu vòng 60s mới
-        }
-        return prev + 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [chapter?.id, novelId, gainReadingExp]);
+    if (!chapter || loading) return;
 
-  // Auto-hide top bar on scroll down
-  useEffect(() => {
+    const saveCurrentPosition = () => {
+      const scrollY = window.scrollY;
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (maxScroll > 0) {
+        const percent = Math.max(0, Math.min(1, scrollY / maxScroll));
+        localStorage.setItem(`scroll_pos_${novelId}_${chapter.id}`, JSON.stringify({ percent, scrollY, time: Date.now() }));
+        saveReadingProgress(novelId, { chapterId: chapter.id, scrollTop: scrollY, percent });
+      }
+    };
+
+    let throttleTimer = null;
     const handleScroll = () => {
       const currentY = window.scrollY;
       setBarVisible(currentY < lastScrollY.current || currentY < 80);
       lastScrollY.current = currentY;
+
+      if (!throttleTimer) {
+        throttleTimer = setTimeout(() => {
+          saveCurrentPosition();
+          throttleTimer = null;
+        }, 200);
+      }
     };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    window.addEventListener('beforeunload', saveCurrentPosition);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('beforeunload', saveCurrentPosition);
+      if (throttleTimer) clearTimeout(throttleTimer);
+      saveCurrentPosition();
+    };
+  }, [chapter?.id, loading, novelId]);
 
   // Navigate to adjacent chapters
   const currentIndex = chapters.findIndex(c => c.id === chapterId);

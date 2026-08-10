@@ -15,8 +15,8 @@ export default function CultivationModal({ isOpen, onClose }) {
     anchorPalace,
     sellArtifact,
     buyArtifact,
-    activateKimDanTrial,
-    endKimDanTrial,
+    activateNguyenAnhTrial,
+    endNguyenAnhTrial,
     breakthroughToTrucCo,
     breakthroughToKimDan,
     attemptUnlock121,
@@ -24,9 +24,6 @@ export default function CultivationModal({ isOpen, onClose }) {
     injectThienMenh,
     attemptTribulationSingle,
     attemptTribulationAll,
-    debugAddChapter,
-    debugGiveAllLamps,
-    debugGiveAllArtifacts,
     resetCultivation,
     LIFE_LAMPS,
     SUPPRESSING_ARTIFACTS,
@@ -60,20 +57,21 @@ export default function CultivationModal({ isOpen, onClose }) {
   const absorbedCount = (cultivation.absorbedLamps || []).length;
   const artifactCount = (cultivation.inventoryArtifacts || []).length;
   const isNguyenAnhStage = cultivation.realm === 'gia_anh' || cultivation.realm === 'nguyen_anh';
+  const isTrialActive = cultivation.isNguyenAnhTrial || cultivation.isKimDanTrial;
   const currentTienTinh = cultivation.tienTinh !== undefined ? cultivation.tienTinh : (cultivation.dangDiem || 0);
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title="✦ ĐẠO LỘ TU TIÊN ✦" fullHeight>
       <div className={styles.container}>
-        {/* BANNER THẺ TRẢI NGHIỆM KIM ĐAN (NẾU ĐANG KÍCH HOẠT) */}
-        {cultivation.isKimDanTrial && (
+        {/* BANNER THẺ TRẢI NGHIỆM NGUYÊN ANH (NẾU ĐANG KÍCH HOẠT) */}
+        {isTrialActive && (
           <div className={styles.trialActiveBanner}>
             <div className={styles.trialBannerLeft}>
-              <span className={styles.trialBannerIcon}>✨</span>
+              <span className={styles.trialBannerIcon}>👑</span>
               <div>
-                <h4 style={{ margin: 0, color: '#ffcc00', fontSize: 13 }}>ĐANG TRẢI NGHIỆM CẢNH GIỚI KIM ĐAN (TẠM THỜI)</h4>
+                <h4 style={{ margin: 0, color: '#ffcc00', fontSize: 13 }}>ĐANG TRẢI NGHIỆM CẢNH GIỚI NGUYÊN ANH (TẠM THỜI)</h4>
                 <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
-                  Đang trải nghiệm Tòa Thiên Lâu 9 Cung và Nút Thắt Trấn Cung Bảo Vật. Kết thúc bất cứ lúc nào để về lại cảnh giới cũ!
+                  Đang trải nghiệm Độ Kiếp Đài Nguyên Anh (9 Đạo Anh, 25.000 Thiên Mệnh, Vạn Kiếp Tề Phi). Kết thúc bất cứ lúc nào để về lại cảnh giới cũ!
                 </p>
               </div>
             </div>
@@ -89,8 +87,8 @@ export default function CultivationModal({ isOpen, onClose }) {
                 flexShrink: 0,
               }}
               onClick={() => {
-                if (confirm('KẾT THÚC TRẢI NGHIỆM KIM ĐAN:\n\nBạn có muốn kết thúc trải nghiệm và khôi phục lại cảnh giới & tu vi ban đầu?')) {
-                  triggerAction(endKimDanTrial);
+                if (confirm('KẾT THÚC TRẢI NGHIỆM NGUYÊN ANH:\n\nBạn có muốn kết thúc trải nghiệm và khôi phục lại cảnh giới & tu vi ban đầu?')) {
+                  triggerAction(endNguyenAnhTrial);
                 }
               }}
             >
@@ -106,9 +104,9 @@ export default function CultivationModal({ isOpen, onClose }) {
           <div className={styles.realmBadge}>
             {cultivation.realm === 'ngung_khi' && 'CẢNH GIỚI: NGƯNG KHÍ'}
             {cultivation.realm === 'truc_co' && 'CẢNH GIỚI: TRÚC CƠ'}
-            {cultivation.realm === 'kim_dan' && (cultivation.isKimDanTrial ? 'CẢNH GIỚI: KIM ĐAN (TRẢI NGHIỆM)' : 'CẢNH GIỚI: KIM ĐAN')}
+            {cultivation.realm === 'kim_dan' && 'CẢNH GIỚI: KIM ĐAN'}
             {cultivation.realm === 'gia_anh' && 'CẢNH GIỚI: GIẢ ANH'}
-            {cultivation.realm === 'nguyen_anh' && 'CẢNH GIỚI: NGUYÊN ANH'}
+            {cultivation.realm === 'nguyen_anh' && (isTrialActive ? 'CẢNH GIỚI: NGUYÊN ANH (TRẢI NGHIỆM)' : 'CẢNH GIỚI: NGUYÊN ANH')}
           </div>
 
           <h2 className={styles.realmTitle}>{displayName}</h2>
@@ -195,15 +193,15 @@ export default function CultivationModal({ isOpen, onClose }) {
            ======================================================== */}
         {activeTab === 'status' && (
           <div className={styles.statusSection}>
-            {/* THẺ TRẢI NGHIỆM KIM ĐAN (KHI CHƯA Ở KIM ĐAN) */}
-            {!cultivation.isKimDanTrial && cultivation.realm !== 'kim_dan' && cultivation.realm !== 'gia_anh' && cultivation.realm !== 'nguyen_anh' && (
+            {/* THẺ TRẢI NGHIỆM NGUYÊN ANH (KHI CHƯA Ở NGUYÊN ANH) */}
+            {!isTrialActive && cultivation.realm !== 'nguyen_anh' && (
               <div className={styles.trialCardOffer}>
                 <div className={styles.trialCardOfferInfo}>
-                  <span className={styles.trialOfferIcon}>📜</span>
+                  <span className={styles.trialOfferIcon}>👑</span>
                   <div>
-                    <h4 style={{ color: '#ffcc00', margin: 0, fontSize: 13 }}>THẺ TRẢI NGHIỆM CẢNH GIỚI KIM ĐAN</h4>
+                    <h4 style={{ color: '#ffcc00', margin: 0, fontSize: 13 }}>THẺ TRẢI NGHIỆM CẢNH GIỚI NGUYÊN ANH</h4>
                     <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
-                      Dùng thử cảnh giới Kim Đan, trải nghiệm Tòa Thiên Lâu Đa Tầng, Kim Đan Xoay Tròn và Khảm Nạm 96 Trấn Cung Bảo Vật (Kết thúc bất cứ lúc nào để trở về cảnh giới ban đầu).
+                      Dùng thử cảnh giới Nguyên Anh Đỉnh Phong, trải nghiệm Độ Kiếp Đài, 9 Đạo Anh, 25.000 Lực Thiên Mệnh và Vạn Kiếp Tề Phi (Khi kết thúc sẽ khôi phục cảnh giới ban đầu).
                     </p>
                   </div>
                 </div>
@@ -211,8 +209,8 @@ export default function CultivationModal({ isOpen, onClose }) {
                   className="btn-gold"
                   style={{ fontSize: 11.5, padding: '7px 14px', fontWeight: 700 }}
                   onClick={() => {
-                    if (confirm('SỬ DỤNG THẺ TRẢI NGHIỆM KIM ĐAN:\n\n• Tạm thời thăng hoa lên cảnh giới Kim Đan (4 Cung Thật, Cung 5 đạt 99.99% chờ khảm nạm Trấn Cung Bảo Vật).\n• Cung cấp sẵn bảo vật và Tiên Tinh dùng thử.\n• Khi kết thúc sẽ khôi phục 100% cảnh giới và tu vi ban đầu của bạn!\n\nĐạo hữu có muốn kích hoạt trải nghiệm ngay?')) {
-                      triggerAction(activateKimDanTrial);
+                    if (confirm('SỬ DỤNG THẺ TRẢI NGHIỆM NGUYÊN ANH:\n\n• Tạm thời thăng hoa lên cảnh giới Nguyên Anh Đỉnh Phong (9 Đạo Anh hùng hậu, mở khóa Độ Kiếp Đài).\n• Cung cấp sẵn 25.000 Lực Thiên Mệnh và 10.000 Tiên Tinh để trải nghiệm.\n• Khi kết thúc sẽ khôi phục 100% cảnh giới và tu vi ban đầu của bạn!\n\nĐạo hữu có muốn kích hoạt trải nghiệm ngay?')) {
+                      triggerAction(activateNguyenAnhTrial);
                     }
                   }}
                 >
@@ -224,9 +222,7 @@ export default function CultivationModal({ isOpen, onClose }) {
             {/* NGƯNG KHÍ VIEW */}
             {cultivation.realm === 'ngung_khi' && (
               <div className={styles.realmDetailCard}>
-                <h3 className={styles.cardHeader}>
-                  Khí Hải Ngưng Khí · Chiến Lực: <span style={{ color: '#ffcc00' }}>{combatPowerDisplay}</span>
-                </h3>
+                <h3 className={styles.cardHeader}>Khí Hải Ngưng Khí</h3>
                 <p className={styles.subtext}>
                   • Cảnh giới ban đầu gồm 10 tầng khí hải (1 Tầng = 1 Hổ, 5 Hổ = 1 Tiêu, 2 Tiêu = 1 Bạt).
                   <br />
@@ -295,45 +291,24 @@ export default function CultivationModal({ isOpen, onClose }) {
             {/* TRÚC CƠ VIEW */}
             {cultivation.realm === 'truc_co' && (
               <div className={styles.realmDetailCard}>
-                <h3 className={styles.cardHeader}>
-                  Đạo Cơ Pháp Khiếu · Chiến Lực: <span style={{ color: '#ffcc00' }}>{combatPowerDisplay} (Tối đa 10 Hỏa)</span>
-                </h3>
+                <h3 className={styles.cardHeader}>Đạo Cơ Pháp Khiếu</h3>
                 <p className={styles.subtext}>
                   • Chiến lực ở Trúc Cơ tính bằng <strong>Mệnh Hỏa</strong> (Cứ mỗi 30 pháp khiếu thắp sáng 1 Mệnh Hỏa tự thân, tối đa 4 Hỏa từ 120 khiếu).
                   <br />
                   • <strong>Pháp Khiếu 121</strong>: Cơ duyên bí mật mở ra Mệnh Hỏa thứ 5 đạt Cực Cảnh!
                 </p>
 
-                {/* Flame Slots List */}
-                <div className={styles.flameSlotsList}>
-                  <span className={styles.sectionMiniTitle}>🔥 Mệnh Hỏa Tự Thân & Pháp Khiếu:</span>
-                  <div className={styles.flameSlotsGrid}>
-                    {[1, 2, 3, 4].map(idx => {
-                      const isLit = selfHoa >= idx;
-                      return (
-                        <div
-                          key={idx}
-                          className={`${styles.flameSlotCard} ${isLit ? styles.flameLit : styles.flameUnlit}`}
-                        >
-                          <span className={styles.flameIcon}>{isLit ? '🔥' : '🕯️'}</span>
-                          <span className={styles.flameTitle}>Hỏa Thứ {idx}</span>
-                          <span className={styles.flameRange}>Khiếu {(idx - 1) * 30 + 1}-{idx * 30}</span>
-                          <span className={styles.flameStatus}>{isLit ? '✦ Đã Thắp' : 'Chưa Mở'}</span>
-                        </div>
-                      );
-                    })}
-
-                    {/* Secret 121st Slot */}
+                {/* Phap Khieu Progress */}
+                <div className={styles.progressContainer}>
+                  <div className={styles.progressInfo}>
+                    <span>Pháp Khiếu tự thân khai mở:</span>
+                    <strong>{cultivation.phapKhieu}/120 {cultivation.has121st && '(+ Khiếu 121)'}</strong>
+                  </div>
+                  <div className={styles.progressBarBg}>
                     <div
-                      className={`${styles.flameSlotCard} ${styles.secretSlotCard} ${cultivation.has121st ? styles.secretLit : ''}`}
-                    >
-                      <span className={styles.flameIcon}>{cultivation.has121st ? '⚡' : '🔒'}</span>
-                      <span className={styles.flameTitle}>Hỏa Thứ 5 (Cực Cảnh)</span>
-                      <span className={styles.flameRange}>Khiếu Thứ 121</span>
-                      <span className={styles.flameStatus}>
-                        {cultivation.has121st ? '✦ ĐẠT CỰC CẢNH' : cultivation.failed121st ? 'Đã Đóng Kín' : 'Bí Mật (50%)'}
-                      </span>
-                    </div>
+                      className={styles.progressBarFillGold}
+                      style={{ width: `${Math.min(100, (cultivation.phapKhieu / 120) * 100)}%` }}
+                    />
                   </div>
                 </div>
 
@@ -367,20 +342,6 @@ export default function CultivationModal({ isOpen, onClose }) {
                     </div>
                   </div>
                 )}
-
-                {/* Phap Khieu Progress */}
-                <div className={styles.progressContainer}>
-                  <div className={styles.progressInfo}>
-                    <span>Pháp Khiếu tự thân khai mở:</span>
-                    <strong>{cultivation.phapKhieu}/120 {cultivation.has121st && '(+ Khiếu 121)'}</strong>
-                  </div>
-                  <div className={styles.progressBarBg}>
-                    <div
-                      className={styles.progressBarFillGold}
-                      style={{ width: `${Math.min(100, (cultivation.phapKhieu / 120) * 100)}%` }}
-                    />
-                  </div>
-                </div>
 
                 {/* Secret 121st progress if at 120 khiếu */}
                 {cultivation.phapKhieu >= 120 && !cultivation.has121st && (
@@ -457,9 +418,7 @@ export default function CultivationModal({ isOpen, onClose }) {
             {/* KIM ĐAN / GIẢ ANH / NGUYÊN ANH VIEW */}
             {(cultivation.realm === 'kim_dan' || cultivation.realm === 'gia_anh' || cultivation.realm === 'nguyen_anh') && (
               <div className={styles.realmDetailCard}>
-                <h3 className={styles.cardHeader}>
-                  Thiên Cung Kim Đan · Chiến Lực: <span style={{ color: '#ffcc00' }}>{combatPowerDisplay} (Tối đa 13 Cung)</span>
-                </h3>
+                <h3 className={styles.cardHeader}>Thiên Cung Kim Đan</h3>
                 <p className={styles.subtext}>
                   • Chiến lực ở Kim Đan tính bằng <strong>Cung</strong> (Chỉ những cung nào đã hóa thành <strong>Cung Thật</strong> mới tính là chiến lực chân chính).
                   <br />
@@ -590,7 +549,7 @@ export default function CultivationModal({ isOpen, onClose }) {
            ======================================================== */}
         {activeTab === 'lamps' && (
           <div className={styles.lampsSection}>
-            {/* Top Points Balance & Info Card */}
+            {/* Top Info Card */}
             <div className={styles.lampHeroCard}>
               <div className={styles.lampHeroGlow} />
               <div className={styles.lampHeroTop}>
@@ -601,10 +560,6 @@ export default function CultivationModal({ isOpen, onClose }) {
                     <br />
                     • Đổi Tu Vi : Tiên Tinh là <strong>1:5</strong>. Có thể bán đèn trong túi lấy Tiên Tinh hoặc dùng Tiên Tinh mua đèn!
                   </p>
-                </div>
-                <div className={styles.dangDiemBank}>
-                  <span className={styles.dangDiemLabel}>Số dư Tiên Tinh:</span>
-                  <span className={styles.dangDiemVal}>{currentTienTinh.toLocaleString()} TT</span>
                 </div>
               </div>
             </div>
@@ -794,23 +749,19 @@ export default function CultivationModal({ isOpen, onClose }) {
            ======================================================== */}
         {activeTab === 'artifacts' && (
           <div className={styles.lampsSection}>
-            {/* Top Artifacts Hero Card */}
+            {/* Top Artifacts Info Card */}
             <div className={styles.lampHeroCard}>
               <div className={styles.lampHeroGlow} />
               <div className={styles.lampHeroTop}>
                 <div>
-                  <h3 className={styles.cardHeader}>Trấn Cung Bảo Vật (96 Bảo Vật) · Khảm Nạm & Tiên Tinh</h3>
+                  <h3 className={styles.cardHeader}>Trấn Cung Bảo Vật & Công Pháp (96 Mục) · Khảm Nạm & Tiên Tinh</h3>
                   <p className={styles.subtext}>
                     • Trong Túi Trữ Vật: <strong>{artifactCount} Vật Trấn Áp</strong>.
                     <br />
-                    • Khi Thiên Cung tự thân đạt <strong>99.99%</strong>, khảm nạm 1 Vật Trấn Áp để đạt <strong>100% Cung Thật</strong>!
+                    • Khi Thiên Cung tự thân đạt <strong>99.99%</strong>, khảm nạm 1 Bảo Vật hoặc Công Pháp để đạt <strong>100% Cung Thật</strong>!
                     <br />
                     • Có thể bán Vật Trấn Áp không dùng để lấy Tiên Tinh hoặc dùng Tiên Tinh đổi bảo vật mới!
                   </p>
-                </div>
-                <div className={styles.dangDiemBank}>
-                  <span className={styles.dangDiemLabel}>Số dư Tiên Tinh:</span>
-                  <span className={styles.dangDiemVal}>{currentTienTinh.toLocaleString()} TT</span>
                 </div>
               </div>
             </div>
@@ -969,14 +920,10 @@ export default function CultivationModal({ isOpen, onClose }) {
             <div className={styles.tribulationHero}>
               <div className={styles.tribulationHeaderRow}>
                 <div>
-                  <h3 className={styles.cardHeader}>Độ Kiếp Đài · Chiến Lực: <span style={{ color: '#ffcc00' }}>{combatPowerDisplay} (Tối đa 65 Anh)</span></h3>
+                  <h3 className={styles.cardHeader}>Độ Kiếp Đài</h3>
                   <p className={styles.subtext}>
-                    Chiến lực ở Nguyên Anh tính bằng <strong>Anh</strong>. Tích tụ Thiên Mệnh vào từng Đạo Anh để vượt qua <strong>5 Kiếp Luân Hồi</strong> (Mỗi kiếp = +1 Anh chiến lực).
+                    Chiến lực ở Nguyên Anh tính bằng <strong>Anh</strong> (Tối đa 65 Anh). Tích tụ Thiên Mệnh vào từng Đạo Anh để vượt qua <strong>5 Kiếp Luân Hồi</strong> (Mỗi kiếp = +1 Anh chiến lực).
                   </p>
-                </div>
-                <div className={styles.thienMenhBank}>
-                  <span className={styles.thienMenhLabel}>Lực Thiên Mệnh:</span>
-                  <span className={styles.thienMenhVal}>{(cultivation.totalThienMenh || 0).toLocaleString()} TM</span>
                 </div>
               </div>
 
