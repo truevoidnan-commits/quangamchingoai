@@ -11,6 +11,7 @@ export default function CultivationModal({ isOpen, onClose }) {
     combatPowerDisplay,
     absorbLamp,
     burnExpForLamp,
+    sellLamp,
     breakthroughToTrucCo,
     breakthroughToKimDan,
     attemptUnlock121,
@@ -412,14 +413,17 @@ export default function CultivationModal({ isOpen, onClose }) {
               <div style={{ position: 'relative', zIndex: 2 }}>
                 <h3 className={styles.cardHeader}>Bát Đại Thần Đăng Thượng Cổ (Thất Thập Nhị Mệnh Đăng)</h3>
                 <p className={styles.subtext}>
-                  • <strong>6 Cấp Phẩm Độ Hiếm</strong>: <span style={{ color: '#e2e8f0' }}>Hạ Phẩm (500 EXP)</span> · <span style={{ color: '#10b981' }}>Trung Phẩm (1.200 EXP)</span> · <span style={{ color: '#06b6d4' }}>Thượng Phẩm (2.500 EXP)</span> · <span style={{ color: '#a855f7' }}>Cực Phẩm (5.000 EXP)</span> · <span style={{ color: '#f59e0b' }}>Tiên Phẩm (10.000 EXP)</span> · <span style={{ color: '#ef4444' }}>Thần Phẩm (25.000 EXP)</span>.
+                  • <strong>Bán & Tích Đăng Điểm (Tỉ lệ 1:5)</strong>: Có thể bán các Mệnh Đăng chưa dùng trong Túi Trữ Vật để thu hồi Đăng Điểm.
                   <br />
-                  • <strong>Bí Thuật Đốt Tu Vi Đổi Đèn</strong>: Đạo hữu có thể hiến tế Tu Vi / Thiên Mệnh để cưỡng ép ngưng tụ Mệnh Đăng chưa nhặt được. Khi đốt: <strong>Ngưng Khí rơi tầng</strong>, <strong>Trúc Cơ ngắt bớt pháp khiếu</strong> (Khiếu 121 không ảnh hưởng), <strong>Kim Đan hư hóa thiên cung tự thân</strong> (Chân Cung từ Mệnh Đăng bất tử), <strong>Nguyên Anh tiêu hao Thiên Mệnh (1:10)</strong>.
+                  • <strong>Đổi Mệnh Đăng Mới</strong>: Dùng Đăng Điểm đổi đèn, nếu Đăng Điểm không đủ sẽ tự động trừ hết Đăng Điểm và <strong>đốt phần Tu Vi / Thiên Mệnh còn thiếu để bù</strong>!
                   <br />
-                  • <strong>Quy tắc Hấp Thụ</strong>: Tối đa hấp thụ <strong>5 Mệnh Đăng</strong> (Trúc Cơ: +1 Hỏa · Kim Đan: +1 Cung Thật · Nguyên Anh: Bảo vệ 50% Thiên Mệnh).
+                  • <strong>6 Cấp Phẩm</strong>: Hạ (2.500 ĐĐ) · Trung (6.000 ĐĐ) · Thượng (12.500 ĐĐ) · Cực (25.000 ĐĐ) · Tiên (50.000 ĐĐ) · Thần (125.000 ĐĐ).
                 </p>
-                <div style={{ marginTop: 8 }}>
+                <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <span className="badge badge-gold">Đã Hấp Thụ: {absorbedCount} Mệnh Đăng</span>
+                  <span className="badge badge-cyan" style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px' }}>
+                    🏮 Đăng Điểm: {(cultivation.dangDiem || 0).toLocaleString()} ĐĐ
+                  </span>
                 </div>
               </div>
             </div>
@@ -453,7 +457,14 @@ export default function CultivationModal({ isOpen, onClose }) {
                 const isAbsorbed = (cultivation.absorbedLamps || []).includes(lamp.id);
                 const isInInventory = (cultivation.inventoryLamps || []).includes(lamp.id);
                 const isOwned = isAbsorbed || isInInventory;
-                const tierInfo = LAMP_TIERS[lamp.tier] || { name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.1)', border: 'rgba(226, 232, 240, 0.3)', priceExp: 500, priceTM: 5000 };
+                const tierInfo = LAMP_TIERS[lamp.tier] || { name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.1)', border: 'rgba(226, 232, 240, 0.3)', priceExp: 500, priceTM: 50, dangDiem: 2500 };
+
+                // Tính toán chi phí Đăng Điểm & phần thiếu cần bù
+                const totalCostDangDiem = tierInfo.dangDiem || (tierInfo.priceExp * 5);
+                const userDangDiem = cultivation.dangDiem || 0;
+                const canCoverWithPoints = userDangDiem >= totalCostDangDiem;
+                const deficitExp = Math.max(0, Math.ceil((totalCostDangDiem - userDangDiem) / 5));
+                const deficitTM = Math.ceil(deficitExp / 10);
 
                 return (
                   <div
@@ -494,12 +505,12 @@ export default function CultivationModal({ isOpen, onClose }) {
 
                     <p className={styles.lampDesc}>{lamp.desc}</p>
 
-                    {/* Action buttons */}
+                    {/* Action buttons khi đèn đang ở trong túi */}
                     {isInInventory && (
-                      <div className={styles.lampActions}>
+                      <div className={styles.lampActions} style={{ display: 'flex', gap: 6 }}>
                         <button
                           className="btn-gold"
-                          style={{ fontSize: 12, padding: '6px 12px', width: '100%' }}
+                          style={{ fontSize: 11.5, padding: '6px 10px', flex: 1.4 }}
                           disabled={
                             absorbedCount >= 5 ||
                             cultivation.realm === 'ngung_khi' ||
@@ -514,48 +525,81 @@ export default function CultivationModal({ isOpen, onClose }) {
                           }}
                         >
                           {isNguyenAnhStage
-                            ? 'Nguyên Anh Không Thể Hấp Thụ'
+                            ? 'Nguyên Anh Khóa'
                             : cultivation.realm === 'ngung_khi'
-                            ? 'Ngưng Khí Chưa Dùng Được'
+                            ? 'Ngưng Khí Khóa'
                             : cultivation.realm === 'truc_co' && selfHoa < 1
-                            ? 'Cần Mở Mệnh Hỏa ở Trúc Cơ'
+                            ? 'Cần 1 Hỏa'
                             : absorbedCount >= 5
-                            ? 'Đã Đạt Tối Đa 5 Mệnh Đăng'
+                            ? 'Đã Đạt 5 Đăng'
                             : cultivation.realm === 'truc_co'
-                            ? '🏮 Hấp Thụ (+1 Hỏa · Không Hoàn Trả)'
-                            : '🏮 Hấp Thụ (+1 Cung Thật · Không Hoàn Trả)'}
+                            ? '🏮 Hấp Thụ (+1 Hỏa)'
+                            : '🏮 Hấp Thụ (+1 Cung)'}
+                        </button>
+
+                        {/* Nút Bán Mệnh Đăng lấy Đăng Điểm */}
+                        <button
+                          className="btn-ghost"
+                          style={{
+                            fontSize: 11.5,
+                            padding: '6px 10px',
+                            color: '#10b981',
+                            borderColor: 'rgba(16, 185, 129, 0.5)',
+                            background: 'rgba(16, 185, 129, 0.08)',
+                            flex: 1,
+                          }}
+                          onClick={() => {
+                            const earned = tierInfo.dangDiem || (tierInfo.priceExp * 5);
+                            if (
+                              confirm(
+                                `XÁC NHẬN BÁN MỆNH ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Nhận lại: +${earned.toLocaleString()} Đăng Điểm (Tỉ lệ 1:5)\n\nĐạo hữu có muốn bán chiếc đèn này để tích lũy Đăng Điểm?`
+                              )
+                            ) {
+                              triggerAction(() => sellLamp(lamp.id), `Đã bán thành công ${lamp.name}! Nhận +${earned.toLocaleString()} Đăng Điểm.`);
+                            }
+                          }}
+                        >
+                          💰 Bán (+{totalCostDangDiem.toLocaleString()} ĐĐ)
                         </button>
                       </div>
                     )}
 
-                    {/* Nút Đốt Tu Vi Đổi Mệnh Đăng khi chưa sở hữu */}
+                    {/* Nút Đổi Mệnh Đăng bằng Đăng Điểm & Đốt Tu Vi bù khi chưa sở hữu */}
                     {!isOwned && (
                       <div className={styles.lampActions}>
                         <button
                           className={styles.burnExpBtn}
                           onClick={() => {
-                            const costText = isNguyenAnhStage
-                              ? `${(tierInfo.priceTM || 50).toLocaleString()} Thiên Mệnh`
-                              : `${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`;
-                            const consequenceText =
-                              cultivation.realm === 'ngung_khi'
-                                ? 'Cảnh báo: Tu vi giảm có thể rơi tầng Ngưng Khí!'
-                                : cultivation.realm === 'truc_co'
-                                ? 'Cảnh báo: Tu vi giảm sẽ ngắt bớt Pháp Khiếu (Pháp Khiếu 121 không bị ảnh hưởng)!'
-                                : cultivation.realm === 'kim_dan'
-                                ? 'Cảnh báo: Tu vi giảm sẽ làm Thiên Cung tự thân bị hư hóa trở lại (Chân Cung Mệnh Đăng bất tử)!'
-                                : 'Cảnh báo: Tiêu hao Thiên Mệnh (rút từ kho hoặc Đạo Anh)!';
+                            const paymentMsg = canCoverWithPoints
+                              ? `Tiêu hao: ${totalCostDangDiem.toLocaleString()} Đăng Điểm (Không tổn hao tu vi)`
+                              : userDangDiem > 0
+                              ? `Tiêu hao: ${userDangDiem.toLocaleString()} Đăng Điểm + Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} Thiên Mệnh` : `${deficitExp.toLocaleString()} Tu Vi`} bù thiếu`
+                              : `Tiêu hao: Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} Thiên Mệnh` : `${deficitExp.toLocaleString()} Tu Vi`}`;
+
+                            const consequenceText = canCoverWithPoints
+                              ? 'An toàn: Đủ Đăng Điểm chi trả, không ảnh hưởng cảnh giới!'
+                              : cultivation.realm === 'ngung_khi'
+                              ? 'Cảnh báo: Tu vi bù thiếu có thể làm rơi tầng Ngưng Khí!'
+                              : cultivation.realm === 'truc_co'
+                              ? 'Cảnh báo: Tu vi bù thiếu sẽ ngắt bớt Pháp Khiếu (Pháp Khiếu 121 bảo toàn)!'
+                              : cultivation.realm === 'kim_dan'
+                              ? 'Cảnh báo: Tu vi bù thiếu sẽ làm Thiên Cung tự thân bị hư hóa (Chân Cung Mệnh Đăng bất tử)!'
+                              : 'Cảnh báo: Tiêu hao Thiên Mệnh bù thiếu theo tỉ lệ 10:1!';
 
                             if (
                               confirm(
-                                `🔥 BÍ THUẬT NGHỊCH MỆNH HOÁN ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Chi phí: ${costText}\n• ${consequenceText}\n\nĐạo hữu có muốn thi triển bí thuật đốt tu vi để ngưng tụ Mệnh Đăng này vào Túi Trữ Vật?`
+                                `✨ NGHỊCH MỆNH HOÁN ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• ${paymentMsg}\n• ${consequenceText}\n\nĐạo hữu có muốn đổi Mệnh Đăng này vào Túi Trữ Vật?`
                               )
                             ) {
                               triggerAction(() => burnExpForLamp(lamp.id));
                             }
                           }}
                         >
-                          🔥 Đốt {isNguyenAnhStage ? `${(tierInfo.priceTM || 50).toLocaleString()} TM` : `${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`} Đổi Đèn
+                          {canCoverWithPoints
+                            ? `✨ Đổi Đèn (${totalCostDangDiem.toLocaleString()} ĐĐ)`
+                            : userDangDiem > 0
+                            ? `🔥 ${userDangDiem.toLocaleString()} ĐĐ + Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} TM` : `${deficitExp.toLocaleString()} Tu Vi`}`
+                            : `🔥 Đốt ${isNguyenAnhStage ? `${(tierInfo.priceTM || 50).toLocaleString()} TM` : `${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`} Đổi Đèn`}
                         </button>
                       </div>
                     )}

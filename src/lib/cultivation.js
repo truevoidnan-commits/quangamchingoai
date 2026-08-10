@@ -56,14 +56,16 @@ export const KIEP_THIEN_MENH_REQUIREMENTS = [
   35000, // Kiếp 5: 35000 TM
 ];
 
-// 6 Phẩm cấp độ hiếm của Mệnh Đăng kèm giá Đốt Tu Vi / Thiên Mệnh (Tỉ lệ 10 Tu Vi = 1 Thiên Mệnh)
+export const DANG_DIEM_RATIO = 5; // Tỉ lệ quy đổi 1 Tu Vi = 5 Đăng Điểm
+
+// 6 Phẩm cấp độ hiếm của Mệnh Đăng kèm giá Tu Vi, Thiên Mệnh (10:1) và Đăng Điểm (1:5)
 export const LAMP_TIERS = {
-  ha_pham: { id: 'ha_pham', name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.12)', border: 'rgba(226, 232, 240, 0.4)', weight: 0.45, priceExp: 500, priceTM: 50 },
-  trung_pham: { id: 'trung_pham', name: 'Trung Phẩm', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.4)', weight: 0.28, priceExp: 1200, priceTM: 120 },
-  thuong_pham: { id: 'thuong_pham', name: 'Thượng Phẩm', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.4)', weight: 0.15, priceExp: 2500, priceTM: 250 },
-  cuc_pham: { id: 'cuc_pham', name: 'Cực Phẩm', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.12)', border: 'rgba(168, 85, 247, 0.4)', weight: 0.08, priceExp: 5000, priceTM: 500 },
-  tien_pham: { id: 'tien_pham', name: 'Tiên Phẩm', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.6)', weight: 0.032, priceExp: 10000, priceTM: 1000 },
-  than_pham: { id: 'than_pham', name: 'Thần Phẩm', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.18)', border: 'rgba(239, 68, 68, 0.7)', weight: 0.008, priceExp: 25000, priceTM: 2500 },
+  ha_pham: { id: 'ha_pham', name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.12)', border: 'rgba(226, 232, 240, 0.4)', weight: 0.45, priceExp: 500, priceTM: 50, dangDiem: 2500 },
+  trung_pham: { id: 'trung_pham', name: 'Trung Phẩm', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.4)', weight: 0.28, priceExp: 1200, priceTM: 120, dangDiem: 6000 },
+  thuong_pham: { id: 'thuong_pham', name: 'Thượng Phẩm', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.4)', weight: 0.15, priceExp: 2500, priceTM: 250, dangDiem: 12500 },
+  cuc_pham: { id: 'cuc_pham', name: 'Cực Phẩm', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.12)', border: 'rgba(168, 85, 247, 0.4)', weight: 0.08, priceExp: 5000, priceTM: 500, dangDiem: 25000 },
+  tien_pham: { id: 'tien_pham', name: 'Tiên Phẩm', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.6)', weight: 0.032, priceExp: 10000, priceTM: 1000, dangDiem: 50000 },
+  than_pham: { id: 'than_pham', name: 'Thần Phẩm', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.18)', border: 'rgba(239, 68, 68, 0.7)', weight: 0.008, priceExp: 25000, priceTM: 2500, dangDiem: 125000 },
 };
 
 // Danh sách 72 Mệnh Đăng Thần Thoại (12 Đèn / Cấp Phẩm)
@@ -821,7 +823,8 @@ const DEFAULT_STATE = {
   failed121st: false, // Đã xung kích thất bại (vĩnh viễn không mở được nữa)
   attemptExp121: 0,
 
-  // Mệnh Đăng
+  // Mệnh Đăng & Đăng Điểm
+  dangDiem: 0, // Đăng Điểm thu được từ việc phân giải/bán Mệnh Đăng không dùng
   inventoryLamps: [], // Danh sách id đèn trong túi
   absorbedLamps: [],  // Danh sách id đèn đã hấp thụ (tối đa 5, không hoàn trả)
 
@@ -1129,15 +1132,48 @@ export function absorbLifeLamp(lampId) {
 }
 
 /**
- * ĐỐT EXP / THIÊN MỆNH ĐỔI MỆNH ĐĂNG (Nghịch Thiên Hoán Đăng)
- * - Tùy phẩm chất Mệnh Đăng mà có giá EXP/TM tương ứng.
- * - Khi đốt:
- *   + Ngưng Khí: Rơi tầng tu vi (tính lại level theo exp còn lại).
- *   + Trúc Cơ: Ngắt/đóng bớt Pháp Khiếu (nhưng Pháp Khiếu 121 TUYỆT ĐỐI KHÔNG BỊ ẢNH HƯỞNG).
- *   + Kim Đan: Cung tự thân bị hư hóa trở lại thành Cung Hư (nhưng Chân Cung từ Mệnh Đăng KHÔNG THỂ BỊ ĐỐT).
- *   + Nguyên Anh / Giả Anh: Tiêu hao Thiên Mệnh theo tỉ lệ 1:10 (mất TM kho hoặc rút từ Đạo Anh).
+ * BÁN MỆNH ĐĂNG TRONG TÚI TRỮ VẬT LẤY ĐĂNG ĐIỂM
+ * - Chỉ có thể bán Mệnh Đăng nằm trong Túi Trữ Vật (inventoryLamps).
+ * - Đèn đã hấp thụ vào Đạo Cơ (absorbedLamps) không thể bán!
+ * - Nhận về Đăng Điểm theo phẩm chất đèn (Tỉ lệ 1 Tu Vi = 5 Đăng Điểm).
  */
-export function burnExpForLamp(lampId) {
+export function sellLampForPoints(lampId) {
+  const state = getCultivationState();
+  const lamp = LIFE_LAMPS.find(l => l.id === lampId);
+  if (!lamp) throw new Error('Mệnh Đăng không tồn tại.');
+
+  if (!(state.inventoryLamps || []).includes(lampId)) {
+    throw new Error(`Bạn không có [${lamp.name}] trong Túi Trữ Vật để bán.`);
+  }
+
+  const tier = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
+  const gainedDangDiem = tier.dangDiem || (tier.priceExp * DANG_DIEM_RATIO);
+
+  // Xóa khỏi túi trữ vật
+  state.inventoryLamps = state.inventoryLamps.filter(id => id !== lampId);
+  // Cộng Đăng Điểm
+  state.dangDiem = (state.dangDiem || 0) + gainedDangDiem;
+
+  state.logs.unshift({
+    text: `💰 Đã phân giải bán [${tier.name}] ${lamp.name} thu hồi +${gainedDangDiem.toLocaleString()} Đăng Điểm (Hiện có: ${state.dangDiem.toLocaleString()} ĐĐ).`,
+    time: Date.now(),
+  });
+
+  saveCultivationState(state);
+  return {
+    state,
+    gainedDangDiem,
+    message: `Đã bán [${tier.name}] ${lamp.name}, nhận +${gainedDangDiem.toLocaleString()} Đăng Điểm!`,
+  };
+}
+
+/**
+ * MUA MỆNH ĐĂNG BẰNG ĐĂNG ĐIỂM & ĐỐT TU VI BÙ THIẾU (Nghịch Thiên Hoán Đăng)
+ * - Ưu tiên trừ Đăng Điểm trước (1 Tu Vi = 5 Đăng Điểm).
+ * - Nếu Đăng Điểm không đủ: Tự động trừ hết Đăng Điểm hiện có và đốt phần Tu Vi (hoặc Thiên Mệnh) còn thiếu!
+ * - Khi đốt tu vi bù thiếu: Áp dụng đầy đủ quy tắc rơi tầng Ngưng Khí, ngắt khiếu Trúc Cơ (bảo toàn khiếu 121), hư hóa Kim Đan (bảo toàn Chân Cung Mệnh Đăng), tiêu hao Thiên Mệnh Nguyên Anh (10:1).
+ */
+export function buyLampWithPointsAndExp(lampId) {
   const state = getCultivationState();
   const lamp = LIFE_LAMPS.find(l => l.id === lampId);
   if (!lamp) throw new Error('Mệnh Đăng không tồn tại.');
@@ -1148,86 +1184,99 @@ export function burnExpForLamp(lampId) {
   }
 
   const tier = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
-  const costExp = tier.priceExp;
-  const costTM = tier.priceTM;
+  const totalCostDangDiem = tier.dangDiem || (tier.priceExp * DANG_DIEM_RATIO);
+  const userDangDiem = state.dangDiem || 0;
   const isNguyenAnhStage = state.realm === 'gia_anh' || state.realm === 'nguyen_anh';
 
-  if (isNguyenAnhStage) {
-    // Kiểm tra Thiên Mệnh ở Nguyên Anh
-    const totalTMStored = (state.totalThienMenh || 0) + (state.daoAnhs || []).reduce((sum, da) => sum + (da.currentThienMenh || 0), 0);
-    if (totalTMStored < costTM) {
-      throw new Error(`Thiên Mệnh không đủ! Cần tối thiểu ${costTM.toLocaleString()} Thiên Mệnh để đốt đổi [${lamp.name}]. (Hiện có: ${totalTMStored.toLocaleString()} TM)`);
-    }
+  let usedDangDiem = 0;
+  let deficitExp = 0;
+  let deficitTM = 0;
 
-    // Khấu trừ Thiên Mệnh (tỉ lệ 1:10)
-    let remainingCostTM = costTM;
-    if ((state.totalThienMenh || 0) >= remainingCostTM) {
-      state.totalThienMenh -= remainingCostTM;
-      remainingCostTM = 0;
-    } else {
-      remainingCostTM -= (state.totalThienMenh || 0);
-      state.totalThienMenh = 0;
-      // Rút bớt từ các Đạo Anh
-      if (state.daoAnhs && state.daoAnhs.length > 0) {
-        for (const da of state.daoAnhs) {
-          if (remainingCostTM <= 0) break;
-          if (da.currentThienMenh > 0) {
-            const deduct = Math.min(da.currentThienMenh, remainingCostTM);
-            da.currentThienMenh -= deduct;
-            remainingCostTM -= deduct;
+  if (userDangDiem >= totalCostDangDiem) {
+    // Đủ Đăng Điểm: Trừ 100% Đăng Điểm, không tổn hao tu vi!
+    usedDangDiem = totalCostDangDiem;
+    state.dangDiem = userDangDiem - totalCostDangDiem;
+  } else {
+    // Không đủ Đăng Điểm: Dùng toàn bộ Đăng Điểm hiện có và tính phần Tu Vi / TM bù
+    usedDangDiem = userDangDiem;
+    state.dangDiem = 0;
+    const remainingDangDiemDeficit = totalCostDangDiem - userDangDiem;
+    deficitExp = Math.ceil(remainingDangDiemDeficit / DANG_DIEM_RATIO);
+    deficitTM = Math.ceil(deficitExp / 10); // 10 Exp = 1 TM
+
+    if (isNguyenAnhStage) {
+      // Kiểm tra Thiên Mệnh ở Nguyên Anh
+      const totalTMStored = (state.totalThienMenh || 0) + (state.daoAnhs || []).reduce((sum, da) => sum + (da.currentThienMenh || 0), 0);
+      if (totalTMStored < deficitTM) {
+        throw new Error(`Không đủ tài nguyên! Sau khi dùng ${usedDangDiem.toLocaleString()} ĐĐ, cần thêm ${deficitTM.toLocaleString()} Thiên Mệnh để bù. (Hiện có: ${totalTMStored.toLocaleString()} TM)`);
+      }
+
+      // Khấu trừ Thiên Mệnh
+      let remainingCostTM = deficitTM;
+      if ((state.totalThienMenh || 0) >= remainingCostTM) {
+        state.totalThienMenh -= remainingCostTM;
+        remainingCostTM = 0;
+      } else {
+        remainingCostTM -= (state.totalThienMenh || 0);
+        state.totalThienMenh = 0;
+        if (state.daoAnhs && state.daoAnhs.length > 0) {
+          for (const da of state.daoAnhs) {
+            if (remainingCostTM <= 0) break;
+            if (da.currentThienMenh > 0) {
+              const deduct = Math.min(da.currentThienMenh, remainingCostTM);
+              da.currentThienMenh -= deduct;
+              remainingCostTM -= deduct;
+            }
           }
         }
       }
-    }
-  } else {
-    // Cảnh giới Ngưng Khí, Trúc Cơ, Kim Đan: Kiểm tra Tu Vi
-    if (state.totalExp < costExp) {
-      throw new Error(`Tu Vi không đủ! Cần tối thiểu ${costExp.toLocaleString()} Tu Vi để đốt đổi [${lamp.name}]. (Hiện có: ${state.totalExp.toLocaleString()} Tu Vi)`);
-    }
+    } else {
+      // Kiểm tra Tu Vi ở Ngưng Khí, Trúc Cơ, Kim Đan
+      if (state.totalExp < deficitExp) {
+        throw new Error(`Không đủ tài nguyên! Sau khi dùng ${usedDangDiem.toLocaleString()} ĐĐ, cần thêm ${deficitExp.toLocaleString()} Tu Vi để bù. (Hiện có: ${state.totalExp.toLocaleString()} Tu Vi)`);
+      }
 
-    state.totalExp = Math.max(0, state.totalExp - costExp);
+      state.totalExp = Math.max(0, state.totalExp - deficitExp);
 
-    if (state.realm === 'ngung_khi') {
-      state.expCurrentRealm = Math.max(0, state.expCurrentRealm - costExp);
-      let newLevel = 1;
-      for (let lvl = 10; lvl >= 1; lvl--) {
-        if (state.expCurrentRealm >= NGUNG_KHI_THRESHOLDS[lvl - 1]) {
-          newLevel = lvl;
-          break;
+      if (state.realm === 'ngung_khi') {
+        state.expCurrentRealm = Math.max(0, state.expCurrentRealm - deficitExp);
+        let newLevel = 1;
+        for (let lvl = 10; lvl >= 1; lvl--) {
+          if (state.expCurrentRealm >= NGUNG_KHI_THRESHOLDS[lvl - 1]) {
+            newLevel = lvl;
+            break;
+          }
         }
-      }
-      state.ngungKhiLevel = newLevel;
-      if (state.expCurrentRealm < NGUNG_KHI_THRESHOLDS[10]) {
-        state.readyBreakthroughTrucCo = false;
-      }
-    } else if (state.realm === 'truc_co') {
-      state.expCurrentRealm = Math.max(0, state.expCurrentRealm - costExp);
-      // Đóng bớt các pháp khiếu tương ứng (mỗi 70 EXP = 1 khiếu)
-      state.phapKhieu = Math.min(120, Math.max(0, Math.floor(state.expCurrentRealm / EXP_PER_PHAP_KHIEU)));
-      state.selfMenhHoa = Math.floor(state.phapKhieu / 30);
-      // PHÁP KHIẾU 121: TUYỆT ĐỐI KHÔNG BỊ ẢNH HƯỞNG!
-    } else if (state.realm === 'kim_dan') {
-      const absorbedLampCount = (state.absorbedLamps || []).length;
-      // Cung từ Mệnh Đăng KHÔNG THỂ BỊ ĐỐT! Cung thật tối thiểu = 1 cung khởi đầu + số Cung Mệnh Đăng
-      const minRealizedPalaces = 1 + absorbedLampCount;
+        state.ngungKhiLevel = newLevel;
+        if (state.expCurrentRealm < NGUNG_KHI_THRESHOLDS[10]) {
+          state.readyBreakthroughTrucCo = false;
+        }
+      } else if (state.realm === 'truc_co') {
+        state.expCurrentRealm = Math.max(0, state.expCurrentRealm - deficitExp);
+        state.phapKhieu = Math.min(120, Math.max(0, Math.floor(state.expCurrentRealm / EXP_PER_PHAP_KHIEU)));
+        state.selfMenhHoa = Math.floor(state.phapKhieu / 30);
+        // PHÁP KHIẾU 121 BẢO TOÀN
+      } else if (state.realm === 'kim_dan') {
+        const absorbedLampCount = (state.absorbedLamps || []).length;
+        const minRealizedPalaces = 1 + absorbedLampCount;
 
-      let remainingCost = costExp;
-      if (state.currentThienCungExp >= remainingCost) {
-        state.currentThienCungExp -= remainingCost;
-        remainingCost = 0;
-      } else {
-        remainingCost -= state.currentThienCungExp;
-        state.currentThienCungExp = 0;
+        let remainingCost = deficitExp;
+        if (state.currentThienCungExp >= remainingCost) {
+          state.currentThienCungExp -= remainingCost;
+          remainingCost = 0;
+        } else {
+          remainingCost -= state.currentThienCungExp;
+          state.currentThienCungExp = 0;
 
-        // Hư hóa các Cung Tự Thân
-        while (remainingCost > 0 && state.realizedThienCung > minRealizedPalaces) {
-          if (remainingCost >= EXP_PER_THIEN_CUNG) {
-            state.realizedThienCung -= 1;
-            remainingCost -= EXP_PER_THIEN_CUNG;
-          } else {
-            state.realizedThienCung -= 1;
-            state.currentThienCungExp = EXP_PER_THIEN_CUNG - remainingCost;
-            remainingCost = 0;
+          while (remainingCost > 0 && state.realizedThienCung > minRealizedPalaces) {
+            if (remainingCost >= EXP_PER_THIEN_CUNG) {
+              state.realizedThienCung -= 1;
+              remainingCost -= EXP_PER_THIEN_CUNG;
+            } else {
+              state.realizedThienCung -= 1;
+              state.currentThienCungExp = EXP_PER_THIEN_CUNG - remainingCost;
+              remainingCost = 0;
+            }
           }
         }
       }
@@ -1237,9 +1286,14 @@ export function burnExpForLamp(lampId) {
   // Thêm Mệnh Đăng vào túi trữ vật
   state.inventoryLamps = [...(state.inventoryLamps || []), lamp.id];
 
-  const costDisplay = isNguyenAnhStage ? `${costTM.toLocaleString()} Thiên Mệnh` : `${costExp.toLocaleString()} Tu Vi`;
+  const payDesc = usedDangDiem > 0 && (deficitExp > 0 || deficitTM > 0)
+    ? `${usedDangDiem.toLocaleString()} ĐĐ + Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} TM` : `${deficitExp.toLocaleString()} Tu Vi`}`
+    : usedDangDiem > 0
+    ? `${usedDangDiem.toLocaleString()} Đăng Điểm`
+    : `Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} TM` : `${deficitExp.toLocaleString()} Tu Vi`}`;
+
   state.logs.unshift({
-    text: `🔥 Bí thuật Nghịch Mệnh Hoán Đăng: Đốt tổn hao ${costDisplay} ngưng tụ thành công [${tier.name}] ${lamp.name} vào Túi Trữ Vật!`,
+    text: `✨ Nghịch Mệnh Hoán Đăng: Dùng ${payDesc} ngưng tụ thành công [${tier.name}] ${lamp.name} vào Túi Trữ Vật!`,
     time: Date.now(),
   });
 
@@ -1247,9 +1301,11 @@ export function burnExpForLamp(lampId) {
   return {
     state,
     lamp,
-    message: `Đốt tổn hao ${costDisplay} thành công! Đã ngưng tụ [${tier.name}] ${lamp.name} vào Túi Trữ Vật.`,
+    message: `Đã đổi thành công [${tier.name}] ${lamp.name} (Tiêu hao: ${payDesc})!`,
   };
 }
+
+export const burnExpForLamp = buyLampWithPointsAndExp;
 
 /**
  * Đột phá Ngưng Khí lên Trúc Cơ

@@ -5,6 +5,8 @@ import {
   addReadingProgress,
   absorbLifeLamp,
   burnExpForLamp,
+  sellLampForPoints,
+  buyLampWithPointsAndExp,
   breakthroughToTrucCo,
   breakthroughToKimDan,
   attemptUnlock121st,
@@ -58,7 +60,13 @@ export function useCultivation() {
   }, []);
 
   const handleBurnExpForLamp = useCallback((lampId) => {
-    const res = burnExpForLamp(lampId);
+    const res = buyLampWithPointsAndExp(lampId);
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
+  const handleSellLamp = useCallback((lampId) => {
+    const res = sellLampForPoints(lampId);
     setCultivation({ ...res.state });
     return res;
   }, []);
@@ -148,6 +156,8 @@ export function useCultivation() {
     gainReadingExp,
     absorbLamp: handleAbsorbLamp,
     burnExpForLamp: handleBurnExpForLamp,
+    buyLamp: handleBurnExpForLamp,
+    sellLamp: handleSellLamp,
     breakthroughToTrucCo: handleBreakthroughTrucCo,
     breakthroughToKimDan: handleBreakthroughKimDan,
     attemptUnlock121: handleUnlock121,
