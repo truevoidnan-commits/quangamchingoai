@@ -20,12 +20,16 @@ export default function NovelDetailPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [, startTransition] = useTransition();
 
+  // Jump to chapter state
+  const [jumpInput, setJumpInput] = useState('');
+  const [highlightedChapterId, setHighlightedChapterId] = useState(null);
+
   useEffect(() => {
     async function load() {
       try {
         const [n, chs] = await Promise.all([getNovel(novelId), getChapters(novelId)]);
         setNovel(n);
-        setChapters(chs);
+        setChapters(chs || []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -55,29 +59,28 @@ export default function NovelDetailPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, novelId]);
 
+  // Tự động cuộn đến chương đang đọc dở khi vào trang thông tin truyện
+  useEffect(() => {
+    if (!loading && chapters.length > 0) {
+      const prog = getReadingProgress(novelId);
+      if (prog?.chapterId) {
+        const timer = setTimeout(() => {
+          const el = document.getElementById(`chapter-item-${prog.chapterId}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 350);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [loading, chapters.length, novelId]);
+
   if (loading) return <LoadingState />;
   if (!novel) return <NotFoundState />;
 
   const progress = getReadingProgress(novelId);
   const mainChapters = chapters.filter(c => !c.isExtra);
   const extraChapters = chapters.filter(c => c.isExtra);
-
-  // Jump to chapter state
-  const [jumpInput, setJumpInput] = useState('');
-  const [highlightedChapterId, setHighlightedChapterId] = useState(null);
-
-  // Tự động cuộn đến chương đang đọc dở khi vào trang thông tin truyện
-  useEffect(() => {
-    if (!loading && chapters.length > 0 && progress?.chapterId) {
-      const timer = setTimeout(() => {
-        const el = document.getElementById(`chapter-item-${progress.chapterId}`);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 350);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, chapters.length, progress?.chapterId]);
 
   // Xử lý nhảy nhanh đến số chương mong muốn
   const handleJumpToChapter = (val) => {
