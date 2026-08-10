@@ -418,12 +418,26 @@ export default function CultivationModal({ isOpen, onClose }) {
                           {da ? `✦ ${da.currentKiep} Anh` : isLampPalace ? 'Chân Cung Đăng (Thật)' : isRealized ? '✦ Cung Thật' : 'Hư Ảo'}
                         </span>
                         {isRealized && !da && (
-                          <button
-                            className={styles.miniManifestBtn}
-                            onClick={() => triggerAction(() => manifestDaoAnh(i), `Đã chuyển hóa Thiên Cung ${palaceNum} thành Đạo Anh!`)}
-                          >
-                            Hóa Đạo Anh
-                          </button>
+                          cultivation.realizedThienCung === cultivation.maxThienCung ? (
+                            <button
+                              className={styles.miniManifestBtn}
+                              onClick={() => {
+                                if (
+                                  confirm(
+                                    `XÁC NHẬN HÓA ĐẠO ANH:\n\n• Thiên Cung: Cung ${palaceNum}\n• Chi phí: 1.000 Tu Vi (Linh lực thai nghén Đạo Anh)\n\nĐạo hữu có muốn tiêu hao 1.000 Tu Vi để thai nghén và khai sinh Đạo Anh tại Thiên Cung này?`
+                                  )
+                                ) {
+                                  triggerAction(() => manifestDaoAnh(i), `Đã chuyển hóa thành công Thiên Cung ${palaceNum} thành Đạo Anh!`);
+                                }
+                              }}
+                            >
+                              👑 Hóa Đạo Anh (1k EXP)
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: 8.5, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              Chờ Hóa Thật Hết
+                            </span>
+                          )
                         )}
                       </div>
                     );

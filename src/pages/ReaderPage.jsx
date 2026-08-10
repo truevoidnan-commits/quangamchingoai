@@ -153,7 +153,7 @@ export default function ReaderPage() {
           </span>
           <div className={styles.meditationBadgeWrap}>
             <span className={styles.meditationBadge} title="Mỗi chu kỳ 60s tĩnh tâm đọc sẽ hấp thu một luồng linh khí tu vi (lặp lại liên tục)">
-              🧘 Ngộ đạo {cycleSeconds}/60s {cycleCount > 0 ? `(Vòng ${cycleCount + 1})` : ''}
+              🧘 Ngộ đạo {cycleSeconds}/60s
             </span>
           </div>
           <div className={styles.topBtns}>

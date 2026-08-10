@@ -46,6 +46,7 @@ export const NGUNG_KHI_THRESHOLDS = [
 export const EXP_PER_PHAP_KHIEU = 70; // 70 EXP / khiếu (tổng 8400 EXP để mở 120 khiếu)
 export const EXP_FOR_121_ATTEMPT = 1200; // Tích lũy 1200 EXP sau 120 khiếu để mượn cơ duyên xung kích
 export const EXP_PER_THIEN_CUNG = 800; // 800 EXP để hóa thực 1 Thiên Cung
+export const EXP_PER_DAO_ANH = 1000; // 1000 EXP để thai nghén hóa sinh 1 Đạo Anh vào Thiên Cung Thật
 
 // Ngưỡng Thiên Mệnh chuẩn cho 5 Kiếp của mỗi Đạo Anh
 export const KIEP_THIEN_MENH_REQUIREMENTS = [
@@ -1419,6 +1420,11 @@ export function manifestDaoAnh(palaceIndex) {
     throw new Error('Cảnh giới chưa đủ để ngưng tụ Đạo Anh.');
   }
 
+  // Điều kiện 1: Toàn bộ Thiên Cung phải được Hóa Thực thành Cung Thật 100%
+  if (state.realizedThienCung < state.maxThienCung) {
+    throw new Error(`Chưa đủ điều kiện! Cần Hóa Thực toàn bộ ${state.maxThienCung}/${state.maxThienCung} Thiên Cung thành Cung Thật trước khi bắt đầu Hóa Đạo Anh.`);
+  }
+
   if (palaceIndex >= state.realizedThienCung) {
     throw new Error('Thiên Cung này chưa được Hóa Thực thành Cung Thật.');
   }
@@ -1428,6 +1434,14 @@ export function manifestDaoAnh(palaceIndex) {
   if (existing) {
     throw new Error('Thiên Cung này đã chuyển hóa thành Đạo Anh.');
   }
+
+  // Điều kiện 2: Thiên Cung Thật phải tích lũy đủ Linh Lực (1000 Tu Vi) để thai nghén Đạo Anh
+  if ((state.totalExp || 0) < EXP_PER_DAO_ANH) {
+    throw new Error(`Linh lực chưa đủ để thai nghén Đạo Anh! Cần tích lũy tối thiểu ${EXP_PER_DAO_ANH.toLocaleString()} Tu Vi (Hiện có: ${(state.totalExp || 0).toLocaleString()} Tu Vi).`);
+  }
+
+  // Tiêu hao Linh Lực để thai nghén Đạo Anh
+  state.totalExp -= EXP_PER_DAO_ANH;
 
   const absorbed = state.absorbedLamps || [];
   const totalPalaces = state.maxThienCung;

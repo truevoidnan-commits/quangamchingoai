@@ -315,49 +315,79 @@ export default function RealmPreviewVisualizer({ cultivation }) {
       )}
 
       {/* ========================================================
-          3. KIM ĐAN VISUALIZER
+          3. KIM ĐAN VISUALIZER: TÒA THIÊN LÂU (SỐ TẦNG THEO TRẦN THIÊN CUNG)
          ======================================================== */}
       {realm === 'kim_dan' && (
         <div className={styles.kimDanStage}>
-          {/* Golden Core Center */}
-          <div className={styles.goldenCoreWrap}>
-            <div className={styles.goldenCoreCenter} />
-            <div className={styles.goldenCoreShimmer} />
-            <div className={styles.goldenCoreAura} />
+          {/* Mây mù thiên giới bao quanh tòa lầu */}
+          <div className={styles.towerMistyBackdrop}>
+            <div className={styles.floatingCloudLeft}>☁️</div>
+            <div className={styles.floatingCloudRight}>☁️</div>
           </div>
 
-          {/* Orbiting Celestial Palaces Array (Hư Ảo -> Hóa Thật) */}
-          <div className={styles.palacesOrbitArray}>
-            {Array.from({ length: maxThienCung }).map((_, i) => {
-              const palaceNum = i + 1;
-              const isRealized = realizedThienCung >= palaceNum;
-              const isLampPalace = i >= maxThienCung - (cultivation?.absorbedLamps || []).length;
-              const angle = (i / maxThienCung) * 360;
+          {/* Tòa Thiên Cung Bảo Tháp */}
+          <div className={styles.celestialTowerContainer}>
+            {/* Mái chóp đỉnh tháp Cửu Trùng */}
+            <div className={styles.towerSpire}>
+              <span className={styles.spireGlow}>✦</span>
+              <div className={styles.spireRoof} />
+            </div>
 
-              return (
-                <div
-                  key={palaceNum}
-                  className={`${styles.palaceOrbitNode} ${isRealized ? styles.nodeRealized : styles.nodeHollow} ${isLampPalace ? styles.nodeLamp : ''}`}
-                  style={{
-                    transform: `rotate(${angle}deg) translate(105px) rotate(-${angle}deg)`,
-                  }}
-                  title={`Thiên Cung ${palaceNum}: ${isRealized ? 'Hóa Thực Cung Thật' : 'Cung Hư Ảo'}`}
-                >
-                  <div className={styles.palaceIconWrap}>
-                    <span className={styles.palaceEmoji}>
-                      {isLampPalace ? '🏮' : isRealized ? '🏛️' : '☁️'}
-                    </span>
+            {/* Các Tầng Lầu Thiên Cung (Xếp từ tầng cao nhất xuống tầng 1) */}
+            <div className={styles.towerFloorsList}>
+              {Array.from({ length: maxThienCung }).map((_, i) => {
+                // Tầng tính từ trên xuống: tầng maxThienCung -> tầng 1
+                const floorNum = maxThienCung - i;
+                const isRealized = realizedThienCung >= floorNum;
+                const isLampPalace = (floorNum - 1) >= maxThienCung - (cultivation?.absorbedLamps || []).length;
+                const da = (daoAnhs || []).find(d => d.palaceIndex === (floorNum - 1));
+
+                return (
+                  <div
+                    key={floorNum}
+                    className={`${styles.towerFloorRow} ${isRealized ? styles.floorRealized : styles.floorHollow} ${isLampPalace ? styles.floorLamp : ''}`}
+                    title={`Tầng ${floorNum} (Thiên Cung ${floorNum}): ${isRealized ? 'Hóa Thực Cung Thật (Có Kim Đan)' : 'Hư Ảo (Mây mù bao phủ)'}`}
+                  >
+                    {/* Mái ngói nhỏ của tầng */}
+                    <div className={styles.floorRoofLine} />
+
+                    {/* Gian phòng đan điện bên trong tầng lầu */}
+                    <div className={styles.floorChamber}>
+                      {/* Số tầng bên trái */}
+                      <span className={styles.floorNumberBadge}>T{floorNum}</span>
+
+                      {/* Nội điện: Đã hóa thật thì có Kim Đan tỏa sáng, chưa hóa thật thì có Mây Mù bao phủ */}
+                      {isRealized ? (
+                        <div className={styles.realizedChamberContent}>
+                          {/* Viên Kim Đan tỏa sáng bên trong */}
+                          <div className={styles.goldenCoreOrbInside}>
+                            <span className={styles.orbGlowCore}>🟡</span>
+                            <span className={styles.orbShimmerSparkle}>✨</span>
+                          </div>
+                          <span className={styles.chamberTitle}>
+                            {da ? `${da.name}` : isLampPalace ? 'Chân Cung Đăng' : `Cung Thật ${floorNum}`}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className={styles.hollowChamberContent}>
+                          <span className={styles.hollowMistIcon}>☁️</span>
+                          <span className={styles.hollowMistText}>Mây mù hư ảo...</span>
+                        </div>
+                      )}
+
+                      {/* Biểu tượng trạng thái bên phải */}
+                      <span className={styles.floorRightBadge}>
+                        {da ? '👑' : isLampPalace ? '🏮' : isRealized ? '🏛️' : '🌫️'}
+                      </span>
+                    </div>
                   </div>
-                  <span className={styles.palaceMiniLabel}>
-                    {isLampPalace ? `Cung ${palaceNum}★` : isRealized ? `Cung ${palaceNum}` : `Hư ${palaceNum}`}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           <div className={styles.stageStatusBadge}>
-            <span>🏛️ ĐÃ HÓA THỰC: {realizedThienCung}/{maxThienCung} CUNG THẬT</span>
+            <span>🏛️ TÒA THIÊN LÂU: {realizedThienCung}/{maxThienCung} TẦNG HÓA THẬT (CÓ KIM ĐAN)</span>
           </div>
         </div>
       )}
