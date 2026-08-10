@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import BottomSheet from '../ui/BottomSheet';
 import { useCultivation } from '../../hooks/useCultivation';
+import RealmPreviewVisualizer from './RealmPreviewVisualizer';
 import styles from './CultivationModal.module.css';
 
 export default function CultivationModal({ isOpen, onClose }) {
@@ -51,17 +52,9 @@ export default function CultivationModal({ isOpen, onClose }) {
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title="✦ ĐẠO LỘ TU TIÊN ✦" fullHeight>
       <div className={styles.container}>
-        {/* Realm Hero Card */}
+        {/* Realm Hero Card with Dedicated Visual Animation */}
         <div className={styles.realmHeroCard}>
           <div className={styles.realmGlowCircle} />
-
-          <div className={styles.realmIconRow}>
-            {cultivation.realm === 'ngung_khi' && <span className={styles.realmIcon}>⚡</span>}
-            {cultivation.realm === 'truc_co' && <span className={styles.realmIcon}>🔥</span>}
-            {cultivation.realm === 'kim_dan' && <span className={styles.realmIcon}>🏛️</span>}
-            {cultivation.realm === 'gia_anh' && <span className={styles.realmIcon}>✨</span>}
-            {cultivation.realm === 'nguyen_anh' && <span className={styles.realmIcon}>👑</span>}
-          </div>
 
           <div className={styles.realmBadge}>
             {cultivation.realm === 'ngung_khi' && 'CẢNH GIỚI: NGƯNG KHÍ'}
@@ -72,6 +65,9 @@ export default function CultivationModal({ isOpen, onClose }) {
           </div>
 
           <h2 className={styles.realmTitle}>{displayName}</h2>
+
+          {/* REALM-SPECIFIC ANIMATED VISUALIZER */}
+          <RealmPreviewVisualizer cultivation={cultivation} />
 
           <div className={styles.statsRow}>
             <div className={styles.statBox}>

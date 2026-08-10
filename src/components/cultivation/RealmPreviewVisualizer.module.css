@@ -1,0 +1,557 @@
+.visualizerWrapper {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: radial-gradient(circle at center, rgba(16, 25, 39, 0.4) 0%, rgba(10, 16, 26, 0.8) 100%);
+  margin: 4px 0 10px;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+/* ========================================================
+   1. NGƯNG KHÍ: KHÍ HẢI ĐAN ĐIỀN & 10 VÒNG LINH MẠCH
+   ======================================================== */
+.ngungKhiStage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.danDienVortex {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.danDienCore {
+  width: 22px;
+  height: 22px;
+  background: radial-gradient(circle, #ffcc00 0%, #0284c7 60%, transparent 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 20px #22c3f0, 0 0 40px #0284c7;
+  animation: pulseCore 2s ease-in-out infinite;
+}
+
+.danDienAura {
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(34, 195, 240, 0.4) 0%, transparent 70%);
+  animation: rotateSlow 8s linear infinite;
+}
+
+.danDienLightning {
+  position: absolute;
+  inset: -16px;
+  border: 1px dashed rgba(255, 204, 0, 0.6);
+  border-radius: 50%;
+  animation: rotateSlow 4s linear infinite reverse;
+}
+
+.meridianRings {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.meridianRing {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+  transition: all 0.5s ease;
+}
+
+.ringReached {
+  border-color: rgba(34, 195, 240, 0.35);
+  box-shadow: 0 0 8px rgba(34, 195, 240, 0.2);
+}
+
+.ringCurrent {
+  border-color: #ffcc00 !important;
+  box-shadow: 0 0 15px rgba(255, 204, 0, 0.6), inset 0 0 10px rgba(255, 204, 0, 0.2) !important;
+  animation: pulseCurrentRing 1.8s ease-in-out infinite;
+}
+
+.ringSpark {
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  background: #ffcc00;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #ffcc00;
+  transform: translateX(-50%);
+}
+
+/* ========================================================
+   2. TRÚC CƠ: NHÂN THỂ PHÁP KHIẾU & MỆNH HỎA
+   ======================================================== */
+.trucCoStage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flameAuraContainer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.orbitingFlame {
+  position: absolute;
+  animation: rotateOrbit 12s linear infinite;
+}
+
+.flameSymbol {
+  font-size: 20px;
+  filter: drop-shadow(0 0 10px rgba(255, 120, 0, 0.8));
+  animation: flameFlicker 1.5s ease-in-out infinite alternate;
+}
+
+.bodySilhouetteWrap {
+  position: relative;
+  width: 170px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
+.bodySvg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 15px rgba(34, 195, 240, 0.3));
+}
+
+.bodyOutline {
+  fill: rgba(16, 25, 39, 0.85);
+  stroke: rgba(34, 195, 240, 0.4);
+  stroke-width: 1.5;
+  transition: stroke 0.4s ease;
+}
+
+.phapKhieuDot {
+  transition: all 0.3s ease;
+}
+
+.phapKhieuLit {
+  fill: #ffcc00;
+  filter: drop-shadow(0 0 4px #ffcc00);
+  animation: acupointGlow 2s ease-in-out infinite alternate;
+}
+
+.phapKhieuDim {
+  fill: rgba(255, 255, 255, 0.15);
+}
+
+.danDienFireCore {
+  fill: #f97316;
+  filter: drop-shadow(0 0 12px #f97316);
+  animation: pulseCore 1.5s infinite;
+}
+
+.secret121GlowGroup {
+  animation: floatSlow 2s ease-in-out infinite;
+}
+
+.secret121Dot {
+  fill: #ec4899;
+  filter: drop-shadow(0 0 10px #ec4899);
+}
+
+.secret121Halo {
+  fill: none;
+  stroke: #ec4899;
+  stroke-width: 1.5;
+  stroke-dasharray: 2, 2;
+  animation: rotateSlow 3s linear infinite;
+}
+
+.secret121Label {
+  font-family: var(--font-serif);
+  font-size: 8px;
+  font-weight: 700;
+  fill: #ec4899;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 6px rgba(236, 72, 153, 0.8);
+}
+
+.secret121Unlit {
+  fill: rgba(255, 255, 255, 0.2);
+}
+
+/* ========================================================
+   3. KIM ĐAN: KIM ĐAN & THIÊN CUNG TỪ HƯ HÓA THẬT
+   ======================================================== */
+.kimDanStage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.goldenCoreWrap {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.goldenCoreCenter {
+  width: 32px;
+  height: 32px;
+  background: radial-gradient(circle, #fff 0%, #ffcc00 45%, #d97706 80%, #92400e 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 25px rgba(255, 204, 0, 0.9), 0 0 50px rgba(245, 158, 11, 0.6);
+  animation: pulseCore 2.5s ease-in-out infinite;
+}
+
+.goldenCoreShimmer {
+  position: absolute;
+  inset: -6px;
+  border: 1px solid rgba(255, 204, 0, 0.7);
+  border-radius: 50%;
+  animation: rotateSlow 6s linear infinite;
+}
+
+.goldenCoreAura {
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 204, 0, 0.3) 0%, transparent 70%);
+  animation: pulseCurrentRing 3s ease-in-out infinite;
+}
+
+.palacesOrbitArray {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.palaceOrbitNode {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.4s ease;
+  pointer-events: auto;
+}
+
+.palaceIconWrap {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.nodeRealized .palaceIconWrap {
+  background: linear-gradient(135deg, rgba(255, 204, 0, 0.25), rgba(217, 119, 6, 0.35));
+  border: 1.5px solid #ffcc00;
+  box-shadow: 0 0 14px rgba(255, 204, 0, 0.6);
+  animation: palaceGlow 2s ease-in-out infinite alternate;
+}
+
+.nodeHollow .palaceIconWrap {
+  background: rgba(16, 25, 39, 0.6);
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  opacity: 0.45;
+}
+
+.nodeLamp .palaceIconWrap {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(239, 68, 68, 0.25));
+  border: 1.5px solid #a855f7;
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.6);
+}
+
+.palaceEmoji {
+  font-size: 16px;
+}
+
+.palaceMiniLabel {
+  font-family: var(--font-serif);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.nodeRealized .palaceMiniLabel {
+  color: #ffcc00;
+}
+
+/* ========================================================
+   4. NGUYÊN ANH: ĐẠO ANH TỌA TRẤN THIÊN CUNG
+   ======================================================== */
+.nguyenAnhStage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.celestialGateway {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.gatewayArch {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(34, 195, 240, 0.3);
+  box-shadow: 0 0 30px rgba(34, 195, 240, 0.2);
+  animation: rotateSlow 20s linear infinite;
+}
+
+.tribulationLightning {
+  position: absolute;
+  inset: -10px;
+  border: 1px dashed rgba(255, 204, 0, 0.4);
+  border-radius: 50%;
+  animation: rotateSlow 8s linear infinite reverse;
+}
+
+.daoAnhShowcaseWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.daoAnhAvatarBox {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.daoAnhKiepHalo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.haloRing {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.haloRingPassed {
+  border-color: #22c3f0 !important;
+  box-shadow: 0 0 10px rgba(34, 195, 240, 0.5);
+  animation: pulseCurrentRing 2s ease-in-out infinite;
+}
+
+.infantEntity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  z-index: 5;
+  animation: floatSlow 2.5s ease-in-out infinite;
+}
+
+.infantCrown {
+  font-size: 16px;
+  filter: drop-shadow(0 0 8px #ffcc00);
+}
+
+.infantBody {
+  font-size: 26px;
+  filter: drop-shadow(0 0 12px #22c3f0);
+}
+
+.daoAnhsOrbitList {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.orbitDaoAnhMini {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(16, 25, 39, 0.9);
+  border: 1px solid #22c3f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(34, 195, 240, 0.4);
+  pointer-events: auto;
+}
+
+.orbitLampProtected {
+  border-color: #ffcc00;
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.6);
+}
+
+.miniIcon {
+  font-size: 11px;
+}
+
+.miniKiep {
+  font-size: 7.5px;
+  font-weight: 700;
+  color: #22c3f0;
+  line-height: 1;
+}
+
+/* ========================================================
+   STAGE STATUS BADGE (FOOTER OF VISUALIZER)
+   ======================================================== */
+.stageStatusBadge {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 16, 26, 0.85);
+  border: 1px solid rgba(255, 204, 0, 0.4);
+  backdrop-filter: blur(8px);
+  padding: 3px 14px;
+  border-radius: var(--radius-full);
+  z-index: 20;
+}
+
+.stageStatusBadge span {
+  font-family: var(--font-serif);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #ffcc00;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* ========================================================
+   KEYFRAME ANIMATIONS
+   ======================================================== */
+@keyframes pulseCore {
+  0%, 100% {
+    transform: scale(0.92);
+    filter: brightness(0.9);
+  }
+  50% {
+    transform: scale(1.08);
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes pulseCurrentRing {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes rotateSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotateOrbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes flameFlicker {
+  0% {
+    transform: scale(0.95) translateY(0);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.1) translateY(-2px);
+    opacity: 1;
+  }
+}
+
+@keyframes acupointGlow {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes palaceGlow {
+  0% {
+    box-shadow: 0 0 8px rgba(255, 204, 0, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(255, 204, 0, 0.85);
+  }
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
