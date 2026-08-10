@@ -5,7 +5,7 @@ import styles from './RealmPreviewVisualizer.module.css';
 /**
  * RealmPreviewVisualizer — Bộ Hoạt Ảnh Tu Vi Chuyên Biệt Theo Từng Cảnh Giới:
  * 1. Ngưng Khí: Khí Hải Đan Điền & 10 Vòng Linh Mạch luân chuyển.
- * 2. Trúc Cơ: Nhân Thể Pháp Khiếu (120 khiếu sáng rực) + Trụ Mệnh Hỏa + Khiếu 121 Tử Phủ Cực Cảnh + Mệnh Đăng đã hấp thụ (hiện đúng biểu tượng thần đăng).
+ * 2. Trúc Cơ: Tu sĩ tĩnh tọa giữa Tinh Đồ 120 Pháp Khiếu + 4 Vị Trí Lơ Lửng (Hỏa / Đăng) + Cực Cảnh 121 trên đỉnh đầu.
  * 3. Kim Đan: Kim Đan trung tâm + Thiên Cung từ Hư Ảo chuyển sang Hóa Thực Hoàng Kim.
  * 4. Nguyên Anh: Thiên Cung mở cửa, Đạo Anh Thần Thể tĩnh tọa với Vòng Hào Quang 5 Kiếp Luân Hồi.
  */
@@ -14,64 +14,105 @@ export default function RealmPreviewVisualizer({ cultivation }) {
   const phapKhieu = cultivation?.phapKhieu || 0;
   const selfHoa = cultivation?.selfMenhHoa || Math.floor(phapKhieu / 30);
   const has121st = !!cultivation?.has121st;
-  const absorbedCount = (cultivation?.absorbedLamps || []).length;
+  const absorbedLamps = cultivation?.absorbedLamps || [];
+  const absorbedCount = absorbedLamps.length;
   const ngungKhiLevel = cultivation?.ngungKhiLevel || 1;
   const maxThienCung = cultivation?.maxThienCung || 6;
   const realizedThienCung = cultivation?.realizedThienCung || 1;
   const daoAnhs = cultivation?.daoAnhs || [];
 
-  // Tạo danh sách các ngọn lửa & Mệnh Đăng bay quanh nhân thể ở Trúc Cơ
-  const trucCoOrbitElements = useMemo(() => {
-    const elements = [];
+  // Tạo danh sách 120 điểm sao tinh đồ phân bố thanh nhã theo các chòm sao
+  const constellationStars = useMemo(() => {
+    const stars = [];
+    const branches = 6; // 6 nhánh tinh tú xung quanh
+    const starsPerBranch = 20; // 20 sao mỗi nhánh = 120 sao
 
-    // 1. Mệnh Hỏa Tự Thân (1 đến 4 Hỏa)
-    for (let i = 0; i < selfHoa; i++) {
-      elements.push({
-        id: `self_${i}`,
-        type: 'self_flame',
-        icon: '🔥',
-        name: `Hỏa ${i + 1}`,
-        color: '#f97316',
-        glow: 'rgba(249, 115, 22, 0.85)',
-      });
-    }
-
-    // 2. Pháp Khiếu 121 Cực Cảnh (nếu đã mở)
-    if (has121st) {
-      elements.push({
-        id: '121_flame',
-        type: '121_flame',
-        icon: '⚡',
-        name: '121 Cực Cảnh',
-        color: '#ec4899',
-        glow: 'rgba(236, 72, 153, 0.95)',
-      });
-    }
-
-    // 3. Mệnh Đăng Đã Hấp Thụ (thay thế hoạt ảnh lửa bằng chính Mệnh Đăng)
-    (cultivation?.absorbedLamps || []).forEach(lampId => {
-      const lamp = LIFE_LAMPS.find(l => l.id === lampId);
-      if (lamp) {
-        const tier = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
-        elements.push({
-          id: lamp.id,
-          type: 'absorbed_lamp',
-          icon: lamp.icon || '🏮',
-          name: lamp.shortName || lamp.name,
-          tierName: tier.name,
-          color: tier.color || '#ffcc00',
-          glow: tier.border || 'rgba(255, 204, 0, 0.9)',
-          bg: tier.bg,
+    for (let b = 0; b < branches; b++) {
+      const baseAngle = (b / branches) * (2 * Math.PI);
+      for (let s = 0; s < starsPerBranch; s++) {
+        const dist = 42 + (s / starsPerBranch) * 58; // bán kính từ 42px đến 100px
+        const curveAngle = baseAngle + Math.sin((s / starsPerBranch) * Math.PI) * 0.35;
+        const cx = 100 + Math.cos(curveAngle) * dist;
+        const cy = 110 + Math.sin(curveAngle) * dist * 0.85;
+        const idx = b * starsPerBranch + s;
+        stars.push({
+          idx,
+          cx,
+          cy,
+          isLit: idx < phapKhieu,
         });
       }
-    });
+    }
+    return stars;
+  }, [phapKhieu]);
 
-    return elements;
-  }, [selfHoa, has121st, cultivation?.absorbedLamps]);
+  // 4 Vị Trí Xung Quanh (Tây Bắc, Đông Bắc, Tây Nam, Đông Nam)
+  // Quy tắc: Nếu có Mệnh Đăng hấp thụ thì THAY THẾ ngọn hỏa tại vị trí đó bằng Mệnh Đăng!
+  const surroundingSlots = useMemo(() => {
+    const slots = [
+      { id: 'pos_1', name: 'Vị Trí 1 (Tây Bắc)', posClass: styles.slotTopLeft },
+      { id: 'pos_2', name: 'Vị Trí 2 (Đông Bắc)', posClass: styles.slotTopRight },
+      { id: 'pos_3', name: 'Vị Trí 3 (Tây Nam)', posClass: styles.slotBottomLeft },
+      { id: 'pos_4', name: 'Vị Trí 4 (Đông Nam)', posClass: styles.slotBottomRight },
+    ];
+
+    return slots.map((slot, index) => {
+      // Kiểm tra xem có Mệnh Đăng tương ứng ở vị trí này không
+      const lampId = absorbedLamps[index];
+      if (lampId) {
+        const lamp = LIFE_LAMPS.find(l => l.id === lampId);
+        const tier = lamp ? (LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham) : null;
+        return {
+          ...slot,
+          type: 'lamp',
+          isLit: true,
+          icon: lamp?.icon || '🏮',
+          title: lamp?.shortName || lamp?.name || 'Mệnh Đăng',
+          tierName: tier?.name,
+          color: tier?.color || '#ffcc00',
+          glow: tier?.border || 'rgba(255, 204, 0, 0.8)',
+          bg: tier?.bg,
+        };
+      }
+
+      // Nếu không có Mệnh Đăng: Kiểm tra Mệnh Hỏa Tự Thân (1, 2, 3, 4)
+      const fireIndex = index + 1;
+      const isFireLit = selfHoa >= fireIndex;
+      return {
+        ...slot,
+        type: 'fire',
+        isLit: isFireLit,
+        icon: isFireLit ? '🔥' : '🕯️',
+        title: `Mệnh Hỏa ${fireIndex}`,
+        tierName: isFireLit ? 'Đã Thắp' : `${(fireIndex - 1) * 30 + 1}-${fireIndex * 30}`,
+        color: isFireLit ? '#f97316' : 'rgba(255, 255, 255, 0.3)',
+        glow: isFireLit ? 'rgba(249, 115, 22, 0.85)' : 'none',
+      };
+    });
+  }, [absorbedLamps, selfHoa]);
+
+  // Nếu có Mệnh Đăng thứ 5 (vị trí phụ dưới chân tọa đài)
+  const fifthLamp = useMemo(() => {
+    if (absorbedLamps.length >= 5) {
+      const lampId = absorbedLamps[4];
+      const lamp = LIFE_LAMPS.find(l => l.id === lampId);
+      const tier = lamp ? (LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham) : null;
+      return {
+        icon: lamp?.icon || '🏮',
+        title: lamp?.shortName || lamp?.name || 'Mệnh Đăng 5',
+        color: tier?.color || '#ffcc00',
+        glow: tier?.border || 'rgba(255, 204, 0, 0.8)',
+        bg: tier?.bg,
+      };
+    }
+    return null;
+  }, [absorbedLamps]);
 
   return (
     <div className={styles.visualizerWrapper}>
-      {/* 1. NGƯNG KHÍ VISUALIZER */}
+      {/* ========================================================
+          1. NGƯNG KHÍ VISUALIZER
+         ======================================================== */}
       {realm === 'ngung_khi' && (
         <div className={styles.ngungKhiStage}>
           <div className={styles.danDienVortex}>
@@ -108,117 +149,138 @@ export default function RealmPreviewVisualizer({ cultivation }) {
         </div>
       )}
 
-      {/* 2. TRÚC CƠ VISUALIZER: NHÂN THỂ PHÁP KHIẾU & MỆNH HỎA / MỆNH ĐĂNG HẤP THỤ */}
+      {/* ========================================================
+          2. TRÚC CƠ VISUALIZER: TINH ĐỒ PHÁP KHIẾU & 4 HỎA / ĐĂNG + 121 ĐỈNH ĐẦU
+         ======================================================== */}
       {realm === 'truc_co' && (
         <div className={styles.trucCoStage}>
-          {/* Flame & Absorbed Life Lamps Aura surrounding the body */}
-          <div className={styles.flameAuraContainer}>
-            {trucCoOrbitElements.map((el, i) => {
-              const totalCount = Math.max(1, trucCoOrbitElements.length);
-              const angle = (i / totalCount) * 360;
-              const isLamp = el.type === 'absorbed_lamp';
-
-              return (
-                <div
-                  key={el.id}
-                  className={`${styles.orbitingFlame} ${isLamp ? styles.orbitingLampContainer : ''}`}
-                  style={{
-                    transform: `rotate(${angle}deg) translate(95px) rotate(-${angle}deg)`,
-                    animationDelay: `${i * 0.3}s`,
-                  }}
-                  title={el.name}
-                >
-                  {isLamp ? (
-                    <div
-                      className={styles.absorbedLampHaloWrap}
-                      style={{
-                        borderColor: el.color,
-                        boxShadow: `0 0 14px ${el.glow}`,
-                        backgroundColor: el.bg || 'rgba(16, 25, 39, 0.85)',
-                      }}
-                    >
-                      <span className={styles.lampSymbol} style={{ filter: `drop-shadow(0 0 8px ${el.color})` }}>
-                        {el.icon}
-                      </span>
-                    </div>
-                  ) : (
-                    <span
-                      className={styles.flameSymbol}
-                      style={{
-                        filter: `drop-shadow(0 0 10px ${el.glow})`,
-                        color: el.color,
-                      }}
-                    >
-                      {el.icon}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Human Body Meditating Silhouette with Acupoints */}
-          <div className={styles.bodySilhouetteWrap}>
-            <svg viewBox="0 0 200 240" className={styles.bodySvg}>
+          {/* A. BỨC TINH ĐỒ CỬU THIÊN (CELESTIAL STAR CHART BACKGROUND) */}
+          <div className={styles.starChartBackdrop}>
+            <svg viewBox="0 0 200 220" className={styles.starChartSvg}>
               <defs>
-                <radialGradient id="bodyGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#22c3f0" stopOpacity="0.25" />
+                <radialGradient id="starChartGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#22c3f0" stopOpacity="0.18" />
+                  <stop offset="60%" stopColor="#0284c7" stopOpacity="0.06" />
                   <stop offset="100%" stopColor="transparent" stopOpacity="0" />
                 </radialGradient>
-                <linearGradient id="meridianLine" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#ffcc00" stopOpacity="0.8" />
-                  <stop offset="50%" stopColor="#22c3f0" stopOpacity="0.6" />
-                  <stop offset="100%" stopColor="#ffcc00" stopOpacity="0.8" />
-                </linearGradient>
               </defs>
 
+              {/* Tinh bàn thiên văn */}
+              <circle cx="100" cy="110" r="95" fill="url(#starChartGlow)" stroke="rgba(34, 195, 240, 0.15)" strokeWidth="1" strokeDasharray="3,3" />
+              <circle cx="100" cy="110" r="70" stroke="rgba(255, 204, 0, 0.12)" strokeWidth="1" />
+              <circle cx="100" cy="110" r="45" stroke="rgba(34, 195, 240, 0.15)" strokeWidth="1" strokeDasharray="2,2" />
+
+              {/* Trục bát quái tinh bàn */}
+              <line x1="100" y1="15" x2="100" y2="205" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
+              <line x1="15" y1="110" x2="185" y2="110" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
+
+              {/* 120 Ngôi Sao Pháp Khiếu */}
+              {constellationStars.map((star) => (
+                <circle
+                  key={star.idx}
+                  cx={star.cx}
+                  cy={star.cy}
+                  r={star.isLit ? 2 : 1}
+                  className={`${styles.starDot} ${star.isLit ? styles.starLit : styles.starDim}`}
+                  style={{ animationDelay: `${(star.idx % 12) * 0.12}s` }}
+                />
+              ))}
+            </svg>
+          </div>
+
+          {/* B. MỆNH HỎA CỰC CẢNH THỨ 5 (KHIẾU 121) - NGAY TRÊN ĐỈNH ĐẦU */}
+          <div className={styles.crownSlotWrap}>
+            {has121st ? (
+              <div className={styles.crownFlameActive} title="Pháp Khiếu 121: Cực Cảnh Thần Hỏa">
+                <span className={styles.crownIcon}>⚡</span>
+                <span className={styles.crownLabel}>✦ 121 CỰC CẢNH</span>
+              </div>
+            ) : (
+              <div className={styles.crownFlameLocked} title="Pháp Khiếu 121: Chưa Khai Mở">
+                <span className={styles.crownIconDim}>🕯️</span>
+                <span className={styles.crownLabelDim}>121 KHIẾU</span>
+              </div>
+            )}
+          </div>
+
+          {/* C. TU SĨ TĨNH TỌA THIỀN ĐỊNH Ở TRUNG TÂM */}
+          <div className={styles.daoistCenterSilhouette}>
+            <svg viewBox="0 0 100 120" className={styles.daoistSvg}>
+              <defs>
+                <linearGradient id="daoistBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#22c3f0" stopOpacity="0.9" />
+                  <stop offset="50%" stopColor="#0284c7" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#0f172a" stopOpacity="0.95" />
+                </linearGradient>
+              </defs>
               {/* Meditating body contour */}
               <path
-                d="M 100 45 Q 85 45 85 62 Q 85 75 92 82 L 80 95 Q 60 102 55 125 L 45 155 Q 40 175 60 185 L 80 190 Q 60 205 75 218 Q 100 225 125 218 Q 140 205 120 190 L 140 185 Q 160 175 155 155 L 145 125 Q 140 102 120 95 L 108 82 Q 115 75 115 62 Q 115 45 100 45 Z"
-                className={styles.bodyOutline}
+                d="M 50 18 Q 42 18 42 27 Q 42 34 46 38 L 38 45 Q 26 50 24 64 L 18 80 Q 14 90 26 95 L 38 98 Q 26 106 35 112 Q 50 116 65 112 Q 74 106 62 98 L 74 95 Q 86 90 82 80 L 76 64 Q 74 50 62 45 L 54 38 Q 58 34 58 27 Q 58 18 50 18 Z"
+                fill="url(#daoistBodyGrad)"
+                stroke="#22c3f0"
+                strokeWidth="1.2"
               />
-              <circle cx="100" cy="140" r="70" fill="url(#bodyGlow)" />
-
-              {/* Central Chong Mai / Ren Mai meridian line */}
-              <line x1="100" y1="50" x2="100" y2="195" stroke="url(#meridianLine)" strokeWidth="2" strokeDasharray="3,3" />
-
-              {/* 120 Pháp Khiếu Acupoints Array Map */}
-              {Array.from({ length: 60 }).map((_, idx) => {
-                // Generate left & right mirrored acupoints (total ~120 points mapped)
-                const isLeft = idx % 2 === 0;
-                const row = Math.floor(idx / 2);
-                const cy = 55 + row * 4.6;
-                const spread = Math.sin((row / 30) * Math.PI) * 35;
-                const cx = isLeft ? 100 - spread : 100 + spread;
-                const pointNum = idx * 2 + 1;
-                const isLit = phapKhieu >= pointNum;
-
-                return (
-                  <circle
-                    key={idx}
-                    cx={cx}
-                    cy={cy}
-                    r={isLit ? 2.5 : 1.2}
-                    className={`${styles.phapKhieuDot} ${isLit ? styles.phapKhieuLit : styles.phapKhieuDim}`}
-                    style={{ animationDelay: `${(idx % 10) * 0.1}s` }}
-                  />
-                );
-              })}
-
-              {/* Dan Dien Fire Core (Center of chest/abdomen) */}
-              <circle cx="100" cy="145" r="8" className={styles.danDienFireCore} />
-
-              {/* Secret 121st Acupoint at Baihui / Crown of head */}
-              {has121st ? (
-                <g className={styles.secret121GlowGroup}>
-                  <circle cx="100" cy="42" r="6" className={styles.secret121Dot} />
-                  <circle cx="100" cy="42" r="14" className={styles.secret121Halo} />
-                  <text x="100" y="30" textAnchor="middle" className={styles.secret121Label}>✦ 121 KHIẾU</text>
-                </g>
-              ) : (
-                <circle cx="100" cy="42" r="2" className={styles.secret121Unlit} />
-              )}
+              {/* Dan Dien Core Glow */}
+              <circle cx="50" cy="74" r="5" fill="#ffcc00" className={styles.daoistDanDien} />
             </svg>
+          </div>
+
+          {/* D. 4 VỊ TRÍ LƠ LỬNG XUNG QUANH (MỆNH HỎA / THAY BẰNG MỆNH ĐĂNG) */}
+          <div className={styles.surroundingSlotsLayer}>
+            {surroundingSlots.map((slot) => (
+              <div
+                key={slot.id}
+                className={`${styles.floatingElementWrap} ${slot.posClass}`}
+                title={slot.title}
+              >
+                {slot.type === 'lamp' ? (
+                  <div
+                    className={styles.divineLampCardFloating}
+                    style={{
+                      borderColor: slot.color,
+                      boxShadow: `0 0 14px ${slot.glow}`,
+                      backgroundColor: slot.bg || 'rgba(16, 25, 39, 0.9)',
+                    }}
+                  >
+                    <span className={styles.slotIcon} style={{ filter: `drop-shadow(0 0 6px ${slot.color})` }}>
+                      {slot.icon}
+                    </span>
+                    <span className={styles.slotName} style={{ color: slot.color }}>
+                      {slot.title}
+                    </span>
+                  </div>
+                ) : (
+                  <div
+                    className={`${styles.flameCardFloating} ${slot.isLit ? styles.flameCardLit : styles.flameCardDim}`}
+                    style={slot.isLit ? { borderColor: 'rgba(249, 115, 22, 0.6)', boxShadow: '0 0 10px rgba(249, 115, 22, 0.3)' } : {}}
+                  >
+                    <span className={styles.slotIcon} style={{ filter: slot.isLit ? 'drop-shadow(0 0 6px #f97316)' : 'none' }}>
+                      {slot.icon}
+                    </span>
+                    <span className={styles.slotName} style={{ color: slot.color }}>
+                      {slot.title}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Mệnh Đăng thứ 5 nếu có */}
+            {fifthLamp && (
+              <div className={styles.fifthLampWrap} title={fifthLamp.title}>
+                <div
+                  className={styles.divineLampCardFloating}
+                  style={{
+                    borderColor: fifthLamp.color,
+                    boxShadow: `0 0 14px ${fifthLamp.glow}`,
+                    backgroundColor: fifthLamp.bg || 'rgba(16, 25, 39, 0.9)',
+                  }}
+                >
+                  <span className={styles.slotIcon}>{fifthLamp.icon}</span>
+                  <span className={styles.slotName} style={{ color: fifthLamp.color }}>{fifthLamp.title}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className={styles.stageStatusBadge}>
@@ -227,7 +289,9 @@ export default function RealmPreviewVisualizer({ cultivation }) {
         </div>
       )}
 
-      {/* 3. KIM ĐAN VISUALIZER: KIM ĐAN & THIÊN CUNG TỪ HƯ HÓA THẬT */}
+      {/* ========================================================
+          3. KIM ĐAN VISUALIZER
+         ======================================================== */}
       {realm === 'kim_dan' && (
         <div className={styles.kimDanStage}>
           {/* Golden Core Center */}
@@ -273,20 +337,21 @@ export default function RealmPreviewVisualizer({ cultivation }) {
         </div>
       )}
 
-      {/* 4. NGUYÊN ANH / GIẢ ANH VISUALIZER: ĐẠO ANH TỌA TRẤN THIÊN CUNG */}
+      {/* ========================================================
+          4. NGUYÊN ANH VISUALIZER
+         ======================================================== */}
       {(realm === 'gia_anh' || realm === 'nguyen_anh') && (
         <div className={styles.nguyenAnhStage}>
-          {/* Celestial Gateway / Heavenly Tribulation Lightning Backdrop */}
+          {/* Celestial Gateway */}
           <div className={styles.celestialGateway}>
             <div className={styles.gatewayArch} />
             <div className={styles.tribulationLightning} />
           </div>
 
-          {/* Central Showcase: Supreme Dao Anh in Lotus Position */}
+          {/* Central Showcase */}
           <div className={styles.daoAnhShowcaseWrap}>
             <div className={styles.daoAnhAvatarBox}>
               <div className={styles.daoAnhKiepHalo}>
-                {/* Halo rings representing 5 Tribulation Kieps */}
                 {Array.from({ length: 5 }).map((_, k) => {
                   const maxKiep = daoAnhs.length > 0 ? Math.max(...daoAnhs.map(d => d.currentKiep || 0)) : 1;
                   const isPassed = maxKiep >= k + 1;
