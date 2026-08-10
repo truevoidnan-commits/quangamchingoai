@@ -1459,6 +1459,16 @@ export function getRealmDisplayName(state) {
 }
 
 export function resetCultivationState() {
-  saveCultivationState(DEFAULT_STATE);
-  return DEFAULT_STATE;
+  const freshState = {
+    ...DEFAULT_STATE,
+    readChapterIds: {},
+    inventoryLamps: [],
+    absorbedLamps: [],
+    daoAnhs: [],
+    logs: [
+      { text: '💀 Đã tản đi toàn bộ tu vi, tán sạch 72 Mệnh Đăng, hóa phàm trùng tu đạo lộ lại từ đầu.', time: Date.now() },
+    ],
+  };
+  saveCultivationState(freshState);
+  return freshState;
 }

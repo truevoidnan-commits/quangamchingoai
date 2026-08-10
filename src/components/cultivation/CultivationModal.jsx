@@ -194,7 +194,10 @@ export default function CultivationModal({ isOpen, onClose }) {
                     className={`btn-gold ${styles.breakthroughBtn}`}
                     onClick={() => triggerAction(breakthroughToTrucCo, 'Trúc Cơ Thành Công! Tẩy kinh phạt tủy mở Pháp Khiếu đầu tiên!')}
                   >
-                    🔥 ĐỘT PHÁ TRÚC CƠ
+                    <div className={styles.btnContentWrap}>
+                      <span className={styles.btnMainTitle}>🔥 ĐỘT PHÁ TRÚC CƠ</span>
+                      <span className={styles.btnSubInfo}>Khai Mở 120 Pháp Khiếu · Thắp Sáng Mệnh Hỏa</span>
+                    </div>
                   </button>
                 ) : (
                   <p className={styles.hintText}>
@@ -215,7 +218,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                   <br />
                   • Mệnh Hỏa tự thân: <strong>{selfHoa} Hỏa</strong> ({cultivation.phapKhieu}/120 khiếu) {cultivation.has121st && '+ 1 Hỏa (Khiếu 121)'}.
                   <br />
-                  • Mệnh Đăng đã hấp thụ: <strong>{absorbedCount}/5 Đăng</strong> (+{absorbedCount} Hỏa chiến lực).
+                  • Mệnh Đăng đã hấp thụ: <strong>{absorbedCount} Đăng</strong> (+{absorbedCount} Hỏa chiến lực).
                 </p>
 
                 {/* 5 Flames Visual */}
@@ -284,7 +287,10 @@ export default function CultivationModal({ isOpen, onClose }) {
                             }}
                             style={{ marginTop: 10 }}
                           >
-                            🌟 XUNG KÍCH MỞ PHÁP KHIẾU 121 (50% Thành Công / 50% Đóng Kín Vĩnh Viễn)
+                            <div className={styles.btnContentWrap}>
+                              <span className={styles.btnMainTitle}>🌟 XUNG KÍCH PHÁP KHIẾU 121</span>
+                              <span className={styles.btnSubInfo}>50% Thành Công · 50% Đóng Kín Vĩnh Viễn</span>
+                            </div>
                           </button>
                         ) : (
                           <p className={styles.hintTextSmall}>Đọc thêm chương để tích tụ đủ 800 linh lực xung kích Pháp Khiếu 121 (Tỉ lệ: 50% thành công / 50% đóng kín vĩnh viễn).</p>
@@ -306,7 +312,12 @@ export default function CultivationModal({ isOpen, onClose }) {
                         )
                       }
                     >
-                      🏛️ ĐỘT PHÁ KIM ĐAN (Trần {(selfHoa + (cultivation.has121st ? 1 : 0)) === 3 ? '6' : (selfHoa + (cultivation.has121st ? 1 : 0)) === 4 ? '7' : '8'} Cung Tự Thân + {absorbedCount} Chân Cung Mệnh Đăng)
+                      <div className={styles.btnContentWrap}>
+                        <span className={styles.btnMainTitle}>🏛️ ĐỘT PHÁ KIM ĐAN</span>
+                        <span className={styles.btnSubInfo}>
+                          Trần {(selfHoa + (cultivation.has121st ? 1 : 0)) === 3 ? '6' : (selfHoa + (cultivation.has121st ? 1 : 0)) === 4 ? '7' : '8'} Cung Tự Thân + {absorbedCount} Chân Cung Mệnh Đăng
+                        </span>
+                      </div>
                     </button>
                   )}
 
@@ -554,7 +565,10 @@ export default function CultivationModal({ isOpen, onClose }) {
                   className={`btn-gold ${styles.massTribulationBtn}`}
                   onClick={() => triggerAction(attemptTribulationAll)}
                 >
-                  ⚡ VẠN KIẾP TỀ PHI (Độ Kiếp Tất Cả Đạo Anh Đủ Điều Kiện · Thưởng +50% Thiên Mệnh)
+                  <div className={styles.btnContentWrap}>
+                    <span className={styles.btnMainTitle}>⚡ VẠN KIẾP TỀ PHI</span>
+                    <span className={styles.btnSubInfo}>Độ Kiếp Tất Cả Đạo Anh Đủ Điều Kiện · Thưởng +50% Thiên Mệnh</span>
+                  </div>
                 </button>
               )}
             </div>
@@ -686,7 +700,7 @@ export default function CultivationModal({ isOpen, onClose }) {
           <div className={styles.rulesSection}>
             <div className={styles.ruleCard}>
               <h4>1. Quy Tắc Hấp Thu Linh Khí & Đường Cong EXP Lũy Tiến</h4>
-              <p>• <strong>Luật Tĩnh Tâm Ngộ Đạo (60 Giây)</strong>: Đạo hữu phải ở lại đọc chương sách ít nhất <strong>60 giây</strong> mới có thể cảm ngộ thiên địa và hấp thu linh lực (+Tu Vi).</p>
+              <p>• <strong>Luật Tĩnh Tâm Ngộ Đạo (60 Giây)</strong>: Đạo hữu ở lại đọc chương truyện đủ <strong>60 giây</strong> sẽ hấp thu ngẫu nhiên từ <strong>50 đến 100 Tu Vi</strong> (chu kỳ 60s lặp lại liên tục).</p>
               <p>• <strong>Đường Cong Tu Vi</strong>: Tu vi càng cao thì lượng linh lực cần để phá cảnh càng lớn (Ngưng Khí 1-10 tầng tăng lũy tiến, Trúc Cơ 120 pháp khiếu cần 8.400 EXP, Kim Đan cần 800 EXP/cung).</p>
             </div>
 
@@ -701,7 +715,7 @@ export default function CultivationModal({ isOpen, onClose }) {
             <div className={styles.ruleCard}>
               <h4>3. Hệ Thống 72 Mệnh Đăng (6 Cấp Phẩm Độ Hiếm - 12 Đăng/Phẩm)</h4>
               <p>• <strong>Phân Cấp Phẩm</strong>: <strong>Hạ Phẩm</strong> (Trắng · 12 đèn) · <strong>Trung Phẩm</strong> (Xanh Lá · 12 đèn) · <strong>Thượng Phẩm</strong> (Xanh Lam · 12 đèn) · <strong>Cực Phẩm</strong> (Tím · 12 đèn) · <strong>Tiên Phẩm</strong> (Kim Sắc · 12 đèn) · <strong>Thần Phẩm</strong> (Đỏ Thần Thánh · 12 đèn).</p>
-              <p>• <strong>Tỉ lệ rơi</strong>: Cơ duyên ngẫu nhiên quý hiếm (~1.8% mỗi chương đọc đủ 60s). Mệnh Đăng phẩm càng cao càng hiếm có khó tìm!</p>
+              <p>• <strong>Tỉ lệ rơi</strong>: Cơ duyên ngẫu nhiên quý hiếm (~7.5% mỗi chu kỳ 60s). Mệnh Đăng phẩm càng cao càng hiếm có khó tìm!</p>
               <p>• <strong>Giới hạn hấp thụ</strong>: Tối đa <strong>5 Mệnh Đăng</strong>. Một khi đã hấp thụ thì <strong>KHÔNG HOÀN TRẢ</strong>!</p>
               <p>• <strong>Ở Trúc Cơ</strong>: Mỗi Mệnh Đăng hấp thụ = <strong>+1 Hỏa</strong>.</p>
               <p>• <strong>Ở Kim Đan</strong>: Mỗi Mệnh Đăng hấp thụ = <strong>+1 Cung Thật</strong> (hóa thực sẵn 100% không tốn EXP).</p>
@@ -731,6 +745,32 @@ export default function CultivationModal({ isOpen, onClose }) {
             ))}
           </div>
         )}
+
+        {/* ========================================================
+            DANGER ZONE: TẢN ĐI TU VI (TRÙNG TU TỪ ĐẦU)
+           ======================================================== */}
+        <div className={styles.dangerZoneCard}>
+          <div className={styles.dangerZoneHeader}>
+            <span>💀 NGHỊCH THIÊN HÓA PHÀM · TẢN ĐI TU VI</span>
+          </div>
+          <p className={styles.dangerZoneDesc}>
+            Tản đi toàn bộ tu vi hiện có, tán sạch toàn bộ 72 Mệnh Đăng đã thu thập và hấp thụ để hóa phàm trùng tu đạo lộ lại từ đầu.
+          </p>
+          <button
+            className={styles.resetCultivationBtn}
+            onClick={() => {
+              if (
+                confirm(
+                  '⚠️ CẢNH BÁO TẢN ĐI TU VI:\n\nBạn có chắc chắn muốn TẢN ĐI TOÀN BỘ TU VI?\n\n• Toàn bộ cảnh giới, chiến lực, EXP và Thiên Mệnh sẽ về 0 (Phàm Nhân / Ngưng Khí 1 Tầng).\n• Toàn bộ Mệnh Đăng trong túi và Mệnh Đăng đã hấp thụ sẽ MẤT HẾT VĨNH VIỄN!\n• Hành động này KHÔNG THỂ HOÀN TÁC!\n\nĐạo hữu có muốn tản công trùng tu lại từ đầu?'
+                )
+              ) {
+                triggerAction(resetCultivation, 'Đã tản đi toàn bộ tu vi! Hóa phàm trùng tu đạo lộ từ đầu.');
+              }
+            }}
+          >
+            💀 TẢN ĐI TU VI (TRÙNG TU TỪ ĐẦU)
+          </button>
+        </div>
       </div>
     </BottomSheet>
   );
