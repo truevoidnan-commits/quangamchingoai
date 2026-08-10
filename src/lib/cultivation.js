@@ -987,6 +987,20 @@ export function getCultivationState() {
       state.tienTinh = state.dangDiem || 0;
     }
     state.dangDiem = state.tienTinh;
+
+    // Tự động khôi phục nếu người dùng bị kẹt ở trạng thái trial cũ trên Safari / iPhone
+    if (state.isNguyenAnhTrial) {
+      state.isNguyenAnhTrial = false;
+      if (state.preTrialBackup) {
+        state.realm = state.preTrialBackup.realm || 'truc_co';
+        state.maxThienCung = state.preTrialBackup.maxThienCung || 6;
+        state.realizedThienCung = state.preTrialBackup.realizedThienCung || 0;
+        state.preTrialBackup = null;
+      } else if (state.realm === 'nguyen_anh') {
+        state.realm = 'truc_co';
+      }
+    }
+
     return state;
   } catch (err) {
     return DEFAULT_STATE;
