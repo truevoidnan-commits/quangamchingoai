@@ -1203,6 +1203,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   }
 
   let droppedLamp = null;
+  let droppedArtifact = null;
   let breakthrough = null;
 
   // ĐẾN CHÍNH THỨC NGUYÊN ANH: Mệnh Đăng và Vật Trấn Áp sẽ KHÔNG RƠI NỮA! (Giả Anh vẫn rơi bình thường)
@@ -1256,7 +1257,14 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
       else if (tierRoll < 0.992) selectedTier = 'tien_pham';
       else selectedTier = 'than_pham';
 
-      const candidateArtifacts = SUPPRESSING_ARTIFACTS.filter(a => a.tier === selectedTier);
+      const anchoredIds = Object.values(state.palaceAnchors || {}).map(a => a?.id).filter(Boolean);
+      const allOwnedArtifacts = [...(state.inventoryArtifacts || []), ...anchoredIds];
+      const unownedArtifacts = SUPPRESSING_ARTIFACTS.filter(a => !allOwnedArtifacts.includes(a.id));
+      const pool = unownedArtifacts.length > 0 ? unownedArtifacts : SUPPRESSING_ARTIFACTS;
+
+      let candidateArtifacts = pool.filter(a => a.tier === selectedTier);
+      if (candidateArtifacts.length === 0) candidateArtifacts = pool;
+
       if (candidateArtifacts.length > 0) {
         const randomIdx = Math.floor(Math.random() * candidateArtifacts.length);
         droppedArtifact = candidateArtifacts[randomIdx];
