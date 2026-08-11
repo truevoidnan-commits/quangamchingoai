@@ -174,14 +174,8 @@ export default function CultivationModal({ isOpen, onClose }) {
               <span className={styles.statValGold}>{combatPowerDisplay}</span>
             </div>
             <div className={styles.statBox}>
-              <span className={styles.statLabel}>
-                {isNguyenAnhStage ? 'Lực Thiên Mệnh' : 'Mệnh Đăng Hấp Thụ'}
-              </span>
-              {isNguyenAnhStage ? (
-                <span className={styles.statValCyan}>{(cultivation.totalThienMenh || 0).toLocaleString()} TM</span>
-              ) : (
-                <span className={styles.statVal}>{absorbedCount} Đăng</span>
-              )}
+              <span className={styles.statLabel}>Tu Vi Đang Có</span>
+              <span className={styles.statValCyan}>{(cultivation.totalExp || 0).toLocaleString()} Tu Vi</span>
             </div>
           </div>
         </div>
@@ -475,18 +469,31 @@ export default function CultivationModal({ isOpen, onClose }) {
                 </div>
 
                 {/* Phap Khieu Progress */}
-                <div className={styles.progressContainer}>
-                  <div className={styles.progressInfo}>
-                    <span>Pháp Khiếu tự thân khai mở:</span>
-                    <strong>{cultivation.phapKhieu}/120 {cultivation.has121st && '(+ Khiếu 121)'}</strong>
-                  </div>
-                  <div className={styles.progressBarBg}>
-                    <div
-                      className={styles.progressBarFillGold}
-                      style={{ width: `${Math.min(100, (cultivation.phapKhieu / 120) * 100)}%` }}
-                    />
-                  </div>
-                </div>
+                {(() => {
+                  const currentKhieuIndex = Math.min(120, cultivation.phapKhieu + 1);
+                  const currentKhieuReq = constants.getExpForPhapKhieuIndex ? constants.getExpForPhapKhieuIndex(currentKhieuIndex) : 70;
+                  const prevThreshold = (constants.TRUC_CO_KHIEU_THRESHOLDS && constants.TRUC_CO_KHIEU_THRESHOLDS[cultivation.phapKhieu]) || 0;
+                  const expInCurrentKhieu = Math.max(0, (cultivation.expCurrentRealm || 0) - prevThreshold);
+                  const percent = cultivation.phapKhieu >= 120 ? 100 : Math.min(100, Math.floor((expInCurrentKhieu / currentKhieuReq) * 100));
+
+                  return (
+                    <div className={styles.progressContainer}>
+                      <div className={styles.progressInfo}>
+                        <span>Pháp Khiếu tự thân khai mở:</span>
+                        <strong>
+                          {cultivation.phapKhieu}/120 {cultivation.has121st && '(+ Khiếu 121)'}
+                          {cultivation.phapKhieu < 120 && ` · Khiếu ${currentKhieuIndex}: ${expInCurrentKhieu}/${currentKhieuReq} Tu Vi`}
+                        </strong>
+                      </div>
+                      <div className={styles.progressBarBg}>
+                        <div
+                          className={styles.progressBarFillGold}
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Secret 121st progress if at 120 khiếu */}
                 {cultivation.phapKhieu >= 120 && !cultivation.has121st && (
@@ -573,117 +580,126 @@ export default function CultivationModal({ isOpen, onClose }) {
                 </p>
 
                 {/* Palace Grid */}
-                <div className={styles.palaceGrid}>
-                  {Array.from({ length: cultivation.maxThienCung }).map((_, i) => {
-                    const palaceNum = i + 1;
-                    const isRealized = cultivation.realizedThienCung >= palaceNum;
-                    const isLampPalace = i >= (cultivation.maxThienCung - (cultivation.absorbedLamps || []).length);
-                    const da = (cultivation.daoAnhs || []).find(d => d.palaceIndex === i);
-                    const anchor = cultivation.palaceAnchors?.[i];
-                    const isBottleneck = !isRealized && i === cultivation.realizedThienCung && cultivation.currentThienCungExp >= 799;
+                {(() => {
+                  const targetPalaceExp = constants.getPalaceCost ? constants.getPalaceCost(cultivation.realizedThienCung + 1) : 800;
+                  const bottleneckExp = targetPalaceExp - 1;
 
-                    return (
-                      <div
-                        key={palaceNum}
-                        className={`${styles.palaceCard} ${isRealized ? styles.palaceRealized : isBottleneck ? styles.palaceBottleneck : ''} ${da ? styles.palaceDaoAnh : ''}`}
-                      >
-                        <span className={styles.palaceIcon}>{da ? '👑' : anchor ? anchor.icon : isLampPalace ? '🏮' : isRealized ? '🏛️' : isBottleneck ? '🔑' : '☁️'}</span>
-                        <span className={styles.palaceName}>
-                          {da ? `${da.name} (${da.currentKiep}K)` : anchor ? `Cung ${palaceNum} (${anchor.shortName})` : `Thiên Cung ${palaceNum}`}
-                        </span>
-                        <span className={styles.palaceStatus}>
-                          {da ? `✦ ${da.currentKiep} Anh` : anchor ? `✦ Trấn: ${anchor.name}` : isLampPalace ? 'Chân Cung Đăng (Thật)' : isRealized ? '✦ Cung Thật' : isBottleneck ? '⚠️ Cần Trấn Vật (99.9%)' : 'Hư Ảo'}
-                        </span>
+                  return (
+                    <>
+                      <div className={styles.palaceGrid}>
+                        {Array.from({ length: cultivation.maxThienCung }).map((_, i) => {
+                          const palaceNum = i + 1;
+                          const isRealized = cultivation.realizedThienCung >= palaceNum;
+                          const isLampPalace = i >= (cultivation.maxThienCung - (cultivation.absorbedLamps || []).length);
+                          const da = (cultivation.daoAnhs || []).find(d => d.palaceIndex === i);
+                          const anchor = cultivation.palaceAnchors?.[i];
+                          const isBottleneck = !isRealized && i === cultivation.realizedThienCung && cultivation.currentThienCungExp >= bottleneckExp;
 
-                        {/* Button Hóa Đạo Anh khi toàn bộ cung đã hóa thật 100% */}
-                        {isRealized && !da && (
-                          cultivation.realizedThienCung === cultivation.maxThienCung ? (
-                            <button
-                              className={styles.miniManifestBtn}
-                              onClick={() => {
-                                if (
-                                  confirm(
-                                    `XÁC NHẬN HÓA ĐẠO ANH:\n\n• Thiên Cung: Cung ${palaceNum}\n• Chi phí: 1.000 Tu Vi (Linh lực thai nghén Đạo Anh)\n\nĐạo hữu có muốn tiêu hao 1.000 Tu Vi để thai nghén và khai sinh Đạo Anh tại Thiên Cung này?`
-                                  )
-                                ) {
-                                  triggerAction(() => manifestDaoAnh(i), `Đã chuyển hóa thành công Thiên Cung ${palaceNum} thành Đạo Anh!`);
-                                }
-                              }}
+                          return (
+                            <div
+                              key={palaceNum}
+                              className={`${styles.palaceCard} ${isRealized ? styles.palaceRealized : isBottleneck ? styles.palaceBottleneck : ''} ${da ? styles.palaceDaoAnh : ''}`}
                             >
-                              👑 Hóa Đạo Anh (1k EXP)
+                              <span className={styles.palaceIcon}>{da ? '👑' : anchor ? anchor.icon : isLampPalace ? '🏮' : isRealized ? '🏛️' : isBottleneck ? '🔑' : '☁️'}</span>
+                              <span className={styles.palaceName}>
+                                {da ? `${da.name} (${da.currentKiep}K)` : anchor ? `Cung ${palaceNum} (${anchor.shortName})` : `Thiên Cung ${palaceNum}`}
+                              </span>
+                              <span className={styles.palaceStatus}>
+                                {da ? `✦ ${da.currentKiep} Anh` : anchor ? `✦ Trấn: ${anchor.name}` : isLampPalace ? 'Chân Cung Đăng (Thật)' : isRealized ? '✦ Cung Thật' : isBottleneck ? '⚠️ Cần Trấn Vật (99.9%)' : 'Hư Ảo'}
+                              </span>
+
+                              {/* Button Hóa Đạo Anh khi toàn bộ cung đã hóa thật 100% */}
+                              {isRealized && !da && (
+                                cultivation.realizedThienCung === cultivation.maxThienCung ? (
+                                  <button
+                                    className={styles.miniManifestBtn}
+                                    onClick={() => {
+                                      if (
+                                        confirm(
+                                          `XÁC NHẬN HÓA ĐẠO ANH:\n\n• Thiên Cung: Cung ${palaceNum}\n• Chi phí: 1.000 Tu Vi (Linh lực thai nghén Đạo Anh)\n\nĐạo hữu có muốn tiêu hao 1.000 Tu Vi để thai nghén và khai sinh Đạo Anh tại Thiên Cung này?`
+                                        )
+                                      ) {
+                                        triggerAction(() => manifestDaoAnh(i), `Đã chuyển hóa thành công Thiên Cung ${palaceNum} thành Đạo Anh!`);
+                                      }
+                                    }}
+                                  >
+                                    👑 Hóa Đạo Anh (1k EXP)
+                                  </button>
+                                ) : (
+                                  <span style={{ fontSize: 8.5, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                    Chờ Hóa Thật Hết
+                                  </span>
+                                )
+                              )}
+
+                              {/* Button Khảm Nạm nhanh khi cung đang ở 99.99% */}
+                              {isBottleneck && (
+                                <button
+                                  className={styles.miniAnchorBtn}
+                                  onClick={() => setAnchorModalPalace(i)}
+                                >
+                                  🔑 Khảm Nạm Trấn Vật
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Progress or Bottleneck Banner */}
+                      {cultivation.realizedThienCung < cultivation.maxThienCung ? (
+                        cultivation.currentThienCungExp >= bottleneckExp ? (
+                          <div className={styles.bottleneckNoticeCard}>
+                            <div className={styles.bottleneckNoticeHead}>
+                              <span style={{ fontSize: 18 }}>⚠️</span>
+                              <div>
+                                <h4 style={{ color: '#f97316', margin: 0, fontSize: 13.5 }}>
+                                  THIÊN CUNG {cultivation.realizedThienCung + 1} ĐẠT 99.99% TÍCH LŨY!
+                                </h4>
+                                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                                  Linh lực đã đạt cực hạn ({bottleneckExp}/{targetPalaceExp} Tu Vi). Cần khảm nạm một <strong>Vật Trấn Áp (Pháp Khí, Dị Khí, Công Pháp...)</strong> để phá vỡ bình cảnh, hoàn tất <strong>100% Cung Thật</strong>!
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              className={`btn-gold ${styles.breakthroughBtn}`}
+                              onClick={() => setAnchorModalPalace(cultivation.realizedThienCung)}
+                              style={{ marginTop: 8 }}
+                            >
+                              <div className={styles.btnContentWrap}>
+                                <span className={styles.btnMainTitle}>👑 KHẢM NẠM VẬT TRẤN ÁP NGAY</span>
+                                <span className={styles.btnSubInfo}>Chọn bảo vật trong túi hoặc đổi bằng Tiên Tinh để đạt 100% Cung Thật</span>
+                              </div>
                             </button>
-                          ) : (
-                            <span style={{ fontSize: 8.5, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                              Chờ Hóa Thật Hết
-                            </span>
-                          )
-                        )}
-
-                        {/* Button Khảm Nạm nhanh khi cung đang ở 99.99% */}
-                        {isBottleneck && (
-                          <button
-                            className={styles.miniAnchorBtn}
-                            onClick={() => setAnchorModalPalace(i)}
-                          >
-                            🔑 Khảm Nạm Trấn Vật
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Progress or Bottleneck Banner */}
-                {cultivation.realizedThienCung < cultivation.maxThienCung ? (
-                  cultivation.currentThienCungExp >= 799 ? (
-                    <div className={styles.bottleneckNoticeCard}>
-                      <div className={styles.bottleneckNoticeHead}>
-                        <span style={{ fontSize: 18 }}>⚠️</span>
-                        <div>
-                          <h4 style={{ color: '#f97316', margin: 0, fontSize: 13.5 }}>
-                            THIÊN CUNG {cultivation.realizedThienCung + 1} ĐÃ ĐẠT 99.99% TÍCH LŨY!
-                          </h4>
-                          <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
-                            Linh lực đã đạt cực hạn (799/800 EXP). Cần khảm nạm một <strong>Vật Trấn Áp (Pháp Khí, Dị Khí, Công Pháp...)</strong> để phá vỡ bình cảnh, hoàn tất <strong>100% Cung Thật</strong>!
-                          </p>
+                          </div>
+                        ) : (
+                          <div className={styles.progressContainer}>
+                            <div className={styles.progressInfo}>
+                              <span>Tiến độ Hóa Thực Thiên Cung {cultivation.realizedThienCung + 1} thành Cung Thật:</span>
+                              <strong>{cultivation.currentThienCungExp}/{targetPalaceExp} Tu Vi</strong>
+                            </div>
+                            <div className={styles.progressBarBg}>
+                              <div
+                                className={styles.progressBarFillCyan}
+                                style={{ width: `${Math.min(100, (cultivation.currentThienCungExp / targetPalaceExp) * 100)}%` }}
+                              />
+                            </div>
+                            <p className={styles.hintText}>📖 Đọc thêm chương để ngưng tụ linh lực Hóa Thực Thiên Cung tiếp theo (Yêu cầu lũy tiến: {targetPalaceExp} Tu Vi)!</p>
+                          </div>
+                        )
+                      ) : (
+                        <div className={styles.maxRankBadge}>
+                          ✨ TOÀN BỘ {cultivation.maxThienCung} THIÊN CUNG ĐÃ HÓA THÀNH CUNG THẬT 100%!
+                          {cultivation.realm === 'kim_dan' && (
+                            <p style={{ marginTop: 6, fontSize: 12, color: 'var(--accent-cyan)', fontWeight: 'normal' }}>
+                              👉 Nhấn "👑 Hóa Đạo Anh" trên từng cung để ngưng tụ Đạo Anh Thần Thể mở khóa cảnh giới <strong>Nguyên Anh (Chiến lực tính bằng Anh)</strong>!
+                            </p>
+                          )}
                         </div>
-                      </div>
-                      <button
-                        className={`btn-gold ${styles.breakthroughBtn}`}
-                        onClick={() => setAnchorModalPalace(cultivation.realizedThienCung)}
-                        style={{ marginTop: 8 }}
-                      >
-                        <div className={styles.btnContentWrap}>
-                          <span className={styles.btnMainTitle}>👑 KHẢM NẠM VẬT TRẤN ÁP NGAY</span>
-                          <span className={styles.btnSubInfo}>Chọn bảo vật trong túi hoặc đổi bằng Tiên Tinh để đạt 100% Cung Thật</span>
-                        </div>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className={styles.progressContainer}>
-                      <div className={styles.progressInfo}>
-                        <span>Tiến độ Hóa Thực Thiên Cung {cultivation.realizedThienCung + 1} thành Cung Thật:</span>
-                        <strong>{cultivation.currentThienCungExp}/800 Linh Lực</strong>
-                      </div>
-                      <div className={styles.progressBarBg}>
-                        <div
-                          className={styles.progressBarFillCyan}
-                          style={{ width: `${Math.min(100, (cultivation.currentThienCungExp / 800) * 100)}%` }}
-                        />
-                      </div>
-                      <p className={styles.hintText}>📖 Đọc thêm chương để ngưng tụ linh lực Hóa Thực Thiên Cung tiếp theo (+1 Cung chiến lực)!</p>
-                    </div>
-                  )
-                ) : (
-                  <div className={styles.maxRankBadge}>
-                    ✨ TOÀN BỘ {cultivation.maxThienCung} THIÊN CUNG ĐÃ HÓA THÀNH CUNG THẬT 100%!
-                    {cultivation.realm === 'kim_dan' && (
-                      <p style={{ marginTop: 6, fontSize: 12, color: 'var(--accent-cyan)', fontWeight: 'normal' }}>
-                        👉 Nhấn "👑 Hóa Đạo Anh" trên từng cung để ngưng tụ Đạo Anh Thần Thể mở khóa cảnh giới <strong>Nguyên Anh (Chiến lực tính bằng Anh)</strong>!
-                      </p>
-                    )}
-                  </div>
-                )}
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>

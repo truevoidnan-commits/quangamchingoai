@@ -45,6 +45,10 @@ import {
   EXP_PER_THIEN_CUNG,
   NGUNG_KHI_THRESHOLDS,
   KIEP_THIEN_MENH_REQUIREMENTS,
+  TRUC_CO_KHIEU_THRESHOLDS,
+  getExpForPhapKhieuIndex,
+  KIM_DAN_PALACE_COSTS,
+  getPalaceCost,
 } from '../lib/cultivation';
 
 export function useCultivation() {
@@ -258,6 +262,10 @@ export function useCultivation() {
       EXP_PER_THIEN_CUNG,
       NGUNG_KHI_THRESHOLDS,
       KIEP_THIEN_MENH_REQUIREMENTS,
+      TRUC_CO_KHIEU_THRESHOLDS,
+      getExpForPhapKhieuIndex,
+      KIM_DAN_PALACE_COSTS,
+      getPalaceCost,
     },
   };
 }

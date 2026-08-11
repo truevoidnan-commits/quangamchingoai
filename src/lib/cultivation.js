@@ -43,9 +43,50 @@ export const NGUNG_KHI_THRESHOLDS = [
   4500,  // Sẵn sàng Trúc Cơ
 ];
 
-export const EXP_PER_PHAP_KHIEU = 70; // 70 EXP / khiếu (tổng 8400 EXP để mở 120 khiếu)
+// Ngưỡng Tu Vi lũy tiến cho 120 Pháp Khiếu Trúc Cơ (Tăng dần từ 15 -> 110 EXP/khiếu, tổng ~7512 EXP)
+export function getExpForPhapKhieuIndex(k) {
+  const num = Math.min(120, Math.max(1, k));
+  return 15 + Math.floor((num - 1) * 0.8);
+}
+
+export const TRUC_CO_KHIEU_THRESHOLDS = [0];
+let runningKhieuSum = 0;
+for (let i = 1; i <= 120; i++) {
+  runningKhieuSum += getExpForPhapKhieuIndex(i);
+  TRUC_CO_KHIEU_THRESHOLDS.push(runningKhieuSum);
+}
+
+export function getOpenedPhapKhieuFromExp(exp) {
+  let opened = 0;
+  while (opened < 120 && exp >= TRUC_CO_KHIEU_THRESHOLDS[opened + 1]) {
+    opened++;
+  }
+  return opened;
+}
+
+export const EXP_PER_PHAP_KHIEU = 70; // Giữ để tương thích ngược
 export const EXP_FOR_121_ATTEMPT = 1200; // Tích lũy 1200 EXP sau 120 khiếu để mượn cơ duyên xung kích
-export const EXP_PER_THIEN_CUNG = 800; // 800 EXP để hóa thực 1 Thiên Cung
+
+// Chi phí Tu Vi lũy tiến cho 9 Thiên Cung Kim Đan (Cung 1: 500 EXP -> Cung 9: 5000 EXP)
+export const KIM_DAN_PALACE_COSTS = [
+  0,
+  500,  // Cung 1
+  700,  // Cung 2
+  1000, // Cung 3
+  1400, // Cung 4
+  1900, // Cung 5
+  2500, // Cung 6
+  3200, // Cung 7
+  4000, // Cung 8
+  5000, // Cung 9
+];
+
+export function getPalaceCost(palaceNum) {
+  const num = Math.min(9, Math.max(1, palaceNum));
+  return KIM_DAN_PALACE_COSTS[num] || 1000;
+}
+
+export const EXP_PER_THIEN_CUNG = 800; // Giữ để tương thích ngược
 export const EXP_PER_DAO_ANH = 1000; // 1000 EXP để thai nghén hóa sinh 1 Đạo Anh vào Thiên Cung Thật
 
 // Ngưỡng Thiên Mệnh chuẩn cho 5 Kiếp của mỗi Đạo Anh
@@ -1258,7 +1299,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
       state.expCurrentRealm += gainedExp;
 
       if (state.phapKhieu < 120) {
-        const opened = Math.min(120, Math.floor(state.expCurrentRealm / EXP_PER_PHAP_KHIEU));
+        const opened = getOpenedPhapKhieuFromExp(state.expCurrentRealm);
         if (opened > state.phapKhieu) {
           state.phapKhieu = opened;
           const newSelfHoa = Math.floor(state.phapKhieu / 30);
@@ -1300,13 +1341,14 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
             time: Date.now(),
           });
         } else {
-          // Cung tự thân: Tích lũy tới 99.99% (799/800 EXP) và dừng lại chờ Vật Trấn Áp
-          const bottleneckExp = EXP_PER_THIEN_CUNG - 1;
+          // Cung tự thân: Tích lũy tới 99.99% (targetPalaceExp - 1) và dừng lại chờ Vật Trấn Áp
+          const targetPalaceExp = getPalaceCost(state.realizedThienCung + 1);
+          const bottleneckExp = targetPalaceExp - 1;
           if (state.currentThienCungExp < bottleneckExp) {
             state.currentThienCungExp = Math.min(bottleneckExp, state.currentThienCungExp + gainedExp);
             if (state.currentThienCungExp >= bottleneckExp) {
               state.logs.unshift({
-                text: `⚠️ THIÊN CUNG ĐẠT 99.99%! Thiên Cung ${state.realizedThienCung + 1} đã tích lũy đủ linh lực, cần khảm nạm một Vật Trấn Áp để đạt 100% Hóa Thực thành Cung Thật!`,
+                text: `⚠️ THIÊN CUNG ${state.realizedThienCung + 1} ĐẠT 99.99%! Đã tích lũy đủ ${bottleneckExp}/${targetPalaceExp} EXP linh lực, cần khảm nạm một Vật Trấn Áp để đạt 100% Hóa Thực thành Cung Thật!`,
                 time: Date.now(),
               });
             }
@@ -1598,10 +1640,11 @@ export function anchorPalaceWithArtifact(palaceIndex, artifactId) {
     throw new Error('Hãy tích lũy và Hóa Thực tuần tự từ Thiên Cung trước.');
   }
 
-  // Cần đạt ngưỡng nút thắt (EXP_PER_THIEN_CUNG - 1 = 799/800 EXP)
-  const bottleneckExp = EXP_PER_THIEN_CUNG - 1;
+  // Cần đạt ngưỡng nút thắt (targetPalaceExp - 1)
+  const targetPalaceExp = getPalaceCost(palaceIndex + 1);
+  const bottleneckExp = targetPalaceExp - 1;
   if (state.currentThienCungExp < bottleneckExp) {
-    throw new Error(`Thiên Cung này chưa đạt ngưỡng tích lũy 99.99% (${state.currentThienCungExp}/${EXP_PER_THIEN_CUNG} EXP). Hãy đọc thêm chương để tích lũy linh lực trước khi trấn áp.`);
+    throw new Error(`Thiên Cung này chưa đạt ngưỡng tích lũy 99.99% (${state.currentThienCungExp}/${targetPalaceExp} EXP). Hãy đọc thêm chương để tích lũy linh lực trước khi trấn áp.`);
   }
 
   // Tìm artifact trong túi trữ vật
