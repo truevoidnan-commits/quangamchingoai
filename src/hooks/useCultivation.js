@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   getCultivationState,
   saveCultivationState,
+  clearUnreadDrops,
   addReadingProgress,
   absorbLifeLamp,
   burnExpForLamp,
@@ -211,6 +212,11 @@ export function useCultivation() {
     setCultivation({ ...state });
   }, []);
 
+  const handleClearUnreadDrops = useCallback(() => {
+    const newState = clearUnreadDrops();
+    setCultivation({ ...newState });
+  }, []);
+
   const displayName = getRealmDisplayName(cultivation);
   const combatPowerDisplay = getCombatPowerDisplay(cultivation);
   const totalCombatPower = getTotalCombatPowerAnh(cultivation);
@@ -222,6 +228,8 @@ export function useCultivation() {
     combatPowerDisplay,
     totalCombatPower,
     totalMenhHoa,
+    unreadDropsCount: cultivation.unreadDropsCount || 0,
+    clearUnreadDrops: handleClearUnreadDrops,
     gainReadingExp,
     absorbLamp: handleAbsorbLamp,
     burnExpForLamp: handleBurnExpForLamp,

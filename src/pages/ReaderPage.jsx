@@ -18,7 +18,7 @@ export default function ReaderPage() {
   const searchKeyword = searchParams.get('q') || '';
   const navigate = useNavigate();
   const { settings, updateSettings } = useReadingSettings();
-  const { gainReadingExp, displayName, LAMP_TIERS } = useCultivation();
+  const { gainReadingExp, displayName, LAMP_TIERS, unreadDropsCount, clearUnreadDrops } = useCultivation();
 
   const [novel, setNovel] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -30,7 +30,6 @@ export default function ReaderPage() {
   const [barVisible, setBarVisible] = useState(true);
   const [breakthroughToast, setBreakthroughToast] = useState(null);
   const [droppedLamp, setDroppedLamp] = useState(null);
-  const [unreadDropsCount, setUnreadDropsCount] = useState(0);
   const scrollRef = useRef(null);
   const lastScrollY = useRef(0);
 
@@ -123,7 +122,6 @@ export default function ReaderPage() {
                   setDroppedLamp(dropItem);
                   setTimeout(() => setDroppedLamp(null), 3000); // 3 giây thông báo màn hình đối với tiên phẩm/thần phẩm
                 }
-                setUnreadDropsCount(cnt => cnt + 1); // Hiển thị chấm đỏ thông báo chưa đọc
               }
             }
           } catch (err) {
@@ -230,7 +228,7 @@ export default function ReaderPage() {
               <button
                 className={styles.topBtn}
                 onClick={() => {
-                  setUnreadDropsCount(0);
+                  clearUnreadDrops();
                   setCultivationOpen(true);
                 }}
                 title="Xem Bảng Tu Vi"

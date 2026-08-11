@@ -1058,6 +1058,15 @@ export function saveCultivationState(state) {
   } catch (err) {}
 }
 
+export function clearUnreadDrops() {
+  const state = getCultivationState();
+  if (state.unreadDropsCount > 0) {
+    state.unreadDropsCount = 0;
+    saveCultivationState(state);
+  }
+  return state;
+}
+
 /**
  * Tính tổng số Mệnh Hỏa sở hữu ở Trúc Cơ
  * = Mệnh hỏa tự thân (pháp khiếu / 30) + khiếu 121 (nếu có) + số Mệnh Đăng đã hấp thụ
@@ -1199,7 +1208,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   // ĐẾN CHÍNH THỨC NGUYÊN ANH: Mệnh Đăng và Vật Trấn Áp sẽ KHÔNG RƠI NỮA! (Giả Anh vẫn rơi bình thường)
   const isNguyenAnh = state.realm === 'nguyen_anh';
 
-  // TỈ LỆ RƠI MỆNH ĐĂNG THEO 6 CẤP BẬC HIẾM (~7.5% mỗi chu kỳ 60s) - Vẫn rơi ở Giả Anh, chỉ ngừng khi lên Nguyên Anh
+  // TỈ LỆ RƠI MỆNH ĐĂNG THEO 6 CẤP BẬC HIẾM (~20% mỗi chu kỳ 60s) - Vẫn rơi ở Giả Anh, chỉ ngừng khi lên Nguyên Anh
   if (!isNguyenAnh) {
     const allOwnedLamps = [...(state.inventoryLamps || []), ...(state.absorbedLamps || [])];
     if (allOwnedLamps.length < LIFE_LAMPS.length) {
@@ -1207,7 +1216,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
 
       if (unownedLamps.length > 0) {
         const dropRoll = Math.random();
-        if (dropRoll < 0.075) {
+        if (dropRoll < 0.20) {
           const tierRoll = Math.random();
           let selectedTier = 'ha_pham';
           if (tierRoll < 0.45) selectedTier = 'ha_pham';
@@ -1234,10 +1243,10 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     }
   }
 
-  // 12% tỉ lệ nhặt được Vật Trấn Áp Thiên Cung - Vẫn rơi ở Giả Anh, chỉ ngừng khi lên Nguyên Anh
+  // 35% tỉ lệ nhặt được Vật Trấn Áp Thiên Cung - Vẫn rơi ở Giả Anh, chỉ ngừng khi lên Nguyên Anh
   if (!isNguyenAnh) {
     const artifactRoll = Math.random();
-    if (artifactRoll < 0.12) {
+    if (artifactRoll < 0.35) {
       const tierRoll = Math.random();
       let selectedTier = 'ha_pham';
       if (tierRoll < 0.45) selectedTier = 'ha_pham';
@@ -1259,6 +1268,10 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
         });
       }
     }
+  }
+
+  if (droppedLamp || droppedArtifact) {
+    state.unreadDropsCount = (state.unreadDropsCount || 0) + 1;
   }
 
   // Xử lý tiến độ theo từng cảnh giới với đường cong EXP lũy tiến (Chỉ tăng khi CHƯA ĐẠT ĐẠI VIÊN MÃN)
