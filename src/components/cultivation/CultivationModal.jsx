@@ -726,182 +726,215 @@ export default function CultivationModal({ isOpen, onClose }) {
             </div>
 
             {/* Tier Filters Bar */}
-            <div className={styles.tierFilterRow}>
-              <button
-                className={`${styles.tierFilterBtn} ${tierFilter === 'all' ? styles.tierFilterActive : ''}`}
-                onClick={() => setTierFilter('all')}
-              >
-                Tất Cả (72)
-              </button>
-              {Object.entries(LAMP_TIERS || {}).map(([key, t]) => {
-                const count = LIFE_LAMPS.filter(l => l.tier === key).length;
-                return (
+            {(() => {
+              const ownedLampsCount = LIFE_LAMPS.filter(l => (cultivation.absorbedLamps || []).includes(l.id) || (cultivation.inventoryLamps || []).includes(l.id)).length;
+
+              return (
+                <div className={styles.tierFilterRow}>
                   <button
-                    key={key}
-                    className={`${styles.tierFilterBtn} ${tierFilter === key ? styles.tierFilterActive : ''}`}
-                    onClick={() => setTierFilter(key)}
-                    style={{ borderColor: tierFilter === key ? t.color : 'var(--border-subtle)', color: t.color }}
+                    className={`${styles.tierFilterBtn} ${tierFilter === 'owned' ? styles.tierFilterActive : ''}`}
+                    onClick={() => setTierFilter('owned')}
+                    style={{ borderColor: tierFilter === 'owned' ? '#ffcc00' : 'rgba(255, 204, 0, 0.4)', color: '#ffcc00' }}
                   >
-                    {t.name} ({count})
+                    ✦ Đã Sở Hữu ({ownedLampsCount})
                   </button>
-                );
-              })}
-            </div>
+                  <button
+                    className={`${styles.tierFilterBtn} ${tierFilter === 'all' ? styles.tierFilterActive : ''}`}
+                    onClick={() => setTierFilter('all')}
+                  >
+                    Tất Cả (72)
+                  </button>
+                  {Object.entries(LAMP_TIERS || {}).map(([key, t]) => {
+                    const count = LIFE_LAMPS.filter(l => l.tier === key).length;
+                    return (
+                      <button
+                        key={key}
+                        className={`${styles.tierFilterBtn} ${tierFilter === key ? styles.tierFilterActive : ''}`}
+                        onClick={() => setTierFilter(key)}
+                        style={{ borderColor: tierFilter === key ? t.color : 'var(--border-subtle)', color: t.color }}
+                      >
+                        {t.name} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* List of 72 Life Lamps */}
-            <div className={styles.lampCardsGrid}>
-              {LIFE_LAMPS.filter(lamp => tierFilter === 'all' || lamp.tier === tierFilter).map(lamp => {
+            {(() => {
+              const filteredLamps = LIFE_LAMPS.filter(lamp => {
                 const isAbsorbed = (cultivation.absorbedLamps || []).includes(lamp.id);
                 const isInInventory = (cultivation.inventoryLamps || []).includes(lamp.id);
                 const isOwned = isAbsorbed || isInInventory;
-                const tierInfo = LAMP_TIERS[lamp.tier] || { name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.1)', border: 'rgba(226, 232, 240, 0.3)', priceExp: 500, priceTM: 50, tienTinh: 2500 };
+                if (tierFilter === 'owned') return isOwned;
+                return tierFilter === 'all' || lamp.tier === tierFilter;
+              });
 
-                // Tính toán chi phí Tiên Tinh & phần thiếu cần bù
-                const totalCostTienTinh = tierInfo.tienTinh || tierInfo.dangDiem || (tierInfo.priceExp * 5);
-                const canCoverWithPoints = currentTienTinh >= totalCostTienTinh;
-                const deficitExp = Math.max(0, Math.ceil((totalCostTienTinh - currentTienTinh) / 5));
-                const deficitTM = Math.ceil(deficitExp / 10);
-
+              if (filteredLamps.length === 0) {
                 return (
-                  <div
-                    key={lamp.id}
-                    className={`${styles.lampCard} ${isAbsorbed ? styles.lampEquipped : ''} ${!isOwned ? styles.lampLocked : ''}`}
-                    style={{ borderColor: isOwned ? tierInfo.color : 'var(--border-subtle)' }}
-                  >
-                    <div className={styles.lampCardTop}>
-                      <span className={styles.lampIcon} style={{ textShadow: `0 0 12px ${tierInfo.color}` }}>
-                        {lamp.icon}
-                      </span>
-                      <div className={styles.lampNameCol}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <h4 className={styles.lampName} style={{ color: isOwned ? tierInfo.color : 'var(--text-muted)' }}>
-                            {lamp.name}
-                          </h4>
-                          <span
-                            className="badge"
-                            style={{
-                              fontSize: 9,
-                              padding: '1px 6px',
-                              backgroundColor: tierInfo.bg,
-                              color: tierInfo.color,
-                              borderColor: tierInfo.border,
-                            }}
-                          >
-                            {tierInfo.name}
-                          </span>
-                        </div>
-                        <span className={styles.lampPoem}>"{lamp.poem}"</span>
-                      </div>
-                      <div className={styles.lampStatusBadge}>
-                        {isAbsorbed && <span className="badge badge-gold">✦ Đã Hấp Thụ</span>}
-                        {isInInventory && <span className="badge badge-cyan">Trong Túi</span>}
-                        {!isOwned && <span className="badge" style={{ opacity: 0.45 }}>Chưa Sở Hữu</span>}
-                      </div>
-                    </div>
-
-                    <p className={styles.lampDesc}>{lamp.desc}</p>
-
-                    {/* Action buttons khi đèn đang ở trong túi */}
-                    {isInInventory && (
-                      <div className={styles.lampActions} style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          className="btn-gold"
-                          style={{ fontSize: 11.5, padding: '6px 10px', flex: 1.4 }}
-                          disabled={
-                            absorbedCount >= 5 ||
-                            cultivation.realm === 'ngung_khi' ||
-                            isNguyenAnhStage ||
-                            (cultivation.realm === 'truc_co' && selfHoa < 1)
-                          }
-                          onClick={() => {
-                            const realmBenefit = cultivation.realm === 'truc_co' ? '+1 Hỏa chiến lực' : '+1 Cung Thật chiến lực';
-                            if (confirm(`XÁC NHẬN HẤP THỤ [${lamp.name}] (${tierInfo.name})?\n\n• Lưu ý: Một khi hấp thụ sẽ vĩnh viễn dung nhập đạo cơ, KHÔNG THỂ HOÀN TRẢ!\n• Tác dụng: ${realmBenefit}.\n• Đã hấp thụ: ${absorbedCount} Mệnh Đăng.`)) {
-                              triggerAction(() => absorbLamp(lamp.id), `Đã hấp thụ thành công ${lamp.name}! (${realmBenefit})`);
-                            }
-                          }}
-                        >
-                          {isNguyenAnhStage
-                            ? 'Nguyên Anh Khóa'
-                            : cultivation.realm === 'ngung_khi'
-                            ? 'Ngưng Khí Khóa'
-                            : cultivation.realm === 'truc_co' && selfHoa < 1
-                            ? 'Cần 1 Hỏa'
-                            : absorbedCount >= 5
-                            ? 'Đã Đạt 5 Đăng'
-                            : cultivation.realm === 'truc_co'
-                            ? '🏮 Hấp Thụ (+1 Hỏa)'
-                            : '🏮 Hấp Thụ (+1 Cung)'}
-                        </button>
-
-                        {/* Nút Bán Mệnh Đăng lấy Tiên Tinh */}
-                        <button
-                          className="btn-ghost"
-                          style={{
-                            fontSize: 11.5,
-                            padding: '6px 10px',
-                            color: '#10b981',
-                            borderColor: 'rgba(16, 185, 129, 0.5)',
-                            background: 'rgba(16, 185, 129, 0.08)',
-                            flex: 1,
-                          }}
-                          onClick={() => {
-                            if (
-                              confirm(
-                                `XÁC NHẬN BÁN MỆNH ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Nhận lại: +${totalCostTienTinh.toLocaleString()} Tiên Tinh (Tỉ lệ 1:5)\n\nĐạo hữu có muốn bán chiếc đèn này để tích lũy Tiên Tinh?`
-                              )
-                            ) {
-                              triggerAction(() => sellLamp(lamp.id), `Đã bán thành công ${lamp.name}! Nhận +${totalCostTienTinh.toLocaleString()} Tiên Tinh.`);
-                            }
-                          }}
-                        >
-                          💰 Bán (+{totalCostTienTinh.toLocaleString()} TT)
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Nút Đổi Mệnh Đăng bằng Tiên Tinh & Đốt Tu Vi bù khi chưa sở hữu */}
-                    {!isOwned && (
-                      <div className={styles.lampActions}>
-                        <button
-                          className={styles.burnExpBtn}
-                          onClick={() => {
-                            const paymentMsg = canCoverWithPoints
-                              ? `Tiêu hao: ${totalCostTienTinh.toLocaleString()} Tiên Tinh (Không tổn hao tu vi)`
-                              : currentTienTinh > 0
-                              ? `Tiêu hao: ${currentTienTinh.toLocaleString()} Tiên Tinh + Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} Thiên Mệnh` : `${deficitExp.toLocaleString()} Tu Vi`} bù thiếu`
-                              : `Tiêu hao: Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} Thiên Mệnh` : `${deficitExp.toLocaleString()} Tu Vi`}`;
-
-                            const consequenceText = canCoverWithPoints
-                              ? 'An toàn: Đủ Tiên Tinh chi trả, không ảnh hưởng cảnh giới!'
-                              : cultivation.realm === 'ngung_khi'
-                              ? 'Cảnh báo: Tu vi bù thiếu có thể làm rơi tầng Ngưng Khí!'
-                              : cultivation.realm === 'truc_co'
-                              ? 'Cảnh báo: Tu vi bù thiếu sẽ ngắt bớt Pháp Khiếu (Pháp Khiếu 121 bảo toàn)!'
-                              : cultivation.realm === 'kim_dan'
-                              ? 'Cảnh báo: Tu vi bù thiếu sẽ làm Thiên Cung tự thân bị hư hóa (Chân Cung Mệnh Đăng bất tử)!'
-                              : 'Cảnh báo: Tiêu hao Thiên Mệnh bù thiếu theo tỉ lệ 10:1!';
-
-                            if (
-                              confirm(
-                                `✨ NGHỊCH MỆNH HOÁN ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• ${paymentMsg}\n• ${consequenceText}\n\nĐạo hữu có muốn đổi Mệnh Đăng này vào Túi Trữ Vật?`
-                              )
-                            ) {
-                              triggerAction(() => burnExpForLamp(lamp.id));
-                            }
-                          }}
-                        >
-                          {canCoverWithPoints
-                            ? `✨ Đổi Đèn (${totalCostTienTinh.toLocaleString()} TT)`
-                            : currentTienTinh > 0
-                            ? `🔥 ${currentTienTinh.toLocaleString()} TT + Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} TM` : `${deficitExp.toLocaleString()} Tu Vi`}`
-                            : `🔥 Đốt ${isNguyenAnhStage ? `${(tierInfo.priceTM || 50).toLocaleString()} TM` : `${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`} Đổi Đèn`}
-                        </button>
-                      </div>
-                    )}
+                  <div className={styles.emptyNoticeCard}>
+                    <span>🏮 Chưa sở hữu Mệnh Đăng nào trong danh mục này. Hãy đọc thêm chương để nhặt cơ duyên!</span>
                   </div>
                 );
-              })}
-            </div>
+              }
+
+              return (
+                <div className={styles.lampCardsGrid}>
+                  {filteredLamps.map(lamp => {
+                    const isAbsorbed = (cultivation.absorbedLamps || []).includes(lamp.id);
+                    const isInInventory = (cultivation.inventoryLamps || []).includes(lamp.id);
+                    const isOwned = isAbsorbed || isInInventory;
+                    const tierInfo = LAMP_TIERS[lamp.tier] || { name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.1)', border: 'rgba(226, 232, 240, 0.3)', priceExp: 500, priceTM: 50, tienTinh: 2500 };
+
+                    // Tính toán chi phí Tiên Tinh & phần thiếu cần bù
+                    const totalCostTienTinh = tierInfo.tienTinh || tierInfo.dangDiem || (tierInfo.priceExp * 5);
+                    const canCoverWithPoints = currentTienTinh >= totalCostTienTinh;
+                    const deficitExp = Math.max(0, Math.ceil((totalCostTienTinh - currentTienTinh) / 5));
+                    const deficitTM = Math.ceil(deficitExp / 10);
+
+                    return (
+                      <div
+                        key={lamp.id}
+                        className={`${styles.lampCard} ${isAbsorbed ? styles.lampEquipped : ''} ${!isOwned ? styles.lampLocked : ''}`}
+                        style={{ borderColor: isOwned ? tierInfo.color : 'var(--border-subtle)' }}
+                      >
+                        <div className={styles.lampCardTop}>
+                          <span className={styles.lampIcon} style={{ textShadow: `0 0 12px ${tierInfo.color}` }}>
+                            {lamp.icon}
+                          </span>
+                          <div className={styles.lampNameCol}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              <h4 className={styles.lampName} style={{ color: isOwned ? tierInfo.color : 'var(--text-muted)' }}>
+                                {lamp.name}
+                              </h4>
+                              <span
+                                className="badge"
+                                style={{
+                                  fontSize: 9,
+                                  padding: '1px 6px',
+                                  backgroundColor: tierInfo.bg,
+                                  color: tierInfo.color,
+                                  borderColor: tierInfo.border,
+                                }}
+                              >
+                                {tierInfo.name}
+                              </span>
+                            </div>
+                            <span className={styles.lampPoem}>"{lamp.poem}"</span>
+                          </div>
+                          <div className={styles.lampStatusBadge}>
+                            {isAbsorbed && <span className="badge badge-gold">✦ Đã Hấp Thụ</span>}
+                            {isInInventory && <span className="badge badge-cyan">Trong Túi</span>}
+                            {!isOwned && <span className="badge" style={{ opacity: 0.45 }}>Chưa Sở Hữu</span>}
+                          </div>
+                        </div>
+
+                        <p className={styles.lampDesc}>{lamp.desc}</p>
+
+                        {/* Action buttons khi đèn đang ở trong túi */}
+                        {isInInventory && (
+                          <div className={styles.lampActions} style={{ display: 'flex', gap: 6 }}>
+                            <button
+                              className="btn-gold"
+                              style={{ fontSize: 11.5, padding: '6px 10px', flex: 1.4 }}
+                              disabled={
+                                absorbedCount >= 5 ||
+                                cultivation.realm === 'ngung_khi' ||
+                                isNguyenAnhStage ||
+                                (cultivation.realm === 'truc_co' && selfHoa < 1)
+                              }
+                              onClick={() => {
+                                const realmBenefit = cultivation.realm === 'truc_co' ? '+1 Hỏa chiến lực' : '+1 Cung Thật chiến lực';
+                                if (confirm(`XÁC NHẬN HẤP THỤ [${lamp.name}] (${tierInfo.name})?\n\n• Lưu ý: Một khi hấp thụ sẽ vĩnh viễn dung nhập đạo cơ, KHÔNG THỂ HOÀN TRẢ!\n• Tác dụng: ${realmBenefit}.\n• Đã hấp thụ: ${absorbedCount} Mệnh Đăng.`)) {
+                                  triggerAction(() => absorbLamp(lamp.id), `Đã hấp thụ thành công ${lamp.name}! (${realmBenefit})`);
+                                }
+                              }}
+                            >
+                              {isNguyenAnhStage
+                                ? 'Nguyên Anh Khóa'
+                                : cultivation.realm === 'ngung_khi'
+                                ? 'Ngưng Khí Khóa'
+                                : cultivation.realm === 'truc_co' && selfHoa < 1
+                                ? 'Cần 1 Hỏa'
+                                : absorbedCount >= 5
+                                ? 'Đã Đạt 5 Đăng'
+                                : cultivation.realm === 'truc_co'
+                                ? '🏮 Hấp Thụ (+1 Hỏa)'
+                                : '🏮 Hấp Thụ (+1 Cung)'}
+                            </button>
+
+                            {/* Nút Bán Mệnh Đăng lấy Tiên Tinh */}
+                            <button
+                              className="btn-ghost"
+                              style={{
+                                fontSize: 11.5,
+                                padding: '6px 10px',
+                                color: '#10b981',
+                                borderColor: 'rgba(16, 185, 129, 0.5)',
+                                background: 'rgba(16, 185, 129, 0.08)',
+                                flex: 1,
+                              }}
+                              onClick={() => {
+                                if (
+                                  confirm(
+                                    `XÁC NHẬN BÁN MỆNH ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Nhận lại: +${totalCostTienTinh.toLocaleString()} Tiên Tinh (Tỉ lệ 1:5)\n\nĐạo hữu có muốn bán chiếc đèn này để tích lũy Tiên Tinh?`
+                                  )
+                                ) {
+                                  triggerAction(() => sellLamp(lamp.id), `Đã bán thành công ${lamp.name}! Nhận +${totalCostTienTinh.toLocaleString()} Tiên Tinh.`);
+                                }
+                              }}
+                            >
+                              💰 Bán (+{totalCostTienTinh.toLocaleString()} TT)
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Nút Đổi Mệnh Đăng bằng Tiên Tinh & Đốt Tu Vi bù khi chưa sở hữu */}
+                        {!isOwned && (
+                          <div className={styles.lampActions}>
+                            <button
+                              className={styles.burnExpBtn}
+                              onClick={() => {
+                                const paymentMsg = canCoverWithPoints
+                                  ? `Tiêu hao: ${totalCostTienTinh.toLocaleString()} Tiên Tinh (Không tổn hao tu vi)`
+                                  : currentTienTinh > 0
+                                  ? `Tiêu hao: ${currentTienTinh.toLocaleString()} Tiên Tinh + Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} Thiên Mệnh` : `${deficitExp.toLocaleString()} Tu Vi`} bù thiếu`
+                                  : `Tiêu hao: Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} Thiên Mệnh` : `${deficitExp.toLocaleString()} Tu Vi`}`;
+
+                                const consequenceText = canCoverWithPoints
+                                  ? 'An toàn: Đủ Tiên Tinh chi trả, không ảnh hưởng cảnh giới!'
+                                  : cultivation.realm === 'ngung_khi'
+                                  ? 'Cảnh báo: Tu vi bù thiếu có thể làm rơi tầng Ngưng Khí!'
+                                  : cultivation.realm === 'truc_co'
+                                  ? 'Cảnh báo: Tu vi bù thiếu sẽ ngắt bớt Pháp Khiếu (Pháp Khiếu 121 bảo toàn)!'
+                                  : cultivation.realm === 'kim_dan'
+                                  ? 'Cảnh báo: Tu vi bù thiếu sẽ làm Thiên Cung tự thân bị hư hóa (Chân Cung Mệnh Đăng bất tử)!'
+                                  : 'Cảnh báo: Tiêu hao Thiên Mệnh bù thiếu theo tỉ lệ 10:1!';
+
+                                if (
+                                  confirm(
+                                    `✨ NGHỊCH MỆNH HOÁN ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• ${paymentMsg}\n• ${consequenceText}\n\nĐạo hữu có muốn đổi Mệnh Đăng này vào Túi Trữ Vật?`
+                                  )
+                                ) {
+                                  triggerAction(() => burnExpForLamp(lamp.id));
+                                }
+                              }}
+                            >
+                              {canCoverWithPoints
+                                ? `✨ Đổi Đèn (${totalCostTienTinh.toLocaleString()} TT)`
+                                : currentTienTinh > 0
+                                ? `🔥 ${currentTienTinh.toLocaleString()} TT + Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} TM` : `${deficitExp.toLocaleString()} Tu Vi`}`
+                                : `🔥 Đốt ${isNguyenAnhStage ? `${(tierInfo.priceTM || 50).toLocaleString()} TM` : `${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`} Đổi Đèn`}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -928,147 +961,190 @@ export default function CultivationModal({ isOpen, onClose }) {
             </div>
 
             {/* Tier Filters Bar */}
-            <div className={styles.tierFilterRow}>
-              <button
-                className={`${styles.tierFilterBtn} ${artifactTierFilter === 'all' ? styles.tierFilterActive : ''}`}
-                onClick={() => setArtifactTierFilter('all')}
-              >
-                Tất Cả ({(SUPPRESSING_ARTIFACTS || []).length})
-              </button>
-              {Object.entries(LAMP_TIERS || {}).map(([key, t]) => {
-                const count = (SUPPRESSING_ARTIFACTS || []).filter(a => a.tier === key).length;
-                return (
+            {(() => {
+              const anchoredIds = Object.values(cultivation.palaceAnchors || {}).map(a => a?.id);
+              const ownedArtifactsCount = (SUPPRESSING_ARTIFACTS || []).filter(art => (cultivation.inventoryArtifacts || []).includes(art.id) || anchoredIds.includes(art.id)).length;
+
+              return (
+                <div className={styles.tierFilterRow}>
                   <button
-                    key={key}
-                    className={`${styles.tierFilterBtn} ${artifactTierFilter === key ? styles.tierFilterActive : ''}`}
-                    onClick={() => setArtifactTierFilter(key)}
-                    style={{ borderColor: artifactTierFilter === key ? t.color : 'var(--border-subtle)', color: t.color }}
+                    className={`${styles.tierFilterBtn} ${artifactTierFilter === 'owned' ? styles.tierFilterActive : ''}`}
+                    onClick={() => setArtifactTierFilter('owned')}
+                    style={{ borderColor: artifactTierFilter === 'owned' ? '#ffcc00' : 'rgba(255, 204, 0, 0.4)', color: '#ffcc00' }}
                   >
-                    {t.name} ({count})
+                    ✦ Đã Sở Hữu ({ownedArtifactsCount})
                   </button>
-                );
-              })}
-            </div>
+                  <button
+                    className={`${styles.tierFilterBtn} ${artifactTierFilter === 'all' ? styles.tierFilterActive : ''}`}
+                    onClick={() => setArtifactTierFilter('all')}
+                  >
+                    Tất Cả ({(SUPPRESSING_ARTIFACTS || []).length})
+                  </button>
+                  {Object.entries(LAMP_TIERS || {}).map(([key, t]) => {
+                    const count = (SUPPRESSING_ARTIFACTS || []).filter(a => a.tier === key).length;
+                    return (
+                      <button
+                        key={key}
+                        className={`${styles.tierFilterBtn} ${artifactTierFilter === key ? styles.tierFilterActive : ''}`}
+                        onClick={() => setArtifactTierFilter(key)}
+                        style={{ borderColor: artifactTierFilter === key ? t.color : 'var(--border-subtle)', color: t.color }}
+                      >
+                        {t.name} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* List of 96 Suppressing Artifacts */}
-            <div className={styles.lampCardsGrid}>
-              {(SUPPRESSING_ARTIFACTS || []).filter(a => artifactTierFilter === 'all' || a.tier === artifactTierFilter).map(art => {
-                const invCount = (cultivation.inventoryArtifacts || []).filter(id => id === art.id).length;
-                const isInInventory = invCount > 0;
-                const tierInfo = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
-                const costTienTinh = tierInfo.tienTinh || tierInfo.dangDiem || (tierInfo.priceExp * 5);
-                const canCover = currentTienTinh >= costTienTinh;
-                const deficitExp = Math.max(0, Math.ceil((costTienTinh - currentTienTinh) / 5));
+            {(() => {
+              const anchoredIds = Object.values(cultivation.palaceAnchors || {}).map(a => a?.id);
+              const filteredArtifacts = (SUPPRESSING_ARTIFACTS || []).filter(art => {
+                const isInInv = (cultivation.inventoryArtifacts || []).includes(art.id);
+                const isAnchored = anchoredIds.includes(art.id);
+                const isOwned = isInInv || isAnchored;
+                if (artifactTierFilter === 'owned') return isOwned;
+                return artifactTierFilter === 'all' || art.tier === artifactTierFilter;
+              });
 
+              if (filteredArtifacts.length === 0) {
                 return (
-                  <div
-                    key={art.id}
-                    className={`${styles.lampCard} ${isInInventory ? styles.lampEquipped : styles.lampLocked}`}
-                    style={{ borderColor: isInInventory ? tierInfo.color : 'var(--border-subtle)' }}
-                  >
-                    <div className={styles.lampCardTop}>
-                      <span className={styles.lampIcon} style={{ textShadow: `0 0 12px ${tierInfo.color}` }}>
-                        {art.icon}
-                      </span>
-                      <div className={styles.lampNameCol}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <h4 className={styles.lampName} style={{ color: isInInventory ? tierInfo.color : 'var(--text-muted)' }}>
-                            {art.name}
-                          </h4>
-                          <span
-                            className="badge"
-                            style={{
-                              fontSize: 9,
-                              padding: '1px 6px',
-                              backgroundColor: tierInfo.bg,
-                              color: tierInfo.color,
-                              borderColor: tierInfo.border,
-                            }}
-                          >
-                            {tierInfo.name} · {art.type}
-                          </span>
-                        </div>
-                        <span className={styles.lampPoem}>"{art.poem}"</span>
-                      </div>
-                      <div className={styles.lampStatusBadge}>
-                        {isInInventory ? (
-                          <span className="badge badge-gold">Sở Hữu x{invCount}</span>
-                        ) : (
-                          <span className="badge" style={{ opacity: 0.45 }}>Chưa Có</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <p className={styles.lampDesc}>{art.desc}</p>
-
-                    {/* Actions */}
-                    <div className={styles.lampActions} style={{ display: 'flex', gap: 6 }}>
-                      {isInInventory ? (
-                        <>
-                          {/* Nút Khảm Nạm nếu đang ở Kim Đan và có cung cần trấn áp */}
-                          {cultivation.realm === 'kim_dan' && cultivation.currentThienCungExp >= 799 && (
-                            <button
-                              className="btn-gold"
-                              style={{ fontSize: 11.5, padding: '6px 10px', flex: 1.3 }}
-                              onClick={() => {
-                                triggerAction(
-                                  () => anchorPalace(cultivation.realizedThienCung, art.id),
-                                  `Đã khảm nạm ${art.name} vào Thiên Cung ${cultivation.realizedThienCung + 1} thành Cung Thật 100%!`
-                                );
-                              }}
-                            >
-                              👑 Khảm Nạm Ngay
-                            </button>
-                          )}
-
-                          {/* Nút Bán lấy Tiên Tinh */}
-                          <button
-                            className="btn-ghost"
-                            style={{
-                              fontSize: 11.5,
-                              padding: '6px 10px',
-                              color: '#10b981',
-                              borderColor: 'rgba(16, 185, 129, 0.5)',
-                              background: 'rgba(16, 185, 129, 0.08)',
-                              flex: 1,
-                            }}
-                            onClick={() => {
-                              if (confirm(`BÁN VẬT TRẤN ÁP:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name}\n• Nhận lại: +${costTienTinh.toLocaleString()} Tiên Tinh\n\nBạn có muốn bán vật phẩm này?`)) {
-                                triggerAction(() => sellArtifact(art.id), `Đã bán ${art.name}, nhận +${costTienTinh.toLocaleString()} Tiên Tinh!`);
-                              }
-                            }}
-                          >
-                            💰 Bán (+{costTienTinh.toLocaleString()} TT)
-                          </button>
-                        </>
-                      ) : (
-                        /* Nút Đổi Vật Trấn Áp */
-                        <button
-                          className={styles.burnExpBtn}
-                          onClick={() => {
-                            const paymentMsg = canCover
-                              ? `Tiêu hao: ${costTienTinh.toLocaleString()} Tiên Tinh`
-                              : currentTienTinh > 0
-                              ? `Tiêu hao: ${currentTienTinh.toLocaleString()} TT + Đốt ${deficitExp.toLocaleString()} Tu Vi bù thiếu`
-                              : `Tiêu hao: Đốt ${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`;
-
-                            if (confirm(`ĐỔI VẬT TRẤN ÁP:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name} (${art.type})\n• ${paymentMsg}\n\nĐạo hữu có muốn đổi bảo vật này vào Túi Trữ Vật?`)) {
-                              triggerAction(() => buyArtifact(art.id));
-                            }
-                          }}
-                        >
-                          {canCover
-                            ? `✨ Đổi (${costTienTinh.toLocaleString()} TT)`
-                            : currentTienTinh > 0
-                            ? `🔥 ${currentTienTinh.toLocaleString()} TT + Đốt ${deficitExp.toLocaleString()} EXP`
-                            : `🔥 Đốt ${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi Đổi`}
-                        </button>
-                      )}
-                    </div>
+                  <div className={styles.emptyNoticeCard}>
+                    <span>🗝️ Chưa sở hữu Vật Trấn Áp nào trong danh mục này. Hãy đọc thêm chương để nhặt cơ duyên!</span>
                   </div>
                 );
-              })}
-            </div>
+              }
+
+              return (
+                <div className={styles.lampCardsGrid}>
+                  {filteredArtifacts.map(art => {
+                    const invCount = (cultivation.inventoryArtifacts || []).filter(id => id === art.id).length;
+                    const isAnchored = anchoredIds.includes(art.id);
+                    const isInInventory = invCount > 0;
+                    const isOwned = isInInventory || isAnchored;
+                    const tierInfo = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
+                    const costTienTinh = tierInfo.tienTinh || tierInfo.dangDiem || (tierInfo.priceExp * 5);
+                    const canCover = currentTienTinh >= costTienTinh;
+                    const deficitExp = Math.max(0, Math.ceil((costTienTinh - currentTienTinh) / 5));
+
+                    return (
+                      <div
+                        key={art.id}
+                        className={`${styles.lampCard} ${isOwned ? styles.lampEquipped : styles.lampLocked}`}
+                        style={{ borderColor: isOwned ? tierInfo.color : 'var(--border-subtle)' }}
+                      >
+                        <div className={styles.lampCardTop}>
+                          <span className={styles.lampIcon} style={{ textShadow: `0 0 12px ${tierInfo.color}` }}>
+                            {art.icon}
+                          </span>
+                          <div className={styles.lampNameCol}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              <h4 className={styles.lampName} style={{ color: isOwned ? tierInfo.color : 'var(--text-muted)' }}>
+                                {art.name}
+                              </h4>
+                              <span
+                                className="badge"
+                                style={{
+                                  fontSize: 9,
+                                  padding: '1px 6px',
+                                  backgroundColor: tierInfo.bg,
+                                  color: tierInfo.color,
+                                  borderColor: tierInfo.border,
+                                }}
+                              >
+                                {tierInfo.name} · {art.type}
+                              </span>
+                            </div>
+                            <span className={styles.lampPoem}>"{art.poem}"</span>
+                          </div>
+                          <div className={styles.lampStatusBadge}>
+                            {isAnchored ? (
+                              <span className="badge badge-gold">✦ Đã Trấn Cung</span>
+                            ) : isInInventory ? (
+                              <span className="badge badge-cyan">Sở Hữu x{invCount}</span>
+                            ) : (
+                              <span className="badge" style={{ opacity: 0.45 }}>Chưa Có</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <p className={styles.lampDesc}>{art.desc}</p>
+
+                        {/* Actions */}
+                        <div className={styles.lampActions} style={{ display: 'flex', gap: 6 }}>
+                          {isInInventory ? (
+                            <>
+                              {/* Nút Khảm Nạm nếu đang ở Kim Đan và có cung cần trấn áp */}
+                              {cultivation.realm === 'kim_dan' && cultivation.currentThienCungExp >= 799 && (
+                                <button
+                                  className="btn-gold"
+                                  style={{ fontSize: 11.5, padding: '6px 10px', flex: 1.3 }}
+                                  onClick={() => {
+                                    triggerAction(
+                                      () => anchorPalace(cultivation.realizedThienCung, art.id),
+                                      `Đã khảm nạm ${art.name} vào Thiên Cung ${cultivation.realizedThienCung + 1} thành Cung Thật 100%!`
+                                    );
+                                  }}
+                                >
+                                  👑 Khảm Nạm Ngay
+                                </button>
+                              )}
+
+                              {/* Nút Bán lấy Tiên Tinh */}
+                              <button
+                                className="btn-ghost"
+                                style={{
+                                  fontSize: 11.5,
+                                  padding: '6px 10px',
+                                  color: '#10b981',
+                                  borderColor: 'rgba(16, 185, 129, 0.5)',
+                                  background: 'rgba(16, 185, 129, 0.08)',
+                                  flex: 1,
+                                }}
+                                onClick={() => {
+                                  if (confirm(`BÁN VẬT TRẤN ÁP:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name}\n• Nhận lại: +${costTienTinh.toLocaleString()} Tiên Tinh\n\nBạn có muốn bán vật phẩm này?`)) {
+                                    triggerAction(() => sellArtifact(art.id), `Đã bán ${art.name}, nhận +${costTienTinh.toLocaleString()} Tiên Tinh!`);
+                                  }
+                                }}
+                              >
+                                💰 Bán (+{costTienTinh.toLocaleString()} TT)
+                              </button>
+                            </>
+                          ) : isAnchored ? (
+                            <span style={{ fontSize: 11, color: '#ffcc00', fontStyle: 'italic' }}>
+                              ✦ Đã tọa trấn vĩnh cửu tại Thiên Cung
+                            </span>
+                          ) : (
+                            /* Nút Đổi Vật Trấn Áp */
+                            <button
+                              className={styles.burnExpBtn}
+                              onClick={() => {
+                                const paymentMsg = canCover
+                                  ? `Tiêu hao: ${costTienTinh.toLocaleString()} Tiên Tinh`
+                                  : currentTienTinh > 0
+                                  ? `Tiêu hao: ${currentTienTinh.toLocaleString()} TT + Đốt ${deficitExp.toLocaleString()} Tu Vi bù thiếu`
+                                  : `Tiêu hao: Đốt ${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`;
+
+                                if (confirm(`ĐỔI VẬT TRẤN ÁP:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name} (${art.type})\n• ${paymentMsg}\n\nĐạo hữu có muốn đổi bảo vật này vào Túi Trữ Vật?`)) {
+                                  triggerAction(() => buyArtifact(art.id));
+                                }
+                              }}
+                            >
+                              {canCover
+                                ? `✨ Đổi Bảo Vật (${costTienTinh.toLocaleString()} TT)`
+                                : currentTienTinh > 0
+                                ? `🔥 ${currentTienTinh.toLocaleString()} TT + Đốt ${deficitExp.toLocaleString()} Tu Vi`
+                                : `🔥 Đốt ${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi Đổi`}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
 
