@@ -43,10 +43,10 @@ export const NGUNG_KHI_THRESHOLDS = [
   4500,  // Sẵn sàng Trúc Cơ
 ];
 
-// Ngưỡng Tu Vi lũy tiến cho 120 Pháp Khiếu Trúc Cơ (Tăng dần từ 15 -> 110 EXP/khiếu, tổng ~7512 EXP)
+// Ngưỡng Tu Vi lũy tiến cho 120 Pháp Khiếu Trúc Cơ (Khởi điểm Khiếu 1: 50 Tu Vi, tăng dần đến Khiếu 120: 192 Tu Vi, tổng ~14.568 Tu Vi)
 export function getExpForPhapKhieuIndex(k) {
   const num = Math.min(120, Math.max(1, k));
-  return 15 + Math.floor((num - 1) * 0.8);
+  return 50 + Math.floor((num - 1) * 1.2);
 }
 
 export const TRUC_CO_KHIEU_THRESHOLDS = [0];
@@ -67,26 +67,26 @@ export function getOpenedPhapKhieuFromExp(exp) {
 export const EXP_PER_PHAP_KHIEU = 70; // Giữ để tương thích ngược
 export const EXP_FOR_121_ATTEMPT = 1200; // Tích lũy 1200 EXP sau 120 khiếu để mượn cơ duyên xung kích
 
-// Chi phí Tu Vi lũy tiến cho 9 Thiên Cung Kim Đan (Cung 1: 500 EXP -> Cung 9: 5000 EXP)
+// Chi phí Tu Vi lũy tiến cho 9 Thiên Cung Kim Đan (Khởi điểm Cung 1: 2.000 Tu Vi -> Cung 9: 27.000 Tu Vi)
 export const KIM_DAN_PALACE_COSTS = [
   0,
-  500,  // Cung 1
-  700,  // Cung 2
-  1000, // Cung 3
-  1400, // Cung 4
-  1900, // Cung 5
-  2500, // Cung 6
-  3200, // Cung 7
-  4000, // Cung 8
-  5000, // Cung 9
+  2000,  // Cung 1
+  3000,  // Cung 2
+  4500,  // Cung 3
+  6500,  // Cung 4
+  9000,  // Cung 5
+  12000, // Cung 6
+  16000, // Cung 7
+  21000, // Cung 8
+  27000, // Cung 9
 ];
 
 export function getPalaceCost(palaceNum) {
   const num = Math.min(9, Math.max(1, palaceNum));
-  return KIM_DAN_PALACE_COSTS[num] || 1000;
+  return KIM_DAN_PALACE_COSTS[num] || 2000;
 }
 
-export const EXP_PER_THIEN_CUNG = 800; // Giữ để tương thích ngược
+export const EXP_PER_THIEN_CUNG = 2000; // Giữ để tương thích ngược
 export const EXP_PER_DAO_ANH = 1000; // 1000 EXP để thai nghén hóa sinh 1 Đạo Anh vào Thiên Cung Thật
 
 // Ngưỡng Thiên Mệnh chuẩn cho 5 Kiếp của mỗi Đạo Anh

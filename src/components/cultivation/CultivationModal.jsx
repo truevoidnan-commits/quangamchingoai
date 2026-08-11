@@ -174,7 +174,7 @@ export default function CultivationModal({ isOpen, onClose }) {
               <span className={styles.statValGold}>{combatPowerDisplay}</span>
             </div>
             <div className={styles.statBox}>
-              <span className={styles.statLabel}>Tu Vi Đang Có</span>
+              <span className={styles.statLabel}>Tu Vi</span>
               <span className={styles.statValCyan}>{(cultivation.totalExp || 0).toLocaleString()} Tu Vi</span>
             </div>
           </div>
