@@ -2,6 +2,7 @@ import { useState } from 'react';
 import BottomSheet from '../ui/BottomSheet';
 import { useCultivation } from '../../hooks/useCultivation';
 import RealmPreviewVisualizer from './RealmPreviewVisualizer';
+import BreakthroughModal from './BreakthroughModal';
 import styles from './CultivationModal.module.css';
 
 export default function CultivationModal({ isOpen, onClose }) {
@@ -40,18 +41,25 @@ export default function CultivationModal({ isOpen, onClose }) {
   const [artifactTierFilter, setArtifactTierFilter] = useState('all');
   const [anchorModalPalace, setAnchorModalPalace] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
+  const [breakthroughData, setBreakthroughData] = useState(null);
 
-  const triggerAction = (fn, successMsg) => {
+  const triggerAction = (fn, successMsg, customBreakthrough) => {
     try {
       const res = fn();
-      if (res && res.message) {
-        setActionMsg(res.message);
-      } else if (res && res.resultMsg) {
-        setActionMsg(res.resultMsg);
-      } else if (successMsg) {
-        setActionMsg(successMsg);
+      const msg = (res && (res.message || res.resultMsg)) || successMsg;
+      if (msg) {
+        setActionMsg(msg);
+        setTimeout(() => setActionMsg(''), 5000);
+
+        if (customBreakthrough || (msg && (msg.includes('thành công') || msg.includes('kích hoạt') || msg.includes('Đột phá')))) {
+          setBreakthroughData(customBreakthrough || {
+            title: msg.includes('Trúc Cơ') ? 'ĐỘT PHÁ TRÚC CƠ CẢNH!' : msg.includes('Kim Đan') ? 'ĐỘT PHÁ KIM ĐAN CẢNH!' : 'ĐỘT PHÁ CẢNH GIỚI!',
+            subtitle: msg,
+            icon: msg.includes('Trúc Cơ') ? '🔥' : msg.includes('Kim Đan') ? '✨' : msg.includes('Nguyện Anh') ? '👑' : '⚡',
+            cpStr: combatPowerDisplay,
+          });
+        }
       }
-      setTimeout(() => setActionMsg(''), 5000);
     } catch (err) {
       alert(err.message || 'Chưa đủ điều kiện.');
     }
@@ -1345,6 +1353,11 @@ export default function CultivationModal({ isOpen, onClose }) {
           </button>
         </div>
       </div>
+
+      {/* Full-Screen Breakthrough Celebration Overlay */}
+      {breakthroughData && (
+        <BreakthroughModal data={breakthroughData} onClose={() => setBreakthroughData(null)} />
+      )}
     </BottomSheet>
   );
 }

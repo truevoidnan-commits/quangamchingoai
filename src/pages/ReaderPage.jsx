@@ -6,6 +6,7 @@ import { useReadingSettings } from '../hooks/useReadingSettings';
 import { READING_THEMES, FONT_OPTIONS } from '../hooks/useReadingSettings';
 import { useCultivation } from '../hooks/useCultivation';
 import CultivationModal from '../components/cultivation/CultivationModal';
+import BreakthroughModal from '../components/cultivation/BreakthroughModal';
 import TableOfContents from '../components/reader/TableOfContents';
 import ReadingSettings from '../components/reader/ReadingSettings';
 import ScrollToTop from '../components/ui/ScrollToTop';
@@ -268,17 +269,9 @@ export default function ReaderPage() {
         </div>
       )}
 
-      {/* Breakthrough Banner — Xuất hiện chớp nhoáng 1 giây rồi tự tiêu tán */}
+      {/* Full-Screen Breakthrough Celebration Overlay */}
       {breakthroughToast && (
-        <div className={styles.breakthroughToast}>
-          <span className={styles.breakthroughIcon}>{breakthroughToast.icon || '⚡'}</span>
-          <div className={styles.breakthroughContent}>
-            <span className={styles.breakthroughTitle}>{breakthroughToast.title}</span>
-            {breakthroughToast.subtitle && (
-              <span className={styles.breakthroughSubtitle}>{breakthroughToast.subtitle}</span>
-            )}
-          </div>
-        </div>
+        <BreakthroughModal data={breakthroughToast} onClose={() => setBreakthroughToast(null)} />
       )}
 
       {/* Lucky Life Lamp Drop Celebration Modal */}
