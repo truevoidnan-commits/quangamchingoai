@@ -1244,10 +1244,10 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     }
   }
 
-  // 35% tỉ lệ nhặt được Vật Trấn Áp Thiên Cung - Vẫn rơi ở Giả Anh, chỉ ngừng khi lên Nguyên Anh
+  // 25% tỉ lệ nhặt được Vật Trấn Áp Thiên Cung - Vẫn rơi ở Giả Anh, chỉ ngừng khi lên Nguyên Anh
   if (!isNguyenAnh) {
     const artifactRoll = Math.random();
-    if (artifactRoll < 0.35) {
+    if (artifactRoll < 0.25) {
       const tierRoll = Math.random();
       let selectedTier = 'ha_pham';
       if (tierRoll < 0.45) selectedTier = 'ha_pham';
