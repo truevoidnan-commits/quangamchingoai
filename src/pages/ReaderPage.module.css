@@ -89,8 +89,58 @@
   box-shadow: 0 0 8px rgba(255, 204, 0, 0.3);
 }
 
-.chapterLabel {
-  text-align: center;
+.topBarSpacer {
+  flex: 1;
+}
+
+.cultivationBtnWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.unreadRedDot {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 10px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 14px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.9);
+  pointer-events: none;
+  animation: pulseRedDot 1.5s ease-in-out infinite alternate;
+  z-index: 2;
+}
+
+.unreadRedDotDotOnly {
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  padding: 0;
+  top: 4px;
+  right: 4px;
+  border-radius: 50%;
+}
+
+@keyframes pulseRedDot {
+  0% {
+    transform: scale(0.9);
+    box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
+  }
+  100% {
+    transform: scale(1.2);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 1);
+  }
 }
 
 .topBtns {

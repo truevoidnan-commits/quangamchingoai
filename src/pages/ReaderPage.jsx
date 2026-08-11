@@ -30,6 +30,7 @@ export default function ReaderPage() {
   const [barVisible, setBarVisible] = useState(true);
   const [breakthroughToast, setBreakthroughToast] = useState(null);
   const [droppedLamp, setDroppedLamp] = useState(null);
+  const [unreadDropsCount, setUnreadDropsCount] = useState(0);
   const scrollRef = useRef(null);
   const lastScrollY = useRef(0);
 
@@ -115,9 +116,14 @@ export default function ReaderPage() {
                 setBreakthroughToast(res.breakthrough);
                 setTimeout(() => setBreakthroughToast(null), 5000);
               }
-              if (res.droppedLamp) {
-                setDroppedLamp(res.droppedLamp);
-                setTimeout(() => setDroppedLamp(null), 6000);
+              const dropItem = res.droppedLamp || res.droppedArtifact;
+              if (dropItem) {
+                const isLegendary = dropItem.tier === 'tien_pham' || dropItem.tier === 'than_pham';
+                if (isLegendary) {
+                  setDroppedLamp(dropItem);
+                  setTimeout(() => setDroppedLamp(null), 3000); // 3 giây thông báo màn hình đối với tiên phẩm/thần phẩm
+                }
+                setUnreadDropsCount(cnt => cnt + 1); // Hiển thị chấm đỏ thông báo chưa đọc
               }
             }
           } catch (err) {
@@ -213,24 +219,35 @@ export default function ReaderPage() {
           >
             ←
           </button>
-          <span className={styles.chapterLabel} title={chapter?.title}>
-            {chapter?.title || '...'}
-          </span>
           <div className={styles.meditationBadgeWrap}>
             <span className={styles.meditationBadge} title="Mỗi chu kỳ 60s tĩnh tâm đọc sẽ hấp thu một luồng linh khí tu vi (lặp lại liên tục)">
               🧘 Ngộ đạo {cycleSeconds}/60s
             </span>
           </div>
+          <div className={styles.topBarSpacer} />
           <div className={styles.topBtns}>
-            <button
-              className={styles.topBtn}
-              onClick={() => setCultivationOpen(true)}
-              title="Xem Bảng Tu Vi"
-              aria-label="Tu Vi"
-              style={{ color: '#ffcc00' }}
-            >
-              ⚡
-            </button>
+            <div className={styles.cultivationBtnWrap}>
+              <button
+                className={styles.topBtn}
+                onClick={() => {
+                  setUnreadDropsCount(0);
+                  setCultivationOpen(true);
+                }}
+                title="Xem Bảng Tu Vi"
+                aria-label="Tu Vi"
+                style={{ color: '#ffcc00' }}
+              >
+                ⚡
+              </button>
+              {unreadDropsCount > 0 && (
+                <span
+                  className={`${styles.unreadRedDot} ${unreadDropsCount === 1 ? styles.unreadRedDotDotOnly : ''}`}
+                  title={`${unreadDropsCount} cơ duyên chưa đọc`}
+                >
+                  {unreadDropsCount > 1 ? (unreadDropsCount > 99 ? '99+' : unreadDropsCount) : ''}
+                </span>
+              )}
+            </div>
             <button
               className={styles.topBtn}
               onClick={() => navigate(`/novel/${novelId}/add-chapter`)}
