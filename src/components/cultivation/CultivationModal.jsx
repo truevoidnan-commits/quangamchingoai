@@ -3,6 +3,7 @@ import BottomSheet from '../ui/BottomSheet';
 import { useCultivation } from '../../hooks/useCultivation';
 import RealmPreviewVisualizer from './RealmPreviewVisualizer';
 import BreakthroughModal from './BreakthroughModal';
+import TribulationModal from './TribulationModal';
 import styles from './CultivationModal.module.css';
 
 export default function CultivationModal({ isOpen, onClose }) {
@@ -42,6 +43,36 @@ export default function CultivationModal({ isOpen, onClose }) {
   const [anchorModalPalace, setAnchorModalPalace] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
   const [breakthroughData, setBreakthroughData] = useState(null);
+  const [tribulationModalData, setTribulationModalData] = useState(null);
+
+  const handleSingleTribulation = (daoAnhId) => {
+    try {
+      const res = attemptTribulationSingle(daoAnhId);
+      if (res) {
+        setTribulationModalData(res);
+      }
+    } catch (err) {
+      alert(err.message || 'Không thể độ kiếp.');
+    }
+  };
+
+  const handleAllTribulation = () => {
+    try {
+      const res = attemptTribulationAll();
+      if (res) {
+        setTribulationModalData({
+          isSuccess: res.successCount > 0,
+          tribulationName: 'Vạn Kiếp Tề Phi (Toàn Bộ Đạo Anh)',
+          daoAnhName: `Toàn Bộ ${cultivation.daoAnhs?.length || 0} Đạo Anh`,
+          element: 'Thiên Cơ Lôi Kiếp',
+          message: res.resultMsg,
+          successChance: 100,
+        });
+      }
+    } catch (err) {
+      alert(err.message || 'Không thể vạn kiếp tề phi.');
+    }
+  };
 
   const triggerAction = (fn, successMsg, customBreakthrough) => {
     try {
@@ -1200,7 +1231,7 @@ export default function CultivationModal({ isOpen, onClose }) {
               {/* Vạn Kiếp Tề Phi button */}
               <button
                 className={`btn-gold ${styles.massTribulationBtn}`}
-                onClick={() => triggerAction(attemptTribulationAll)}
+                onClick={handleAllTribulation}
               >
                 ⚡ VẠN KIẾP TỀ PHI (TOÀN BỘ ĐẠO ANH CÙNG VƯỢT KIẾP · THƯỞNG +50% THIÊN MỆNH)
               </button>
@@ -1228,8 +1259,8 @@ export default function CultivationModal({ isOpen, onClose }) {
                         <div className={styles.daoAnhInfo}>
                           <h4 className={styles.daoAnhTitle}>{da.name}</h4>
                           <span className={styles.daoAnhBadge}>
-                            Kiếp {da.currentKiep}/5 · {da.currentKiep} Anh Chiến Lực
-                            {da.fromLamp && ' · (Mệnh Đăng Bảo Hộ)'}
+                            {da.element || 'Thần Thể'} · Kiếp {da.currentKiep}/5 ({da.currentKiep} Anh)
+                            {da.fromLamp && ' · 🏮 Chân Hỏa Bảo Vệ'}
                           </span>
                         </div>
                       </div>
@@ -1297,10 +1328,10 @@ export default function CultivationModal({ isOpen, onClose }) {
                             <button
                               className={isEligible ? 'btn-gold' : 'btn-ghost'}
                               style={{ fontSize: 12, padding: '6px 14px', fontWeight: 600 }}
-                              onClick={() => triggerAction(() => attemptTribulationSingle(da.id))}
+                              onClick={() => handleSingleTribulation(da.id)}
                               disabled={!isEligible}
                             >
-                              {isEligible ? `⚡ Độ Kiếp (${successChance}% Thành Công)` : `Độ Kiếp (Cần >= 70% TM)`}
+                              {isEligible ? `⚡ Nghênh Tiếp Thiên Kiếp (${successChance}%)` : `Độ Kiếp (Cần >= 70% TM)`}
                             </button>
                           </div>
                         </>
@@ -1482,6 +1513,11 @@ export default function CultivationModal({ isOpen, onClose }) {
       {/* Full-Screen Breakthrough Celebration Overlay */}
       {breakthroughData && (
         <BreakthroughModal data={breakthroughData} onClose={() => setBreakthroughData(null)} />
+      )}
+
+      {/* Interactive Tribulation Thunderstorm Overlay */}
+      {tribulationModalData && (
+        <TribulationModal activeData={tribulationModalData} onClose={() => setTribulationModalData(null)} />
       )}
     </BottomSheet>
   );

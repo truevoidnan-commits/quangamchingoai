@@ -2142,6 +2142,14 @@ export function breakthroughToKimDan() {
   return state;
 }
 
+export const TRIBULATION_NAMES = {
+  1: 'Ngũ Hành Lôi Kiếp (1K ➔ 2K)',
+  2: 'Tâm Ma Hỏa Kiếp (2K ➔ 3K)',
+  3: 'Vẫn Tinh Âm Kiếp (3K ➔ 4K)',
+  4: 'Cửu Thiên Trọng Kiếp (4K ➔ 5K)',
+  5: 'Nguyên Anh Đại Viên Mãn (5 Kiếp Luân Hồi)',
+};
+
 /**
  * Chuyển hóa 1 Thiên Cung đã Hóa Thực thành Đạo Anh
  */
@@ -2154,10 +2162,6 @@ export function manifestDaoAnh(palaceIndex) {
   // Điều kiện 1: Toàn bộ Thiên Cung phải được Hóa Thực thành Cung Thật 100%
   if (state.realizedThienCung < state.maxThienCung) {
     throw new Error(`Chưa đủ điều kiện! Cần Hóa Thực toàn bộ ${state.maxThienCung}/${state.maxThienCung} Thiên Cung thành Cung Thật trước khi bắt đầu Hóa Đạo Anh.`);
-  }
-
-  if (palaceIndex >= state.realizedThienCung) {
-    throw new Error('Thiên Cung này chưa được Hóa Thực thành Cung Thật.');
   }
 
   if (!state.daoAnhs) state.daoAnhs = [];
@@ -2175,20 +2179,40 @@ export function manifestDaoAnh(palaceIndex) {
   state.totalExp -= EXP_PER_DAO_ANH;
 
   const absorbed = state.absorbedLamps || [];
-  const totalPalaces = state.maxThienCung;
-  const lampStartIndex = totalPalaces - absorbed.length;
-  const isLampPalace = palaceIndex >= lampStartIndex;
-  let lampName = null;
+  const lampCount = absorbed.length;
+  const isLampPalace = palaceIndex < lampCount;
+
+  let lampObj = null;
+  let elementAttr = 'Ngũ Hành Thần Thể';
+  let daoAnhTitle = '';
+
   if (isLampPalace) {
-    const lampId = absorbed[palaceIndex - lampStartIndex];
-    const lampObj = LIFE_LAMPS.find(l => l.id === lampId);
-    lampName = lampObj ? lampObj.shortName : 'Mệnh Đăng';
+    const lampId = absorbed[palaceIndex];
+    lampObj = LIFE_LAMPS.find(l => l.id === lampId);
+    const shortName = lampObj ? (lampObj.shortName || lampObj.name.replace('Đăng', '')) : `Mệnh Đăng ${palaceIndex + 1}`;
+    daoAnhTitle = `Đạo Anh [${shortName}]`;
+    elementAttr = lampObj ? `${shortName} Thần Thể` : 'Chân Đăng Thần Thể';
+  } else {
+    const selfNum = palaceIndex - lampCount + 1;
+    const elements = [
+      'Kim Nguyên Thần Thể',
+      'Mộc Nguyên Thần Thể',
+      'Thủy Nguyên Thần Thể',
+      'Hỏa Nguyên Thần Thể',
+      'Thổ Nguyên Thần Thể',
+      'Băng Nguyên Thần Thể',
+      'Phong Nguyên Thần Thể',
+      'Lôi Nguyên Thần Thể',
+    ];
+    elementAttr = elements[(selfNum - 1) % elements.length];
+    daoAnhTitle = `Đạo Anh Tự Thân ${selfNum}`;
   }
 
   const newDaoAnh = {
     id: `da_${palaceIndex}_${Date.now()}`,
     palaceIndex,
-    name: lampName ? `Đạo Anh [${lampName}]` : `Đạo Anh Cung ${palaceIndex + 1}`,
+    name: daoAnhTitle,
+    element: elementAttr,
     fromLamp: isLampPalace,
     currentKiep: 1, // Khởi tạo ở Kiếp 1 (= 1 Anh chiến lực)
     currentThienMenh: 0,
@@ -2200,13 +2224,13 @@ export function manifestDaoAnh(palaceIndex) {
   if (state.daoAnhs.length === state.maxThienCung) {
     state.realm = 'nguyen_anh';
     state.logs.unshift({
-      text: `👑 NGUYÊN ANH ĐẠI THÀNH! Toàn bộ ${state.maxThienCung} Thiên Cung đã hóa thành Đạo Anh! Chiến lực tính bằng Anh (tối đa 65 Anh)!`,
+      text: `👑 NGUYÊN ANH ĐẠI THÀNH! Toàn bộ ${state.maxThienCung} Thiên Cung đã hóa thành Đạo Anh! Tụ đỉnh ngưng tụ chiến lực Anh (tối đa 65 Anh)!`,
       time: Date.now(),
     });
   } else {
     state.realm = 'gia_anh';
     state.logs.unshift({
-      text: `Ngưng tụ thành công ${newDaoAnh.name} (+1 Anh chiến lực)! Đạt cảnh giới Giả Anh.`,
+      text: `Ngưng tụ thành công ${newDaoAnh.name} (${elementAttr}, +1 Anh chiến lực)! Đạt cảnh giới Giả Anh.`,
       time: Date.now(),
     });
   }
@@ -2252,9 +2276,12 @@ export function attemptTribulationSingle(daoAnhId) {
   if (!da) throw new Error('Không tìm thấy Đạo Anh.');
   if (da.currentKiep >= 5) throw new Error('Đạo Anh này đã đạt Kiếp 5 Đại Viên Mãn.');
 
+  const targetKiep = da.currentKiep;
+  const tribulationName = TRIBULATION_NAMES[targetKiep] || `Thiên Kiếp ${targetKiep}`;
+
   const percent = Math.floor((da.currentThienMenh / da.maxThienMenh) * 100);
   if (percent < 70) {
-    throw new Error(`Đạo Anh mới đạt ${percent}% Thiên Mệnh. Cần tối thiểu 70% Thiên Mệnh để nghênh tiếp Thiên Kiếp.`);
+    throw new Error(`Đạo Anh mới đạt ${percent}% Thiên Mệnh. Cần tối thiểu 70% Thiên Mệnh để nghênh tiếp ${tribulationName}.`);
   }
 
   const successChance = Math.min(100, 50 + (percent - 70));
@@ -2266,7 +2293,7 @@ export function attemptTribulationSingle(daoAnhId) {
     da.currentKiep += 1;
     da.currentThienMenh = 0;
     da.maxThienMenh = KIEP_THIEN_MENH_REQUIREMENTS[Math.min(4, da.currentKiep)];
-    message = `⚡ ĐỘ KIẾP THÀNH CÔNG! ${da.name} đã vượt qua Kiếp thứ ${da.currentKiep} (+1 Anh chiến lực)!`;
+    message = `⚡ ĐỘ KIẾP THÀNH CÔNG! ${da.name} (${da.element || 'Thần Thể'}) đã vượt qua [${tribulationName}], thăng hoa lên Kiếp thứ ${da.currentKiep} (+1 Anh chiến lực)!`;
     state.logs.unshift({ text: message, time: Date.now() });
 
     if (state.daoAnhs.length === state.maxThienCung && state.daoAnhs.every(d => d.currentKiep >= 1)) {
@@ -2275,16 +2302,16 @@ export function attemptTribulationSingle(daoAnhId) {
   } else {
     if (da.fromLamp) {
       da.currentThienMenh = Math.round(da.maxThienMenh * 0.5);
-      message = `Độ kiếp thất bại! Nhờ có chân hỏa của Mệnh Đăng bảo vệ, ${da.name} chỉ bị tiêu hao lui về 50% Thiên Mệnh!`;
+      message = `⚡ ĐỘ KIẾP THẤT BẠI! Nhờ có Chân Hỏa Mệnh Đăng bảo vệ, ${da.name} không bị thương hại nặng, chỉ lui về 50% Thiên Mệnh!`;
     } else {
       da.currentThienMenh = 0;
-      message = `Độ kiếp thất bại! Thiên lôi đánh tan thần niệm, ${da.name} bị trừ toàn bộ Thiên Mệnh tích lũy!`;
+      message = `⚡ ĐỘ KIẾP THẤT BẠI! Thiên lôi đánh tan thần niệm, ${da.name} bị tiêu hao toàn bộ Thiên Mệnh tích lũy!`;
     }
     state.logs.unshift({ text: message, time: Date.now() });
   }
 
   saveCultivationState(state);
-  return { state, isSuccess, successChance, message };
+  return { state, isSuccess, successChance, tribulationName, daoAnhName: da.name, element: da.element, message };
 }
 
 /**
@@ -2336,7 +2363,7 @@ export function attemptTribulationAll() {
     state.realm = 'nguyen_anh';
   }
 
-  const resultMsg = `VẠN KIẾP TỀ PHI KẾT THÚC: ${successCount} Đạo Anh vượt kiếp thành công, ${failCount} Đạo Anh thất bại. Nhận thưởng +${totalBonusThienMenh.toLocaleString()} Thiên Mệnh!`;
+  const resultMsg = `🌟 VẠN KIẾP TỀ PHI KẾT THÚC: ${successCount} Đạo Anh vượt kiếp thành công, ${failCount} Đạo Anh thất bại. Nhận thưởng +${totalBonusThienMenh.toLocaleString()} Thiên Mệnh!`;
   state.logs.unshift({ text: resultMsg, time: Date.now() });
 
   saveCultivationState(state);
