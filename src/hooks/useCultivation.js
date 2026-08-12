@@ -123,9 +123,11 @@ export function useCultivation() {
   }, []);
 
   const handleUnlock121 = useCallback(() => {
-    const next = attemptUnlock121st();
-    setCultivation({ ...next });
-    return next;
+    const res = attemptUnlock121st();
+    if (res && res.state) {
+      setCultivation({ ...res.state });
+    }
+    return res;
   }, []);
 
   const handleManifestDaoAnh = useCallback((palaceIndex) => {

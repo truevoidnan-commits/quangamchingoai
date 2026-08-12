@@ -65,7 +65,7 @@ export function getOpenedPhapKhieuFromExp(exp) {
 }
 
 export const EXP_PER_PHAP_KHIEU = 70; // Giữ để tương thích ngược
-export const EXP_FOR_121_ATTEMPT = 1200; // Tích lũy 1200 EXP sau 120 khiếu để mượn cơ duyên xung kích
+export const EXP_FOR_121_ATTEMPT = 800; // Tích lũy 800 EXP sau 120 khiếu để mượn cơ duyên xung kích
 
 // Chi phí Tu Vi lũy tiến cho 9 Thiên Cung Kim Đan (Khởi điểm Cung 1: 2.000 Tu Vi -> Cung 9: 27.000 Tu Vi)
 export const KIM_DAN_PALACE_COSTS = [
@@ -1114,8 +1114,10 @@ export function getCombatPowerDisplay(state) {
   }
 
   if (state.realm === 'kim_dan') {
-    const realPalaces = state.realizedThienCung !== undefined ? state.realizedThienCung : 0;
-    return `${realPalaces} Cung`;
+    const lampCount = (state.absorbedLamps || []).length;
+    const selfRealized = state.realizedThienCung !== undefined ? state.realizedThienCung : 0;
+    const totalRealizedCung = lampCount + selfRealized;
+    return `${totalRealizedCung} Cung`;
   }
 
   if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
@@ -1401,14 +1403,18 @@ export function absorbLifeLamp(lampId) {
     throw new Error('Đến cảnh giới Nguyên Anh (hoặc Giả Anh) đạo cơ đã định hình Đạo Anh, KHÔNG THỂ hấp thụ thêm Mệnh Đăng nữa!');
   }
 
+  const currentAbsorbed = state.absorbedLamps || [];
+
   if (state.realm === 'truc_co') {
-    const selfHoa = state.selfMenhHoa || Math.floor(state.phapKhieu / 30);
+    const selfHoa = state.selfMenhHoa || Math.floor((state.phapKhieu || 0) / 30);
     if (selfHoa < 1) {
       throw new Error('Cần thắp sáng ít nhất 1 Mệnh Hỏa tự thân ở Trúc Cơ mới có thể hấp thụ Mệnh Đăng.');
     }
+    if (currentAbsorbed.length >= selfHoa) {
+      throw new Error(`Bạn đang có ${selfHoa} Mệnh Hỏa tự thân, chỉ có thể hấp thụ tối đa ${selfHoa} Mệnh Đăng. Hãy mở thêm pháp khiếu để thắp sáng Mệnh Hỏa tiếp theo!`);
+    }
   }
 
-  const currentAbsorbed = state.absorbedLamps || [];
   if (currentAbsorbed.length >= MAX_ABSORBED_LAMPS) {
     throw new Error(`Đã đạt giới hạn tối đa 5 Mệnh Đăng có thể hấp thụ trong suốt đạo lộ tu tiên.`);
   }
@@ -2124,7 +2130,7 @@ export function breakthroughToKimDan() {
   state.realm = 'kim_dan';
   state.expCurrentRealm = 0;
   state.maxThienCung = totalThienCung;
-  state.realizedThienCung = lampBonusCung; // Chỉ các cung hình thành từ Mệnh Đăng mới là Cung Thật (100%), toàn bộ cung tự thân ban đầu đều HƯ ẢO (0%)!
+  state.realizedThienCung = 0; // 0 Cung tự thân đã hóa thực ban đầu (toàn bộ Cung Tự Thân ban đầu đều HƯ ẢO 0%, cần nạp linh lực & khảm nạm Trấn Cung Vật)
   state.currentThienCungExp = 0;
 
   state.logs.unshift({

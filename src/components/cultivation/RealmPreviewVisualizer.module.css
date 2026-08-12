@@ -265,20 +265,20 @@
 }
 
 .slotBottomLeft {
-  bottom: 34px;
+  bottom: 50px;
   left: 20px;
   animation-delay: 1.5s;
 }
 
 .slotBottomRight {
-  bottom: 34px;
+  bottom: 50px;
   right: 20px;
   animation-delay: 2.25s;
 }
 
 .fifthLampWrap {
   position: absolute;
-  bottom: 30px;
+  bottom: 60px;
   left: 50%;
   transform: translateX(-50%);
   pointer-events: auto;
