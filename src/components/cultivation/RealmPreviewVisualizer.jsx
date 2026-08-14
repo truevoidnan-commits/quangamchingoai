@@ -589,14 +589,17 @@ export default function RealmPreviewVisualizer({ cultivation }) {
               </div>
             </div>
 
+            {/* 3D Celestial Astrolabe Ring in Background */}
+            <div className={styles.astrolabeRing3D} />
+
             {/* Orbiting Dao Anh Guardians with Trấn Cung Bảo Vật & Mệnh Đăng AI */}
             <div className={styles.daoAnhsOrbitList}>
               {(daoAnhs || []).slice(0, 11).map((da, idx) => {
                 const totalCount = Math.max(1, Math.min(11, daoAnhs.length));
                 const angleDeg = (idx / totalCount) * 360 - 90;
                 const angleRad = (angleDeg * Math.PI) / 180;
-                const radiusX = 120; // Fit perfectly on mobile screen width
-                const radiusY = 72;  // Fit perfectly on mobile screen height
+                const radiusX = 124; // Fit perfectly on mobile screen width
+                const radiusY = 74;  // Fit perfectly on mobile screen height
                 const posX = Math.cos(angleRad) * radiusX;
                 const posY = Math.sin(angleRad) * radiusY;
 
@@ -630,19 +633,27 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                     style={{
                       transform: `translate(${posX.toFixed(1)}px, ${posY.toFixed(1)}px)`,
                       borderColor: artifactColor,
-                      boxShadow: `0 0 14px ${artifactColor}aa, inset 0 0 6px ${artifactColor}33`,
+                      boxShadow: `0 0 16px ${artifactColor}cc, inset 0 0 8px ${artifactColor}44`,
                     }}
                     title={`${da.name} · Trấn Vật: ${artifactName} (${da.currentKiep > 0 ? `${da.currentKiep} Kiếp` : 'Giả Anh 0 Kiếp'})`}
                   >
                     <span className={styles.miniIcon}>
                       {daItemObj ? (
-                        <ArtifactIcon item={daItemObj} isLamp={isLampPalace} size={30} />
+                        <ArtifactIcon item={daItemObj} isLamp={isLampPalace} size={34} />
                       ) : (
-                        <span style={{ filter: `drop-shadow(0 0 6px ${artifactColor})` }}>
+                        <span style={{ fontSize: 18, filter: `drop-shadow(0 0 6px ${artifactColor})` }}>
                           {daTheme.icon}
                         </span>
                       )}
                     </span>
+
+                    {/* Biển Hiệu Thẻ Tên Tiên Gia Hiển Thị Trên Hover / Touch */}
+                    <div className={styles.daoAnhHoverPlaque} style={{ borderColor: artifactColor, color: artifactColor }}>
+                      <span className={styles.plaqueNameText}>{artifactName}</span>
+                      <span className={styles.plaqueKiepText}>
+                        {da.currentKiep > 0 ? `✦ ${da.currentKiep} Kiếp` : 'Giả Anh'}
+                      </span>
+                    </div>
                   </div>
                 );
               })}

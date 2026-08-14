@@ -957,6 +957,17 @@
   filter: drop-shadow(0 0 8px rgba(255, 204, 0, 0.6));
 }
 
+.astrolabeRing3D {
+  position: absolute;
+  width: 250px;
+  height: 150px;
+  border-radius: 50%;
+  border: 1px dashed rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.2);
+  pointer-events: none;
+  animation: rotateSlow 24s linear infinite;
+}
+
 .daoAnhsOrbitList {
   position: absolute;
   inset: 0;
@@ -968,36 +979,75 @@
 
 .orbitDaoAnhMini {
   position: absolute;
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  background: rgba(10, 16, 26, 0.95);
-  border: 1.5px solid #22c3f0;
+  background: radial-gradient(circle at 35% 35%, rgba(15, 23, 42, 0.98) 0%, rgba(5, 11, 20, 1) 100%);
+  border: 1.8px solid #22c3f0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 14px rgba(34, 195, 240, 0.5);
+  box-shadow: 0 0 16px rgba(34, 195, 240, 0.6);
   pointer-events: auto;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
   z-index: 8;
 }
 
 .orbitDaoAnhMini:hover {
-  transform: scale(1.22) !important;
-  box-shadow: 0 0 20px #ffcc00 !important;
-  z-index: 20;
+  transform: scale(1.25) !important;
+  box-shadow: 0 0 26px #ffcc00 !important;
+  z-index: 25;
+}
+
+.orbitDaoAnhMini:hover .daoAnhHoverPlaque {
+  opacity: 1;
+  transform: translate(-50%, 6px) scale(1);
 }
 
 .orbitLampProtected {
   border-color: #ffcc00;
-  box-shadow: 0 0 14px rgba(255, 204, 0, 0.7);
+  box-shadow: 0 0 16px rgba(255, 204, 0, 0.8);
 }
 
 .miniIcon {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.daoAnhHoverPlaque {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translate(-50%, 0) scale(0.9);
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  background: rgba(10, 16, 26, 0.96);
+  border: 1px solid #ffcc00;
+  border-radius: 6px;
+  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 30;
+}
+
+.plaqueNameText {
+  font-family: var(--font-serif);
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+
+.plaqueKiepText {
+  font-size: 9px;
+  font-weight: 700;
+  color: #ffcc00;
 }
 
 @keyframes starSparkle {
