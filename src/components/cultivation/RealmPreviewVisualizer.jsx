@@ -321,7 +321,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
          ======================================================== */}
       {realm === 'kim_dan' && (
         <div className={styles.kimDanStage}>
-          {/* Mây mù thiên giới 3D bao quanh tháp */}
+          {/* Mây mù tiên cảnh bao quanh tháp */}
           <div className={styles.towerMistyBackdrop}>
             <div className={styles.floatingCloudLeft}>☁️</div>
             <div className={styles.floatingCloudRight}>☁️</div>
@@ -329,143 +329,132 @@ export default function RealmPreviewVisualizer({ cultivation }) {
           </div>
 
           {/* 3D Pagoda Perspective Container */}
-          <div className={styles.pagoda3DStage}>
-            <div className={styles.celestialTowerContainer}>
-              {/* Mái đình đài vàng đỉnh tháp */}
-              <div className={styles.towerSpire}>
-                <div className={styles.spireParticles}>
-                  <span className={styles.spireParticle} style={{ '--d': '0.0s', '--tx': '-6px', '--ty': '-8px' }}>✦</span>
-                  <span className={styles.spireParticle} style={{ '--d': '0.4s', '--tx': '7px',  '--ty': '-5px' }}>✦</span>
-                  <span className={styles.spireParticle} style={{ '--d': '0.8s', '--tx': '-4px', '--ty': '-12px' }}>✦</span>
-                </div>
-                <div className={styles.spireBody}>
-                  <div className={styles.spireTopNeedle} />
-                  <div className={styles.spireRoofTier1} />
-                  <div className={styles.spireRoofTier2} />
-                </div>
+          <div className={styles.lauCacContainer}>
+            <div className={styles.lauCac3D}>
+              {/* Mái chóp đình đài đỉnh tháp */}
+              <div className={styles.spire3D}>
+                <div className={styles.spireNeedle} />
+                <div className={styles.spireRoofTop} />
+                <div className={styles.spireRoofBase} />
               </div>
 
-              {/* Danh Sách Tầng Lầu (Xếp từ tầng cao nhất xuống T1) */}
-              <div className={styles.towerFloorsList}>
-                {Array.from({ length: maxThienCung }).map((_, i) => {
-                  const floorNum = maxThienCung - i;
-                  const palaceIdx = floorNum - 1;
-                  const selfPalacesTotal = maxThienCung - lampPalaceCount;
-                  const isLampPalace = palaceIdx >= selfPalacesTotal;
-                  const selfLocalIdx = isLampPalace ? null : palaceIdx;
-                  const isRealized = isLampPalace || (selfLocalIdx !== null && selfLocalIdx < realizedThienCung);
-                  const da = (daoAnhs || []).find(d => d.palaceIndex === palaceIdx);
-                  const daTheme = da ? getDaoAnhTheme(da, cultivation) : null;
-                  const anchor = cultivation?.palaceAnchors?.[palaceIdx];
-                  const currentExp = cultivation?.currentThienCungExp || 0;
-                  const isBottleneck = !isRealized && !isLampPalace && selfLocalIdx === realizedThienCung && currentExp >= 799;
-                  const expPercent = (!isRealized && !isLampPalace && selfLocalIdx === realizedThienCung)
-                    ? Math.min(99.99, Math.round((currentExp / 800) * 100 * 100) / 100)
-                    : 0;
+              {/* Các Tầng Lầu Các (Xếp từ tầng cao nhất xuống T1) */}
+              {Array.from({ length: maxThienCung }).map((_, i) => {
+                const floorNum = maxThienCung - i;
+                const palaceIdx = floorNum - 1;
+                const selfPalacesTotal = maxThienCung - lampPalaceCount;
+                const isLampPalace = palaceIdx >= selfPalacesTotal;
+                const selfLocalIdx = isLampPalace ? null : palaceIdx;
+                const isRealized = isLampPalace || (selfLocalIdx !== null && selfLocalIdx < realizedThienCung);
+                const da = (daoAnhs || []).find(d => d.palaceIndex === palaceIdx);
+                const daTheme = da ? getDaoAnhTheme(da, cultivation) : null;
+                const anchor = cultivation?.palaceAnchors?.[palaceIdx];
+                const currentExp = cultivation?.currentThienCungExp || 0;
+                const isBottleneck = !isRealized && !isLampPalace && selfLocalIdx === realizedThienCung && currentExp >= 799;
+                const expPercent = (!isRealized && !isLampPalace && selfLocalIdx === realizedThienCung)
+                  ? Math.min(99.99, Math.round((currentExp / 800) * 100 * 100) / 100)
+                  : 0;
 
-                  const lampIdx = isLampPalace ? palaceIdx - selfPalacesTotal : null;
-                  const absLamps = cultivation?.absorbedLamps || [];
-                  const lid = isLampPalace ? absLamps[lampIdx] : null;
-                  const lobj = lid ? LIFE_LAMPS.find(l => l.id === lid) : null;
-                  const elemTheme = daTheme || (isLampPalace ? getPalaceElementTheme(lobj) : anchor ? getPalaceElementTheme(anchor) : getPalaceElementTheme(null));
+                const lampIdx = isLampPalace ? palaceIdx - selfPalacesTotal : null;
+                const absLamps = cultivation?.absorbedLamps || [];
+                const lid = isLampPalace ? absLamps[lampIdx] : null;
+                const lobj = lid ? LIFE_LAMPS.find(l => l.id === lid) : null;
+                const elemTheme = daTheme || (isLampPalace ? getPalaceElementTheme(lobj) : anchor ? getPalaceElementTheme(anchor) : getPalaceElementTheme(null));
 
-                  const artifactObj = anchor
-                    ? SUPPRESSING_ARTIFACTS.find(a => a.id === anchor.id) || anchor
-                    : null;
+                const artifactObj = anchor
+                  ? SUPPRESSING_ARTIFACTS.find(a => a.id === anchor.id) || anchor
+                  : null;
 
-                  const palaceName = (() => {
-                    if (da) return formatDaoAnhTitle(da.name);
-                    if (isLampPalace) return lobj ? getLampPalaceName(lobj) : `Mệnh Đăng Cung ${lampIdx + 1}`;
-                    if (anchor) return anchor.palaceName || getPalaceNameFromArtifact(anchor, palaceIdx, cultivation?.palaceAnchors);
-                    return `Thiên Cung ${floorNum}`;
-                  })();
+                const palaceName = (() => {
+                  if (da) return formatDaoAnhTitle(da.name);
+                  if (isLampPalace) return lobj ? getLampPalaceName(lobj) : `Mệnh Đăng Cung ${lampIdx + 1}`;
+                  if (anchor) return anchor.palaceName || getPalaceNameFromArtifact(anchor, palaceIdx, cultivation?.palaceAnchors);
+                  return `Thiên Cung ${floorNum}`;
+                })();
 
-                  // 2-Layer Color System: Layer 1 = Tier Aura/Glow, Layer 2 = Element Core Color
-                  const tierKey = isLampPalace ? (lobj?.tier || 'than_pham') : (artifactObj?.tier || 'ha_pham');
-                  const auraColor = isLampPalace ? '#a855f7' : (elemTheme?.color || '#ffcc00');
-                  const auraGlow  = isLampPalace ? 'rgba(168,85,247,0.7)' : (elemTheme?.glow || 'rgba(255,204,0,0.5)');
+                // Phẩm chất tier key -> Aura Color (Layer 1)
+                const tierKey = isLampPalace ? (lobj?.tier || 'than_pham') : (artifactObj?.tier || 'ha_pham');
+                const auraColor = isLampPalace ? '#a855f7' : (
+                  tierKey === 'than_pham'   ? '#FF2D4D' :
+                  tierKey === 'tien_pham'   ? '#FFD700' :
+                  tierKey === 'cuc_pham'    ? '#8E44AD' :
+                  tierKey === 'thuong_pham' ? '#2E86DE' :
+                  tierKey === 'trung_pham'  ? '#4CAF50' : '#B0B0B0'
+                );
 
-                  return (
-                    <div
-                      key={floorNum}
-                      className={`${styles.floorCard} ${
-                        isRealized   ? styles.floorCardRealized
-                        : isBottleneck ? styles.floorCardBottleneck
-                        : styles.floorCardHollow
-                      } ${isLampPalace ? styles.floorCardLamp : ''}`}
-                      style={{
-                        '--tier-color': auraColor,
-                        '--tier-glow': auraGlow,
-                      }}
-                      title={`Tầng ${floorNum}: ${
-                        isLampPalace ? 'Chân Cung Mệnh Đăng (100% Hóa Thực)'
-                        : isRealized ? (anchor ? `Hóa Thực · Trấn: ${anchor.name}` : 'Hóa Thực Cung Thật')
-                        : isBottleneck ? '99.99% · Cần Vật Trấn Áp'
-                        : `Hư Ảo (${expPercent}%)`}`}
-                    >
-                      {/* Colored left bar for 2-Layer Visual Identity */}
-                      {isRealized && (
-                        <div
-                          className={styles.floorLeftBar}
-                          style={{ background: auraColor, boxShadow: `0 0 10px ${auraGlow}` }}
-                        />
-                      )}
-                      {isBottleneck && (
-                        <div className={styles.floorLeftBarBottleneck} />
-                      )}
+                // Core color (Layer 2 - Ngũ hành / Lore)
+                const loiColor = elemTheme?.color || auraColor;
 
-                      {/* Floor number badge */}
-                      <span
-                        className={styles.floorNumBadge}
-                        style={isRealized ? { color: auraColor } : {}}
-                      >
-                        T{floorNum}
-                      </span>
+                // Trang thai: 'hoan-thien' | 'dang-ngung-thuc' | 'hu-ao'
+                const trangThai = isRealized ? 'hoan-thien' : isBottleneck ? 'dang-ngung-thuc' : expPercent > 0 ? 'dang-ngung-thuc' : 'hu-ao';
+                const loai = isLampPalace ? 'menh-dang' : 'thuong';
+                const tierIndex = i; // 0 for top floor down to maxThienCung-1 for T1
 
-                      {/* Content */}
-                      {isRealized ? (
-                        <div className={styles.floorRealizedContent}>
-                          {/* Distinct Icon Slot: Sphere Kim Đan Core vs Lantern Mệnh Đăng */}
-                          <div className={styles.floorIconSlot}>
-                            <ArtifactIcon
-                              item={isLampPalace ? (lobj || { tier: 'than_pham', color: '#a855f7', name: 'Mệnh Đăng' }) : artifactObj}
-                              isLamp={isLampPalace}
-                              size={26}
-                            />
-                          </div>
-                          {/* Palace Name */}
-                          <span
-                            className={styles.floorPalaceName}
-                            style={{ color: auraColor, textShadow: `0 0 8px ${auraGlow}` }}
-                          >
-                            {palaceName}
-                          </span>
-                        </div>
-                      ) : isBottleneck ? (
-                        <div className={styles.floorBottleneckContent}>
-                          <span className={styles.bottleneckPulse}>⚡</span>
-                          <span className={styles.bottleneckLabel}>99.99% · Khảm Nạm Trấn Vật</span>
-                        </div>
-                      ) : (
-                        <div className={styles.floorHollowContent}>
-                          <span className={styles.hollowLabel}>
-                            {expPercent > 0 ? `☁️ Ngưng Thực ${expPercent}%...` : 'Mây mù hư ảo...'}
-                          </span>
-                          {expPercent > 0 && (
-                            <div className={styles.hollowProgressTrack}>
-                              <div className={styles.hollowProgressBar} style={{ width: `${expPercent}%` }} />
-                            </div>
-                          )}
-                        </div>
-                      )}
+                return (
+                  <div
+                    key={floorNum}
+                    className={styles.tang}
+                    data-tier={floorNum}
+                    data-loai={loai}
+                    data-trang-thai={trangThai}
+                    data-pham-chat={tierKey}
+                    style={{
+                      '--tier-index': tierIndex,
+                      '--aura-color': auraColor,
+                      '--loi-color': loiColor,
+                      '--tien-do': `${expPercent}%`,
+                    }}
+                    title={`Tầng ${floorNum}: ${
+                      isLampPalace ? 'Chân Cung Mệnh Đăng (100% Ngưng Thực)'
+                      : isRealized ? (anchor ? `Hoàn Thiện · Trấn: ${anchor.name}` : 'Hoàn Thiện Cung Thật')
+                      : isBottleneck ? '99.99% · Cần Vật Trấn Áp'
+                      : `Hư Ảo (${expPercent}%)`}`}
+                  >
+                    {/* Khung Kiến Trúc 3D (Cột, Mái, Lan Can, Thập Tự) */}
+                    <div className={styles.khungKienTruc}>
+                      <div className={styles.khungRoof} />
+                      <div className={styles.khungPillars}>
+                        <span className={styles.pillarLeft} />
+                        <span className={styles.pillarRight} />
+                      </div>
+                      <span className={styles.tangBadge}>T{floorNum}</span>
+                      <span className={styles.tangTitle}>{palaceName}</span>
                     </div>
-                  );
-                })}
-              </div>
+
+                    {/* Viên Kim Đan / Đèn Mệnh Đăng (Chỉ hiện khi HOÀN THIỆN) */}
+                    {trangThai === 'hoan-thien' && (
+                      <div className={styles.kimDan}>
+                        <div className={styles.kimDanLoi} />
+                        <div className={styles.kimDanIcon}>
+                          <ArtifactIcon
+                            item={isLampPalace ? (lobj || { tier: 'than_pham', color: '#a855f7', name: 'Mệnh Đăng' }) : artifactObj}
+                            isLamp={isLampPalace}
+                            size={24}
+                          />
+                        </div>
+                        <div className={styles.kimDanParticles}>
+                          <span className={styles.sparkle} style={{ top: -2, right: -2 }}>✦</span>
+                          <span className={styles.sparkle} style={{ bottom: -2, left: -2 }}>✨</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tiến độ ngưng thực (khi ĐANG NGUNG THỰC) */}
+                    {trangThai === 'dang-ngung-thuc' && (
+                      <div className={styles.ngungThucTrack}>
+                        <div className={styles.ngungThucBar} style={{ width: `${expPercent || 99.99}%` }} />
+                        <span className={styles.ngungThucText}>
+                          {isBottleneck ? '⚡ 99.99% · Cần Trấn Vật' : `${expPercent}%`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Bottom Realm Badge */}
+          {/* Bottom Realm Status Badge */}
           <div className={styles.stageStatusBadge}>
             <span style={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#ffcc00', textShadow: '0 0 12px rgba(255,204,0,0.7)' }}>
               ✨ THIÊN CUNG KIM ĐAN ✨

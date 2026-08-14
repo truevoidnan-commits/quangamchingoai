@@ -357,16 +357,35 @@
   padding: 6px 12px 34px;
 }
 
-/* 3D Pagoda Perspective Container */
-.pagoda3DStage {
-  position: relative;
+/* 3D Pagoda Perspective Container (BẮT BUỘC) */
+.lauCacContainer {
+  perspective: 1200px;          /* BẮT BUỘC — 3D depth */
+  perspective-origin: 50% 80%;  /* Nhìn ngước lên từ dưới */
   width: 100%;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  z-index: 5;
+  margin-bottom: 28px;
+}
+
+.lauCac3D {
+  transform-style: preserve-3d; /* BẮT BUỘC — giữ chiều sâu các tầng con */
+  transform: rotateX(8deg);     /* Nghiêng nhẹ tạo phối cảnh */
+  width: 100%;
+  max-width: 270px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  perspective: 700px;
-  transform-style: preserve-3d;
-  will-change: transform;
+  max-height: 165px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.lauCac3D::-webkit-scrollbar { width: 3px; }
+.lauCac3D::-webkit-scrollbar-thumb {
+  background: rgba(255, 204, 0, 0.3);
+  border-radius: 3px;
 }
 
 /* Mây Mù Backdrop */
@@ -408,62 +427,16 @@
   z-index: 2;
 }
 
-/* Container Tòa Tháp 3D */
-.celestialTowerContainer {
-  position: relative;
-  width: 100%;
-  max-width: 270px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  z-index: 5;
-  margin-bottom: 26px;
-  transform: rotateX(8deg) translateZ(0);
-  transform-style: preserve-3d;
-  will-change: transform;
-}
-
-/* Chóp Tháp — Pagoda Style */
-.towerSpire {
+/* 3D Spire roof */
+.spire3D {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-bottom: 4px;
-  position: relative;
+  transform: translateZ(20px);
 }
 
-.spireParticles {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.spireParticle {
-  position: absolute;
-  font-size: 8px;
-  color: #ffcc00;
-  opacity: 0;
-  animation: spireFloat 2.4s ease-in-out infinite;
-  animation-delay: var(--d, 0s);
-  transform: translate(var(--tx, 0), var(--ty, 0));
-}
-
-@keyframes spireFloat {
-  0%   { opacity: 0;   transform: translate(var(--tx), var(--ty)) scale(0.6); }
-  40%  { opacity: 0.9; transform: translate(var(--tx), calc(var(--ty) - 6px)) scale(1); }
-  100% { opacity: 0;   transform: translate(var(--tx), calc(var(--ty) - 14px)) scale(0.5); }
-}
-
-.spireBody {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-}
-
-.spireTopNeedle {
+.spireNeedle {
   width: 4px;
   height: 14px;
   background: linear-gradient(to bottom, #fff8dc, #ffcc00);
@@ -471,97 +444,198 @@
   filter: drop-shadow(0 0 6px #ffcc00);
 }
 
-.spireRoofTier1 {
+.spireRoofTop {
   width: 38px;
   height: 8px;
   background: linear-gradient(to bottom, #ffcc00, #b45309);
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-  filter: drop-shadow(0 2px 4px rgba(180, 83, 9, 0.6));
 }
 
-.spireRoofTier2 {
+.spireRoofBase {
   width: 56px;
   height: 9px;
   background: linear-gradient(to bottom, #d97706, #7c2d12);
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-  filter: drop-shadow(0 2px 6px rgba(124, 45, 18, 0.5));
   margin-top: -1px;
 }
 
-/* ─── Danh Sách Tầng ─── */
-.towerFloorsList {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  max-height: 150px;
-  overflow-y: auto;
-  padding: 2px 4px 6px 0;
-}
-.towerFloorsList::-webkit-scrollbar { width: 3px; }
-.towerFloorsList::-webkit-scrollbar-thumb {
-  background: rgba(255, 204, 0, 0.25);
-  border-radius: 3px;
-}
-
-/* ─── Floor Card Base ─── */
-.floorCard {
+/* ─── TẦNG THÁP 3D (.tang) ─── */
+.tang {
   position: relative;
   width: 100%;
-  min-height: 38px;
+  min-height: 40px;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 5px 8px 5px 4px;
+  justify-content: space-between;
+  padding: 4px 10px;
+  margin-bottom: 3px;
   border-radius: 6px;
-  transition: opacity 0.25s, box-shadow 0.25s, transform 0.2s;
-  overflow: hidden;
-}
-
-/* ─── Realized Floor ─── */
-.floorCardRealized {
   background: rgba(16, 25, 39, 0.85);
-  box-shadow: inset 0 0 12px rgba(0,0,0,0.4), 0 0 8px var(--tier-glow, rgba(255,204,0,0.25));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transform: translateZ(calc(var(--tier-index) * -6px)) scale(calc(1 - var(--tier-index) * 0.015));
+  transition: transform 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
 }
 
-/* Lamp palace tint */
-.floorCardLamp.floorCardRealized {
-  background: rgba(28, 10, 40, 0.88);
+/* Data state styling */
+.tang[data-trang-thai="hu-ao"] {
+  opacity: 0.25;
+  filter: blur(2px) grayscale(0.6);
+  border-style: dashed;
 }
 
-/* ─── Bottleneck Floor ─── */
-.floorCardBottleneck {
-  background: rgba(40, 18, 5, 0.85);
-  box-shadow: 0 0 12px rgba(249,115,22,0.35), inset 0 0 8px rgba(249,115,22,0.1);
-  animation: bottleneckPulseCard 1.8s ease-in-out infinite;
+.tang[data-trang-thai="dang-ngung-thuc"] {
+  opacity: calc(0.4 + (parseFloat(var(--tien-do, 0)) / 100) * 0.55);
+  filter: blur(0.5px);
+  border-color: var(--aura-color, #38bdf8);
 }
 
-@keyframes bottleneckPulseCard {
-  0%, 100% { box-shadow: 0 0 10px rgba(249,115,22,0.3), inset 0 0 6px rgba(249,115,22,0.08); }
-  50%       { box-shadow: 0 0 18px rgba(249,115,22,0.55), inset 0 0 12px rgba(249,115,22,0.18); }
+.tang[data-trang-thai="hoan-thien"] {
+  opacity: 1;
+  filter: none;
+  border-color: var(--aura-color, #ffcc00);
+  box-shadow: 0 0 12px var(--aura-color, rgba(255,204,0,0.3)), inset 0 0 8px rgba(0,0,0,0.5);
 }
 
-/* ─── Hollow Floor ─── */
-.floorCardHollow {
-  background: rgba(16, 25, 39, 0.3);
-  opacity: 0.38;
-  border: 1px solid rgba(255,255,255,0.06);
+.tang[data-loai="menh-dang"] {
+  background: rgba(28, 10, 40, 0.9);
 }
 
-.hollowProgressTrack {
-  width: 60px;
-  height: 3px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 2px;
+/* Khung Kiến Trúc (Tên + Số tầng) */
+.khungKienTruc {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tangBadge {
+  font-family: var(--font-serif);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--aura-color, #ffcc00);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--aura-color, rgba(255,204,0,0.4));
+  flex-shrink: 0;
+}
+
+.tangTitle {
+  font-family: var(--font-serif);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--aura-color, #ffcc00);
+  text-shadow: 0 0 8px var(--aura-color, rgba(255,204,0,0.6));
+  white-space: nowrap;
   overflow: hidden;
-  margin-left: auto;
+  text-overflow: ellipsis;
 }
 
-.hollowProgressBar {
-  height: 100%;
-  background: linear-gradient(90deg, #38bdf8, #ffcc00);
-  border-radius: 2px;
-  transition: width 0.4s ease;
+/* ─── VIÊN KIM ĐAN (HÌNH CẦU HOẶC ĐÈN LỒNG THẬT) ─── */
+.kimDan {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: kimDanPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Thường = Hình Cầu Tròn Độc Lập (border-radius: 50% + radial-gradient) */
+.tang[data-loai="thuong"] .kimDan {
+  border-radius: 50%;
+  box-shadow: 0 0 14px var(--aura-color, #ffcc00), 0 0 4px var(--aura-color, #ffcc00);
+  border: 1.5px solid var(--aura-color, #ffcc00);
+}
+
+/* Mệnh Đăng = Dạng Đèn Lồng / Ngọn Đăng */
+.tang[data-loai="menh-dang"] .kimDan {
+  border-radius: 6px;
+  clip-path: polygon(20% 0%, 80% 0%, 100% 30%, 85% 100%, 15% 100%, 0% 30%);
+  box-shadow: 0 0 16px var(--aura-color, #a855f7);
+  border: 1.5px solid var(--aura-color, #a855f7);
+}
+
+/* Lõi Kim Đan (Layer 2 - Radial Gradient Ngũ Hành) */
+.kimDanLoi {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, var(--loi-color, #ffcc00) 60%, #0d1628 100%);
+  opacity: 0.85;
+}
+
+/* Icon vật khảm đúc nổi trên bề mặt */
+.kimDanIcon {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.9));
+}
+
+.kimDanParticles {
+  position: absolute;
+  inset: -4px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.sparkle {
+  position: absolute;
+  font-size: 8px;
+  color: #fff;
+  animation: sparkleTwinkle 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes kimDanPop {
+  0%   { transform: scale(0); opacity: 0; }
+  70%  { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes sparkleTwinkle {
+  0%   { opacity: 0.3; transform: scale(0.8); }
+  100% { opacity: 1;   transform: scale(1.2); }
+}
+
+/* Thanh ngưng thực */
+.ngungThucTrack {
+  position: relative;
+  width: 90px;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ngungThucBar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, #38bdf8, var(--aura-color, #f97316));
+  border-radius: 6px;
+}
+
+.ngungThucText {
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-serif);
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
 }
 
 /* ─── Left Bar ─── */
