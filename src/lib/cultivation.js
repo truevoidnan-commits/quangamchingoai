@@ -2704,6 +2704,30 @@ export function attemptTribulationAll() {
 }
 
 /**
+ * NẠP ĐẦY TẤT CẢ THIÊN MỆNH (100%) CHO TOÀN BỘ ĐẠO ANH
+ */
+export function fillAllDaoAnhThienMenh() {
+  const state = getCultivationState();
+  if (!state.daoAnhs || state.daoAnhs.length === 0) {
+    throw new Error('Chưa có Đạo Anh nào để nạp Thiên Mệnh.');
+  }
+
+  let filledCount = 0;
+  state.daoAnhs.forEach(da => {
+    if (da.currentKiep < 5) {
+      da.currentThienMenh = da.maxThienMenh;
+      filledCount++;
+    }
+  });
+
+  const msg = `⚡ THẦN UY TẤT THẮNG! Đã nạp đầy 100% Thiên Mệnh cho ${filledCount} Đạo Anh! Sẵn sàng nghênh tiếp Lôi Kiếp!`;
+  state.logs.unshift({ text: msg, time: Date.now() });
+
+  saveCultivationState(state);
+  return { state, filledCount, message: msg };
+}
+
+/**
  * Format tên cảnh giới hiển thị súc tích:
  * - Ngưng Khí X Tầng
  * - Trúc Cơ X Hỏa

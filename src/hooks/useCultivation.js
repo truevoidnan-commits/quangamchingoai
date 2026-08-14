@@ -26,6 +26,7 @@ import {
   injectThienMenhToDaoAnh,
   attemptTribulationSingle,
   attemptTribulationAll,
+  fillAllDaoAnhThienMenh,
   getRealmDisplayName,
   getLampPalaceName,
   getPalaceNameFromArtifact,
@@ -229,6 +230,12 @@ export function useCultivation() {
   const totalCombatPower = getTotalCombatPowerAnh(cultivation);
   const totalMenhHoa = getTotalMenhHoa(cultivation);
 
+  const handleFillAllDaoAnhThienMenh = useCallback(() => {
+    const res = fillAllDaoAnhThienMenh();
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
   return {
     cultivation,
     displayName,
@@ -261,6 +268,7 @@ export function useCultivation() {
     injectThienMenh: handleInjectThienMenh,
     attemptTribulationSingle: handleTribulationSingle,
     attemptTribulationAll: handleTribulationAll,
+    fillAllDaoAnhThienMenh: handleFillAllDaoAnhThienMenh,
     resetCultivation: handleReset,
     debugAddChapter,
     debugGiveAllLamps,

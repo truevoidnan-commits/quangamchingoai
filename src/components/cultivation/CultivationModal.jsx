@@ -33,6 +33,7 @@ export default function CultivationModal({ isOpen, onClose }) {
     injectThienMenh,
     attemptTribulationSingle,
     attemptTribulationAll,
+    fillAllDaoAnhThienMenh,
     resetCultivation,
     LIFE_LAMPS,
     SUPPRESSING_ARTIFACTS,
@@ -855,6 +856,26 @@ export default function CultivationModal({ isOpen, onClose }) {
                           </div>
                         )
                       )}
+                      {/* Nút Nạp Đầy 100% Thiên Mệnh cho Toàn Bộ Đạo Anh khi ở Giả Anh / Nguyên Anh */}
+                      {isNguyenAnhStage && (cultivation.daoAnhs || []).length > 0 && (
+                        <button
+                          className="btn-gold"
+                          style={{
+                            width: '100%',
+                            marginTop: 14,
+                            padding: '11px 16px',
+                            fontSize: 12.5,
+                            fontWeight: 800,
+                            letterSpacing: '0.5px',
+                            boxShadow: '0 0 16px rgba(255, 204, 0, 0.4)',
+                            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                            border: '1px solid #ffcc00',
+                          }}
+                          onClick={() => triggerAction(fillAllDaoAnhThienMenh)}
+                        >
+                          ⚡ NẠP ĐẦY 100% THIÊN MỆNH (TOÀN BỘ ĐẠO ANH)
+                        </button>
+                      )}
                     </>
                   );
                 })()}
@@ -1324,14 +1345,23 @@ export default function CultivationModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* Vạn Kiếp Tề Thăng button */}
-              <button
-                className={`btn-gold ${styles.massTribulationBtn}`}
-                style={{ width: '100%', padding: '10px 14px', fontSize: 12.5, fontWeight: 700 }}
-                onClick={handleAllTribulation}
-              >
-                👑 VẠN KIẾP TỀ THĂNG (ĐỒNG LOẠT VƯỢT KIẾP CHO CÁC ĐẠO ANH CÙNG NẤC KIẾP)
-              </button>
+              {/* Nạp Đầy 100% & Vạn Kiếp Tề Thăng buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                <button
+                  className="btn-gold"
+                  style={{ width: '100%', padding: '10px 14px', fontSize: 12.5, fontWeight: 800, background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
+                  onClick={() => triggerAction(fillAllDaoAnhThienMenh)}
+                >
+                  ⚡ NẠP ĐẦY 100% THIÊN MỆNH (TOÀN BỘ ĐẠO ANH)
+                </button>
+                <button
+                  className={`btn-gold ${styles.massTribulationBtn}`}
+                  style={{ width: '100%', padding: '10px 14px', fontSize: 12.5, fontWeight: 700 }}
+                  onClick={handleAllTribulation}
+                >
+                  👑 VẠN KIẾP TỀ THĂNG (ĐỒNG LOẠT VƯỢT KIẾP CHO CÁC ĐẠO ANH CÙNG NẤC KIẾP)
+                </button>
+              </div>
             </div>
 
             {/* List of Dao Anhs */}
