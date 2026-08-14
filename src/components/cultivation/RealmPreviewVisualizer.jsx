@@ -557,8 +557,8 @@ export default function RealmPreviewVisualizer({ cultivation }) {
 
             {/* Orbiting Dao Anh Guardians with Trấn Cung Bảo Vật & Công Pháp (Ellipse Orbit to avoid covering bottom badge) */}
             <div className={styles.daoAnhsOrbitList}>
-              {(daoAnhs || []).slice(0, 9).map((da, idx) => {
-                const totalCount = Math.max(1, Math.min(9, daoAnhs.length));
+              {(daoAnhs || []).slice(0, 11).map((da, idx) => {
+                const totalCount = Math.max(1, Math.min(11, daoAnhs.length));
                 const angleDeg = (idx / totalCount) * 360 - 90;
                 const angleRad = (angleDeg * Math.PI) / 180;
                 const radiusX = 102; // Ngang
@@ -566,55 +566,22 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 const posX = Math.cos(angleRad) * radiusX;
                 const posY = Math.sin(angleRad) * radiusY;
 
-                const palaceIdx = da.palaceIndex ?? idx;
-                const anchor = cultivation?.palaceAnchors?.[palaceIdx];
-                const isLamp = da.fromLamp || palaceIdx >= (maxThienCung - (cultivation?.absorbedLamps || []).length);
-                const lampId = isLamp ? (cultivation?.absorbedLamps || [])[palaceIdx - (maxThienCung - (cultivation?.absorbedLamps || []).length)] : null;
-                const lamp = lampId ? LIFE_LAMPS.find(l => l.id === lampId) : null;
-                const lampTier = lamp ? (LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham) : null;
-
-                // Hoạt ảnh Bảo Vật Trấn Áp / Công Pháp trấn thủ cung
-                let artifactIcon = '🗡️';
-                let artifactColor = '#ffcc00';
-                let artifactName = da.name;
-
-                if (anchor) {
-                  artifactIcon = anchor.icon;
-                  artifactColor = anchor.color || '#38bdf8';
-                  artifactName = anchor.shortName || anchor.name;
-                } else if (lamp) {
-                  artifactIcon = lamp.icon;
-                  artifactColor = lampTier?.color || '#ffcc00';
-                  artifactName = lamp.shortName || lamp.name;
-                } else {
-                  // Mẫu Trấn Cung Bảo Vật & Công Pháp đa dạng luân chuyển
-                  const defaultArtifacts = [
-                    { icon: '🌌', color: '#ff4d4f', name: 'Hỗn Độn Sơ Khai' },
-                    { icon: '🗡️', color: '#38bdf8', name: 'Tru Tiên Kiếm' },
-                    { icon: '📜', color: '#ffcc00', name: 'Vô Thượng Tâm Kinh' },
-                    { icon: '🏺', color: '#a855f7', name: 'Thôn Thiên Ma Bình' },
-                    { icon: '⚡', color: '#22c3f0', name: 'Bôn Lôi Kiếm Quyết' },
-                    { icon: '🪷', color: '#34d399', name: 'Hỗn Độn Thanh Liên' },
-                    { icon: '⏳', color: '#f59e0b', name: 'Khởi Nguyên Thời Không' },
-                    { icon: '🛡️', color: '#60a5fa', name: 'Kim Cương Thần Thể' },
-                    { icon: '🔮', color: '#ec4899', name: 'Vận Mệnh Thần Châu' },
-                  ];
-                  const item = defaultArtifacts[palaceIdx % defaultArtifacts.length];
-                  artifactIcon = item.icon;
-                  artifactColor = item.color;
-                  artifactName = item.name;
-                }
+                // Dùng getDaoAnhTheme chuẩn từ cultivation.js
+                const daTheme = getDaoAnhTheme(da, cultivation);
+                const artifactIcon = daTheme.icon;
+                const artifactColor = daTheme.color;
+                const artifactName = daTheme.shortName || da.name;
 
                 return (
                   <div
                     key={da.id}
-                    className={`${styles.orbitDaoAnhMini} ${da.fromLamp ? styles.orbitLampProtected : ''}`}
+                    className={`${styles.orbitDaoAnhMini} ${daTheme.isLamp ? styles.orbitLampProtected : ''}`}
                     style={{
                       transform: `translate(${posX.toFixed(1)}px, ${posY.toFixed(1)}px)`,
                       borderColor: artifactColor,
                       boxShadow: `0 0 10px ${artifactColor}55`,
                     }}
-                    title={`${da.name} · Trấn Vật: ${artifactName} (Kiếp ${da.currentKiep}/5)`}
+                    title={`${da.name} · Trấn Vật: ${artifactName} (${da.currentKiep > 0 ? `${da.currentKiep} Kiếp` : 'Giả Anh 0 Kiếp'})`}
                   >
                     <span
                       className={styles.miniIcon}

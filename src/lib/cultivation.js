@@ -1024,11 +1024,11 @@ export function convertToThienMenhIfInAnhRealm(state) {
 
   state.isThienMenhUnlocked = true;
 
-  // 10 Tu Vi = 1 Lực Thiên Mệnh (Tỉ lệ 10:1)
+  // 10 Tu Vi = 1 Lực Thiên Mệnh (Tỉ lệ 10:1), 1 Tiên Tinh = 2 Lực Thiên Mệnh (Tỉ lệ 1:2)
   const expAmount = state.totalExp || 0;
   const tmFromExp = Math.floor(expAmount / 10);
   const tienTinhAmount = state.tienTinh || 0;
-  const tmFromTienTinh = tienTinhAmount * 10; // 1 Tiên Tinh = 10 Lực Thiên Mệnh
+  const tmFromTienTinh = tienTinhAmount * 2; // 1 Tiên Tinh = 2 Lực Thiên Mệnh
   const totalConverted = tmFromExp + tmFromTienTinh;
 
   if (totalConverted > 0) {
@@ -1037,7 +1037,7 @@ export function convertToThienMenhIfInAnhRealm(state) {
     state.tienTinh = 0;
     state.dangDiem = 0;
     state.logs.unshift({
-      text: `✨ THIÊN MỆNH CHUYỂN HÓA! Đã chuyển đổi ${expAmount.toLocaleString()} Tu Vi (10 Tu Vi = 1 TM) và ${tienTinhAmount.toLocaleString()} Tiên Tinh thành +${totalConverted.toLocaleString()} Lực Thiên Mệnh!`,
+      text: `✨ THIÊN MỆNH CHUYỂN HÓA! Đã chuyển đổi ${expAmount.toLocaleString()} Tu Vi (10 Tu Vi = 1 TM) và ${tienTinhAmount.toLocaleString()} Tiên Tinh (1 TT = 2 TM) thành +${totalConverted.toLocaleString()} Lực Thiên Mệnh!`,
       time: Date.now(),
     });
   }
@@ -1084,11 +1084,13 @@ export function getDaoAnhTheme(daoAnh, state) {
     const selfIdx = pIdx - lampCount;
     const anchor = state?.palaceAnchors?.[selfIdx];
     if (anchor) {
+      const tierInfo = LAMP_TIERS[anchor.tier] || LAMP_TIERS.trung_pham;
+      const color = anchor.color || tierInfo?.color || '#38bdf8';
       return {
         icon: anchor.icon || '🏛️',
-        color: '#38bdf8',
-        glow: 'rgba(56, 189, 248, 0.4)',
-        bg: 'rgba(14, 116, 144, 0.15)',
+        color,
+        glow: tierInfo?.border || `${color}66`,
+        bg: tierInfo?.bg || `${color}15`,
         isLamp: false,
         shortName: anchor.shortName || anchor.name,
       };
@@ -1877,15 +1879,15 @@ export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = 
     'cung_khong': 'Cửu Thiên Cung Khuyết Cung',
     'vo_thuong': 'Bồ Đề Tâm Pháp Cung',
     'thai_so': 'Thái Sơ Hỗn Độn Kiếm Cung',
-    'am_duong_lo': 'Lưỡng Nghi Lô Cung',
+    'am_duong_lo': 'Âm Dương Lưỡng Nghi Cung',
     'nhan_qua_kinh': 'Nhân Quả Luân Hồi Cung',
     'thien_thu': 'Vô Tự Thiên Thư Cung',
     'tien_vuong': 'Đăng Tiên Thần Cung',
-    'chuong_thien': 'Chưởng Thiên Hồ Lô Cung',
+    'chuong_thien': 'Chưởng Thiên Cung',
     'hoa_sen': 'Thanh Liên Đạo Cung',
 
     'hong_mong_khi': 'Hồng Mông Tử Khí Cung',
-    'van_menh_chau': 'Vận Mệnh Châu Cung',
+    'van_menh_chau': 'Vận Mệnh Thần Cung',
     'hon_don_so_khai': 'Hỗn Độn Sơ Khai Cung',
     'ngoc_diep': 'Tạo Hóa Ngọc Điệp Cung',
     'bat_hu_dinh': 'Vạn Cổ Bất Hủ Cung',
@@ -1906,7 +1908,11 @@ export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = 
     baseName = customMap[artifact.id];
   } else {
     if (!baseName.endsWith(' Cung')) {
-      const stripSuffixes = [' Đồ', ' Quyết', ' Pháp', ' Kinh', ' Điển', ' Thuật', ' Công', ' Trận', ' Kính', ' Đỉnh', ' Bình'];
+      const stripSuffixes = [
+        ' Lô', ' Đồ', ' Quyết', ' Pháp', ' Kinh', ' Điển', ' Thuật', ' Công', ' Trận',
+        ' Kính', ' Đỉnh', ' Bình', ' Châu', ' Tháp', ' Ấn', ' Hồ Lô', ' Lồng Đèn',
+        ' Kiếm', ' Búa', ' Chuông', ' Trượng', ' Giáp', ' Xích', ' Bội', ' Phách', ' Thiết'
+      ];
       for (const suf of stripSuffixes) {
         if (baseName.endsWith(suf)) {
           baseName = baseName.slice(0, -suf.length);
@@ -2228,7 +2234,6 @@ export function endKimDanTrialV2() {
     state.chaptersReadCount = backup.chaptersReadCount || 0;
     state.preTrialBackupV2 = null;
   } else {
-    // Reset về trạng thái sơ khai
     state.realm = 'phap_khieu';
     state.expCurrentRealm = 0;
     state.totalExp = 0;
@@ -2591,7 +2596,7 @@ export function attemptTribulationSingle(daoAnhId) {
     throw new Error(`Đạo Anh mới đạt ${percent}% Thiên Mệnh. Cần tối thiểu 70% Thiên Mệnh để nghênh tiếp ${tribulationName}.`);
   }
 
-  const successChance = Math.min(100, 50 + (percent - 70));
+  const successChance = Math.min(100, 60 + (percent - 70));
   const roll = Math.random() * 100;
   const isSuccess = roll <= successChance;
 
@@ -2600,7 +2605,7 @@ export function attemptTribulationSingle(daoAnhId) {
     da.currentKiep += 1;
     da.currentThienMenh = 0;
     da.maxThienMenh = KIEP_THIEN_MENH_REQUIREMENTS[Math.min(4, da.currentKiep)];
-    message = `⚡ ĐỘ KIẾP THÀNH CÔNG! ${da.name} (${da.element || 'Thần Thể'}) đã vượt qua [${tribulationName}], thăng hoa lên Kiếp thứ ${da.currentKiep} (+1 Anh chiến lực)!`;
+    message = `⚡ ĐỘ KIẾP THÀNH CÔNG! ${formatDaoAnhTitle(da.name)} đã vượt qua [${tribulationName}], thăng hoa lên Kiếp thứ ${da.currentKiep} (+1 Anh chiến lực)!`;
     state.logs.unshift({ text: message, time: Date.now() });
 
     if (state.daoAnhs.some(d => d.currentKiep >= 1)) {
@@ -2638,43 +2643,61 @@ export function attemptTribulationAll() {
     throw new Error('Không có Đạo Anh nào đạt từ 70% Thiên Mệnh trở lên để độ kiếp.');
   }
 
-  let successCount = 0;
-  let failCount = 0;
-  let totalBonusThienMenh = 0;
+  // 1. Kiểm tra tất cả Đạo Anh đủ điều kiện có CÙNG SỐ KIẾP hay không
+  const firstKiep = eligibleDaoAnhs[0].currentKiep;
+  const isSameKiep = eligibleDaoAnhs.every(da => da.currentKiep === firstKiep);
+  if (!isSameKiep) {
+    throw new Error('Vạn Kiếp Tề Thăng yêu cầu tất cả Đạo Anh tham gia phải CÙNG NẤC KIẾP (VD: Tất cả cùng ở 0 Kiếp, hoặc tất cả cùng ở 1 Kiếp)!');
+  }
 
-  eligibleDaoAnhs.forEach(da => {
+  // 2. Kiểm tra tỉ lệ thành công từng Đạo Anh (70% TM = 60% tỉ lệ thành công)
+  const rollResults = eligibleDaoAnhs.map(da => {
     const percent = Math.floor((da.currentThienMenh / da.maxThienMenh) * 100);
-    const successChance = Math.min(100, 50 + (percent - 70));
-    const isSuccess = Math.random() * 100 <= successChance;
+    const successChance = Math.min(100, 60 + (percent - 70));
+    const passed = Math.random() * 100 <= successChance;
+    return { da, percent, successChance, passed };
+  });
 
-    if (isSuccess) {
-      successCount++;
+  const allPassed = rollResults.every(r => r.passed);
+
+  let resultMsg = '';
+  if (allPassed) {
+    eligibleDaoAnhs.forEach(da => {
       da.currentKiep += 1;
-      const bonus = Math.round(da.maxThienMenh * 0.5);
-      totalBonusThienMenh += bonus;
       da.currentThienMenh = 0;
       da.maxThienMenh = KIEP_THIEN_MENH_REQUIREMENTS[Math.min(4, da.currentKiep)];
-    } else {
-      failCount++;
+    });
+
+    if (state.daoAnhs.some(d => d.currentKiep >= 1)) {
+      state.realm = 'nguyen_anh';
+    }
+
+    resultMsg = `⚡ VẠN KIẾP TỀ THĂNG THÀNH CÔNG! Đồng loạt ${eligibleDaoAnhs.length} Đạo Anh đã thăng hoa lên Kiếp thứ ${firstKiep + 1}!`;
+    state.logs.unshift({ text: resultMsg, time: Date.now() });
+  } else {
+    // Nếu chỉ có 1 Đạo Anh thất bại ➔ TOÀN BỘ CÙNG THẤT BẠI!
+    eligibleDaoAnhs.forEach(da => {
       if (da.fromLamp) {
         da.currentThienMenh = Math.round(da.maxThienMenh * 0.5);
       } else {
         da.currentThienMenh = 0;
       }
-    }
-  });
+    });
 
-  state.totalThienMenh = (state.totalThienMenh || 0) + totalBonusThienMenh;
-
-  if (state.daoAnhs.some(d => d.currentKiep >= 1)) {
-    state.realm = 'nguyen_anh';
+    const failedNames = rollResults.filter(r => !r.passed).map(r => formatDaoAnhTitle(r.da.name)).join(', ');
+    resultMsg = `⚡ VẠN KIẾP TỀ THĂNG THẤT BẠI! Do [${failedNames}] bị thiên lôi đánh lui, toàn bộ ${eligibleDaoAnhs.length} Đạo Anh đều không thể lên kiếp!`;
+    state.logs.unshift({ text: resultMsg, time: Date.now() });
   }
 
-  const resultMsg = `🌟 VẠN KIẾP TỀ PHI KẾT THÚC: ${successCount} Đạo Anh vượt kiếp thành công, ${failCount} Đạo Anh thất bại. Nhận thưởng +${totalBonusThienMenh.toLocaleString()} Thiên Mệnh!`;
-  state.logs.unshift({ text: resultMsg, time: Date.now() });
-
   saveCultivationState(state);
-  return { state, successCount, failCount, totalBonusThienMenh, resultMsg };
+  return {
+    state,
+    isSuccess: allPassed,
+    totalCount: eligibleDaoAnhs.length,
+    successCount: allPassed ? eligibleDaoAnhs.length : 0,
+    failCount: allPassed ? 0 : eligibleDaoAnhs.length,
+    message: resultMsg,
+  };
 }
 
 /**

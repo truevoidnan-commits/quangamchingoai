@@ -675,7 +675,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                                   {daTheme.icon}
                                 </span>
                                 <span className={styles.palaceName} style={{ color: daTheme.color, fontWeight: 700 }}>
-                                  {title}{da.currentKiep > 0 ? ` (${da.currentKiep}K)` : ''}
+                                  {title}
                                 </span>
                                 <span className={styles.palaceStatus} style={{ color: daTheme.color }}>
                                   {da.currentKiep > 0 ? `✦ ${da.currentKiep} Kiếp` : '✦ Giả Anh (0 Kiếp)'}
@@ -1323,13 +1323,13 @@ export default function CultivationModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* Vạn Kiếp Tề Phi button */}
+              {/* Vạn Kiếp Tề Thăng button */}
               <button
                 className={`btn-gold ${styles.massTribulationBtn}`}
                 style={{ width: '100%', padding: '10px 14px', fontSize: 12.5, fontWeight: 700 }}
                 onClick={handleAllTribulation}
               >
-                👑 VẠN KIẾP TỀ PHI (TOÀN BỘ ĐẠO ANH CÙNG VƯỢT KIẾP · THƯỞNG +50% THIÊN MỆNH)
+                👑 VẠN KIẾP TỀ THĂNG (ĐỒNG LOẠT VƯỢT KIẾP CHO CÁC ĐẠO ANH CÙNG NẤC KIẾP)
               </button>
             </div>
 
@@ -1344,7 +1344,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                   const daTheme = getDaoAnhTheme(da, cultivation);
                   const percent = Math.min(100, Math.floor((da.currentThienMenh / da.maxThienMenh) * 100));
                   const isEligible = percent >= 70;
-                  const successChance = Math.min(100, 50 + (percent - 70));
+                  const successChance = Math.min(100, 60 + (percent - 70));
 
                   return (
                     <div
