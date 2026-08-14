@@ -141,7 +141,7 @@ export default function RealmPreviewVisualizer({
   }, [absorbedLamps]);
 
   return (
-    <div className={styles.visualizerWrapper}>
+    <div className={`${styles.visualizerWrapper} ${(realm === 'kim_dan' || realm === 'gia_anh' || realm === 'nguyen_anh') ? styles.visualizerWrapperTall : ''}`}>
       {/* ========================================================
           1. NGƯNG KHÍ VISUALIZER
          ======================================================== */}
