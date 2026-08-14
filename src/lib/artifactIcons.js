@@ -1,8 +1,6 @@
 // =========================================================================
 // ARTIFACT ICON MAPPING
-// Maps artifact IDs to their custom icon sources.
-// - All 16 Thần Phẩm artifacts use AI-generated images
-// - All other tiers use dedicated SVG art components
+// Maps artifact IDs & life lamp IDs to their custom icon sources.
 // =========================================================================
 
 const baseUrl = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/';
@@ -25,6 +23,13 @@ export const THAN_PHAM_AI_ICONS = {
   van_co_long_to:     baseUrl + 'icons/than_pham/van_co_long_to.jpg',
   sang_the_quang:     baseUrl + 'icons/than_pham/sang_the_quang.jpg',
   dai_dao_tieu_dao:  baseUrl + 'icons/than_pham/tieu_dao_thien.jpg',
+};
+
+/** Map of Thần Phẩm Life Lamp IDs to AI-generated icons */
+export const LAMP_THAN_PHAM_AI_ICONS = {
+  tan_tien_phe_than: baseUrl + 'icons/than_pham/lamp_tan_tien_phe_than.jpg',
+  thon_thien_ma_de:  baseUrl + 'icons/than_pham/lamp_thon_thien_ma_de.jpg',
+  hon_don_so_khai:   baseUrl + 'icons/than_pham/lamp_hon_don_so_khai.jpg',
 };
 
 /**

@@ -980,9 +980,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                         style={{ borderColor: isOwned ? tierInfo.color : 'var(--border-subtle)' }}
                       >
                         <div className={styles.lampCardTop}>
-                          <span className={styles.lampIcon} style={{ textShadow: `0 0 12px ${tierInfo.color}` }}>
-                            {lamp.icon}
-                          </span>
+                          <ArtifactIcon item={lamp} isLamp={true} size={28} />
                           <div className={styles.lampNameCol}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                               <h4 className={styles.lampName} style={{ color: isOwned ? tierInfo.color : 'var(--text-muted)' }}>

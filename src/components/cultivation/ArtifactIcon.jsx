@@ -9,7 +9,7 @@
 
 import React from 'react';
 import styles from './ArtifactIcon.module.css';
-import { THAN_PHAM_AI_ICONS, TIER_COLORS, TIER_GLOW } from '../../lib/artifactIcons';
+import { THAN_PHAM_AI_ICONS, LAMP_THAN_PHAM_AI_ICONS, TIER_COLORS, TIER_GLOW } from '../../lib/artifactIcons';
 
 // ─── DEDICATED SVG ART FOR THE 9 THẦN PHẨM ITEMS WITHOUT AI IMAGES ───────────
 
@@ -399,10 +399,29 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
   const color = item?.color || TIER_COLORS[tier] || '#94a3b8';
   const glow  = TIER_GLOW[tier]  || 'rgba(148,163,184,0.5)';
 
-  // Mệnh Đăng → flame lantern
+  // Mệnh Đăng → check for AI image first, fallback to SvgLamp
   if (isLamp) {
     const lampColor = item?.color || '#a855f7';
     const lampGlow  = `rgba(168,85,247,0.6)`;
+
+    if (item?.id && LAMP_THAN_PHAM_AI_ICONS[item.id] && !imgError) {
+      return (
+        <span
+          className={`${styles.iconWrapper} ${styles.imgWrapper} ${className}`}
+          style={{ '--icon-glow': lampGlow, width: size, height: size }}
+          title={item?.name || 'Mệnh Đăng'}
+        >
+          <img
+            src={LAMP_THAN_PHAM_AI_ICONS[item.id]}
+            alt={item?.name || 'Mệnh Đăng'}
+            className={styles.aiImg}
+            style={{ width: size, height: size }}
+            onError={() => setImgError(true)}
+          />
+        </span>
+      );
+    }
+
     return (
       <span
         className={`${styles.iconWrapper} ${styles.lampWrapper} ${className}`}
