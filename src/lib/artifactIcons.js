@@ -1,0 +1,59 @@
+// =========================================================================
+// ARTIFACT ICON MAPPING
+// Maps artifact IDs to their custom icon sources.
+// - than_pham with AI-generated images: use image path
+// - than_pham without AI image: use SVG fallback (rendered inline)
+// - All other tiers: SVG art components defined below
+// =========================================================================
+
+/** Map of Thần Phẩm artifact IDs that have AI-generated PNG icons */
+export const THAN_PHAM_AI_ICONS = {
+  hong_mong_khi:      '/icons/than_pham/hong_mong_tu_khi.jpg',
+  hon_don_so_khai:    '/icons/than_pham/hon_don_so_khai.jpg',
+  van_co_long_to:     '/icons/than_pham/van_co_long_to.jpg',
+  luan_hoi_ban:       '/icons/than_pham/luan_hoi_chan_kinh.jpg',
+  sang_the_quang:     '/icons/than_pham/sang_the_quang.jpg',
+  hu_vo_ban_nguyen:   '/icons/than_pham/hu_vo_tich_diet.jpg',
+  thuong_thuong_kiem: '/icons/than_pham/phat_thien_kiem.jpg',
+};
+
+/**
+ * Returns the icon config for a given artifact/lamp object.
+ * @param {object} item - artifact or lamp object with { id, tier, icon, color }
+ * @returns {{ type: 'img'|'svg'|'emoji', src?: string, tier: string, color: string }}
+ */
+export function getArtifactIconConfig(item) {
+  if (!item) return { type: 'emoji', emoji: '🌫️', tier: 'ha_pham', color: '#94a3b8' };
+
+  const tier = item.tier || 'ha_pham';
+  const color = item.color || TIER_COLORS[tier] || '#94a3b8';
+
+  // Thần Phẩm: check for AI image first
+  if (tier === 'than_pham' && THAN_PHAM_AI_ICONS[item.id]) {
+    return { type: 'img', src: THAN_PHAM_AI_ICONS[item.id], tier, color };
+  }
+
+  // All items: SVG art by tier
+  return { type: 'svg', svgKey: tier, tier, color };
+}
+
+export const TIER_COLORS = {
+  ha_pham:     '#e2e8f0',
+  trung_pham:  '#10b981',
+  thuong_pham: '#06b6d4',
+  cuc_pham:    '#a855f7',
+  tien_pham:   '#f59e0b',
+  than_pham:   '#ef4444',
+};
+
+export const TIER_GLOW = {
+  ha_pham:     'rgba(226,232,240,0.5)',
+  trung_pham:  'rgba(16,185,129,0.55)',
+  thuong_pham: 'rgba(6,182,212,0.55)',
+  cuc_pham:    'rgba(168,85,247,0.55)',
+  tien_pham:   'rgba(245,158,11,0.55)',
+  than_pham:   'rgba(239,68,68,0.6)',
+};
+
+export const LAMP_TIER_COLOR = '#a855f7';
+export const LAMP_TIER_GLOW  = 'rgba(168,85,247,0.55)';

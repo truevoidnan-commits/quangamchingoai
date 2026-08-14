@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { LIFE_LAMPS, LAMP_TIERS, getPalaceNameFromArtifact, getPalaceElementTheme, getLampPalaceName, formatDaoAnhTitle, getDaoAnhTheme } from '../../lib/cultivation';
+import { LIFE_LAMPS, LAMP_TIERS, SUPPRESSING_ARTIFACTS, getPalaceNameFromArtifact, getPalaceElementTheme, getLampPalaceName, formatDaoAnhTitle, getDaoAnhTheme } from '../../lib/cultivation';
+import ArtifactIcon from './ArtifactIcon';
 import styles from './RealmPreviewVisualizer.module.css';
 
 /**
@@ -316,113 +317,124 @@ export default function RealmPreviewVisualizer({ cultivation }) {
       )}
 
       {/* ========================================================
-          3. KIM ĐAN VISUALIZER: TÒA THIÊN LÂU (SỐ TẦNG THEO TRẦN THIÊN CUNG)
+          3. KIM ĐAN VISUALIZER: TÒA THIÊN LÂU — PREMIUM REDESIGN
          ======================================================== */}
       {realm === 'kim_dan' && (
         <div className={styles.kimDanStage}>
-          {/* Mây mù thiên giới bao quanh tòa lầu */}
-          <div className={styles.towerMistyBackdrop}>
-            <div className={styles.floatingCloudLeft}>☁️</div>
-            <div className={styles.floatingCloudRight}>☁️</div>
-          </div>
-
           {/* Tòa Thiên Cung Bảo Tháp */}
           <div className={styles.celestialTowerContainer}>
-            {/* Mái chóp đỉnh tháp Cửu Trùng */}
+            {/* Mái đình đài vàng đỉnh tháp */}
             <div className={styles.towerSpire}>
-              <span className={styles.spireGlow}>✦</span>
-              <div className={styles.spireRoof} />
+              <div className={styles.spireParticles}>
+                <span className={styles.spireParticle} style={{ '--d': '0.0s', '--tx': '-6px', '--ty': '-8px' }}>✦</span>
+                <span className={styles.spireParticle} style={{ '--d': '0.4s', '--tx': '7px',  '--ty': '-5px' }}>✦</span>
+                <span className={styles.spireParticle} style={{ '--d': '0.8s', '--tx': '-4px', '--ty': '-12px' }}>✦</span>
+              </div>
+              <div className={styles.spireBody}>
+                <div className={styles.spireTopNeedle} />
+                <div className={styles.spireRoofTier1} />
+                <div className={styles.spireRoofTier2} />
+              </div>
             </div>
 
-            {/* Các Tầng Lầu Thiên Cung (Xếp từ tầng cao nhất xuống tầng 1) */}
+            {/* Danh Sách Tầng Lầu */}
             <div className={styles.towerFloorsList}>
               {Array.from({ length: maxThienCung }).map((_, i) => {
-                // Tầng tính từ trên xuống: tầng maxThienCung -> tầng 1
                 const floorNum = maxThienCung - i;
-                // Lamp palaces = the HIGHEST floors (indices: maxThienCung-lampPalaceCount .. maxThienCung-1)
-                // But floors are mapped: palaceIndex = floorNum - 1
-                // Self palaces = indices 0..selfPalacesTotal-1 (lower floors)
-                // Lamp palaces = indices lampPalaceCount..maxThienCung-1 (upper floors)
-                // floorNum goes from maxThienCung down to 1, so palaceIndex = floorNum-1
-                // Lamp palace condition: palaceIndex >= maxThienCung - lampPalaceCount
-                //   => floorNum - 1 >= maxThienCung - lampPalaceCount
-                //   => floorNum > maxThienCung - lampPalaceCount
                 const palaceIdx = floorNum - 1;
                 const selfPalacesTotal = maxThienCung - lampPalaceCount;
-                const isLampPalace = palaceIdx >= selfPalacesTotal; // upper floors = lamp palaces
-                // Self palace index within self palaces (1-indexed)
-                const selfNum = palaceIdx + 1; // among all palaces
-                const selfLocalIdx = isLampPalace ? null : palaceIdx; // 0-indexed within self palaces
-                // isRealized: lamp palaces always realized; self palaces realized if selfLocalIdx < realizedThienCung
+                const isLampPalace = palaceIdx >= selfPalacesTotal;
+                const selfLocalIdx = isLampPalace ? null : palaceIdx;
                 const isRealized = isLampPalace || (selfLocalIdx !== null && selfLocalIdx < realizedThienCung);
                 const da = (daoAnhs || []).find(d => d.palaceIndex === palaceIdx);
                 const daTheme = da ? getDaoAnhTheme(da, cultivation) : null;
                 const anchor = cultivation?.palaceAnchors?.[palaceIdx];
                 const isBottleneck = !isRealized && !isLampPalace && selfLocalIdx === realizedThienCung && (cultivation?.currentThienCungExp || 0) >= 799;
-                // Lamp palace info
                 const lampIdx = isLampPalace ? palaceIdx - selfPalacesTotal : null;
                 const absLamps = cultivation?.absorbedLamps || [];
                 const lid = isLampPalace ? absLamps[lampIdx] : null;
                 const lobj = lid ? LIFE_LAMPS.find(l => l.id === lid) : null;
                 const elemTheme = daTheme || (isLampPalace ? getPalaceElementTheme(lobj) : anchor ? getPalaceElementTheme(anchor) : getPalaceElementTheme(null));
 
+                // Resolve artifact object for icon
+                const artifactObj = anchor
+                  ? SUPPRESSING_ARTIFACTS.find(a => a.id === anchor.id) || anchor
+                  : null;
+
+                // Palace display name
+                const palaceName = (() => {
+                  if (da) return formatDaoAnhTitle(da.name);
+                  if (isLampPalace) return lobj ? getLampPalaceName(lobj) : `Mệnh Đăng Cung ${lampIdx + 1}`;
+                  if (anchor) return anchor.palaceName || getPalaceNameFromArtifact(anchor, palaceIdx, cultivation?.palaceAnchors);
+                  return `Thiên Cung ${floorNum}`;
+                })();
+
+                // Bar + glow color
+                const barColor = isLampPalace ? '#a855f7' : (elemTheme?.color || '#ffcc00');
+                const barGlow  = isLampPalace ? 'rgba(168,85,247,0.7)' : (elemTheme?.glow || 'rgba(255,204,0,0.5)');
+
                 return (
                   <div
                     key={floorNum}
-                    className={`${styles.towerFloorRow} ${isRealized ? styles.floorRealized : isBottleneck ? styles.floorBottleneck : styles.floorHollow} ${isLampPalace ? styles.floorLamp : ''}`}
-                    title={`Tầng ${floorNum}: ${isLampPalace ? 'Chân Cung Mệnh Đăng (100% Thật)' : isRealized ? (anchor ? `Hóa Thực 100% (Trấn: ${anchor.name})` : 'Hóa Thực Cung Thật') : isBottleneck ? 'Đạt 99.99% (Cần Vật Trấn Áp)' : 'Hư Ảo (Mây mù bao phủ)'}`}
+                    className={`${styles.floorCard} ${
+                      isRealized   ? styles.floorCardRealized
+                      : isBottleneck ? styles.floorCardBottleneck
+                      : styles.floorCardHollow
+                    } ${isLampPalace ? styles.floorCardLamp : ''}`}
+                    title={`Tầng ${floorNum}: ${
+                      isLampPalace ? 'Chân Cung Mệnh Đăng'
+                      : isRealized ? (anchor ? `Hóa Thực · ${anchor.name}` : 'Hóa Thực Cung Thật')
+                      : isBottleneck ? '99.99% · Cần Vật Trấn Áp'
+                      : 'Hư Ảo'}`}
                   >
-                    {/* Mái ngói nhỏ của tầng */}
-                    <div className={styles.floorRoofLine} style={isRealized ? { borderColor: elemTheme.color } : {}} />
+                    {/* Colored left bar */}
+                    {isRealized && (
+                      <div
+                        className={styles.floorLeftBar}
+                        style={{ background: barColor, boxShadow: `0 0 8px ${barGlow}` }}
+                      />
+                    )}
+                    {isBottleneck && (
+                      <div className={styles.floorLeftBarBottleneck} />
+                    )}
 
-                    {/* Gian phòng đan điện bên trong tầng lầu */}
-                    <div
-                      className={styles.floorChamber}
-                      style={isRealized ? { borderColor: elemTheme.color, boxShadow: `0 0 10px ${elemTheme.glow}`, background: elemTheme.bg } : {}}
+                    {/* Floor number badge */}
+                    <span
+                      className={styles.floorNumBadge}
+                      style={isRealized ? { color: barColor } : {}}
                     >
-                      {/* Số tầng bên trái */}
-                      <span className={styles.floorNumberBadge} style={isRealized ? { color: elemTheme.color } : {}}>T{floorNum}</span>
+                      T{floorNum}
+                    </span>
 
-                      {/* Nội điện: lamp palaces & realized palaces show golden core; bottleneck shows warning; hollow shows mist */}
-                      {isRealized ? (
-                        <div className={styles.realizedChamberContent}>
-                          {/* Viên Kim Đan / Thần Đăng tỏa sáng bên trong */}
-                          <div className={styles.goldenCoreOrbInside}>
-                            {isLampPalace ? (
-                              <span className={styles.orbGlowCore} style={{ filter: `drop-shadow(0 0 6px ${elemTheme.color})` }}>🏮</span>
-                            ) : (
-                              <span className={styles.orbGlowCore} style={{ filter: `drop-shadow(0 0 8px ${elemTheme.color || '#ffcc00'})` }}>🟡</span>
-                            )}
-                            <span className={styles.orbShimmerSparkle}>✨</span>
-                          </div>
-                          <span className={styles.chamberTitle} style={{ color: elemTheme.color, fontWeight: 700, textShadow: `0 0 6px ${elemTheme.glow}` }}>
-                            {(() => {
-                              if (da) return formatDaoAnhTitle(da.name);
-                              if (isLampPalace) {
-                                return lobj ? getLampPalaceName(lobj) : `Chân Cung Đăng ${lampIdx + 1}`;
-                              }
-                              if (anchor) return `${anchor.icon} ${anchor.palaceName || getPalaceNameFromArtifact(anchor, palaceIdx, cultivation?.palaceAnchors)}`;
-                              return `Cung Thật ${floorNum}`;
-                            })()}
-                          </span>
+                    {/* Content */}
+                    {isRealized ? (
+                      <div className={styles.floorRealizedContent}>
+                        {/* Icon */}
+                        <div className={styles.floorIconSlot}>
+                          <ArtifactIcon
+                            item={isLampPalace ? (lobj || { tier: 'than_pham', color: '#a855f7', name: 'Mệnh Đăng' }) : artifactObj}
+                            isLamp={isLampPalace}
+                            size={26}
+                          />
                         </div>
-                      ) : isBottleneck ? (
-                        <div className={styles.bottleneckChamberContent}>
-                          <span className={styles.bottleneckIcon}>⚠️</span>
-                          <span className={styles.bottleneckText}>99.99% · Cần Trấn Vật</span>
-                        </div>
-                      ) : (
-                        <div className={styles.hollowChamberContent}>
-                          <span className={styles.hollowMistIcon}>☁️</span>
-                          <span className={styles.hollowMistText}>Mây mù hư ảo...</span>
-                        </div>
-                      )}
-
-                      {/* Biểu tượng trạng thái bên phải */}
-                      <span className={styles.floorRightBadge} style={isRealized ? { color: elemTheme.color } : {}}>
-                        {da ? (daTheme?.icon || '👑') : isLampPalace ? (lobj?.icon || '🏮') : anchor ? anchor.icon : isRealized ? '🏛️' : isBottleneck ? '🔑' : '🌫️'}
-                      </span>
-                    </div>
+                        {/* Name */}
+                        <span
+                          className={styles.floorPalaceName}
+                          style={{ color: barColor, textShadow: `0 0 8px ${barGlow}` }}
+                        >
+                          {palaceName}
+                        </span>
+                      </div>
+                    ) : isBottleneck ? (
+                      <div className={styles.floorBottleneckContent}>
+                        <span className={styles.bottleneckPulse}>⚡</span>
+                        <span className={styles.bottleneckLabel}>99.99% · Khảm Nạm Trấn Vật</span>
+                      </div>
+                    ) : (
+                      <div className={styles.floorHollowContent}>
+                        <span className={styles.hollowLabel}>Mây mù hư ảo...</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -430,7 +442,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
           </div>
 
           <div className={styles.stageStatusBadge}>
-            <span style={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.2px', color: '#ffcc00', textShadow: '0 0 10px rgba(255, 204, 0, 0.6)' }}>
+            <span style={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#ffcc00', textShadow: '0 0 12px rgba(255,204,0,0.7)' }}>
               ✨ THIÊN CUNG KIM ĐAN ✨
             </span>
           </div>
