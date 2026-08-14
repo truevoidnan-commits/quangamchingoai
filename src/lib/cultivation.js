@@ -1292,11 +1292,11 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     state.totalExp += gainedExp;
   }
 
-  // LỰC THIÊN MỆNH: Chỉ mở khóa và tích lũy khi ở Giả Anh hoặc Nguyên Anh!
+  // LỰC THIÊN MỆNH: Chỉ mở khóa và tích lũy khi ở Giả Anh hoặc Nguyên Anh (+100 - 300 TM mỗi lần ngộ đạo)
   let gainedThienMenh = 0;
   if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
     state.isThienMenhUnlocked = true;
-    gainedThienMenh = gainedExp * THIEN_MENH_PER_EXP;
+    gainedThienMenh = Math.floor(Math.random() * 201) + 100; // +100 đến 300 TM
     state.totalThienMenh = (state.totalThienMenh || 0) + gainedThienMenh;
   }
 
@@ -1892,7 +1892,7 @@ export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = 
     'ngoc_diep': 'Tạo Hóa Ngọc Điệp Cung',
     'bat_hu_dinh': 'Vạn Cổ Bất Hủ Cung',
     'thien_dao_an': 'Thiên Đạo Sơ Tâm Cung',
-    'hu_vo_ban_nguyen': 'Tịch Diệt Ma Điển Cung',
+    'hu_vo_ban_nguyen': 'Hư Vô Tịch Diệt Cung',
     'khoi_nguyen_moc': 'Thế Giới Mộc Cung',
     'luan_hoi_ban': 'Luân Hồi Chân Kinh Cung',
     'tuc_menh_toa': 'Túc Mệnh Thần Tỏa Cung',
@@ -1909,9 +1909,12 @@ export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = 
   } else {
     if (!baseName.endsWith(' Cung')) {
       const stripSuffixes = [
-        ' Lô', ' Đồ', ' Quyết', ' Pháp', ' Kinh', ' Điển', ' Thuật', ' Công', ' Trận',
-        ' Kính', ' Đỉnh', ' Bình', ' Châu', ' Tháp', ' Ấn', ' Hồ Lô', ' Lồng Đèn',
-        ' Kiếm', ' Búa', ' Chuông', ' Trượng', ' Giáp', ' Xích', ' Bội', ' Phách', ' Thiết'
+        ' Ma Điển', ' Thần Điển', ' Bí Điển', ' Đạo Kinh', ' Tâm Kinh', ' Chân Kinh',
+        ' Đan Kinh', ' Thần Kinh', ' Bí Quyết', ' Kiếm Quyết', ' Lôi Quyết', ' Thể Quyết',
+        ' Kiếm Trận', ' Thần Công', ' Ma Công', ' Lô', ' Đồ', ' Quyết', ' Pháp',
+        ' Kinh', ' Điển', ' Thuật', ' Công', ' Trận', ' Kính', ' Đỉnh', ' Bình',
+        ' Châu', ' Tháp', ' Ấn', ' Hồ Lô', ' Lồng Đèn', ' Kiếm', ' Búa', ' Chuông',
+        ' Trượng', ' Giáp', ' Xích', ' Bội', ' Phách', ' Thiết', ' Thảo'
       ];
       for (const suf of stripSuffixes) {
         if (baseName.endsWith(suf)) {

@@ -778,9 +778,18 @@
   left: 50%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 1.5px dashed transparent;
+  border: 1.2px dashed #38bdf8;
   pointer-events: none;
-  animation: miniRingSpin 4s linear infinite;
+  animation: rotateCenterSlow 5s linear infinite;
+}
+
+@keyframes rotateCenterSlow {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
 }
 
 @keyframes miniRingSpin {

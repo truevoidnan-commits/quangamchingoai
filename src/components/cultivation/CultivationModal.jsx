@@ -103,6 +103,7 @@ export default function CultivationModal({ isOpen, onClose }) {
   const absorbedCount = (cultivation.absorbedLamps || []).length;
   const artifactCount = (cultivation.inventoryArtifacts || []).length;
   const isNguyenAnhStage = cultivation.realm === 'gia_anh' || cultivation.realm === 'nguyen_anh';
+  const isStrictNguyenAnh = cultivation.realm === 'nguyen_anh';
   const currentTienTinh = cultivation.tienTinh !== undefined ? cultivation.tienTinh : (cultivation.dangDiem || 0);
 
   return (
@@ -210,7 +211,7 @@ export default function CultivationModal({ isOpen, onClose }) {
           >
             Cảnh Giới
           </button>
-          {!isNguyenAnhStage && (
+          {!isStrictNguyenAnh && (
             <>
               <button
                 className={`${styles.tabBtn} ${activeTab === 'lamps' ? styles.tabActive : ''}`}
@@ -1541,7 +1542,22 @@ export default function CultivationModal({ isOpen, onClose }) {
                         <div className={styles.anchorItemMeta}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <strong style={{ color: tierInfo.color }}>{art.name}</strong>
-                            <span className="badge" style={{ fontSize: 8.5, padding: '1px 5px', color: tierInfo.color, borderColor: tierInfo.border, backgroundColor: tierInfo.bg }}>
+                            <span
+                              className="badge"
+                              style={{
+                                fontSize: 9.5,
+                                padding: '2px 8px',
+                                color: tierInfo.color,
+                                borderColor: tierInfo.border,
+                                backgroundColor: tierInfo.bg,
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0,
+                                borderRadius: 10,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
                               {tierInfo.name}
                             </span>
                           </div>
