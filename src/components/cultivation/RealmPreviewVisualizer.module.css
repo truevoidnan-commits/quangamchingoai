@@ -554,35 +554,6 @@
   border-color: var(--aura-color, #ffcc00);
 }
 
-/* Đôi Cột Trụ 2 Bên */
-.pillarLeft {
-  width: 14px;
-  height: 100%;
-  background: linear-gradient(90deg, #78350f, #b45309);
-  border-right: 1px solid rgba(255,255,255,0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.pillarRight {
-  width: 14px;
-  height: 100%;
-  background: linear-gradient(90deg, #b45309, #78350f);
-  border-left: 1px solid rgba(255,255,255,0.2);
-  flex-shrink: 0;
-}
-
-.floorBadgeSeal {
-  font-family: var(--font-serif);
-  font-size: 8px;
-  font-weight: 800;
-  color: #fff8dc;
-  writing-mode: vertical-rl;
-  text-shadow: 0 1px 2px #000;
-}
-
 /* Nội Điện Chính Giữa (Center Void Realm) */
 .centerChamberVoid {
   flex: 1;
