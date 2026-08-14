@@ -349,13 +349,13 @@ export default function RealmPreviewVisualizer({
                 <div className={styles.spireRoofTop} />
               </div>
 
-              {/* Các Tầng Lầu Các (Xếp từ tầng cao nhất xuống T1, Mệnh Đăng ở tầng trên cùng) */}
+              {/* Các Tầng Lầu Các (Mệnh Đăng ở tầng đỉnh tháp, Thiên Cung Tự Thân Hóa Thực từ đáy tháp lên trên) */}
               {Array.from({ length: maxThienCung }).map((_, i) => {
                 const floorNum = maxThienCung - i;
-                const palaceIdx = i;
-                const selfPalacesTotal = maxThienCung - lampPalaceCount;
-                const isLampPalace = palaceIdx < lampPalaceCount;
-                const selfLocalIdx = isLampPalace ? null : palaceIdx - lampPalaceCount;
+                const isLampPalace = i < lampPalaceCount;
+                const selfLocalIdx = isLampPalace ? null : (maxThienCung - 1) - i;
+                const palaceIdx = isLampPalace ? i : lampPalaceCount + selfLocalIdx;
+
                 const isRealized = isLampPalace || (selfLocalIdx !== null && selfLocalIdx < realizedThienCung);
                 const da = (daoAnhs || []).find(d => d.palaceIndex === palaceIdx);
                 const daTheme = da ? getDaoAnhTheme(da, cultivation) : null;
