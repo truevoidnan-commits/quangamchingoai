@@ -21,11 +21,13 @@ import {
   thangCungKimDan,
   attemptUnlock121st,
   manifestDaoAnh,
+  injectExpToDaoAnh,
   injectThienMenhToDaoAnh,
   attemptTribulationSingle,
   attemptTribulationAll,
   getRealmDisplayName,
   getPalaceNameFromArtifact,
+  getPalaceElementTheme,
   getCombatPowerDisplay,
   getTotalMenhHoa,
   getTotalCombatPowerAnh,
@@ -145,6 +147,12 @@ export function useCultivation() {
     return next;
   }, []);
 
+  const handleInjectExpToDaoAnh = useCallback((palaceIndex, amount) => {
+    const res = injectExpToDaoAnh(palaceIndex, amount);
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
   const handleInjectThienMenh = useCallback((daoAnhId, amount) => {
     const next = injectThienMenhToDaoAnh(daoAnhId, amount);
     setCultivation({ ...next });
@@ -214,6 +222,7 @@ export function useCultivation() {
     cultivation,
     displayName,
     getPalaceNameFromArtifact,
+    getPalaceElementTheme,
     combatPowerDisplay,
     totalCombatPower,
     totalMenhHoa,
@@ -233,6 +242,7 @@ export function useCultivation() {
     breakthroughToKimDan: handleBreakthroughKimDan,
     attemptUnlock121: handleUnlock121,
     manifestDaoAnh: handleManifestDaoAnh,
+    injectExpToDaoAnh: handleInjectExpToDaoAnh,
     injectThienMenh: handleInjectThienMenh,
     attemptTribulationSingle: handleTribulationSingle,
     attemptTribulationAll: handleTribulationAll,

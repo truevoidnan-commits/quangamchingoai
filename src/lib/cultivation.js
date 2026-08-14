@@ -87,7 +87,7 @@ export function getPalaceCost(palaceNum) {
 }
 
 export const EXP_PER_THIEN_CUNG = 2000; // Giữ để tương thích ngược
-export const EXP_PER_DAO_ANH = 1000; // 1000 EXP để thai nghén hóa sinh 1 Đạo Anh vào Thiên Cung Thật
+export const EXP_PER_DAO_ANH = 10000; // 10.000 Tu Vi để thai nghén hoàn tất 1 Đạo Anh vào Thiên Cung Thật
 
 // Ngưỡng Thiên Mệnh chuẩn cho 5 Kiếp của mỗi Đạo Anh
 export const KIEP_THIEN_MENH_REQUIREMENTS = [
@@ -1640,7 +1640,99 @@ export const buyLampWithPointsAndExp = buyLampWithTienTinhAndExp;
 export const burnExpForLamp = buyLampWithTienTinhAndExp;
 
 /**
- * Chuyển đổi tên Vật Trấn Áp thành tên Thiên Cung chuẩn Tiên Hiệp (VD: Bàn Cổ Khai Thiên Đồ -> Bàn Cổ Khai Thiên Cung)
+ * Trả về thuộc tính Ngũ Hành / Hào Quang Độc Bản cho từng Thiên Cung dựa trên Mệnh Đăng hoặc Vật Trấn Áp
+ */
+export function getPalaceElementTheme(item) {
+  if (!item) return {
+    name: 'Hư Ảo',
+    color: '#94a3b8',
+    glow: 'rgba(148, 163, 184, 0.25)',
+    bg: 'rgba(15, 23, 42, 0.6)',
+    icon: '🌫️'
+  };
+
+  const name = item.name || '';
+  const type = item.type || '';
+  const tier = item.tier || '';
+
+  // 1. Hàn Băng / Tuyết / Băng Phách
+  if (name.includes('Băng') || name.includes('Tuyết') || type.includes('Băng') || type.includes('Tuyết')) {
+    return {
+      name: 'Hàn Băng Thần Quang',
+      color: '#38bdf8',
+      glow: 'rgba(56, 189, 248, 0.5)',
+      bg: 'rgba(14, 116, 144, 0.18)',
+      icon: '❄️'
+    };
+  }
+
+  // 2. Hỏa / Thái Dương / Địa Hỏa / Hỏa Hoàng / Chu Tước
+  if (name.includes('Hỏa') || name.includes('Nhật') || name.includes('Chu Tước') || type.includes('Hỏa')) {
+    return {
+      name: 'Thần Hỏa Diễm Quang',
+      color: '#f97316',
+      glow: 'rgba(249, 115, 22, 0.5)',
+      bg: 'rgba(194, 65, 12, 0.18)',
+      icon: '🔥'
+    };
+  }
+
+  // 3. Lôi / Lôi Đình / Bôn Lôi / Lôi Điện
+  if (name.includes('Lôi') || name.includes('Điện') || type.includes('Lôi')) {
+    return {
+      name: 'Thiên Lôi Thần Hào',
+      color: '#22d3ee',
+      glow: 'rgba(34, 211, 238, 0.5)',
+      bg: 'rgba(14, 116, 144, 0.18)',
+      icon: '⚡'
+    };
+  }
+
+  // 4. Hồng Mông / Vận Mệnh / Thần Phẩm / Tiên Phẩm / Thần Ma
+  if (tier === 'than_pham' || tier === 'tien_pham' || name.includes('Hồng Mông') || name.includes('Vận Mệnh') || name.includes('Thần Ma') || name.includes('Đạo')) {
+    return {
+      name: 'Hồng Mông Tiên Quang',
+      color: '#ef4444',
+      glow: 'rgba(239, 68, 68, 0.55)',
+      bg: 'rgba(153, 27, 27, 0.22)',
+      icon: '🟣'
+    };
+  }
+
+  // 5. Cực Phẩm / Luân Hồi / Hư Không / Tử Vi
+  if (tier === 'cuc_pham' || name.includes('Luân Hồi') || name.includes('Hư Không') || name.includes('Thôn')) {
+    return {
+      name: 'Cực Thần Tử Quang',
+      color: '#a855f7',
+      glow: 'rgba(168, 85, 247, 0.5)',
+      bg: 'rgba(126, 34, 206, 0.18)',
+      icon: '🔮'
+    };
+  }
+
+  // 6. Mộc / Sinh Cơ / Bồ Đề / Trầm Hương / Thảo
+  if (name.includes('Mộc') || name.includes('Thảo') || name.includes('Trầm') || name.includes('Bồ Đề') || type.includes('Mộc')) {
+    return {
+      name: 'Ngọc Bích Sinh Khí',
+      color: '#10b981',
+      glow: 'rgba(16, 185, 129, 0.5)',
+      bg: 'rgba(4, 120, 87, 0.18)',
+      icon: '🌿'
+    };
+  }
+
+  // Default Gold
+  return {
+    name: 'Hoàng Kim Thần Quang',
+    color: '#ffcc00',
+    glow: 'rgba(255, 204, 0, 0.45)',
+    bg: 'rgba(255, 204, 0, 0.12)',
+    icon: '✨'
+  };
+}
+
+/**
+ * Chuyển đổi tên Vật Trấn Áp thành tên Thiên Cung chuẩn Tiên Hiệp gọn gàng (VD: Bàn Cổ Khai Thiên Đồ -> Bàn Cổ Khai Thiên Cung)
  */
 export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = {}) {
   if (!artifact) return `Thiên Cung Tự Thân ${palaceIdx + 1}`;
@@ -1649,18 +1741,123 @@ export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = 
   let baseName = artifact.name || artifact.shortName || '';
   if (!baseName) return `Thiên Cung Tự Thân ${palaceIdx + 1}`;
 
-  if (baseName.endsWith(' Cung')) {
-    // Giữ nguyên
+  const customMap = {
+    'bang_phach': 'Huyền Băng Cung',
+    'tinh_thiet': 'Bách Luyện Tinh Cung',
+    'thanh_phong': 'Thanh Phong Linh Cung',
+    'kho_moc': 'Khô Mộc Hồi Xuân Cung',
+    'dia_hoa': 'Địa Hỏa Tinh Cung',
+    'quy_nguyen_quyet': 'Quy Nguyên Cung',
+    'tinh_ngan': 'Ngân Linh Châu Cung',
+    'loi_dinh_quyet': 'Lôi Đình Thối Thể Cung',
+    'tuyet_lien': 'Băng Sơn Tuyết Cung',
+    'xich_dong': 'Xích Đồng Trận Cung',
+    'thanh_tam_kinh': 'Thanh Tâm Định Thần Cung',
+    'thanh_ngoc': 'Thanh Ngọc Bội Cung',
+    'hac_thiet_kiem_quyet': 'Tật Phong Kiếm Cung',
+    'u_lan': 'U Lan Uẩn Khí Cung',
+    'tram_thach': 'Trầm Hà Thạch Cung',
+    'linh_vu': 'Thanh Điểu Linh Cung',
+    
+    'thai_hu': 'Thái Hư Kiếm Cung',
+    'tu_van': 'Tử Vân Tiên Cung',
+    'am_loi': 'U Minh Âm Lôi Cung',
+    'huyet_chi': 'Cửu Diệp Huyết Cung',
+    'ngu_hanh': 'Ngũ Hành Luân Chuyển Cung',
+    'bich_hai': 'Bích Hải Triều Tịch Cung',
+    'phi_loi_quyet': 'Bôn Lôi Kiếm Cung',
+    'chieu_hon': 'Nhiếp Phách Cung',
+    'thiet_cot': 'Kim Cương Bất Hoại Cung',
+    'hoa_hoang': 'Hỏa Hoàng Huyết Cung',
+    'thien_canh': 'Hư Không Thiên Kính Cung',
+    'da_quang_tam_phap': 'Tử Vi Tụ Khí Cung',
+    'tram_moc': 'Vạn Niên Trầm Cung',
+    'hac_ma_cong': 'U Minh Thôn Hồn Cung',
+    'bach_xa': 'Bạch Xà Long Cung',
+    'phong_loi_quyet': 'Lăng Vân Bộ Cung',
+    
+    'tran_ma_dinh': 'Trấn Ma Đỉnh Cung',
+    'bat_quai_do': 'Bát Quái Cung',
+    'huyen_suong_cong': 'Cửu U Băng Phách Cung',
+    'nghich_lan': 'Thanh Long Nghịch Lân Cung',
+    'huyen_hoang': 'Huyền Hoàng Địa Cung',
+    'phuong_hoang': 'Phượng Hoàng Niết Bàn Cung',
+    'tu_la_sat_quyet': 'Tu La Thất Sát Cung',
+    'thien_mon': 'Thiên Môn Khóa Cung',
+    'tram_long_quyet': 'Trảm Thiên Cung',
+    'thai_am': 'Thái Âm Chân Hỏa Cung',
+    'nam_hai': 'Nam Hải Giao Long Cung',
+    'van_kiem': 'Vạn Kiếm Quy Tông Cung',
+    'dai_dia': 'Địa Mạch Thần Cung',
+    'quy_coc': 'Quỷ Cốc Âm Dương Cung',
+    'bac_dau': 'Bắc Đẩu Thất Tinh Cung',
+    'hoang_kim': 'Hoàng Kim Thánh Giáp Cung',
+
+    'thon_thien': 'Thôn Thiên Ma Cung',
+    'chu_tuoc_cung': 'Chu Tước Chân Hỏa Cung',
+    'luan_hoi_an': 'Lục Đạo Luân Hồi Cung',
+    'hon_don_tuc': 'Hỗn Độn Sinh Tức Cung',
+    'nghich_cot': 'Chân Long Hóa Hình Cung',
+    'cuu_u': 'Minh Vương Trượng Cung',
+    'thai_duong_cong': 'Đại Nhật Thần Cung',
+    'bat_diet_the': 'Bất Diệt Kim Thân Cung',
+    'hu_khong_thap': 'Hư Không Toái Liệt Cung',
+    'bach_ho_sat': 'Bạch Hổ Đoạt Mệnh Cung',
+    'thien_kiem': 'Tru Tiên Kiếm Trận Cung',
+    'huyen_vu_giap': 'Huyền Vũ Bất Hoại Cung',
+    'cuc_lac_tam_kinh': 'Vạn Phật Triều Tông Cung',
+    'thoi_khong_phi': 'Thời Không Liệt Phùng Cung',
+    'van_yeu_quyet': 'Vạn Yêu Thiên Thư Cung',
+    'than_ma_an': 'Thần Ma Hỗn Hợp Cung',
+
+    'tru_tien_tieu': 'Tru Tiên Kiếm Cung',
+    'khai_thien_do': 'Bàn Cổ Khai Thiên Cung',
+    'kim_dan_lo': 'Cửu Chuyển Đan Cung',
+    'tien_hon_chau': 'Bất Diệt Tiên Hồn Cung',
+    'than_ma_lenh': 'Thần Ma Hiệu Lệnh Cung',
+    'bat_tu_duoc': 'Bất Tử Tiên Dược Cung',
+    'hai_thien': 'Khai Thiên Búa Cung',
+    'cung_khong': 'Cửu Thiên Cung Khuyết Cung',
+    'vo_thuong': 'Bồ Đề Tâm Pháp Cung',
+    'thai_so': 'Thái Sơ Hỗn Độn Kiếm Cung',
+    'am_duong_lo': 'Lưỡng Nghi Lô Cung',
+    'nhan_qua_kinh': 'Nhân Quả Luân Hồi Cung',
+    'thien_thu': 'Vô Tự Thiên Thư Cung',
+    'tien_vuong': 'Đăng Tiên Thần Cung',
+    'chuong_thien': 'Chưởng Thiên Hồ Lô Cung',
+    'hoa_sen': 'Thanh Liên Đạo Cung',
+
+    'hong_mong_khi': 'Hồng Mông Tử Khí Cung',
+    'van_menh_chau': 'Vận Mệnh Châu Cung',
+    'hon_don_so_khai': 'Hỗn Độn Sơ Khai Cung',
+    'ngoc_diep': 'Tạo Hóa Ngọc Điệp Cung',
+    'bat_hu_dinh': 'Vạn Cổ Bất Hủ Cung',
+    'thien_dao_an': 'Thiên Đạo Sơ Tâm Cung',
+    'hu_vo_ban_nguyen': 'Tịch Diệt Ma Điển Cung',
+    'khoi_nguyen_moc': 'Thế Giới Mộc Cung',
+    'luan_hoi_ban': 'Luân Hồi Chân Kinh Cung',
+    'tuc_menh_toa': 'Túc Mệnh Thần Tỏa Cung',
+    'thuong_thuong_kiem': 'Phạt Thiên Kiếm Cung',
+    'dai_la_chuong': 'Đại La Thiên Cương Cung',
+    'thoi_khong_chau': 'Thời Không Thần Thuật Cung',
+    'van_co_long_to': 'Tổ Long Thần Cung',
+    'sang_the_quang': 'Sáng Thế Thần Quang Cung',
+    'dai_dao_tieu_dao': 'Đại Đạo Tiêu Dao Cung',
+  };
+
+  if (artifact.id && customMap[artifact.id]) {
+    baseName = customMap[artifact.id];
   } else {
-    // Lược bỏ các từ vựng công pháp/bảo vật ở cuối để ghép từ "Cung" chuẩn tiên hiệp
-    const stripSuffixes = [' Đồ', ' Quyết', ' Pháp', ' Kinh', ' Điển', ' Thuật', ' Công', ' Trận'];
-    for (const suf of stripSuffixes) {
-      if (baseName.endsWith(suf)) {
-        baseName = baseName.slice(0, -suf.length);
-        break;
+    if (!baseName.endsWith(' Cung')) {
+      const stripSuffixes = [' Đồ', ' Quyết', ' Pháp', ' Kinh', ' Điển', ' Thuật', ' Công', ' Trận', ' Kính', ' Đỉnh', ' Bình'];
+      for (const suf of stripSuffixes) {
+        if (baseName.endsWith(suf)) {
+          baseName = baseName.slice(0, -suf.length);
+          break;
+        }
       }
+      baseName = `${baseName} Cung`;
     }
-    baseName = `${baseName} Cung`;
   }
 
   // Xử lý chống trùng tên nếu có nhiều cung trấn áp trùng tên vật phẩm
@@ -2061,6 +2258,56 @@ export const TRIBULATION_NAMES = {
 };
 
 /**
+ * NẠP TU VI THAI NGHÉN ĐẠO ANH (10.000 Tu Vi)
+ */
+export function injectExpToDaoAnh(palaceIndex, expAmount = 10000) {
+  const state = getCultivationState();
+  const lampCount = (state.absorbedLamps || []).length;
+  const selfRealized = state.realizedThienCung || 0;
+  const totalRealized = lampCount + selfRealized;
+
+  if (totalRealized < state.maxThienCung) {
+    throw new Error(`Cần Hóa Thực toàn bộ ${state.maxThienCung}/${state.maxThienCung} Thiên Cung thành Cung Thật trước!`);
+  }
+
+  if (!state.daoAnhProgress) state.daoAnhProgress = {};
+  const currentProgress = state.daoAnhProgress[palaceIndex] || 0;
+
+  if (currentProgress >= EXP_PER_DAO_ANH) {
+    return { state, message: 'Đã đạt 10.000/10.000 Tu Vi thai nghén Đạo Anh! Hãy bấm Khai Sinh Đạo Anh.' };
+  }
+
+  const needed = EXP_PER_DAO_ANH - currentProgress;
+  const availableExp = state.totalExp || 0;
+
+  // Cho phép nạp đủ 10k nếu có cờ isKimDanTrialV2 hoặc từ tu vi tích lũy
+  let addExp = needed;
+  if (!state.isKimDanTrialV2) {
+    if (availableExp <= 0) {
+      throw new Error('Chưa có đủ Tu Vi linh lực! Hãy đọc thêm chương sách để tích lũy Tu Vi.');
+    }
+    addExp = Math.min(needed, Math.min(expAmount, availableExp));
+    state.totalExp -= addExp;
+  }
+
+  state.daoAnhProgress[palaceIndex] = currentProgress + addExp;
+
+  state.logs.unshift({
+    text: `✨ THAI NGHÉN ĐẠO ANH! Đã tích lũy +${addExp.toLocaleString()} Tu Vi linh lực vào Thiên Cung ${palaceIndex + 1} (${state.daoAnhProgress[palaceIndex].toLocaleString()}/${EXP_PER_DAO_ANH.toLocaleString()} Tu Vi).`,
+    time: Date.now(),
+  });
+
+  saveCultivationState(state);
+  return {
+    state,
+    progress: state.daoAnhProgress[palaceIndex],
+    message: state.daoAnhProgress[palaceIndex] >= EXP_PER_DAO_ANH 
+      ? `✨ Đã tích lũy đủ 10.000 Tu Vi linh lực! Đạo Anh đã sẵn sàng Khai Sinh!`
+      : `✨ Đã tích lũy +${addExp.toLocaleString()} Tu Vi thai nghén Đạo Anh (${state.daoAnhProgress[palaceIndex].toLocaleString()}/10.000 Tu Vi)!`,
+  };
+}
+
+/**
  * Chuyển hóa 1 Thiên Cung đã Hóa Thực thành Đạo Anh
  */
 export function manifestDaoAnh(palaceIndex) {
@@ -2070,7 +2317,11 @@ export function manifestDaoAnh(palaceIndex) {
   }
 
   // Điều kiện 1: Toàn bộ Thiên Cung phải được Hóa Thực thành Cung Thật 100%
-  if (state.realizedThienCung < state.maxThienCung) {
+  const lampCount = (state.absorbedLamps || []).length;
+  const selfRealized = state.realizedThienCung || 0;
+  const totalRealized = lampCount + selfRealized;
+
+  if (totalRealized < state.maxThienCung) {
     throw new Error(`Chưa đủ điều kiện! Cần Hóa Thực toàn bộ ${state.maxThienCung}/${state.maxThienCung} Thiên Cung thành Cung Thật trước khi bắt đầu Hóa Đạo Anh.`);
   }
 
@@ -2080,16 +2331,15 @@ export function manifestDaoAnh(palaceIndex) {
     throw new Error('Thiên Cung này đã chuyển hóa thành Đạo Anh.');
   }
 
-  // Điều kiện 2: Thiên Cung Thật phải tích lũy đủ Linh Lực (1000 Tu Vi) để thai nghén Đạo Anh
-  if ((state.totalExp || 0) < EXP_PER_DAO_ANH) {
-    throw new Error(`Linh lực chưa đủ để thai nghén Đạo Anh! Cần tích lũy tối thiểu ${EXP_PER_DAO_ANH.toLocaleString()} Tu Vi (Hiện có: ${(state.totalExp || 0).toLocaleString()} Tu Vi).`);
+  // Điều kiện 2: Kiểm tra tiến độ Thai Nghén Đạo Anh (10.000 Tu Vi)
+  if (!state.daoAnhProgress) state.daoAnhProgress = {};
+  const currentProgress = state.daoAnhProgress[palaceIndex] || 0;
+
+  if (currentProgress < EXP_PER_DAO_ANH && !state.isKimDanTrialV2) {
+    throw new Error(`Cần tích lũy đủ ${EXP_PER_DAO_ANH.toLocaleString()} Tu Vi linh lực thai nghén (Hiện có: ${currentProgress.toLocaleString()}/${EXP_PER_DAO_ANH.toLocaleString()} Tu Vi). Hãy đọc thêm chương để tích lũy!`);
   }
 
-  // Tiêu hao Linh Lực để thai nghén Đạo Anh
-  state.totalExp -= EXP_PER_DAO_ANH;
-
   const absorbed = state.absorbedLamps || [];
-  const lampCount = absorbed.length;
   const isLampPalace = palaceIndex < lampCount;
 
   let lampObj = null;
@@ -2104,18 +2354,10 @@ export function manifestDaoAnh(palaceIndex) {
     elementAttr = lampObj ? `${shortName} Thần Thể` : 'Chân Đăng Thần Thể';
   } else {
     const selfNum = palaceIndex - lampCount + 1;
-    const elements = [
-      'Kim Nguyên Thần Thể',
-      'Mộc Nguyên Thần Thể',
-      'Thủy Nguyên Thần Thể',
-      'Hỏa Nguyên Thần Thể',
-      'Thổ Nguyên Thần Thể',
-      'Băng Nguyên Thần Thể',
-      'Phong Nguyên Thần Thể',
-      'Lôi Nguyên Thần Thể',
-    ];
-    elementAttr = elements[(selfNum - 1) % elements.length];
-    daoAnhTitle = `Đạo Anh Tự Thân ${selfNum}`;
+    const anchor = state.palaceAnchors?.[palaceIndex - lampCount] || state.palaceAnchors?.[palaceIndex];
+    const derivedName = anchor ? (anchor.palaceName || getPalaceNameFromArtifact(anchor, palaceIndex - lampCount, state.palaceAnchors)) : `Cung Tự Thân ${selfNum}`;
+    daoAnhTitle = `Đạo Anh [${derivedName}]`;
+    elementAttr = anchor ? `${anchor.shortName || anchor.name} Thần Thể` : 'Thiên Địa Thần Thể';
   }
 
   const newDaoAnh = {

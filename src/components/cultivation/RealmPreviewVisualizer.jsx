@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { LIFE_LAMPS, LAMP_TIERS, getPalaceNameFromArtifact } from '../../lib/cultivation';
+import { LIFE_LAMPS, LAMP_TIERS, getPalaceNameFromArtifact, getPalaceElementTheme } from '../../lib/cultivation';
 import styles from './RealmPreviewVisualizer.module.css';
 
 /**
@@ -361,6 +361,9 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 // Lamp palace info
                 const lampIdx = isLampPalace ? palaceIdx - selfPalacesTotal : null;
                 const absLamps = cultivation?.absorbedLamps || [];
+                const lid = isLampPalace ? absLamps[lampIdx] : null;
+                const lobj = lid ? LIFE_LAMPS.find(l => l.id === lid) : null;
+                const elemTheme = isLampPalace ? getPalaceElementTheme(lobj) : anchor ? getPalaceElementTheme(anchor) : getPalaceElementTheme(null);
 
                 return (
                   <div
@@ -369,28 +372,29 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                     title={`Tầng ${floorNum}: ${isLampPalace ? 'Chân Cung Mệnh Đăng (100% Thật)' : isRealized ? (anchor ? `Hóa Thực 100% (Trấn: ${anchor.name})` : 'Hóa Thực Cung Thật') : isBottleneck ? 'Đạt 99.99% (Cần Vật Trấn Áp)' : 'Hư Ảo (Mây mù bao phủ)'}`}
                   >
                     {/* Mái ngói nhỏ của tầng */}
-                    <div className={styles.floorRoofLine} />
+                    <div className={styles.floorRoofLine} style={isRealized ? { borderColor: elemTheme.color } : {}} />
 
                     {/* Gian phòng đan điện bên trong tầng lầu */}
-                    <div className={styles.floorChamber}>
+                    <div
+                      className={styles.floorChamber}
+                      style={isRealized ? { borderColor: elemTheme.color, boxShadow: `0 0 10px ${elemTheme.glow}`, background: elemTheme.bg } : {}}
+                    >
                       {/* Số tầng bên trái */}
-                      <span className={styles.floorNumberBadge}>T{floorNum}</span>
+                      <span className={styles.floorNumberBadge} style={isRealized ? { color: elemTheme.color } : {}}>T{floorNum}</span>
 
                       {/* Nội điện: lamp palaces & realized palaces show golden core; bottleneck shows warning; hollow shows mist */}
                       {isRealized ? (
                         <div className={styles.realizedChamberContent}>
                           {/* Viên Kim Đan tỏa sáng bên trong */}
                           <div className={styles.goldenCoreOrbInside}>
-                            <span className={styles.orbGlowCore}>{isLampPalace ? '🏮' : '🟡'}</span>
+                            <span className={styles.orbGlowCore}>{isLampPalace ? '🏮' : elemTheme.icon}</span>
                             <span className={styles.orbShimmerSparkle}>✨</span>
                           </div>
-                          <span className={styles.chamberTitle} style={isLampPalace ? { color: '#ffcc00', fontWeight: 700 } : {}}>
+                          <span className={styles.chamberTitle} style={{ color: elemTheme.color, fontWeight: 700, textShadow: `0 0 6px ${elemTheme.glow}` }}>
                             {(() => {
                               if (da) return `${da.name}`;
                               if (isLampPalace) {
-                                const lid = (cultivation?.absorbedLamps || [])[lampIdx];
-                                const lobj = lid ? LIFE_LAMPS.find(l => l.id === lid) : null;
-                                return lobj ? lobj.name.replace('Đăng', 'Cung') : `Chân Cung Mệnh Đăng ${lampIdx + 1}`;
+                                return lobj ? getPalaceNameFromArtifact(lobj, palaceIdx) : `Chân Cung Mệnh Đăng ${lampIdx + 1}`;
                               }
                               if (anchor) return `${anchor.icon} ${anchor.palaceName || getPalaceNameFromArtifact(anchor, palaceIdx, cultivation?.palaceAnchors)}`;
                               return `Cung Thật ${floorNum}`;
@@ -410,7 +414,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                       )}
 
                       {/* Biểu tượng trạng thái bên phải */}
-                      <span className={styles.floorRightBadge}>
+                      <span className={styles.floorRightBadge} style={isRealized ? { color: elemTheme.color } : {}}>
                         {da ? '👑' : isLampPalace ? '🏮' : anchor ? anchor.icon : isRealized ? '🏛️' : isBottleneck ? '🔑' : '🌫️'}
                       </span>
                     </div>
@@ -421,7 +425,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
           </div>
 
           <div className={styles.stageStatusBadge}>
-            <span>✨ {maxThienCung === 9 ? 'CỬU TRÙNG THIÊN LÂU' : `THIÊN CUNG BẢO THÁP (${maxThienCung} TẦNG)`} · {lampPalaceCount + realizedThienCung}/{maxThienCung} CUNG HÓA THỰC</span>
+            <span>✨ {maxThienCung === 9 ? 'CỬU TRÙNG THIÊN LÂU' : `THIÊN CUNG BẢO THÁP (${maxThienCung} TẦNG)`} · {lampPalaceCount + realizedThienCung}/{maxThienCung} CHÂN CUNG HÓA THỰC</span>
           </div>
         </div>
       )}
