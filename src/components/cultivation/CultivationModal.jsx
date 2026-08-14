@@ -23,6 +23,7 @@ export default function CultivationModal({ isOpen, onClose }) {
     getPalaceNameFromArtifact,
     getPalaceElementTheme,
     getDaoAnhTheme,
+    formatDaoAnhTitle,
     breakthroughToTrucCo,
     breakthroughToKimDan,
     attemptUnlock121,
@@ -531,295 +532,314 @@ export default function CultivationModal({ isOpen, onClose }) {
             {/* KIM ĐAN / GIẢ ANH / NGUYÊN ANH VIEW */}
             {(cultivation.realm === 'kim_dan' || cultivation.realm === 'gia_anh' || cultivation.realm === 'nguyen_anh') && (
               <div className={styles.realmDetailCard}>
-                <h3 className={styles.cardHeader}>Thiên Cung Kim Đan ({cultivation.maxThienCung} Cung)</h3>
-                {(() => {
-                  const lampList = cultivation.absorbedLamps || [];
-                  const lampCount = lampList.length;
-                  const selfPalacesTotal = Math.max(1, cultivation.maxThienCung - lampCount);
-                  const selfRealized = cultivation.realizedThienCung || 0;
-                  const totalRealizedCung = lampCount + selfRealized;
-                  const targetPalaceExp = constants.getPalaceCost ? constants.getPalaceCost(selfRealized + 1) : 2000;
-                  const bottleneckExp = targetPalaceExp - 1;
+                {isNguyenAnhStage ? (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
+                      <h3 className={styles.cardHeader} style={{ margin: 0 }}>
+                        ⚡ LỰC THIÊN MỆNH HIỆN CÓ: {(cultivation.totalThienMenh || 0).toLocaleString()} TM
+                      </h3>
+                      <span style={{ fontSize: 10.5, color: '#38bdf8' }}>📖 Đọc 1 chương: +30 ~ 50 TM</span>
+                    </div>
+                    <p className={styles.subtext} style={{ margin: '0 0 12px' }}>
+                      Nạp Lực Thiên Mệnh vào từng Đạo Anh để thai nghén rèn luyện trước khi tiến lên <strong>Độ Kiếp Đài</strong> nghênh tiếp Thiên Kiếp!
+                    </p>
 
-                  return (
-                    <>
-                      <p className={styles.subtext}>
-                        • Tổng Chiến Lực Kim Đan: <strong>{totalRealizedCung}/{cultivation.maxThienCung} Cung Thật</strong> (gồm <strong>{lampCount} Chân Cung Mệnh Đăng</strong> + <strong>{selfRealized}/{selfPalacesTotal} Cung Tự Thân Hóa Thực</strong>).
-                        <br />
-                        • <strong>Chân Cung Mệnh Đăng</strong>: Hình thành vĩnh cửu từ Mệnh Đăng, <strong>100% Cung Thật</strong> ngay khi ngưng tụ Kim Đan, không cần đi Hóa Thực!
-                        <br />
-                        • <strong>Thiên Cung Tự Thân</strong>: Ban đầu Hư Ảo, khi nạp đủ 99.99% linh lực cần khảm nạm <strong>1 Vật Trấn Áp</strong> từ Túi Trữ Vật để hoàn tất 100% Cung Thật!
-                      </p>
+                    <div className={styles.palaceGrid}>
+                      {(cultivation.daoAnhs || []).map(da => {
+                        const daTheme = getDaoAnhTheme(da, cultivation);
+                        const title = formatDaoAnhTitle(da.name);
+                        const percent = Math.min(100, Math.floor((da.currentThienMenh / da.maxThienMenh) * 100));
+                        const needed = da.maxThienMenh - da.currentThienMenh;
+                        const availableTM = cultivation.totalThienMenh || 0;
 
-                      {/* GLOBAL THIÊN MỆNH INJECTION PANEL WHEN IN GIẢ ANH / NGUYÊN ANH */}
-                      {isNguyenAnhStage && (
-                        <div style={{ marginBottom: 14, padding: 12, background: 'rgba(15, 23, 42, 0.88)', borderRadius: 10, border: '1px solid rgba(255, 204, 0, 0.4)', boxShadow: '0 0 15px rgba(255, 204, 0, 0.15)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
-                            <h4 style={{ margin: 0, color: '#ffcc00', fontSize: 13, fontWeight: 700 }}>
-                              ⚡ LỰC THIÊN MỆNH HIỆN CÓ: {(cultivation.totalThienMenh || 0).toLocaleString()} TM
-                            </h4>
-                            <span style={{ fontSize: 10, color: '#38bdf8' }}>📖 Đọc 1 chương: +30-50 TM</span>
+                        return (
+                          <div
+                            key={`da_card_${da.id}`}
+                            className={`${styles.palaceCard} ${styles.palaceRealized} ${styles.palaceDaoAnh}`}
+                            style={{ borderColor: daTheme.color, boxShadow: `0 0 12px ${daTheme.glow}`, background: daTheme.bg }}
+                          >
+                            <span className={styles.palaceIcon}>
+                              {daTheme.icon}
+                            </span>
+                            <span className={styles.palaceName} style={{ color: daTheme.color, fontWeight: 700 }}>
+                              {title}{da.currentKiep > 0 ? ` (${da.currentKiep}K)` : ''}
+                            </span>
+                            <span className={styles.palaceStatus} style={{ color: daTheme.color }}>
+                              {da.currentKiep > 0 ? `✦ ${da.currentKiep} Kiếp` : '✦ Giả Anh (0 Kiếp)'}
+                            </span>
+
+                            {da.currentKiep < 5 ? (
+                              <div style={{ marginTop: 6, width: '100%', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <div style={{ fontSize: 9.5, color: '#38bdf8', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+                                  <span>Thiên Mệnh:</span>
+                                  <strong>{da.currentThienMenh.toLocaleString()}/{da.maxThienMenh.toLocaleString()} ({percent}%)</strong>
+                                </div>
+                                <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: `${percent}%`,
+                                      height: '100%',
+                                      background: percent >= 70 ? 'linear-gradient(90deg, #38bdf8, #ffcc00)' : 'linear-gradient(90deg, #38bdf8, #818cf8)',
+                                      transition: 'width 0.3s ease',
+                                    }}
+                                  />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                                  <button
+                                    className="btn-cyan"
+                                    style={{ flex: 1, fontSize: 9.5, padding: '5px 2px' }}
+                                    disabled={availableTM <= 0 || needed <= 0}
+                                    onClick={() => triggerAction(() => injectThienMenh(da.id, Math.min(1000, needed)), `Đã nạp Thiên Mệnh vào [${title}]`)}
+                                  >
+                                    +1.000 TM
+                                  </button>
+                                  <button
+                                    className="btn-gold"
+                                    style={{ flex: 1, fontSize: 9.5, padding: '5px 2px', fontWeight: 700 }}
+                                    disabled={availableTM <= 0 || needed <= 0}
+                                    onClick={() => triggerAction(() => injectThienMenh(da.id, needed), `Đã nạp đầy Thiên Mệnh vào [${title}]`)}
+                                  >
+                                    ⚡ Nạp Đầy
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ marginTop: 8, fontSize: 10, color: '#ffcc00', fontWeight: 700, textAlign: 'center' }}>
+                                👑 ĐÃ ĐẠI VIÊN MÃN
+                              </div>
+                            )}
                           </div>
-                          <p style={{ margin: '0 0 8px', fontSize: 10.5, color: 'var(--text-secondary)' }}>
-                            Nạp Lực Thiên Mệnh vào từng Đạo Anh để thai nghén chuẩn bị nghênh tiếp Lôi Kiếp trên <strong>Độ Kiếp Đài</strong>!
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h3 className={styles.cardHeader}>Thiên Cung Kim Đan ({cultivation.maxThienCung} Cung)</h3>
+                    {(() => {
+                      const lampList = cultivation.absorbedLamps || [];
+                      const lampCount = lampList.length;
+                      const selfPalacesTotal = Math.max(1, cultivation.maxThienCung - lampCount);
+                      const selfRealized = cultivation.realizedThienCung || 0;
+                      const totalRealizedCung = lampCount + selfRealized;
+                      const targetPalaceExp = constants.getPalaceCost ? constants.getPalaceCost(selfRealized + 1) : 2000;
+                      const bottleneckExp = targetPalaceExp - 1;
+
+                      return (
+                        <>
+                          <p className={styles.subtext}>
+                            • Tổng Chiến Lực Kim Đan: <strong>{totalRealizedCung}/{cultivation.maxThienCung} Cung Thật</strong> (gồm <strong>{lampCount} Chân Cung Mệnh Đăng</strong> + <strong>{selfRealized}/{selfPalacesTotal} Cung Tự Thân Hóa Thực</strong>).
+                            <br />
+                            • <strong>Chân Cung Mệnh Đăng</strong>: Hình thành vĩnh cửu từ Mệnh Đăng, <strong>100% Cung Thật</strong> ngay khi ngưng tụ Kim Đan, không cần đi Hóa Thực!
+                            <br />
+                            • <strong>Thiên Cung Tự Thân</strong>: Ban đầu Hư Ảo, khi nạp đủ 99.99% linh lực cần khảm nạm <strong>1 Vật Trấn Áp</strong> từ Túi Trữ Vật để hoàn tất 100% Cung Thật!
                           </p>
 
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {(cultivation.daoAnhs || []).map(da => {
-                              const daTheme = getDaoAnhTheme(da, cultivation);
-                              const percent = Math.min(100, Math.floor((da.currentThienMenh / da.maxThienMenh) * 100));
-                              const needed = da.maxThienMenh - da.currentThienMenh;
-                              const availableTM = cultivation.totalThienMenh || 0;
+                          {/* Palace Grid */}
+                          <div className={styles.palaceGrid}>
+                            {/* A. Các Chân Cung Mệnh Đăng */}
+                            {lampList.map((lampId, idx) => {
+                              const lampObj = LIFE_LAMPS.find(l => l.id === lampId);
+                              const globalPalaceIdx = idx;
+                              const da = (cultivation.daoAnhs || []).find(d => d.palaceIndex === globalPalaceIdx);
+                              const palaceName = lampObj ? getLampPalaceName(lampObj) : `Chân Cung Đăng ${idx + 1}`;
+                              const daoProg = cultivation.daoAnhProgress?.[globalPalaceIdx] || (cultivation.isKimDanTrialV2 ? 10000 : 0);
 
                               return (
-                                <div key={`tm_inj_${da.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 8px', background: 'rgba(30, 41, 59, 0.6)', borderRadius: 6, border: `1px solid ${daTheme.color}44` }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <span style={{ fontSize: 13 }}>{daTheme.icon}</span>
-                                    <div>
-                                      <div style={{ fontSize: 11, color: daTheme.color, fontWeight: 700 }}>{da.name}</div>
-                                      <div style={{ fontSize: 9.5, color: 'var(--text-secondary)' }}>{da.currentThienMenh.toLocaleString()}/{da.maxThienMenh.toLocaleString()} TM ({percent}%)</div>
-                                    </div>
-                                  </div>
+                                <div
+                                  key={`lamp_palace_${idx}`}
+                                  className={`${styles.palaceCard} ${styles.palaceRealized} ${da ? styles.palaceDaoAnh : ''}`}
+                                >
+                                  <span className={styles.palaceIcon}>
+                                    {lampObj?.icon || '🏮'}
+                                  </span>
+                                  <span className={styles.palaceName} style={{ color: '#ffcc00', fontWeight: 700 }}>
+                                    {palaceName}
+                                  </span>
+                                  <span className={styles.palaceStatus} style={{ color: '#ffcc00' }}>
+                                    ✦ Chân Cung
+                                  </span>
 
-                                  {da.currentKiep >= 5 ? (
-                                    <span style={{ fontSize: 10, color: '#ffcc00', fontWeight: 700 }}>👑 ĐÃ ĐẠI VIÊN MÃN</span>
-                                  ) : (
-                                    <div style={{ display: 'flex', gap: 4 }}>
-                                      <button
-                                        className="btn-cyan"
-                                        style={{ fontSize: 9.5, padding: '3px 8px' }}
-                                        disabled={availableTM <= 0 || needed <= 0}
-                                        onClick={() => triggerAction(() => injectThienMenh(da.id, Math.min(1000, needed)), `Đã nạp Thiên Mệnh vào [${da.name}]`)}
-                                      >
-                                        +1.000 TM
-                                      </button>
-                                      <button
-                                        className="btn-gold"
-                                        style={{ fontSize: 9.5, padding: '3px 8px', fontWeight: 700 }}
-                                        disabled={availableTM <= 0 || needed <= 0}
-                                        onClick={() => triggerAction(() => injectThienMenh(da.id, needed), `Đã nạp đầy Thiên Mệnh vào [${da.name}]`)}
-                                      >
-                                        ⚡ Nạp Đầy
-                                      </button>
+                                  {!da && totalRealizedCung === cultivation.maxThienCung && (
+                                    <div style={{ marginTop: 6, width: '100%', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                      <div style={{ fontSize: 9.5, color: '#38bdf8', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>🌱 Thai Nghén Đạo Anh:</span>
+                                        <strong>{daoProg.toLocaleString()}/10.000</strong>
+                                      </div>
+                                      <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                                        <div
+                                          style={{
+                                            width: `${Math.min(100, Math.floor((daoProg / 10000) * 100))}%`,
+                                            height: '100%',
+                                            background: daoProg >= 10000 ? 'linear-gradient(90deg, #38bdf8, #ffcc00)' : 'linear-gradient(90deg, #38bdf8, #818cf8)',
+                                            transition: 'width 0.3s ease',
+                                          }}
+                                        />
+                                      </div>
+
+                                      {daoProg >= 10000 || cultivation.isKimDanTrialV2 ? (
+                                        <button
+                                          className="btn-gold"
+                                          style={{ width: '100%', fontSize: 10.5, padding: '5px 8px', fontWeight: 700, marginTop: 2 }}
+                                          onClick={() => triggerAction(() => manifestDaoAnh(globalPalaceIdx), `Đã khai sinh Đạo Anh tại [${palaceName}]!`)}
+                                        >
+                                          👑 KHAI SINH ĐẠO ANH
+                                        </button>
+                                      ) : (
+                                        <button
+                                          className="btn-cyan"
+                                          style={{ width: '100%', fontSize: 9.5, padding: '4px 6px', marginTop: 2 }}
+                                          onClick={() => triggerAction(() => injectExpToDaoAnh(globalPalaceIdx, 10000))}
+                                        >
+                                          ⚡ Tích Lũy (10k EXP)
+                                        </button>
+                                      )}
                                     </div>
                                   )}
                                 </div>
                               );
                             })}
-                          </div>
-                        </div>
-                      )}
 
-                      {/* Palace Grid */}
-                      <div className={styles.palaceGrid}>
-                        {/* A. Các Chân Cung Mệnh Đăng (100% Cung Thật Vĩnh Cửu, Tự Động Mang Tên Mệnh Đăng) */}
-                        {lampList.map((lampId, idx) => {
-                          const lampObj = LIFE_LAMPS.find(l => l.id === lampId);
-                          const globalPalaceIdx = idx;
-                          const da = (cultivation.daoAnhs || []).find(d => d.palaceIndex === globalPalaceIdx);
-                          const daTheme = da ? getDaoAnhTheme(da, cultivation) : null;
-                          const palaceName = lampObj ? getLampPalaceName(lampObj) : `Chân Cung Đăng ${idx + 1}`;
-                          const daoProg = cultivation.daoAnhProgress?.[globalPalaceIdx] || (cultivation.isKimDanTrialV2 ? 10000 : 0);
+                            {/* B. Các Thiên Cung Tự Thân */}
+                            {Array.from({ length: selfPalacesTotal }).map((_, sIdx) => {
+                              const selfNum = sIdx + 1;
+                              const globalPalaceIdx = lampCount + sIdx;
+                              const isSelfRealized = selfRealized >= selfNum;
+                              const da = (cultivation.daoAnhs || []).find(d => d.palaceIndex === globalPalaceIdx);
+                              const anchor = cultivation.palaceAnchors?.[sIdx];
+                              const isBottleneck = !isSelfRealized && selfNum === (selfRealized + 1) && cultivation.currentThienCungExp >= bottleneckExp;
+                              const derivedPalaceName = anchor ? (anchor.palaceName || getPalaceNameFromArtifact(anchor, sIdx, cultivation.palaceAnchors)) : `Thiên Cung Tự Thân ${selfNum}`;
+                              const daoProg = cultivation.daoAnhProgress?.[globalPalaceIdx] || (cultivation.isKimDanTrialV2 ? 10000 : 0);
 
-                          return (
-                            <div
-                              key={`lamp_palace_${idx}`}
-                              className={`${styles.palaceCard} ${styles.palaceRealized} ${da ? styles.palaceDaoAnh : ''}`}
-                              style={da ? { borderColor: daTheme.color, boxShadow: `0 0 12px ${daTheme.glow}`, background: daTheme.bg } : {}}
-                            >
-                              <span className={styles.palaceIcon}>
-                                {da ? daTheme.icon : lampObj?.icon || '🏮'}
-                              </span>
-                              <span className={styles.palaceName} style={{ color: da ? daTheme.color : '#ffcc00', fontWeight: 700 }}>
-                                {da ? `${da.name}${da.currentKiep > 0 ? ` (${da.currentKiep}K)` : ''}` : palaceName}
-                              </span>
-                              <span className={styles.palaceStatus} style={{ color: da ? daTheme.color : '#ffcc00' }}>
-                                {da ? (da.currentKiep > 0 ? `✦ ${da.currentKiep} Kiếp` : '✦ Giả Anh (0 Kiếp)') : '✦ Chân Cung'}
-                              </span>
-
-                              {/* Tiến độ Thai Nghén Đạo Anh (10.000 Tu Vi) cho Chân Cung Mệnh Đăng khi đã đạt 100% Cung Thật */}
-                              {!da && totalRealizedCung === cultivation.maxThienCung && (
-                                <div style={{ marginTop: 6, width: '100%', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  <div style={{ fontSize: 9.5, color: '#38bdf8', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-                                    <span>🌱 Thai Nghén Đạo Anh:</span>
-                                    <strong>{daoProg.toLocaleString()}/10.000</strong>
-                                  </div>
-                                  <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
-                                    <div
-                                      style={{
-                                        width: `${Math.min(100, Math.floor((daoProg / 10000) * 100))}%`,
-                                        height: '100%',
-                                        background: daoProg >= 10000 ? 'linear-gradient(90deg, #38bdf8, #ffcc00)' : 'linear-gradient(90deg, #38bdf8, #818cf8)',
-                                        transition: 'width 0.3s ease',
-                                      }}
-                                    />
-                                  </div>
-
-                                  {daoProg >= 10000 || cultivation.isKimDanTrialV2 ? (
-                                    <button
-                                      className="btn-gold"
-                                      style={{ width: '100%', fontSize: 10.5, padding: '5px 8px', fontWeight: 700, marginTop: 2 }}
-                                      onClick={() => triggerAction(() => manifestDaoAnh(globalPalaceIdx), `Đã khai sinh Đạo Anh tại [${palaceName}]!`)}
-                                    >
-                                      👑 KHAI SINH ĐẠO ANH
-                                    </button>
-                                  ) : (
-                                    <button
-                                      className="btn-cyan"
-                                      style={{ width: '100%', fontSize: 9.5, padding: '4px 6px', marginTop: 2 }}
-                                      onClick={() => triggerAction(() => injectExpToDaoAnh(globalPalaceIdx, 10000))}
-                                    >
-                                      ⚡ Tích Lũy (10k EXP)
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-
-                        {/* B. Các Thiên Cung Tự Thân (Cần Nạp Linh Lực & Khảm Nạm Vật Trấn Áp Để Hóa Thực) */}
-                        {Array.from({ length: selfPalacesTotal }).map((_, sIdx) => {
-                          const selfNum = sIdx + 1;
-                          const globalPalaceIdx = lampCount + sIdx;  // self palaces: index 4..10
-                          const isSelfRealized = selfRealized >= selfNum;
-                          const da = (cultivation.daoAnhs || []).find(d => d.palaceIndex === globalPalaceIdx);
-                          const daTheme = da ? getDaoAnhTheme(da, cultivation) : null;
-                          const anchor = cultivation.palaceAnchors?.[sIdx];
-                          const isBottleneck = !isSelfRealized && selfNum === (selfRealized + 1) && cultivation.currentThienCungExp >= bottleneckExp;
-                          const derivedPalaceName = anchor ? (anchor.palaceName || getPalaceNameFromArtifact(anchor, sIdx, cultivation.palaceAnchors)) : `Thiên Cung Tự Thân ${selfNum}`;
-                          const daoProg = cultivation.daoAnhProgress?.[globalPalaceIdx] || (cultivation.isKimDanTrialV2 ? 10000 : 0);
-
-                          return (
-                            <div
-                              key={`self_palace_${selfNum}`}
-                              className={`${styles.palaceCard} ${isSelfRealized ? styles.palaceRealized : isBottleneck ? styles.palaceBottleneck : ''} ${da ? styles.palaceDaoAnh : ''}`}
-                              style={da ? { borderColor: daTheme.color, boxShadow: `0 0 12px ${daTheme.glow}`, background: daTheme.bg } : {}}
-                            >
-                              <span className={styles.palaceIcon}>
-                                {da ? daTheme.icon : anchor ? anchor.icon : isSelfRealized ? '🏛️' : isBottleneck ? '🔑' : '☁️'}
-                              </span>
-                              <span className={styles.palaceName} style={anchor || da ? { color: da ? daTheme.color : '#ffcc00', fontWeight: 700 } : {}}>
-                                {da ? `${da.name}${da.currentKiep > 0 ? ` (${da.currentKiep}K)` : ''}` : derivedPalaceName}
-                              </span>
-                              <span className={styles.palaceStatus} style={anchor || da ? { color: da ? daTheme.color : '#ffcc00' } : {}}>
-                                {da ? (da.currentKiep > 0 ? `✦ ${da.currentKiep} Kiếp` : '✦ Giả Anh (0 Kiếp)') : isSelfRealized ? '✦ Chân Cung' : isBottleneck ? '⚠️ Cần Trấn Vật (99.9%)' : 'Hư Ảo (0%)'}
-                              </span>
-
-                              {/* Tiến độ Thai Nghén Đạo Anh (10.000 Tu Vi) khi toàn bộ 11 cung đã 100% Cung Thật */}
-                              {isSelfRealized && !da && totalRealizedCung === cultivation.maxThienCung && (
-                                <div style={{ marginTop: 6, width: '100%', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  <div style={{ fontSize: 9.5, color: '#38bdf8', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-                                    <span>🌱 Thai Nghén Đạo Anh:</span>
-                                    <strong>{daoProg.toLocaleString()}/10.000</strong>
-                                  </div>
-                                  <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
-                                    <div
-                                      style={{
-                                        width: `${Math.min(100, Math.floor((daoProg / 10000) * 100))}%`,
-                                        height: '100%',
-                                        background: daoProg >= 10000 ? 'linear-gradient(90deg, #38bdf8, #ffcc00)' : 'linear-gradient(90deg, #38bdf8, #818cf8)',
-                                        transition: 'width 0.3s ease',
-                                      }}
-                                    />
-                                  </div>
-
-                                  {daoProg >= 10000 || cultivation.isKimDanTrialV2 ? (
-                                    <button
-                                      className="btn-gold"
-                                      style={{ width: '100%', fontSize: 10.5, padding: '5px 8px', fontWeight: 700, marginTop: 2 }}
-                                      onClick={() => triggerAction(() => manifestDaoAnh(globalPalaceIdx), `Đã khai sinh Đạo Anh tại [${derivedPalaceName}]!`)}
-                                    >
-                                      👑 KHAI SINH ĐẠO ANH
-                                    </button>
-                                  ) : (
-                                    <button
-                                      className="btn-cyan"
-                                      style={{ width: '100%', fontSize: 9.5, padding: '4px 6px', marginTop: 2 }}
-                                      onClick={() => triggerAction(() => injectExpToDaoAnh(globalPalaceIdx, 10000))}
-                                    >
-                                      ⚡ Tích Lũy (10k EXP)
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Button Khảm Nạm nhanh khi cung tự thân đang ở 99.99% */}
-                              {isBottleneck && (
-                                <button
-                                  className={styles.miniAnchorBtn}
-                                  onClick={() => setAnchorModalPalace(sIdx)}
+                              return (
+                                <div
+                                  key={`self_palace_${selfNum}`}
+                                  className={`${styles.palaceCard} ${isSelfRealized ? styles.palaceRealized : isBottleneck ? styles.palaceBottleneck : ''}`}
                                 >
-                                  🔑 Khảm Nạm Trấn Vật
+                                  <span className={styles.palaceIcon}>
+                                    {anchor ? anchor.icon : isSelfRealized ? '🏛️' : isBottleneck ? '🔑' : '☁️'}
+                                  </span>
+                                  <span className={styles.palaceName} style={anchor ? { color: '#ffcc00', fontWeight: 700 } : {}}>
+                                    {derivedPalaceName}
+                                  </span>
+                                  <span className={styles.palaceStatus} style={anchor ? { color: '#ffcc00' } : {}}>
+                                    {isSelfRealized ? '✦ Chân Cung' : isBottleneck ? '⚠️ Cần Trấn Vật (99.9%)' : 'Hư Ảo (0%)'}
+                                  </span>
+
+                                  {isSelfRealized && !da && totalRealizedCung === cultivation.maxThienCung && (
+                                    <div style={{ marginTop: 6, width: '100%', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                      <div style={{ fontSize: 9.5, color: '#38bdf8', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>🌱 Thai Nghén Đạo Anh:</span>
+                                        <strong>{daoProg.toLocaleString()}/10.000</strong>
+                                      </div>
+                                      <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                                        <div
+                                          style={{
+                                            width: `${Math.min(100, Math.floor((daoProg / 10000) * 100))}%`,
+                                            height: '100%',
+                                            background: daoProg >= 10000 ? 'linear-gradient(90deg, #38bdf8, #ffcc00)' : 'linear-gradient(90deg, #38bdf8, #818cf8)',
+                                            transition: 'width 0.3s ease',
+                                          }}
+                                        />
+                                      </div>
+
+                                      {daoProg >= 10000 || cultivation.isKimDanTrialV2 ? (
+                                        <button
+                                          className="btn-gold"
+                                          style={{ width: '100%', fontSize: 10.5, padding: '5px 8px', fontWeight: 700, marginTop: 2 }}
+                                          onClick={() => triggerAction(() => manifestDaoAnh(globalPalaceIdx), `Đã khai sinh Đạo Anh tại [${derivedPalaceName}]!`)}
+                                        >
+                                          👑 KHAI SINH ĐẠO ANH
+                                        </button>
+                                      ) : (
+                                        <button
+                                          className="btn-cyan"
+                                          style={{ width: '100%', fontSize: 9.5, padding: '4px 6px', marginTop: 2 }}
+                                          onClick={() => triggerAction(() => injectExpToDaoAnh(globalPalaceIdx, 10000))}
+                                        >
+                                          ⚡ Tích Lũy (10k EXP)
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {isBottleneck && (
+                                    <button
+                                      className={styles.miniAnchorBtn}
+                                      onClick={() => setAnchorModalPalace(sIdx)}
+                                    >
+                                      🔑 Khảm Nạm Trấn Vật
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Progress or Bottleneck Banner cho Thiên Cung Tự Thân */}
+                          {selfRealized < selfPalacesTotal ? (
+                            cultivation.currentThienCungExp >= bottleneckExp ? (
+                              <div className={styles.bottleneckNoticeCard}>
+                                <div className={styles.bottleneckNoticeHead}>
+                                  <span style={{ fontSize: 18 }}>⚠️</span>
+                                  <div>
+                                    <h4 style={{ color: '#f97316', margin: 0, fontSize: 13.5 }}>
+                                      THIÊN CUNG TỰ THÂN {selfRealized + 1} ĐẠT 99.99% TÍCH LŨY!
+                                    </h4>
+                                    <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                                      Linh lực đã đạt cực hạn ({bottleneckExp.toLocaleString()}/{targetPalaceExp.toLocaleString()} Tu Vi). Cần khảm nạm một <strong>Vật Trấn Áp (Pháp Khí, Dị Khí, Công Pháp...)</strong> để hoàn tất <strong>100% Cung Thật</strong>!
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  className="btn-gold"
+                                  style={{ width: '100%', marginTop: 8, fontSize: 12, padding: '7px' }}
+                                  onClick={() => setAnchorModalPalace(selfRealized)}
+                                >
+                                  🔑 Khảm Nạm Vật Trấn Áp Ngay
                                 </button>
+                              </div>
+                            ) : (
+                              <div className={styles.progressContainer}>
+                                <div className={styles.progressInfo}>
+                                  <span>Tiến độ Hóa Thực Thiên Cung {cultivation.realizedThienCung + 1} thành Cung Thật:</span>
+                                  <strong>{cultivation.currentThienCungExp}/{targetPalaceExp} Tu Vi</strong>
+                                </div>
+                                <div className={styles.progressBarBg}>
+                                  <div
+                                    className={styles.progressBarFillCyan}
+                                    style={{ width: `${Math.min(100, (cultivation.currentThienCungExp / targetPalaceExp) * 100)}%` }}
+                                  />
+                                </div>
+                                <p className={styles.hintText}>📖 Đọc thêm chương để ngưng tụ linh lực Hóa Thực Thiên Cung tiếp theo (Yêu cầu lũy tiến: {targetPalaceExp} Tu Vi)!</p>
+
+                                {cultivation.isKimDanTrialV2 && (
+                                  <button
+                                    className="btn-gold"
+                                    style={{ width: '100%', marginTop: 10, fontSize: 12, padding: '8px', fontWeight: 700, letterSpacing: 0.5 }}
+                                    onClick={() => triggerAction(thangCung)}
+                                  >
+                                    ⬆️ Thăng Cung (Đẩy Lên 99.99% — Cần Vật Trấn Áp)
+                                  </button>
+                                )}
+                              </div>
+                            )
+                          ) : (
+                            <div className={styles.maxRankBadge}>
+                              ✨ TOÀN BỘ {cultivation.maxThienCung} THIÊN CUNG ĐÃ HÓA THÀNH CUNG THẬT 100%!
+                              {cultivation.realm === 'kim_dan' && (
+                                <p style={{ marginTop: 6, fontSize: 12, color: 'var(--accent-cyan)', fontWeight: 'normal' }}>
+                                  👉 Nhấn "👑 Hóa Đạo Anh" trên từng cung để ngưng tụ Đạo Anh Thần Thể mở khóa cảnh giới <strong>Nguyên Anh (Chiến lực tính bằng Anh)</strong>!
+                                </p>
                               )}
                             </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Progress or Bottleneck Banner cho Thiên Cung Tự Thân */}
-                      {selfRealized < selfPalacesTotal ? (
-                        cultivation.currentThienCungExp >= bottleneckExp ? (
-                          <div className={styles.bottleneckNoticeCard}>
-                            <div className={styles.bottleneckNoticeHead}>
-                              <span style={{ fontSize: 18 }}>⚠️</span>
-                              <div>
-                                <h4 style={{ color: '#f97316', margin: 0, fontSize: 13.5 }}>
-                                  THIÊN CUNG TỰ THÂN {selfRealized + 1} ĐẠT 99.99% TÍCH LŨY!
-                                </h4>
-                                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
-                                  Linh lực đã đạt cực hạn ({bottleneckExp.toLocaleString()}/{targetPalaceExp.toLocaleString()} Tu Vi). Cần khảm nạm một <strong>Vật Trấn Áp (Pháp Khí, Dị Khí, Công Pháp...)</strong> để hoàn tất <strong>100% Cung Thật</strong>!
-                                </p>
-                              </div>
-                            </div>
-                            <button
-                              className="btn-gold"
-                              style={{ width: '100%', marginTop: 8, fontSize: 12, padding: '7px' }}
-                              onClick={() => setAnchorModalPalace(selfRealized)}
-                            >
-                              🔑 Khảm Nạm Vật Trấn Áp Ngay
-                            </button>
-                          </div>
-                        ) : (
-                          <div className={styles.progressContainer}>
-                            <div className={styles.progressInfo}>
-                              <span>Tiến độ Hóa Thực Thiên Cung {cultivation.realizedThienCung + 1} thành Cung Thật:</span>
-                              <strong>{cultivation.currentThienCungExp}/{targetPalaceExp} Tu Vi</strong>
-                            </div>
-                            <div className={styles.progressBarBg}>
-                              <div
-                                className={styles.progressBarFillCyan}
-                                style={{ width: `${Math.min(100, (cultivation.currentThienCungExp / targetPalaceExp) * 100)}%` }}
-                              />
-                            </div>
-                            <p className={styles.hintText}>📖 Đọc thêm chương để ngưng tụ linh lực Hóa Thực Thiên Cung tiếp theo (Yêu cầu lũy tiến: {targetPalaceExp} Tu Vi)!</p>
-
-                            {/* Nút Thăng Cung — chỉ hiển thị cho user đang dùng Kim Đan Trial V2 */}
-                            {cultivation.isKimDanTrialV2 && (
-                              <button
-                                className="btn-gold"
-                                style={{ width: '100%', marginTop: 10, fontSize: 12, padding: '8px', fontWeight: 700, letterSpacing: 0.5 }}
-                                onClick={() => triggerAction(thangCung)}
-                              >
-                                ⬆️ Thăng Cung (Đẩy Lên 99.99% — Cần Vật Trấn Áp)
-                              </button>
-                            )}
-                          </div>
-                        )
-                      ) : (
-                        <div className={styles.maxRankBadge}>
-                          ✨ TOÀN BỘ {cultivation.maxThienCung} THIÊN CUNG ĐÃ HÓA THÀNH CUNG THẬT 100%!
-                          {cultivation.realm === 'kim_dan' && (
-                            <p style={{ marginTop: 6, fontSize: 12, color: 'var(--accent-cyan)', fontWeight: 'normal' }}>
-                              👉 Nhấn "👑 Hóa Đạo Anh" trên từng cung để ngưng tụ Đạo Anh Thần Thể mở khóa cảnh giới <strong>Nguyên Anh (Chiến lực tính bằng Anh)</strong>!
-                            </p>
                           )}
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
+                        </>
+                      );
+                    })()}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1321,7 +1341,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                         </span>
                         <div className={styles.daoAnhInfo}>
                           <h4 className={styles.daoAnhTitle} style={{ color: daTheme.color, fontWeight: 700 }}>
-                            {da.name}
+                            {formatDaoAnhTitle(da.name)}
                           </h4>
                           <span className={styles.daoAnhBadge} style={{ color: daTheme.color }}>
                             {da.element || 'Thần Thể'} · Kiếp {da.currentKiep}/5 ({da.currentKiep} Anh)

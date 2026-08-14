@@ -1718,6 +1718,16 @@ export const buyLampWithPointsAndExp = buyLampWithTienTinhAndExp;
 export const burnExpForLamp = buyLampWithTienTinhAndExp;
 
 /**
+ * Format tên Đạo Anh chuẩn ngắn gọn không dính từ "Cung", "Đăng", "Mệnh Đăng"
+ */
+export function formatDaoAnhTitle(rawName) {
+  if (!rawName) return 'Đạo Anh';
+  let core = rawName.replace(/^Đạo Anh\s*\[?|\]?$/g, '').trim();
+  core = core.replace(/Mệnh Đăng|Thần Đăng|Đăng|Cung/g, '').trim();
+  return `Đạo Anh [${core}]`;
+}
+
+/**
  * Chuyển đổi tên Mệnh Đăng thành tên Chân Cung chuẩn Tiên Hiệp (VD: Hương Hỏa Mệnh Đăng -> Hương Hỏa Cung)
  * Tuyệt đối không để chữ "Đăng Cung"!
  */
@@ -2362,13 +2372,15 @@ export function manifestDaoAnh(palaceIndex) {
   if (isLampPalace) {
     const lampId = absorbed[palaceIndex];
     lampObj = LIFE_LAMPS.find(l => l.id === lampId);
-    const shortName = lampObj ? (lampObj.shortName || lampObj.name.replace('Đăng', '')) : `Mệnh Đăng ${palaceIndex + 1}`;
+    let shortName = lampObj ? (lampObj.shortName || lampObj.name) : `Đăng ${palaceIndex + 1}`;
+    shortName = shortName.replace(/Mệnh Đăng|Thần Đăng|Đăng|Cung/g, '').trim();
     daoAnhTitle = `Đạo Anh [${shortName}]`;
     elementAttr = lampObj ? `${shortName} Thần Thể` : 'Chân Đăng Thần Thể';
   } else {
     const selfNum = palaceIndex - lampCount + 1;
     const anchor = state.palaceAnchors?.[palaceIndex - lampCount] || state.palaceAnchors?.[palaceIndex];
-    const derivedName = anchor ? (anchor.palaceName || getPalaceNameFromArtifact(anchor, palaceIndex - lampCount, state.palaceAnchors)) : `Cung Tự Thân ${selfNum}`;
+    let derivedName = anchor ? (anchor.palaceName || getPalaceNameFromArtifact(anchor, palaceIndex - lampCount, state.palaceAnchors)) : `Tự Thân ${selfNum}`;
+    derivedName = derivedName.replace(/Mệnh Đăng|Thần Đăng|Đăng|Cung/g, '').trim();
     daoAnhTitle = `Đạo Anh [${derivedName}]`;
     elementAttr = anchor ? `${anchor.shortName || anchor.name} Thần Thể` : 'Thiên Địa Thần Thể';
   }
