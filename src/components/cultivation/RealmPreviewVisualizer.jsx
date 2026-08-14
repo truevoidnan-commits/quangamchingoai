@@ -421,7 +421,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
           </div>
 
           <div className={styles.stageStatusBadge}>
-            <span>✨ CỬU TRÙNG THIÊN LÂU · {lampPalaceCount + realizedThienCung}/{maxThienCung} CHÂN CUNG HÓA THỰC (KIM ĐAN TRẤN VIÊN)</span>
+            <span>✨ {maxThienCung === 9 ? 'CỬU TRÙNG THIÊN LÂU' : `THIÊN CUNG BẢO THÁP (${maxThienCung} TẦNG)`} · {lampPalaceCount + realizedThienCung}/{maxThienCung} CHÂN CUNG HÓA THỰC (KIM ĐAN TRẤN VIÊN)</span>
           </div>
         </div>
       )}
