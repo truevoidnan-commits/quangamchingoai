@@ -394,6 +394,7 @@ function SvgLamp({ color, size }) {
  * @param {string}  [props.className]
  */
 export default function ArtifactIcon({ item, isLamp = false, size = 28, className = '' }) {
+  const [imgError, setImgError] = React.useState(false);
   const tier  = item?.tier  || 'ha_pham';
   const color = item?.color || TIER_COLORS[tier] || '#94a3b8';
   const glow  = TIER_GLOW[tier]  || 'rgba(148,163,184,0.5)';
@@ -414,7 +415,7 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
   }
 
   // Thần Phẩm with AI image
-  if (tier === 'than_pham' && item?.id && THAN_PHAM_AI_ICONS[item.id]) {
+  if (tier === 'than_pham' && item?.id && THAN_PHAM_AI_ICONS[item.id] && !imgError) {
     return (
       <span
         className={`${styles.iconWrapper} ${styles.imgWrapper} ${className}`}
@@ -426,6 +427,7 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
           alt={item?.name}
           className={styles.aiImg}
           style={{ width: size, height: size }}
+          onError={() => setImgError(true)}
         />
       </span>
     );

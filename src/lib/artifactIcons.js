@@ -6,15 +6,17 @@
 // - All other tiers: SVG art components defined below
 // =========================================================================
 
+const baseUrl = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/';
+
 /** Map of Thần Phẩm artifact IDs that have AI-generated PNG icons */
 export const THAN_PHAM_AI_ICONS = {
-  hong_mong_khi:      '/icons/than_pham/hong_mong_tu_khi.jpg',
-  hon_don_so_khai:    '/icons/than_pham/hon_don_so_khai.jpg',
-  van_co_long_to:     '/icons/than_pham/van_co_long_to.jpg',
-  luan_hoi_ban:       '/icons/than_pham/luan_hoi_chan_kinh.jpg',
-  sang_the_quang:     '/icons/than_pham/sang_the_quang.jpg',
-  hu_vo_ban_nguyen:   '/icons/than_pham/hu_vo_tich_diet.jpg',
-  thuong_thuong_kiem: '/icons/than_pham/phat_thien_kiem.jpg',
+  hong_mong_khi:      baseUrl + 'icons/than_pham/hong_mong_tu_khi.jpg',
+  hon_don_so_khai:    baseUrl + 'icons/than_pham/hon_don_so_khai.jpg',
+  van_co_long_to:     baseUrl + 'icons/than_pham/van_co_long_to.jpg',
+  luan_hoi_ban:       baseUrl + 'icons/than_pham/luan_hoi_chan_kinh.jpg',
+  sang_the_quang:     baseUrl + 'icons/than_pham/sang_the_quang.jpg',
+  hu_vo_ban_nguyen:   baseUrl + 'icons/than_pham/hu_vo_tich_diet.jpg',
+  thuong_thuong_kiem: baseUrl + 'icons/than_pham/phat_thien_kiem.jpg',
 };
 
 /**
