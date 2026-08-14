@@ -27,19 +27,22 @@ export const THAN_PHAM_AI_ICONS = {
 
 /** Map of Thần Phẩm Life Lamp IDs to AI-generated icons */
 export const LAMP_THAN_PHAM_AI_ICONS = {
-  tan_tien_phe_than:    baseUrl + 'icons/than_pham/lamp_tan_tien_phe_than.jpg',
-  sang_the_ban_nguyen:  baseUrl + 'icons/than_pham/lamp_sang_the_ban_nguyen.jpg',
-  hon_don_so_khai:      baseUrl + 'icons/than_pham/lamp_hon_don_so_khai.jpg',
-  hong_mong_bat_diet:    baseUrl + 'icons/than_pham/lamp_hong_mong_bat_diet.jpg',
-  cuu_chuyen_luan_hoi:   baseUrl + 'icons/than_pham/lamp_cuu_chuyen_luan_hoi.jpg',
+  tan_tien_phe_than:      baseUrl + 'icons/than_pham/lamp_tan_tien_phe_than.jpg',
+  sang_the_ban_nguyen:    baseUrl + 'icons/than_pham/lamp_sang_the_ban_nguyen.jpg',
+  hon_don_so_khai:        baseUrl + 'icons/than_pham/lamp_hon_don_so_khai.jpg',
+  hong_mong_bat_diet:      baseUrl + 'icons/than_pham/lamp_hong_mong_bat_diet.jpg',
+  cuu_chuyen_luan_hoi:     baseUrl + 'icons/than_pham/lamp_cuu_chuyen_luan_hoi.jpg',
   thuong_thuong_loi_kiep: baseUrl + 'icons/than_pham/lamp_thuong_thuong_loi_kiep.jpg',
-  thien_dao_trung_phat:  baseUrl + 'icons/than_pham/lamp_thuong_thuong_loi_kiep.jpg',
-  van_menh_hu_vo:       baseUrl + 'icons/than_pham/lamp_van_menh_hu_vo.jpg',
-  vo_cuc_ma_ton:         baseUrl + 'icons/than_pham/lamp_van_menh_hu_vo.jpg',
-  tuc_menh_nhan_qua:    baseUrl + 'icons/than_pham/lamp_tuc_menh_nhan_qua.jpg',
-  khai_thien_tich_dia:  baseUrl + 'icons/than_pham/lamp_tuc_menh_nhan_qua.jpg',
+  thien_dao_trung_phat:   baseUrl + 'icons/than_pham/lamp_thuong_thuong_loi_kiep.jpg',
+  van_menh_hu_vo:         baseUrl + 'icons/than_pham/lamp_van_menh_hu_vo.jpg',
+  vo_cuc_ma_ton:           baseUrl + 'icons/than_pham/lamp_van_menh_hu_vo.jpg',
+  tuc_menh_nhan_qua:      baseUrl + 'icons/than_pham/lamp_tuc_menh_nhan_qua.jpg',
+  khai_thien_tich_dia:    baseUrl + 'icons/than_pham/lamp_tuc_menh_nhan_qua.jpg',
+  thai_co_than_long:      baseUrl + 'icons/than_pham/lamp_thai_co_than_long.jpg',
   khoi_nguyen_thoi_khong: baseUrl + 'icons/than_pham/lamp_khoi_nguyen_thoi_khong.jpg',
-  bat_hu_thoi_khong:   baseUrl + 'icons/than_pham/lamp_khoi_nguyen_thoi_khong.jpg',
+  bat_hu_thoi_khong:     baseUrl + 'icons/than_pham/lamp_khoi_nguyen_thoi_khong.jpg',
+  van_gioi_quy_nhat:      baseUrl + 'icons/than_pham/lamp_van_gioi_quy_nhat.jpg',
+  toi_cao_thien_menh:    baseUrl + 'icons/than_pham/lamp_toi_cao_thien_menh.jpg',
 };
 
 /**
