@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { LIFE_LAMPS, LAMP_TIERS, getPalaceNameFromArtifact, getPalaceElementTheme } from '../../lib/cultivation';
+import { LIFE_LAMPS, LAMP_TIERS, getPalaceNameFromArtifact, getPalaceElementTheme, getLampPalaceName, formatDaoAnhTitle, getDaoAnhTheme } from '../../lib/cultivation';
 import styles from './RealmPreviewVisualizer.module.css';
 
 /**
@@ -356,6 +356,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 // isRealized: lamp palaces always realized; self palaces realized if selfLocalIdx < realizedThienCung
                 const isRealized = isLampPalace || (selfLocalIdx !== null && selfLocalIdx < realizedThienCung);
                 const da = (daoAnhs || []).find(d => d.palaceIndex === palaceIdx);
+                const daTheme = da ? getDaoAnhTheme(da, cultivation) : null;
                 const anchor = cultivation?.palaceAnchors?.[palaceIdx];
                 const isBottleneck = !isRealized && !isLampPalace && selfLocalIdx === realizedThienCung && (cultivation?.currentThienCungExp || 0) >= 799;
                 // Lamp palace info
@@ -363,7 +364,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 const absLamps = cultivation?.absorbedLamps || [];
                 const lid = isLampPalace ? absLamps[lampIdx] : null;
                 const lobj = lid ? LIFE_LAMPS.find(l => l.id === lid) : null;
-                const elemTheme = isLampPalace ? getPalaceElementTheme(lobj) : anchor ? getPalaceElementTheme(anchor) : getPalaceElementTheme(null);
+                const elemTheme = daTheme || (isLampPalace ? getPalaceElementTheme(lobj) : anchor ? getPalaceElementTheme(anchor) : getPalaceElementTheme(null));
 
                 return (
                   <div
@@ -392,9 +393,9 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                           </div>
                           <span className={styles.chamberTitle} style={{ color: elemTheme.color, fontWeight: 700, textShadow: `0 0 6px ${elemTheme.glow}` }}>
                             {(() => {
-                              if (da) return `${da.name}`;
+                              if (da) return formatDaoAnhTitle(da.name);
                               if (isLampPalace) {
-                                return lobj ? getPalaceNameFromArtifact(lobj, palaceIdx) : `Chân Cung Mệnh Đăng ${lampIdx + 1}`;
+                                return lobj ? getLampPalaceName(lobj) : `Chân Cung Đăng ${lampIdx + 1}`;
                               }
                               if (anchor) return `${anchor.icon} ${anchor.palaceName || getPalaceNameFromArtifact(anchor, palaceIdx, cultivation?.palaceAnchors)}`;
                               return `Cung Thật ${floorNum}`;
@@ -404,7 +405,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                       ) : isBottleneck ? (
                         <div className={styles.bottleneckChamberContent}>
                           <span className={styles.bottleneckIcon}>⚠️</span>
-                          <span className={styles.bottleneckText}>99.99% · Cần Vật Trấn Áp</span>
+                          <span className={styles.bottleneckText}>99.99% · Cần Trấn Vật</span>
                         </div>
                       ) : (
                         <div className={styles.hollowChamberContent}>
@@ -415,7 +416,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
 
                       {/* Biểu tượng trạng thái bên phải */}
                       <span className={styles.floorRightBadge} style={isRealized ? { color: elemTheme.color } : {}}>
-                        {da ? '👑' : isLampPalace ? '🏮' : anchor ? anchor.icon : isRealized ? '🏛️' : isBottleneck ? '🔑' : '🌫️'}
+                        {da ? (daTheme?.icon || '👑') : isLampPalace ? (lobj?.icon || '🏮') : anchor ? anchor.icon : isRealized ? '🏛️' : isBottleneck ? '🔑' : '🌫️'}
                       </span>
                     </div>
                   </div>
@@ -425,7 +426,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
           </div>
 
           <div className={styles.stageStatusBadge}>
-            <span>✨ {maxThienCung === 9 ? 'CỬU TRÙNG THIÊN LÂU' : `THIÊN CUNG BẢO THÁP (${maxThienCung} TẦNG)`} · {lampPalaceCount + realizedThienCung}/{maxThienCung} CHÂN CUNG HÓA THỰC</span>
+            <span>✨ THIÊN CUNG KIM ĐAN ({maxThienCung} TẦNG) · {lampPalaceCount + realizedThienCung}/{maxThienCung} CUNG THẬT</span>
           </div>
         </div>
       )}

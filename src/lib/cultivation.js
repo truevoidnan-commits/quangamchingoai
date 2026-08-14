@@ -1732,9 +1732,9 @@ export function formatDaoAnhTitle(rawName) {
  * Tuyệt đối không để chữ "Đăng Cung"!
  */
 export function getLampPalaceName(lamp) {
-  if (!lamp) return 'Chân Cung Mệnh Đăng';
+  if (!lamp) return 'Chân Cung';
   let name = lamp.name || lamp.shortName || '';
-  name = name.replace(/Mệnh Đăng|Thần Đăng|Đăng/g, '').trim();
+  name = name.replace(/Mệnh Đăng|Thần Đăng|Đăng Cung|Đăng/g, '').trim();
   if (!name.endsWith('Cung')) {
     name = `${name} Cung`;
   }
@@ -1745,12 +1745,30 @@ export function getLampPalaceName(lamp) {
  * Trả về phong cách Hoàng Kim Tiên Gia đồng nhất cho Thiên Cung
  */
 export function getPalaceElementTheme(item) {
+  if (!item) {
+    return {
+      name: 'Thần Quang',
+      color: '#ffcc00',
+      glow: 'rgba(255, 204, 0, 0.4)',
+      bg: 'rgba(255, 204, 0, 0.08)',
+      icon: '🏛️'
+    };
+  }
+
+  const tierKey = item.tier;
+  const tierInfo = LAMP_TIERS[tierKey] || LAMP_TIERS.trung_pham;
+
+  const color = item.color || tierInfo?.color || '#ffcc00';
+  const glow = tierInfo?.border || `${color}66`;
+  const bg = tierInfo?.bg || `${color}15`;
+  const icon = item.icon || '🏛️';
+
   return {
-    name: 'Hoàng Kim Thần Quang',
-    color: '#ffcc00',
-    glow: 'rgba(255, 204, 0, 0.3)',
-    bg: 'rgba(255, 204, 0, 0.08)',
-    icon: '✨'
+    name: tierInfo?.name || 'Thần Quang',
+    color,
+    glow,
+    bg,
+    icon
   };
 }
 
