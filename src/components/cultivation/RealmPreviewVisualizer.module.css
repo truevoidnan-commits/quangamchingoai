@@ -957,117 +957,47 @@
   filter: drop-shadow(0 0 8px rgba(255, 204, 0, 0.6));
 }
 
-.tuPhuStageContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  padding: 12px 8px;
-  gap: 16px;
-  box-sizing: border-box;
-}
-
-.tuPhuTopHeader {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.tuPhuInfantDomain {
-  position: relative;
-  width: 120px;
-  height: 120px;
+.daoAnhsOrbitList {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
 }
 
-.tuPhuTitleBadge {
-  font-family: var(--font-serif);
-  font-size: 11px;
-  font-weight: 800;
-  color: #ffcc00;
-  letter-spacing: 1px;
-  text-shadow: 0 0 10px rgba(255, 204, 0, 0.7);
-  background: rgba(15, 23, 42, 0.85);
-  padding: 4px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 204, 0, 0.4);
-}
-
-.tuPhuCardsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
-  gap: 10px;
-  width: 100%;
-  max-width: 480px;
-  box-sizing: border-box;
-}
-
-.tuPhuSpiritCard {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px 4px;
-  border-radius: 10px;
-  background: radial-gradient(circle at 50% 0%, rgba(15, 23, 42, 0.95) 0%, rgba(5, 11, 20, 0.98) 100%);
-  border: 1.2px solid var(--card-color, #38bdf8);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-  box-sizing: border-box;
-}
-
-.tuPhuSpiritCard:hover {
-  transform: translateY(-3px) scale(1.04);
-}
-
-.cardIconBox {
-  width: 46px;
-  height: 46px;
+.orbitDaoAnhMini {
+  position: absolute;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  margin-bottom: 6px;
-  box-shadow: 0 0 10px var(--card-color, rgba(56, 189, 248, 0.3));
-}
-
-.cardInfoBox {
+  background: rgba(10, 16, 26, 0.95);
+  border: 1.5px solid #22c3f0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  width: 100%;
-  text-align: center;
+  justify-content: center;
+  box-shadow: 0 0 14px rgba(34, 195, 240, 0.5);
+  pointer-events: auto;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  z-index: 8;
 }
 
-.cardNameText {
-  font-family: var(--font-serif);
-  font-size: 10.5px;
-  font-weight: 800;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 86px;
+.orbitDaoAnhMini:hover {
+  transform: scale(1.22) !important;
+  box-shadow: 0 0 20px #ffcc00 !important;
+  z-index: 20;
 }
 
-.cardKiepBadge {
-  font-size: 9px;
-  line-height: 1;
+.orbitLampProtected {
+  border-color: #ffcc00;
+  box-shadow: 0 0 14px rgba(255, 204, 0, 0.7);
 }
 
-.kiepPassedText {
-  font-weight: 800;
-  text-shadow: 0 0 4px rgba(255, 204, 0, 0.6);
-}
-
-.kiepHollowText {
-  color: rgba(255, 255, 255, 0.35);
-  font-style: italic;
+.miniIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @keyframes starSparkle {

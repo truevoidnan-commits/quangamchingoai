@@ -485,178 +485,172 @@ export default function RealmPreviewVisualizer({ cultivation }) {
           4. NGUYÊN ANH VISUALIZER
          ======================================================== */}
       {(realm === 'gia_anh' || realm === 'nguyen_anh') && (
-        <div className={styles.tuPhuStageContainer}>
-          {/* 1. Phần Trên: Tử Phủ Hư Không — Nguyên Anh Thần Thể Tọa Thiền */}
-          <div className={styles.tuPhuTopHeader}>
-            <div className={styles.tuPhuInfantDomain}>
-              <div className={styles.daoAnhAvatarBox}>
-                <div className={styles.daoAnhKiepHalo}>
-                  {Array.from({ length: 5 }).map((_, k) => {
-                    const maxKiep = daoAnhs.length > 0 ? Math.max(...daoAnhs.map(d => d.currentKiep || 0)) : 1;
-                    const isPassed = maxKiep >= k + 1;
-                    return (
-                      <div
-                        key={k}
-                        className={`${styles.haloRing} ${isPassed ? styles.haloRingPassed : ''}`}
-                        style={{
-                          width: `${56 + k * 14}px`,
-                          height: `${56 + k * 14}px`,
-                        }}
-                      />
-                    );
-                  })}
-                </div>
+        <div className={styles.nguyenAnhStage}>
+          {/* Celestial Gateway Background */}
+          <div className={styles.celestialGateway}>
+            <div className={styles.gatewayArch} />
+            <div className={styles.tribulationLightning} />
+          </div>
 
-                {/* Meditating Celestial Infant Body (Đạo Anh Thần Thể Tọa Thiền Bằng Vector SVG) */}
-                <div className={styles.infantEntity}>
-                  <div className={styles.spiritSvgWrap}>
-                    <svg viewBox="0 0 100 120" className={styles.spiritSvg}>
-                      <defs>
-                        <linearGradient id="spiritGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#67e8f9" stopOpacity="0.95" />
-                          <stop offset="35%" stopColor="#06b6d4" stopOpacity="0.9" />
-                          <stop offset="70%" stopColor="#0284c7" stopOpacity="0.85" />
-                          <stop offset="100%" stopColor="#1e293b" stopOpacity="0.95" />
-                        </linearGradient>
+          {/* Central Meditating Nascent Soul Showcase */}
+          <div className={styles.daoAnhShowcaseWrap}>
+            <div className={styles.daoAnhAvatarBox}>
+              <div className={styles.daoAnhKiepHalo}>
+                {Array.from({ length: 5 }).map((_, k) => {
+                  const maxKiep = daoAnhs.length > 0 ? Math.max(...daoAnhs.map(d => d.currentKiep || 0)) : 1;
+                  const isPassed = maxKiep >= k + 1;
+                  return (
+                    <div
+                      key={k}
+                      className={`${styles.haloRing} ${isPassed ? styles.haloRingPassed : ''}`}
+                      style={{
+                        width: `${56 + k * 14}px`,
+                        height: `${56 + k * 14}px`,
+                      }}
+                    />
+                  );
+                })}
+              </div>
 
-                        <linearGradient id="lotusGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.8" />
-                          <stop offset="50%" stopColor="#ffcc00" stopOpacity="1" />
-                          <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.8" />
-                        </linearGradient>
+              {/* Meditating Celestial Infant Body (Đạo Anh Thần Thể Tọa Thiền Bằng Vector SVG) */}
+              <div className={styles.infantEntity}>
+                <div className={styles.spiritSvgWrap}>
+                  <svg viewBox="0 0 100 120" className={styles.spiritSvg}>
+                    <defs>
+                      <linearGradient id="spiritGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#67e8f9" stopOpacity="0.95" />
+                        <stop offset="35%" stopColor="#06b6d4" stopOpacity="0.9" />
+                        <stop offset="70%" stopColor="#0284c7" stopOpacity="0.85" />
+                        <stop offset="100%" stopColor="#1e293b" stopOpacity="0.95" />
+                      </linearGradient>
 
-                        <radialGradient id="haloGlow" cx="50%" cy="50%" r="50%">
-                          <stop offset="0%" stopColor="#22c3f0" stopOpacity="0.6" />
-                          <stop offset="60%" stopColor="#0284c7" stopOpacity="0.2" />
-                          <stop offset="100%" stopColor="transparent" stopOpacity="0" />
-                        </radialGradient>
-                      </defs>
+                      <linearGradient id="lotusGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.8" />
+                        <stop offset="50%" stopColor="#ffcc00" stopOpacity="1" />
+                        <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.8" />
+                      </linearGradient>
 
-                      {/* Back Aura Circle & Celestial Rings */}
-                      <circle cx="50" cy="42" r="32" fill="url(#haloGlow)" />
-                      <circle cx="50" cy="42" r="24" fill="none" stroke="rgba(34, 195, 240, 0.4)" strokeWidth="1" strokeDasharray="3,3" className={styles.spiritRingSpin} />
+                      <radialGradient id="haloGlow" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor="#22c3f0" stopOpacity="0.6" />
+                        <stop offset="60%" stopColor="#0284c7" stopOpacity="0.2" />
+                        <stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                      </radialGradient>
+                    </defs>
 
-                      {/* Floating Immortal Ribbons */}
+                    {/* Back Aura Circle & Celestial Rings */}
+                    <circle cx="50" cy="42" r="32" fill="url(#haloGlow)" />
+                    <circle cx="50" cy="42" r="24" fill="none" stroke="rgba(34, 195, 240, 0.4)" strokeWidth="1" strokeDasharray="3,3" className={styles.spiritRingSpin} />
+
+                    {/* Floating Immortal Ribbons */}
+                    <path
+                      d="M 22 75 Q 14 55 24 38 Q 30 28 36 34 Q 28 48 32 68 Z"
+                      fill="rgba(34, 195, 240, 0.3)"
+                      className={styles.spiritRibbonLeft}
+                    />
+                    <path
+                      d="M 78 75 Q 86 55 76 38 Q 70 28 64 34 Q 72 48 68 68 Z"
+                      fill="rgba(34, 195, 240, 0.3)"
+                      className={styles.spiritRibbonRight}
+                    />
+
+                    {/* Lotus Seat (Đài Sen Tọa Lạc) */}
+                    <g className={styles.lotusSeat}>
+                      <path d="M 50 102 Q 35 106 20 98 Q 30 108 50 110 Q 70 108 80 98 Q 65 106 50 102 Z" fill="url(#lotusGrad)" opacity="0.9" />
+                      <path d="M 50 104 C 36 102 24 94 22 84 C 30 92 42 98 50 104 Z" fill="#ffcc00" opacity="0.85" />
+                      <path d="M 50 104 C 30 100 14 88 12 76 C 24 86 38 96 50 104 Z" fill="#f59e0b" opacity="0.6" />
+                      <path d="M 50 104 C 64 102 76 94 78 84 C 70 92 58 98 50 104 Z" fill="#ffcc00" opacity="0.85" />
+                      <path d="M 50 104 C 70 100 86 88 88 76 C 76 86 62 96 50 104 Z" fill="#f59e0b" opacity="0.6" />
+                      <path d="M 50 82 C 44 92 42 98 50 106 C 58 98 56 92 50 82 Z" fill="#fff" opacity="0.95" />
+                    </g>
+
+                    {/* Meditating Daoist Body */}
+                    <g>
+                      <circle cx="50" cy="32" r="10" fill="url(#spiritGrad)" stroke="#22c3f0" strokeWidth="1" />
+                      <path d="M 46 22 Q 50 14 54 22 Z" fill="#67e8f9" stroke="#38bdf8" strokeWidth="0.8" />
+                      <circle cx="50" cy="14" r="2.5" fill="#ffcc00" />
+                      <circle cx="50" cy="30" r="1.5" fill="#ffcc00" className={styles.thirdEyeMark} />
                       <path
-                        d="M 22 75 Q 14 55 24 38 Q 30 28 36 34 Q 28 48 32 68 Z"
-                        fill="rgba(34, 195, 240, 0.3)"
-                        className={styles.spiritRibbonLeft}
+                        d="M 43 43 C 34 46 28 56 26 68 C 24 78 20 86 18 90 C 26 94 36 94 50 94 C 64 94 74 94 82 90 C 80 86 76 78 74 68 C 72 56 66 46 57 43 Z"
+                        fill="url(#spiritGrad)"
+                        stroke="#22c3f0"
+                        strokeWidth="1.2"
                       />
                       <path
-                        d="M 78 75 Q 86 55 76 38 Q 70 28 64 34 Q 72 48 68 68 Z"
-                        fill="rgba(34, 195, 240, 0.3)"
-                        className={styles.spiritRibbonRight}
+                        d="M 22 86 Q 36 100 50 98 Q 64 100 78 86 Q 64 92 50 90 Q 36 92 22 86 Z"
+                        fill="#0284c7"
+                        stroke="#38bdf8"
+                        strokeWidth="0.8"
                       />
-
-                      {/* Lotus Seat (Đài Sen Tọa Lạc) */}
-                      <g className={styles.lotusSeat}>
-                        <path d="M 50 102 Q 35 106 20 98 Q 30 108 50 110 Q 70 108 80 98 Q 65 106 50 102 Z" fill="url(#lotusGrad)" opacity="0.9" />
-                        <path d="M 50 104 C 36 102 24 94 22 84 C 30 92 42 98 50 104 Z" fill="#ffcc00" opacity="0.85" />
-                        <path d="M 50 104 C 30 100 14 88 12 76 C 24 86 38 96 50 104 Z" fill="#f59e0b" opacity="0.6" />
-                        <path d="M 50 104 C 64 102 76 94 78 84 C 70 92 58 98 50 104 Z" fill="#ffcc00" opacity="0.85" />
-                        <path d="M 50 104 C 70 100 86 88 88 76 C 76 86 62 96 50 104 Z" fill="#f59e0b" opacity="0.6" />
-                        <path d="M 50 82 C 44 92 42 98 50 106 C 58 98 56 92 50 82 Z" fill="#fff" opacity="0.95" />
-                      </g>
-
-                      {/* Meditating Daoist Body */}
-                      <g>
-                        <circle cx="50" cy="32" r="10" fill="url(#spiritGrad)" stroke="#22c3f0" strokeWidth="1" />
-                        <path d="M 46 22 Q 50 14 54 22 Z" fill="#67e8f9" stroke="#38bdf8" strokeWidth="0.8" />
-                        <circle cx="50" cy="14" r="2.5" fill="#ffcc00" />
-                        <circle cx="50" cy="30" r="1.5" fill="#ffcc00" className={styles.thirdEyeMark} />
-                        <path
-                          d="M 43 43 C 34 46 28 56 26 68 C 24 78 20 86 18 90 C 26 94 36 94 50 94 C 64 94 74 94 82 90 C 80 86 76 78 74 68 C 72 56 66 46 57 43 Z"
-                          fill="url(#spiritGrad)"
-                          stroke="#22c3f0"
-                          strokeWidth="1.2"
-                        />
-                        <path
-                          d="M 22 86 Q 36 100 50 98 Q 64 100 78 86 Q 64 92 50 90 Q 36 92 22 86 Z"
-                          fill="#0284c7"
-                          stroke="#38bdf8"
-                          strokeWidth="0.8"
-                        />
-                        <ellipse cx="50" cy="74" rx="8" ry="4" fill="#67e8f9" stroke="#22c3f0" strokeWidth="0.8" />
-                        <circle cx="50" cy="70" r="4" fill="#ffcc00" className={styles.spiritDanDienCore} />
-                      </g>
-                    </svg>
-                  </div>
+                      <ellipse cx="50" cy="74" rx="8" ry="4" fill="#67e8f9" stroke="#22c3f0" strokeWidth="0.8" />
+                      <circle cx="50" cy="70" r="4" fill="#ffcc00" className={styles.spiritDanDienCore} />
+                    </g>
+                  </svg>
                 </div>
               </div>
             </div>
 
-            <div className={styles.tuPhuTitleBadge}>
-              <span>✨ NGUYÊN ANH TỬ PHỦ · {daoAnhs.length} ĐẠO ANH TỌA TRẤN ✨</span>
+            {/* Orbiting Dao Anh Guardians with Trấn Cung Bảo Vật & Mệnh Đăng AI */}
+            <div className={styles.daoAnhsOrbitList}>
+              {(daoAnhs || []).slice(0, 11).map((da, idx) => {
+                const totalCount = Math.max(1, Math.min(11, daoAnhs.length));
+                const angleDeg = (idx / totalCount) * 360 - 90;
+                const angleRad = (angleDeg * Math.PI) / 180;
+                const radiusX = 120; // Fit perfectly on mobile screen width
+                const radiusY = 72;  // Fit perfectly on mobile screen height
+                const posX = Math.cos(angleRad) * radiusX;
+                const posY = Math.sin(angleRad) * radiusY;
+
+                const daTheme = getDaoAnhTheme(da, cultivation);
+                const artifactColor = daTheme.color;
+                const artifactName = daTheme.shortName || da.name;
+
+                // Resolve AI image item object for this Dao Anh palace
+                const palaceIdx = da.palaceIndex;
+                const maxThienCung = cultivation?.maxThienCung || 13;
+                const lampPalaceCount = cultivation?.absorbedLamps?.length || 0;
+                const selfPalacesTotal = maxThienCung - lampPalaceCount;
+                const isLampPalace = palaceIdx >= selfPalacesTotal;
+
+                const lampIdx = isLampPalace ? palaceIdx - selfPalacesTotal : null;
+                const absLamps = cultivation?.absorbedLamps || [];
+                const lid = isLampPalace ? absLamps[lampIdx] : null;
+                const lobj = lid ? LIFE_LAMPS.find(l => l.id === lid) : null;
+
+                const anchor = !isLampPalace ? cultivation?.palaceAnchors?.[palaceIdx] : null;
+                const artifactObj = anchor
+                  ? ((SUPPRESSING_ARTIFACTS || []).find(a => a.id === anchor.id) || anchor)
+                  : null;
+
+                const daItemObj = isLampPalace ? lobj : artifactObj;
+
+                return (
+                  <div
+                    key={da.id}
+                    className={`${styles.orbitDaoAnhMini} ${daTheme.isLamp ? styles.orbitLampProtected : ''}`}
+                    style={{
+                      transform: `translate(${posX.toFixed(1)}px, ${posY.toFixed(1)}px)`,
+                      borderColor: artifactColor,
+                      boxShadow: `0 0 14px ${artifactColor}aa, inset 0 0 6px ${artifactColor}33`,
+                    }}
+                    title={`${da.name} · Trấn Vật: ${artifactName} (${da.currentKiep > 0 ? `${da.currentKiep} Kiếp` : 'Giả Anh 0 Kiếp'})`}
+                  >
+                    <span className={styles.miniIcon}>
+                      {daItemObj ? (
+                        <ArtifactIcon item={daItemObj} isLamp={isLampPalace} size={30} />
+                      ) : (
+                        <span style={{ filter: `drop-shadow(0 0 6px ${artifactColor})` }}>
+                          {daTheme.icon}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* 2. Phần Dưới: Lưới 11 Thần Thẻ Tiên Gia — Ảnh AI TO RÕ, NÉT CĂNG (Thông Thoáng) */}
-          <div className={styles.tuPhuCardsGrid}>
-            {(daoAnhs || []).map((da) => {
-              const daTheme = getDaoAnhTheme(da, cultivation);
-              const artifactColor = daTheme.color;
-              const artifactName = daTheme.shortName || da.name;
-
-              // Resolve AI image item object for this Dao Anh palace
-              const palaceIdx = da.palaceIndex;
-              const maxThienCung = cultivation?.maxThienCung || 13;
-              const lampPalaceCount = cultivation?.absorbedLamps?.length || 0;
-              const selfPalacesTotal = maxThienCung - lampPalaceCount;
-              const isLampPalace = palaceIdx >= selfPalacesTotal;
-
-              const lampIdx = isLampPalace ? palaceIdx - selfPalacesTotal : null;
-              const absLamps = cultivation?.absorbedLamps || [];
-              const lid = isLampPalace ? absLamps[lampIdx] : null;
-              const lobj = lid ? LIFE_LAMPS.find(l => l.id === lid) : null;
-
-              const anchor = !isLampPalace ? cultivation?.palaceAnchors?.[palaceIdx] : null;
-              const artifactObj = anchor
-                ? ((SUPPRESSING_ARTIFACTS || []).find(a => a.id === anchor.id) || anchor)
-                : null;
-
-              const daItemObj = isLampPalace ? lobj : artifactObj;
-
-              return (
-                <div
-                  key={da.id}
-                  className={styles.tuPhuSpiritCard}
-                  style={{
-                    '--card-color': artifactColor,
-                    borderColor: `${artifactColor}aa`,
-                    boxShadow: `0 4px 16px ${artifactColor}33, inset 0 0 10px ${artifactColor}15`,
-                  }}
-                >
-                  {/* AI Artifact Icon Display (TO RÕ NÉT CĂNG 38px) */}
-                  <div className={styles.cardIconBox} style={{ background: `${artifactColor}18`, borderColor: `${artifactColor}66` }}>
-                    {daItemObj ? (
-                      <ArtifactIcon item={daItemObj} isLamp={isLampPalace} size={38} />
-                    ) : (
-                      <span style={{ fontSize: 24, filter: `drop-shadow(0 0 8px ${artifactColor})` }}>
-                        {daTheme.icon}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Card Information */}
-                  <div className={styles.cardInfoBox}>
-                    <span className={styles.cardNameText} style={{ color: artifactColor }}>
-                      {artifactName}
-                    </span>
-
-                    {/* Tribulation / Reincarnation Level */}
-                    <div className={styles.cardKiepBadge}>
-                      {da.currentKiep > 0 ? (
-                        <span className={styles.kiepPassedText} style={{ color: '#ffcc00' }}>
-                          ✦ {da.currentKiep} Kiếp
-                        </span>
-                      ) : (
-                        <span className={styles.kiepHollowText}>Giả Anh</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div className={styles.stageStatusBadge}>
+            <span>👑 {realm === 'nguyen_anh' ? 'NGUYÊN ANH' : 'GIẢ ANH'} · {daoAnhs.length} ĐẠO ANH TỌA TRẤN</span>
           </div>
         </div>
       )}
