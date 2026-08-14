@@ -518,10 +518,14 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
       switch (item.id) {
         case 'hong_mong_bat_diet': DedicatedLampSvg = SvgLampHongMong;  break;
         case 'cuu_chuyen_luan_hoi': DedicatedLampSvg = SvgLampLuanHoi;   break;
+        case 'thuong_thuong_loi_kiep':
         case 'thien_dao_trung_phat': DedicatedLampSvg = SvgLampLoiKiep;  break;
+        case 'van_menh_hu_vo':
         case 'vo_cuc_ma_ton':      DedicatedLampSvg = SvgLampHuVo;      break;
+        case 'tuc_menh_nhan_qua':
         case 'khai_thien_tich_dia': DedicatedLampSvg = SvgLampNhanQua;   break;
         case 'thai_co_than_long':  DedicatedLampSvg = SvgLampThanLong;  break;
+        case 'khoi_nguyen_thoi_khong':
         case 'bat_hu_thoi_khong':  DedicatedLampSvg = SvgLampThoiKhong;  break;
         case 'van_gioi_quy_nhat':  DedicatedLampSvg = SvgLampQuyNhat;   break;
         case 'toi_cao_thien_menh':  DedicatedLampSvg = SvgLampThienMenh; break;

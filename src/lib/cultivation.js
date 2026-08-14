@@ -775,7 +775,7 @@ export const LIFE_LAMPS = [
     poem: 'Cửu chuyển luân hồi, nghịch chuyển sinh tử.',
   },
   {
-    id: 'thien_dao_trung_phat',
+    id: 'thuong_thuong_loi_kiep',
     name: 'Thượng Thương Lôi Kiếp Đăng',
     shortName: 'Thượng Thương Đăng',
     tier: 'than_pham',
@@ -785,7 +785,7 @@ export const LIFE_LAMPS = [
     poem: 'Thượng thương lôi kiếp, thần phạt giáng lâm.',
   },
   {
-    id: 'vo_cuc_ma_ton',
+    id: 'van_menh_hu_vo',
     name: 'Vận Mệnh Hư Vô Đăng',
     shortName: 'Hư Vô Đăng',
     tier: 'than_pham',
@@ -795,7 +795,7 @@ export const LIFE_LAMPS = [
     poem: 'Vận mệnh hư vô, chư thiên quy tịch.',
   },
   {
-    id: 'khai_thien_tich_dia',
+    id: 'tuc_menh_nhan_qua',
     name: 'Túc Mệnh Nhân Quả Đăng',
     shortName: 'Nhân Quả Đăng',
     tier: 'than_pham',
@@ -815,7 +815,7 @@ export const LIFE_LAMPS = [
     poem: 'Tổ long rít gào, uy chấn bát hoang.',
   },
   {
-    id: 'bat_hu_thoi_khong',
+    id: 'khoi_nguyen_thoi_khong',
     name: 'Khởi Nguyên Thời Không Đăng',
     shortName: 'Khởi Nguyên Đăng',
     tier: 'than_pham',
