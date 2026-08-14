@@ -957,98 +957,117 @@
   filter: drop-shadow(0 0 8px rgba(255, 204, 0, 0.6));
 }
 
-.astrolabeRing {
-  position: absolute;
-  width: 252px;
-  height: 156px;
-  border-radius: 50%;
-  border: 1px stroke rgba(56, 189, 248, 0.25);
-  box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
-  pointer-events: none;
-}
-
-.daoAnhsOrbitList {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.yinYangVortexSlot {
-  position: absolute;
-  width: 44px;
-  height: 44px;
+.tuPhuStageContainer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  z-index: 8;
-  filter: drop-shadow(0 0 12px var(--vortex-color, #22c3f0));
+  width: 100%;
+  padding: 12px 8px;
+  gap: 16px;
+  box-sizing: border-box;
 }
 
-.yinYangVortexSlot:hover {
-  transform: scale(1.28) !important;
-  filter: drop-shadow(0 0 22px var(--vortex-color, #ffcc00));
-  z-index: 20;
+.tuPhuTopHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 }
 
-.vortexOuterRing {
-  position: absolute;
-  inset: -6px;
-  border-radius: 50%;
-  border: 1.5px dashed var(--vortex-color, #22c3f0);
-  pointer-events: none;
-  z-index: 1;
-  animation: vortexSpin 10s linear infinite;
-}
-
-@keyframes vortexSpin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.vortexInnerPulse {
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 2;
-  animation: vortexPulse 2s ease-in-out infinite alternate;
-}
-
-@keyframes vortexPulse {
-  0% { opacity: 0.4; transform: scale(0.9); }
-  100% { opacity: 0.85; transform: scale(1.12); }
-}
-
-.vortexFloatingCore {
+.tuPhuInfantDomain {
   position: relative;
-  z-index: 4;
+  width: 120px;
+  height: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: floatSlow 3s ease-in-out infinite alternate;
 }
 
-.vortexStarDots {
-  position: absolute;
-  bottom: -8px;
+.tuPhuTitleBadge {
+  font-family: var(--font-serif);
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffcc00;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(255, 204, 0, 0.7);
+  background: rgba(15, 23, 42, 0.85);
+  padding: 4px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 204, 0, 0.4);
+}
+
+.tuPhuCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
+}
+
+.tuPhuSpiritCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  border-radius: 10px;
+  background: radial-gradient(circle at 50% 0%, rgba(15, 23, 42, 0.95) 0%, rgba(5, 11, 20, 0.98) 100%);
+  border: 1.2px solid var(--card-color, #38bdf8);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-sizing: border-box;
+}
+
+.tuPhuSpiritCard:hover {
+  transform: translateY(-3px) scale(1.04);
+}
+
+.cardIconBox {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  z-index: 5;
-  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 6px;
+  box-shadow: 0 0 10px var(--card-color, rgba(56, 189, 248, 0.3));
 }
 
-.vortexStarDot {
-  font-size: 8.5px;
+.cardInfoBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  text-align: center;
+}
+
+.cardNameText {
+  font-family: var(--font-serif);
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 86px;
+}
+
+.cardKiepBadge {
+  font-size: 9px;
   line-height: 1;
-  animation: starSparkle 1.6s ease-in-out infinite alternate;
+}
+
+.kiepPassedText {
+  font-weight: 800;
+  text-shadow: 0 0 4px rgba(255, 204, 0, 0.6);
+}
+
+.kiepHollowText {
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
 }
 
 @keyframes starSparkle {
