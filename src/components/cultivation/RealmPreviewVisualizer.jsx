@@ -641,34 +641,70 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 return (
                   <div
                     key={da.id}
-                    className={`${styles.orbitDaoAnhMini} ${daTheme.isLamp ? styles.orbitLampProtected : ''}`}
+                    className={styles.miniInfantAltar}
                     style={{
                       transform: `translate(${posX.toFixed(1)}px, ${posY.toFixed(1)}px)`,
-                      borderColor: artifactColor,
-                      boxShadow: `0 0 16px ${artifactColor}88, inset 0 0 6px ${artifactColor}44`,
+                      '--aura-color': artifactColor,
                     }}
-                    title={`${da.name} · Trấn Vật: ${artifactName} (${da.currentKiep > 0 ? `${da.currentKiep} Lần Độ Kiếp` : 'Giả Anh 0 Kiếp'})`}
+                    title={`${da.name} · Đạo Anh Tí Hon Tọa Trấn (${da.currentKiep > 0 ? `${da.currentKiep} Lần Độ Kiếp` : 'Giả Anh 0 Kiếp'})`}
                   >
-                    <span className={styles.miniIcon}>
+                    {/* Hào quang Tiên Thiên sau lưng Thần Anh Nhi */}
+                    <div className={styles.miniInfantAura} style={{ background: `radial-gradient(circle, ${artifactColor}66 0%, transparent 70%)` }} />
+
+                    {/* Thân Thể Anh Nhi Tí Hon Tọa Thiền */}
+                    <svg viewBox="0 0 44 48" className={styles.miniInfantSvg}>
+                      <defs>
+                        <linearGradient id={`infantGrad_${da.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#67e8f9" stopOpacity="0.95" />
+                          <stop offset="50%" stopColor="#0284c7" stopOpacity="0.85" />
+                          <stop offset="100%" stopColor="#0f172a" stopOpacity="0.95" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Đài Sen Vàng Tọa Lạc */}
+                      <path d="M 22 42 Q 14 45 6 39 Q 14 47 22 47 Q 30 47 38 39 Q 30 45 22 42 Z" fill="#f59e0b" />
+                      <path d="M 22 40 C 14 36 8 28 6 20 C 14 27 20 33 22 40 Z" fill={artifactColor} opacity="0.85" />
+                      <path d="M 22 40 C 30 36 36 28 38 20 C 30 27 24 33 22 40 Z" fill={artifactColor} opacity="0.85" />
+
+                      {/* Đầu Anh Nhi Tí Hon */}
+                      <circle cx="22" cy="13" r="5.5" fill={`url(#infantGrad_${da.id})`} stroke={artifactColor} strokeWidth="0.8" />
+                      <circle cx="22" cy="7" r="1.5" fill="#ffcc00" />
+                      <circle cx="22" cy="12" r="1" fill="#ffcc00" />
+
+                      {/* Thân Thể & Áo Choàng Thiền */}
+                      <path
+                        d="M 18 19 C 14 22 11 28 10 34 C 16 37 28 37 34 34 C 33 28 30 22 26 19 Z"
+                        fill={`url(#infantGrad_${da.id})`}
+                        stroke={artifactColor}
+                        strokeWidth="0.8"
+                      />
+                    </svg>
+
+                    {/* Vật Trấn Áp / Mệnh Đăng AI Nung Chảy Trong Lòng Bàn Tay / Đan Điền Anh Nhi */}
+                    <div className={styles.miniInfantCoreArtifact}>
                       {daItemObj ? (
-                        <ArtifactIcon item={daItemObj} isLamp={isLampPalace} size={30} />
+                        <ArtifactIcon item={daItemObj} isLamp={isLampPalace} size={22} />
                       ) : (
-                        <span style={{ filter: `drop-shadow(0 0 6px ${artifactColor})` }}>
+                        <span style={{ fontSize: 11, filter: `drop-shadow(0 0 4px ${artifactColor})` }}>
                           {daTheme.icon}
                         </span>
                       )}
-                    </span>
+                    </div>
 
-                    {/* Dấu Ấn Kiếp Quang Tiên Gia (Hàng sao ✦ phát sáng dưới chân) */}
-                    {da.currentKiep > 0 && (
-                      <div className={styles.kiepStarDots}>
-                        {Array.from({ length: Math.min(5, da.currentKiep) }).map((_, s) => (
-                          <span key={s} className={styles.starDot} style={{ color: artifactColor, textShadow: `0 0 4px ${artifactColor}` }}>
-                            ✦
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    {/* Vòng Kiếp Quang Xoay Quanh Thần Anh Nhi Tí Hon (1 đến 5 vòng) */}
+                    {Array.from({ length: da.currentKiep || 0 }).map((_, rIdx) => (
+                      <div
+                        key={`kiep_${rIdx}`}
+                        className={styles.miniInfantKiepRing}
+                        style={{
+                          width: `${38 + rIdx * 4}px`,
+                          height: `${38 + rIdx * 4}px`,
+                          borderColor: `${artifactColor}aa`,
+                          boxShadow: `0 0 6px ${artifactColor}55`,
+                          animationDuration: `${3 + rIdx * 1.2}s`,
+                        }}
+                      />
+                    ))}
                   </div>
                 );
               })}

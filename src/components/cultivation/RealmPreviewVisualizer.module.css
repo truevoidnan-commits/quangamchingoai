@@ -976,53 +976,66 @@
   pointer-events: none;
 }
 
-.orbitDaoAnhMini {
+.miniInfantAltar {
   position: absolute;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(10, 16, 26, 0.95);
-  border: 1.5px solid #22c3f0;
+  width: 44px;
+  height: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 14px rgba(34, 195, 240, 0.5);
   pointer-events: auto;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease;
   z-index: 8;
+  filter: drop-shadow(0 0 10px var(--aura-color, #22c3f0));
 }
 
-.orbitDaoAnhMini:hover {
-  transform: scale(1.18) !important;
-  box-shadow: 0 0 20px #ffcc00 !important;
+.miniInfantAltar:hover {
+  transform: scale(1.25) !important;
+  filter: drop-shadow(0 0 18px var(--aura-color, #ffcc00));
 }
 
-.orbitLampProtected {
-  border-color: #ffcc00;
-  box-shadow: 0 0 14px rgba(255, 204, 0, 0.7);
-}
-
-.miniIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.kiepStarDots {
+.miniInfantAura {
   position: absolute;
-  bottom: -6px;
+  inset: -6px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.miniInfantSvg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 0 4px var(--aura-color, #38bdf8));
+  animation: floatSlow 3s ease-in-out infinite alternate;
+}
+
+.miniInfantCoreArtifact {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -20%);
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  pointer-events: none;
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--aura-color, #ffcc00);
 }
 
-.starDot {
-  font-size: 7px;
-  line-height: 1;
-  animation: starSparkle 1.6s ease-in-out infinite alternate;
+.miniInfantKiepRing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid var(--aura-color, #38bdf8);
+  pointer-events: none;
+  z-index: 5;
+  animation: rotateCenterSlow 6s linear infinite;
 }
 
 @keyframes starSparkle {
