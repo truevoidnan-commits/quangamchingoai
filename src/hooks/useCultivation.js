@@ -26,6 +26,7 @@ import {
   attemptTribulationSingle,
   attemptTribulationAll,
   getRealmDisplayName,
+  getLampPalaceName,
   getPalaceNameFromArtifact,
   getPalaceElementTheme,
   getCombatPowerDisplay,
@@ -221,6 +222,7 @@ export function useCultivation() {
   return {
     cultivation,
     displayName,
+    getLampPalaceName,
     getPalaceNameFromArtifact,
     getPalaceElementTheme,
     combatPowerDisplay,

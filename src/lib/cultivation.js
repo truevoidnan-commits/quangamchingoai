@@ -1640,93 +1640,28 @@ export const buyLampWithPointsAndExp = buyLampWithTienTinhAndExp;
 export const burnExpForLamp = buyLampWithTienTinhAndExp;
 
 /**
- * Trả về thuộc tính Ngũ Hành / Hào Quang Độc Bản cho từng Thiên Cung dựa trên Mệnh Đăng hoặc Vật Trấn Áp
+ * Chuyển đổi tên Mệnh Đăng thành tên Chân Cung chuẩn Tiên Hiệp (VD: Hương Hỏa Mệnh Đăng -> Hương Hỏa Cung)
+ * Tuyệt đối không để chữ "Đăng Cung"!
+ */
+export function getLampPalaceName(lamp) {
+  if (!lamp) return 'Chân Cung Mệnh Đăng';
+  let name = lamp.name || lamp.shortName || '';
+  name = name.replace(/Mệnh Đăng|Thần Đăng|Đăng/g, '').trim();
+  if (!name.endsWith('Cung')) {
+    name = `${name} Cung`;
+  }
+  return name;
+}
+
+/**
+ * Trả về phong cách Hoàng Kim Tiên Gia đồng nhất cho Thiên Cung
  */
 export function getPalaceElementTheme(item) {
-  if (!item) return {
-    name: 'Hư Ảo',
-    color: '#94a3b8',
-    glow: 'rgba(148, 163, 184, 0.25)',
-    bg: 'rgba(15, 23, 42, 0.6)',
-    icon: '🌫️'
-  };
-
-  const name = item.name || '';
-  const type = item.type || '';
-  const tier = item.tier || '';
-
-  // 1. Hàn Băng / Tuyết / Băng Phách
-  if (name.includes('Băng') || name.includes('Tuyết') || type.includes('Băng') || type.includes('Tuyết')) {
-    return {
-      name: 'Hàn Băng Thần Quang',
-      color: '#38bdf8',
-      glow: 'rgba(56, 189, 248, 0.5)',
-      bg: 'rgba(14, 116, 144, 0.18)',
-      icon: '❄️'
-    };
-  }
-
-  // 2. Hỏa / Thái Dương / Địa Hỏa / Hỏa Hoàng / Chu Tước
-  if (name.includes('Hỏa') || name.includes('Nhật') || name.includes('Chu Tước') || type.includes('Hỏa')) {
-    return {
-      name: 'Thần Hỏa Diễm Quang',
-      color: '#f97316',
-      glow: 'rgba(249, 115, 22, 0.5)',
-      bg: 'rgba(194, 65, 12, 0.18)',
-      icon: '🔥'
-    };
-  }
-
-  // 3. Lôi / Lôi Đình / Bôn Lôi / Lôi Điện
-  if (name.includes('Lôi') || name.includes('Điện') || type.includes('Lôi')) {
-    return {
-      name: 'Thiên Lôi Thần Hào',
-      color: '#22d3ee',
-      glow: 'rgba(34, 211, 238, 0.5)',
-      bg: 'rgba(14, 116, 144, 0.18)',
-      icon: '⚡'
-    };
-  }
-
-  // 4. Hồng Mông / Vận Mệnh / Thần Phẩm / Tiên Phẩm / Thần Ma
-  if (tier === 'than_pham' || tier === 'tien_pham' || name.includes('Hồng Mông') || name.includes('Vận Mệnh') || name.includes('Thần Ma') || name.includes('Đạo')) {
-    return {
-      name: 'Hồng Mông Tiên Quang',
-      color: '#ef4444',
-      glow: 'rgba(239, 68, 68, 0.55)',
-      bg: 'rgba(153, 27, 27, 0.22)',
-      icon: '🟣'
-    };
-  }
-
-  // 5. Cực Phẩm / Luân Hồi / Hư Không / Tử Vi
-  if (tier === 'cuc_pham' || name.includes('Luân Hồi') || name.includes('Hư Không') || name.includes('Thôn')) {
-    return {
-      name: 'Cực Thần Tử Quang',
-      color: '#a855f7',
-      glow: 'rgba(168, 85, 247, 0.5)',
-      bg: 'rgba(126, 34, 206, 0.18)',
-      icon: '🔮'
-    };
-  }
-
-  // 6. Mộc / Sinh Cơ / Bồ Đề / Trầm Hương / Thảo
-  if (name.includes('Mộc') || name.includes('Thảo') || name.includes('Trầm') || name.includes('Bồ Đề') || type.includes('Mộc')) {
-    return {
-      name: 'Ngọc Bích Sinh Khí',
-      color: '#10b981',
-      glow: 'rgba(16, 185, 129, 0.5)',
-      bg: 'rgba(4, 120, 87, 0.18)',
-      icon: '🌿'
-    };
-  }
-
-  // Default Gold
   return {
     name: 'Hoàng Kim Thần Quang',
     color: '#ffcc00',
-    glow: 'rgba(255, 204, 0, 0.45)',
-    bg: 'rgba(255, 204, 0, 0.12)',
+    glow: 'rgba(255, 204, 0, 0.3)',
+    bg: 'rgba(255, 204, 0, 0.08)',
     icon: '✨'
   };
 }
