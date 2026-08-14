@@ -374,7 +374,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 })();
 
                 const tierKey = isLampPalace ? (lobj?.tier || 'than_pham') : (artifactObj?.tier || 'ha_pham');
-                const auraColor = isLampPalace ? '#a855f7' : (
+                const auraColor = isLampPalace ? '#d946ef' : (
                   tierKey === 'than_pham'   ? '#FF2D4D' :
                   tierKey === 'tien_pham'   ? '#FFD700' :
                   tierKey === 'cuc_pham'    ? '#8E44AD' :
@@ -382,7 +382,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                   tierKey === 'trung_pham'  ? '#4CAF50' : '#B0B0B0'
                 );
 
-                const loiColor = elemTheme?.color || auraColor;
+                const loiColor = isLampPalace ? '#c084fc' : (elemTheme?.color || auraColor);
                 const trangThai = isRealized ? 'hoan-thien' : isBottleneck ? 'dang-ngung-thuc' : expPercent > 0 ? 'dang-ngung-thuc' : 'hu-ao';
                 const loai = isLampPalace ? 'menh-dang' : 'thuong';
                 const tierIndex = i;
@@ -434,14 +434,14 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                               <div className={styles.kimDanLoi} />
                               <div className={styles.kimDanIcon}>
                                 <ArtifactIcon
-                                  item={isLampPalace ? (lobj || { tier: 'than_pham', color: '#a855f7', name: 'Mệnh Đăng' }) : artifactObj}
+                                  item={isLampPalace ? (lobj || { tier: 'than_pham', color: '#d946ef', name: 'Mệnh Đăng' }) : artifactObj}
                                   isLamp={isLampPalace}
-                                  size={26}
+                                  size={32}
                                 />
                               </div>
                               <div className={styles.kimDanParticles}>
-                                <span className={styles.sparkle} style={{ top: -3, right: -3 }}>✦</span>
-                                <span className={styles.sparkle} style={{ bottom: -3, left: -3 }}>✨</span>
+                                <span className={styles.sparkle} style={{ top: -4, right: -4 }}>✦</span>
+                                <span className={styles.sparkle} style={{ bottom: -4, left: -4 }}>✨</span>
                               </div>
                             </div>
                           </div>

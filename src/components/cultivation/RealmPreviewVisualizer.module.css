@@ -520,12 +520,10 @@
   background: #b45309;
   clip-path: polygon(0% 0%, 100% 40%, 0% 100%);
 }
-
-/* Gian Điện Thần Tháp (Chamber Body) */
 .pagodaChamber {
   position: relative;
   width: 96%;
-  min-height: 52px;
+  min-height: 62px;
   display: flex;
   align-items: center;
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 16, 26, 0.98) 100%);
@@ -533,7 +531,7 @@
   border-right: 2px solid var(--aura-color, #ffcc00);
   box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.8), 0 0 10px var(--aura-color, rgba(255,204,0,0.25));
   z-index: 3;
-  padding: 3px 0;
+  padding: 4px 0;
 }
 
 /* Data state styling */
@@ -597,12 +595,12 @@
 
 /* Biển Hiệu Treo Trên */
 .palacePlaque {
-  background: rgba(10, 16, 26, 0.85);
-  border: 1px solid var(--aura-color, rgba(255,204,0,0.5));
+  background: rgba(10, 16, 26, 0.88);
+  border: 1px solid var(--aura-color, rgba(255,204,0,0.6));
   padding: 1px 8px;
   border-radius: 3px;
-  margin-bottom: 2px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  margin-bottom: 3px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.8);
 }
 
 .plaqueText {
@@ -619,22 +617,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 2px 0;
+  margin: 3px 0;
 }
 
 .kimDanAuraRing {
   position: absolute;
-  inset: -6px;
+  inset: -10px;
   border-radius: 50%;
-  border: 1px stroke var(--aura-color, #ffcc00);
-  background: radial-gradient(circle, var(--aura-color, rgba(255,204,0,0.3)) 0%, transparent 70%);
+  border: 1.5px stroke var(--aura-color, #ffcc00);
+  background: radial-gradient(circle, var(--aura-color, rgba(255,204,0,0.35)) 0%, transparent 70%);
   animation: auraPulseRing 2.4s ease-in-out infinite alternate;
 }
 
 .kimDan {
   position: relative;
-  width: 36px;
-  height: 36px;
+  width: 46px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -645,16 +643,16 @@
 /* Quả Cầu Tròn Độc Lập */
 .tang[data-loai="thuong"] .kimDan {
   border-radius: 50%;
-  box-shadow: 0 0 18px var(--aura-color, #ffcc00), inset 0 0 6px rgba(255,255,255,0.8);
-  border: 1.5px solid var(--aura-color, #ffcc00);
+  box-shadow: 0 0 22px var(--aura-color, #ffcc00), inset 0 0 8px rgba(255,255,255,0.9);
+  border: 2px solid var(--aura-color, #ffcc00);
 }
 
-/* Lồng Đèn Mệnh Đăng */
+/* Lồng Đèn Mệnh Đăng - Royal Violet-Magenta Glow */
 .tang[data-loai="menh-dang"] .kimDan {
-  border-radius: 6px;
+  border-radius: 8px;
   clip-path: polygon(20% 0%, 80% 0%, 100% 30%, 85% 100%, 15% 100%, 0% 30%);
-  box-shadow: 0 0 20px var(--aura-color, #a855f7);
-  border: 1.5px solid var(--aura-color, #a855f7);
+  box-shadow: 0 0 26px var(--aura-color, #d946ef), inset 0 0 10px rgba(255,255,255,0.8);
+  border: 2px solid var(--aura-color, #d946ef);
 }
 
 .kimDanLoi {
