@@ -976,63 +976,77 @@
   pointer-events: none;
 }
 
-.octagonalJadeShrine {
+.yinYangVortexSlot {
   position: absolute;
   width: 44px;
   height: 44px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, rgba(15, 23, 42, 0.98) 0%, rgba(5, 11, 20, 1) 100%);
-  border: 2px solid var(--aura-color, #22c3f0);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   pointer-events: auto;
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   z-index: 8;
+  filter: drop-shadow(0 0 12px var(--vortex-color, #22c3f0));
 }
 
-.octagonalJadeShrine:hover {
-  transform: scale(1.22) !important;
-  box-shadow: 0 0 24px var(--aura-color, #ffcc00) !important;
+.yinYangVortexSlot:hover {
+  transform: scale(1.28) !important;
+  filter: drop-shadow(0 0 22px var(--vortex-color, #ffcc00));
   z-index: 20;
 }
 
-.shrineAuraRing {
+.vortexOuterRing {
   position: absolute;
-  inset: -8px;
+  inset: -6px;
   border-radius: 50%;
+  border: 1.5px dashed var(--vortex-color, #22c3f0);
   pointer-events: none;
   z-index: 1;
-  animation: shrinePulse 2.4s ease-in-out infinite alternate;
+  animation: vortexSpin 10s linear infinite;
 }
 
-@keyframes shrinePulse {
-  0% { transform: scale(0.92); opacity: 0.5; }
-  100% { transform: scale(1.1); opacity: 0.9; }
+@keyframes vortexSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-.shrineArtifactCore {
+.vortexInnerPulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  animation: vortexPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes vortexPulse {
+  0% { opacity: 0.4; transform: scale(0.9); }
+  100% { opacity: 0.85; transform: scale(1.12); }
+}
+
+.vortexFloatingCore {
   position: relative;
-  z-index: 3;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: floatSlow 3s ease-in-out infinite alternate;
 }
 
-.shrineKiepDots {
+.vortexStarDots {
   position: absolute;
-  bottom: -6px;
+  bottom: -8px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 1px;
-  z-index: 4;
+  z-index: 5;
   pointer-events: none;
 }
 
-.shrineStarDot {
-  font-size: 8px;
+.vortexStarDot {
+  font-size: 8.5px;
   line-height: 1;
   animation: starSparkle 1.6s ease-in-out infinite alternate;
 }

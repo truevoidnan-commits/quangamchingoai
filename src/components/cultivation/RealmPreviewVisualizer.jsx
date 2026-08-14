@@ -641,37 +641,33 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 return (
                   <div
                     key={da.id}
-                    className={styles.octagonalJadeShrine}
+                    className={styles.yinYangVortexSlot}
                     style={{
                       transform: `translate(${posX.toFixed(1)}px, ${posY.toFixed(1)}px)`,
-                      '--aura-color': artifactColor,
-                      borderColor: artifactColor,
-                      boxShadow: `0 0 18px ${artifactColor}88, inset 0 0 8px rgba(0,0,0,0.85)`,
+                      '--vortex-color': artifactColor,
                     }}
-                    title={`${da.name} · Thần Đài Tọa Trấn: ${artifactName} (${da.currentKiep > 0 ? `${da.currentKiep} Lần Độ Kiếp` : 'Giả Anh 0 Kiếp'})`}
+                    title={`${da.name} · Trấn Vật: ${artifactName} (${da.currentKiep > 0 ? `${da.currentKiep} Lần Độ Kiếp` : 'Giả Anh 0 Kiếp'})`}
                   >
-                    {/* Hào quang linh khí đúc từ Thần Đài */}
-                    <div
-                      className={styles.shrineAuraRing}
-                      style={{ background: `radial-gradient(circle, ${artifactColor}66 0%, transparent 70%)` }}
-                    />
+                    {/* Vòng Xoáy Âm Dương Linh Khí 3D Xoay Mượt */}
+                    <div className={styles.vortexOuterRing} style={{ borderColor: `${artifactColor}88` }} />
+                    <div className={styles.vortexInnerPulse} style={{ background: `radial-gradient(circle, ${artifactColor}55 0%, transparent 75%)` }} />
 
-                    {/* Trọng tâm Tranh AI HD (To Rõ 38px, Nét Căng Trung Tâm) */}
-                    <div className={styles.shrineArtifactCore}>
+                    {/* Bức Tranh AI HD Lơ Lửng Tự Do (40px, Nét Căng, Không Khung Dẹt) */}
+                    <div className={styles.vortexFloatingCore}>
                       {daItemObj ? (
-                        <ArtifactIcon item={daItemObj} isLamp={isLampPalace} size={38} />
+                        <ArtifactIcon item={daItemObj} isLamp={isLampPalace} size={40} />
                       ) : (
-                        <span style={{ fontSize: 20, filter: `drop-shadow(0 0 8px ${artifactColor})` }}>
+                        <span style={{ fontSize: 22, filter: `drop-shadow(0 0 10px ${artifactColor})` }}>
                           {daTheme.icon}
                         </span>
                       )}
                     </div>
 
-                    {/* Dấu Ấn Độ Kiếp Hào Quang (✦ ✦ ✦ Hàng Sao Tiên Gia Tỏa Sáng Chân Thần Đài) */}
+                    {/* Dấu Ấn Độ Kiếp Hào Quang Tiên Gia (✦ ✦ ✦ Hàng Sao Nhấp Nháy Below) */}
                     {da.currentKiep > 0 && (
-                      <div className={styles.shrineKiepDots}>
+                      <div className={styles.vortexStarDots}>
                         {Array.from({ length: Math.min(5, da.currentKiep) }).map((_, s) => (
-                          <span key={s} className={styles.shrineStarDot} style={{ color: artifactColor, textShadow: `0 0 6px ${artifactColor}` }}>
+                          <span key={s} className={styles.vortexStarDot} style={{ color: artifactColor, textShadow: `0 0 6px ${artifactColor}` }}>
                             ✦
                           </span>
                         ))}
