@@ -4,6 +4,7 @@ import { useCultivation } from '../../hooks/useCultivation';
 import RealmPreviewVisualizer from './RealmPreviewVisualizer';
 import BreakthroughModal from './BreakthroughModal';
 import TribulationModal from './TribulationModal';
+import ArtifactIcon from './ArtifactIcon';
 import styles from './CultivationModal.module.css';
 
 export default function CultivationModal({ isOpen, onClose }) {
@@ -1216,9 +1217,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                         style={{ borderColor: isOwned ? tierInfo.color : 'var(--border-subtle)' }}
                       >
                         <div className={styles.lampCardTop}>
-                          <span className={styles.lampIcon} style={{ textShadow: `0 0 12px ${tierInfo.color}` }}>
-                            {art.icon}
-                          </span>
+                          <ArtifactIcon item={art} size={28} />
                           <div className={styles.lampNameCol}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                               <h4 className={styles.lampName} style={{ color: isOwned ? tierInfo.color : 'var(--text-muted)' }}>
