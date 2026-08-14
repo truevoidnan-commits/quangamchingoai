@@ -15,12 +15,6 @@ import {
   buyArtifactWithTienTinhAndExp,
   sellArtifactForPoints,
   buyArtifactWithPointsAndExp,
-  activateNguyenAnhTrial,
-  endNguyenAnhTrial,
-  activateKimDanTrial,
-  endKimDanTrial,
-  activateNgungKhiTrial,
-  endNgungKhiTrial,
   breakthroughToTrucCo,
   breakthroughToKimDan,
   attemptUnlock121st,
@@ -154,29 +148,6 @@ export function useCultivation() {
     return res;
   }, []);
 
-  const handleActivateKimDanTrial = useCallback(() => {
-    const res = activateKimDanTrial();
-    setCultivation({ ...res.state });
-    return res;
-  }, []);
-
-  const handleEndKimDanTrial = useCallback(() => {
-    const res = endKimDanTrial();
-    setCultivation({ ...res.state });
-    return res;
-  }, []);
-
-  const handleActivateNgungKhiTrial = useCallback(() => {
-    const res = activateNgungKhiTrial();
-    setCultivation({ ...res.state });
-    return res;
-  }, []);
-
-  const handleEndNgungKhiTrial = useCallback(() => {
-    const res = endNgungKhiTrial();
-    setCultivation({ ...res.state });
-    return res;
-  }, []);
 
   const handleReset = useCallback(() => {
     const next = resetCultivationState();
@@ -240,12 +211,6 @@ export function useCultivation() {
     anchorPalace: handleAnchorPalace,
     sellArtifact: handleSellArtifact,
     buyArtifact: handleBuyArtifact,
-    activateNguyenAnhTrial: handleActivateKimDanTrial,
-    endNguyenAnhTrial: handleEndKimDanTrial,
-    activateKimDanTrial: handleActivateKimDanTrial,
-    endKimDanTrial: handleEndKimDanTrial,
-    activateNgungKhiTrial: handleActivateNgungKhiTrial,
-    endNgungKhiTrial: handleEndNgungKhiTrial,
     breakthroughToTrucCo: handleBreakthroughTrucCo,
     breakthroughToKimDan: handleBreakthroughKimDan,
     attemptUnlock121: handleUnlock121,
