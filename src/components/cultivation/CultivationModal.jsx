@@ -550,10 +550,10 @@ export default function CultivationModal({ isOpen, onClose }) {
                                 {da ? '👑' : lampObj?.icon || '🏮'}
                               </span>
                               <span className={styles.palaceName} style={{ color: da ? 'var(--accent-cyan)' : '#ffcc00', fontWeight: 700 }}>
-                                {da ? `${da.name} (${da.currentKiep}K)` : palaceName}
+                                {da ? `${da.name}${da.currentKiep > 0 ? ` (${da.currentKiep}K)` : ''}` : palaceName}
                               </span>
                               <span className={styles.palaceStatus} style={{ color: da ? 'var(--accent-cyan)' : '#ffcc00' }}>
-                                {da ? `✦ ${da.currentKiep} Anh` : '✦ Chân Cung'}
+                                {da ? (da.currentKiep > 0 ? `✦ ${da.currentKiep} Kiếp` : '✦ Giả Anh (0 Kiếp)') : '✦ Chân Cung'}
                               </span>
 
                               {/* Tiến độ Thai Nghén Đạo Anh (10.000 Tu Vi) cho Chân Cung Mệnh Đăng khi đã đạt 100% Cung Thật */}
@@ -617,10 +617,10 @@ export default function CultivationModal({ isOpen, onClose }) {
                                 {da ? '👑' : anchor ? anchor.icon : isSelfRealized ? '🏛️' : isBottleneck ? '🔑' : '☁️'}
                               </span>
                               <span className={styles.palaceName} style={anchor || da ? { color: da ? 'var(--accent-cyan)' : '#ffcc00', fontWeight: 700 } : {}}>
-                                {da ? `${da.name} (${da.currentKiep}K)` : derivedPalaceName}
+                                {da ? `${da.name}${da.currentKiep > 0 ? ` (${da.currentKiep}K)` : ''}` : derivedPalaceName}
                               </span>
                               <span className={styles.palaceStatus} style={anchor || da ? { color: da ? 'var(--accent-cyan)' : '#ffcc00' } : {}}>
-                                {da ? `✦ ${da.currentKiep} Anh` : isSelfRealized ? '✦ Chân Cung' : isBottleneck ? '⚠️ Cần Trấn Vật (99.9%)' : 'Hư Ảo (0%)'}
+                                {da ? (da.currentKiep > 0 ? `✦ ${da.currentKiep} Kiếp` : '✦ Giả Anh (0 Kiếp)') : isSelfRealized ? '✦ Chân Cung' : isBottleneck ? '⚠️ Cần Trấn Vật (99.9%)' : 'Hư Ảo (0%)'}
                               </span>
 
                               {/* Tiến độ Thai Nghén Đạo Anh (10.000 Tu Vi) khi toàn bộ 11 cung đã 100% Cung Thật */}

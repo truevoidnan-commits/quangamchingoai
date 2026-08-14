@@ -2301,26 +2301,21 @@ export function manifestDaoAnh(palaceIndex) {
     name: daoAnhTitle,
     element: elementAttr,
     fromLamp: isLampPalace,
-    currentKiep: 1, // Khởi tạo ở Kiếp 1 (= 1 Anh chiến lực)
+    currentKiep: 0, // Khởi tạo ở 0 Kiếp (Giả Anh sơ khai - chưa qua Lôi Kiếp)
     currentThienMenh: 0,
-    maxThienMenh: KIEP_THIEN_MENH_REQUIREMENTS[1],
+    maxThienMenh: KIEP_THIEN_MENH_REQUIREMENTS[0] || 3000,
   };
 
   state.daoAnhs.push(newDaoAnh);
 
-  if (state.daoAnhs.length === state.maxThienCung) {
-    state.realm = 'nguyen_anh';
-    state.logs.unshift({
-      text: `👑 NGUYÊN ANH ĐẠI THÀNH! Toàn bộ ${state.maxThienCung} Thiên Cung đã hóa thành Đạo Anh! Tụ đỉnh ngưng tụ chiến lực Anh (tối đa 65 Anh)!`,
-      time: Date.now(),
-    });
-  } else {
-    state.realm = 'gia_anh';
-    state.logs.unshift({
-      text: `Ngưng tụ thành công ${newDaoAnh.name} (${elementAttr}, +1 Anh chiến lực)! Đạt cảnh giới Giả Anh.`,
-      time: Date.now(),
-    });
-  }
+  // Khi mới ngưng tụ Đạo Anh (chưa độ Kiếp nào), luôn là cảnh giới Giả Anh
+  const hasPassedKiep1 = state.daoAnhs.some(d => (d.currentKiep || 0) >= 1);
+  state.realm = hasPassedKiep1 ? 'nguyen_anh' : 'gia_anh';
+
+  state.logs.unshift({
+    text: `👑 KHAI SINH ĐẠO ANH THÀNH CÔNG! Đã thai nghén ${newDaoAnh.name} (${elementAttr}, 0 Kiếp)! Đạt cảnh giới Giả Anh.`,
+    time: Date.now(),
+  });
 
   saveCultivationState(state);
   return state;
@@ -2383,7 +2378,7 @@ export function attemptTribulationSingle(daoAnhId) {
     message = `⚡ ĐỘ KIẾP THÀNH CÔNG! ${da.name} (${da.element || 'Thần Thể'}) đã vượt qua [${tribulationName}], thăng hoa lên Kiếp thứ ${da.currentKiep} (+1 Anh chiến lực)!`;
     state.logs.unshift({ text: message, time: Date.now() });
 
-    if (state.daoAnhs.length === state.maxThienCung && state.daoAnhs.every(d => d.currentKiep >= 1)) {
+    if (state.daoAnhs.some(d => d.currentKiep >= 1)) {
       state.realm = 'nguyen_anh';
     }
   } else {
@@ -2446,7 +2441,7 @@ export function attemptTribulationAll() {
 
   state.totalThienMenh = (state.totalThienMenh || 0) + totalBonusThienMenh;
 
-  if (state.daoAnhs.length === state.maxThienCung && state.daoAnhs.every(d => d.currentKiep >= 1)) {
+  if (state.daoAnhs.some(d => d.currentKiep >= 1)) {
     state.realm = 'nguyen_anh';
   }
 
@@ -2483,15 +2478,12 @@ export function getRealmDisplayName(state) {
     return `Kim Đan ${totalRealCung || 1} Cung`;
   }
 
-  if (state.realm === 'gia_anh') {
+  if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
     const daoAnhs = state.daoAnhs || [];
     const maxKiep = daoAnhs.length > 0 ? Math.max(...daoAnhs.map(da => da.currentKiep || 0)) : 0;
-    return maxKiep > 0 ? `Giả Anh ${maxKiep} Kiếp` : `Giả Anh`;
-  }
-
-  if (state.realm === 'nguyen_anh') {
-    const daoAnhs = state.daoAnhs || [];
-    const maxKiep = daoAnhs.length > 0 ? Math.max(...daoAnhs.map(da => da.currentKiep || 0)) : 1;
+    if (maxKiep === 0) {
+      return 'Giả Anh';
+    }
     return `Nguyên Anh ${maxKiep} Kiếp`;
   }
 
