@@ -957,6 +957,24 @@
   filter: drop-shadow(0 0 8px rgba(255, 204, 0, 0.6));
 }
 
+.qiBeamsSvg {
+  position: absolute;
+  width: 320px;
+  height: 220px;
+  pointer-events: none;
+  z-index: 4;
+  overflow: visible;
+}
+
+.qiBeamLine {
+  animation: beamPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes beamPulse {
+  0% { stroke-opacity: 0.25; stroke-dashoffset: 0; }
+  100% { stroke-opacity: 0.75; stroke-dashoffset: 14; }
+}
+
 .daoAnhsOrbitList {
   position: absolute;
   inset: 0;
@@ -968,27 +986,35 @@
 
 .orbitDaoAnhMini {
   position: absolute;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: rgba(16, 25, 39, 0.94);
-  border: 1px solid #22c3f0;
+  background: rgba(10, 16, 26, 0.95);
+  border: 1.5px solid #22c3f0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 10px rgba(34, 195, 240, 0.4);
+  box-shadow: 0 0 14px rgba(34, 195, 240, 0.5);
   pointer-events: auto;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  z-index: 8;
+}
+
+.orbitDaoAnhMini:hover {
+  transform: scale(1.18) !important;
+  box-shadow: 0 0 20px #ffcc00 !important;
 }
 
 .orbitLampProtected {
   border-color: #ffcc00;
-  box-shadow: 0 0 12px rgba(255, 204, 0, 0.6);
+  box-shadow: 0 0 14px rgba(255, 204, 0, 0.7);
 }
 
 .miniIcon {
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .miniKiep {
@@ -1001,7 +1027,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 1px solid rgba(56, 189, 248, 0.45);
+  border: 1.2px solid rgba(56, 189, 248, 0.5);
   pointer-events: none;
   animation: rotateCenterSlow 6s linear infinite;
 }

@@ -601,22 +601,69 @@ export default function RealmPreviewVisualizer({ cultivation }) {
               </div>
             </div>
 
-            {/* Orbiting Dao Anh Guardians with Trấn Cung Bảo Vật & Công Pháp (Ellipse Orbit to avoid covering bottom badge) */}
+            {/* SVG Linh Khí Beams connecting Center Nguyen Anh to the 11 Orbiting Dao Anhs */}
+            <svg className={styles.qiBeamsSvg} viewBox="-160 -110 320 220">
+              {(daoAnhs || []).slice(0, 11).map((da, idx) => {
+                const totalCount = Math.max(1, Math.min(11, daoAnhs.length));
+                const angleDeg = (idx / totalCount) * 360 - 90;
+                const angleRad = (angleDeg * Math.PI) / 180;
+                const radiusX = 126;
+                const radiusY = 78;
+                const posX = Math.cos(angleRad) * radiusX;
+                const posY = Math.sin(angleRad) * radiusY;
+                const daTheme = getDaoAnhTheme(da, cultivation);
+                const beamColor = daTheme.color || '#38bdf8';
+
+                return (
+                  <line
+                    key={`beam_${da.id}`}
+                    x1="0"
+                    y1="0"
+                    x2={posX.toFixed(1)}
+                    y2={posY.toFixed(1)}
+                    stroke={beamColor}
+                    strokeWidth="1.2"
+                    strokeOpacity="0.4"
+                    strokeDasharray="4 3"
+                    className={styles.qiBeamLine}
+                  />
+                );
+              })}
+            </svg>
+
+            {/* Orbiting Dao Anh Guardians with Trấn Cung Bảo Vật & Công Pháp */}
             <div className={styles.daoAnhsOrbitList}>
               {(daoAnhs || []).slice(0, 11).map((da, idx) => {
                 const totalCount = Math.max(1, Math.min(11, daoAnhs.length));
                 const angleDeg = (idx / totalCount) * 360 - 90;
                 const angleRad = (angleDeg * Math.PI) / 180;
-                const radiusX = 126; // Ngang (nới rộng khoảng cách giữa các Đạo Anh)
-                const radiusY = 78;  // Dọc (nới rộng theo chiều dọc cho thông thoáng)
+                const radiusX = 126;
+                const radiusY = 78;
                 const posX = Math.cos(angleRad) * radiusX;
                 const posY = Math.sin(angleRad) * radiusY;
 
-                // Dùng getDaoAnhTheme chuẩn từ cultivation.js
                 const daTheme = getDaoAnhTheme(da, cultivation);
-                const artifactIcon = daTheme.icon;
                 const artifactColor = daTheme.color;
                 const artifactName = daTheme.shortName || da.name;
+
+                // Resolve AI image item object for this Dao Anh palace
+                const palaceIdx = da.palaceIndex;
+                const maxThienCung = cultivation?.maxThienCung || 13;
+                const lampPalaceCount = cultivation?.absorbedLamps?.length || 0;
+                const selfPalacesTotal = maxThienCung - lampPalaceCount;
+                const isLampPalace = palaceIdx >= selfPalacesTotal;
+
+                const lampIdx = isLampPalace ? palaceIdx - selfPalacesTotal : null;
+                const absLamps = cultivation?.absorbedLamps || [];
+                const lid = isLampPalace ? absLamps[lampIdx] : null;
+                const lobj = lid ? LIFE_LAMPS.find(l => l.id === lid) : null;
+
+                const anchor = !isLampPalace ? cultivation?.palaceAnchors?.[palaceIdx] : null;
+                const artifactObj = anchor
+                  ? ((SUPPRESSING_ARTIFACTS || []).find(a => a.id === anchor.id) || anchor)
+                  : null;
+
+                const daItemObj = isLampPalace ? lobj : artifactObj;
 
                 return (
                   <div
@@ -625,29 +672,30 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                     style={{
                       transform: `translate(${posX.toFixed(1)}px, ${posY.toFixed(1)}px)`,
                       borderColor: artifactColor,
-                      boxShadow: `0 0 10px ${artifactColor}55`,
+                      boxShadow: `0 0 14px ${artifactColor}77`,
                     }}
                     title={`${da.name} · Trấn Vật: ${artifactName} (${da.currentKiep > 0 ? `${da.currentKiep} Kiếp` : 'Giả Anh 0 Kiếp'})`}
                   >
-                    <span
-                      className={styles.miniIcon}
-                      style={{
-                        filter: `drop-shadow(0 0 6px ${artifactColor})`,
-                      }}
-                    >
-                      {artifactIcon}
+                    <span className={styles.miniIcon}>
+                      {daItemObj ? (
+                        <ArtifactIcon item={daItemObj} isLamp={isLampPalace} size={30} />
+                      ) : (
+                        <span style={{ filter: `drop-shadow(0 0 6px ${artifactColor})` }}>
+                          {daTheme.icon}
+                        </span>
+                      )}
                     </span>
 
-                    {/* Vòng Tròn Hào Quang Hào Sắc Quay Xung Quanh Orb (1 vòng trơn = 1 Kiếp, không dùng nét đứt gây nhức mắt) */}
+                    {/* Vòng Tròn Hào Quang 1-5 Kiếp Quang Quay Xung Quanh Orb */}
                     {Array.from({ length: da.currentKiep || 0 }).map((_, rIdx) => (
                       <div
                         key={`kiep_ring_${rIdx}`}
                         className={styles.miniOrbKiepHaloRing}
                         style={{
-                          width: `${34 + rIdx * 5}px`,
-                          height: `${34 + rIdx * 5}px`,
-                          borderColor: `${artifactColor}77`,
-                          boxShadow: `0 0 5px ${artifactColor}33`,
+                          width: `${36 + rIdx * 5}px`,
+                          height: `${36 + rIdx * 5}px`,
+                          borderColor: `${artifactColor}aa`,
+                          boxShadow: `0 0 6px ${artifactColor}55`,
                           animationDuration: `${3.5 + rIdx * 1.5}s`,
                         }}
                       />
