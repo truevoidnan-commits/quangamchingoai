@@ -317,7 +317,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
       )}
 
       {/* ========================================================
-          3. KIM ĐAN VISUALIZER: TÒA THIÊN LÂU 3D BẢO THÁP
+          3. KIM ĐAN VISUALIZER: TÒA THIÊN LÂU 3D BẢO THÁP CHUẨN TIÊN HIỆP
          ======================================================== */}
       {realm === 'kim_dan' && (
         <div className={styles.kimDanStage}>
@@ -331,8 +331,9 @@ export default function RealmPreviewVisualizer({ cultivation }) {
           {/* 3D Pagoda Perspective Container */}
           <div className={styles.lauCacContainer}>
             <div className={styles.lauCac3D}>
-              {/* Mái chóp đình đài đỉnh tháp */}
+              {/* Mái chóp bảo tháp đỉnh cao nhất */}
               <div className={styles.spire3D}>
+                <div className={styles.spireCrownGlow} />
                 <div className={styles.spireNeedle} />
                 <div className={styles.spireRoofTop} />
                 <div className={styles.spireRoofBase} />
@@ -372,7 +373,6 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                   return `Thiên Cung ${floorNum}`;
                 })();
 
-                // Phẩm chất tier key -> Aura Color (Layer 1)
                 const tierKey = isLampPalace ? (lobj?.tier || 'than_pham') : (artifactObj?.tier || 'ha_pham');
                 const auraColor = isLampPalace ? '#a855f7' : (
                   tierKey === 'than_pham'   ? '#FF2D4D' :
@@ -382,13 +382,10 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                   tierKey === 'trung_pham'  ? '#4CAF50' : '#B0B0B0'
                 );
 
-                // Core color (Layer 2 - Ngũ hành / Lore)
                 const loiColor = elemTheme?.color || auraColor;
-
-                // Trang thai: 'hoan-thien' | 'dang-ngung-thuc' | 'hu-ao'
                 const trangThai = isRealized ? 'hoan-thien' : isBottleneck ? 'dang-ngung-thuc' : expPercent > 0 ? 'dang-ngung-thuc' : 'hu-ao';
                 const loai = isLampPalace ? 'menh-dang' : 'thuong';
-                const tierIndex = i; // 0 for top floor down to maxThienCung-1 for T1
+                const tierIndex = i;
 
                 return (
                   <div
@@ -404,50 +401,76 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                       '--loi-color': loiColor,
                       '--tien-do': `${expPercent}%`,
                     }}
-                    title={`Tầng ${floorNum}: ${
-                      isLampPalace ? 'Chân Cung Mệnh Đăng (100% Ngưng Thực)'
-                      : isRealized ? (anchor ? `Hoàn Thiện · Trấn: ${anchor.name}` : 'Hoàn Thiện Cung Thật')
-                      : isBottleneck ? '99.99% · Cần Vật Trấn Áp'
-                      : `Hư Ảo (${expPercent}%)`}`}
                   >
-                    {/* Khung Kiến Trúc 3D (Cột, Mái, Lan Can, Thập Tự) */}
-                    <div className={styles.khungKienTruc}>
-                      <div className={styles.khungRoof} />
-                      <div className={styles.khungPillars}>
-                        <span className={styles.pillarLeft} />
-                        <span className={styles.pillarRight} />
-                      </div>
-                      <span className={styles.tangBadge}>T{floorNum}</span>
-                      <span className={styles.tangTitle}>{palaceName}</span>
+                    {/* Mái ngói cong tháp tiên gia */}
+                    <div className={styles.pagodaEaves}>
+                      <span className={styles.eaveCornerLeft} />
+                      <div className={styles.eaveBody} />
+                      <span className={styles.eaveCornerRight} />
                     </div>
 
-                    {/* Viên Kim Đan / Đèn Mệnh Đăng (Chỉ hiện khi HOÀN THIỆN) */}
-                    {trangThai === 'hoan-thien' && (
-                      <div className={styles.kimDan}>
-                        <div className={styles.kimDanLoi} />
-                        <div className={styles.kimDanIcon}>
-                          <ArtifactIcon
-                            item={isLampPalace ? (lobj || { tier: 'than_pham', color: '#a855f7', name: 'Mệnh Đăng' }) : artifactObj}
-                            isLamp={isLampPalace}
-                            size={24}
-                          />
-                        </div>
-                        <div className={styles.kimDanParticles}>
-                          <span className={styles.sparkle} style={{ top: -2, right: -2 }}>✦</span>
-                          <span className={styles.sparkle} style={{ bottom: -2, left: -2 }}>✨</span>
-                        </div>
+                    {/* Gian Điện Thần Tháp (Chamber Body) */}
+                    <div className={styles.pagodaChamber}>
+                      {/* Đôi Cột Trụ Đúc Nổi 2 Bên */}
+                      <div className={styles.pillarLeft}>
+                        <span className={styles.floorBadgeSeal}>T{floorNum}</span>
                       </div>
-                    )}
+                      <div className={styles.pillarRight} />
 
-                    {/* Tiến độ ngưng thực (khi ĐANG NGUNG THỰC) */}
-                    {trangThai === 'dang-ngung-thuc' && (
-                      <div className={styles.ngungThucTrack}>
-                        <div className={styles.ngungThucBar} style={{ width: `${expPercent || 99.99}%` }} />
-                        <span className={styles.ngungThucText}>
-                          {isBottleneck ? '⚡ 99.99% · Cần Trấn Vật' : `${expPercent}%`}
-                        </span>
+                      {/* Nội Điện Chính Giữa (Center Void Realm) */}
+                      <div className={styles.centerChamberVoid}>
+                        {/* Biển Hiệu Tên Cung Treo Phía Trên */}
+                        <div className={styles.palacePlaque}>
+                          <span className={styles.plaqueText} style={{ color: auraColor, textShadow: `0 0 8px ${auraColor}` }}>
+                            {palaceName}
+                          </span>
+                        </div>
+
+                        {/* VIÊN KIM ĐAN / ĐÈN MỆNH ĐĂNG 3D Ở CHÍNH GIỮA */}
+                        {trangThai === 'hoan-thien' && (
+                          <div className={styles.kimDanCenterWrapper}>
+                            <div className={styles.kimDanAuraRing} />
+                            <div className={styles.kimDan}>
+                              <div className={styles.kimDanLoi} />
+                              <div className={styles.kimDanIcon}>
+                                <ArtifactIcon
+                                  item={isLampPalace ? (lobj || { tier: 'than_pham', color: '#a855f7', name: 'Mệnh Đăng' }) : artifactObj}
+                                  isLamp={isLampPalace}
+                                  size={26}
+                                />
+                              </div>
+                              <div className={styles.kimDanParticles}>
+                                <span className={styles.sparkle} style={{ top: -3, right: -3 }}>✦</span>
+                                <span className={styles.sparkle} style={{ bottom: -3, left: -3 }}>✨</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Tiến độ ngưng thực khi đang luyện */}
+                        {trangThai === 'dang-ngung-thuc' && (
+                          <div className={styles.ngungThucCenterBox}>
+                            <span className={styles.mistCloudCenter}>☁️</span>
+                            <span className={styles.ngungThucCenterLabel}>
+                              {isBottleneck ? '⚡ 99.99% · Cần Vật Trấn Áp' : `Ngưng Thực ${expPercent}%`}
+                            </span>
+                            {expPercent > 0 && (
+                              <div className={styles.ngungThucTrack}>
+                                <div className={styles.ngungThucBar} style={{ width: `${expPercent}%` }} />
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Mây mù khi chưa bắt đầu */}
+                        {trangThai === 'hu-ao' && (
+                          <span className={styles.hollowMistCenter}>🌫️ Hư Ảo Mây Mù...</span>
+                        )}
                       </div>
-                    )}
+                    </div>
+
+                    {/* Lan Can Đá Ngọc Chân Tầng */}
+                    <div className={styles.pagodaBalustrade} />
                   </div>
                 );
               })}

@@ -354,37 +354,37 @@
   align-items: center;
   justify-content: flex-start;
   overflow: hidden;
-  padding: 6px 12px 34px;
+  padding: 4px 8px 30px;
 }
 
-/* 3D Pagoda Perspective Container (BẮT BUỘC) */
+/* 3D Pagoda Perspective Container */
 .lauCacContainer {
-  perspective: 1200px;          /* BẮT BUỘC — 3D depth */
-  perspective-origin: 50% 80%;  /* Nhìn ngước lên từ dưới */
+  perspective: 1000px;
+  perspective-origin: 50% 85%;
   width: 100%;
   display: flex;
   justify-content: center;
   position: relative;
   z-index: 5;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .lauCac3D {
-  transform-style: preserve-3d; /* BẮT BUỘC — giữ chiều sâu các tầng con */
-  transform: rotateX(8deg);     /* Nghiêng nhẹ tạo phối cảnh */
+  transform-style: preserve-3d;
+  transform: rotateX(10deg);
   width: 100%;
-  max-width: 270px;
+  max-width: 280px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-height: 165px;
+  max-height: 175px;
   overflow-y: auto;
   padding-right: 4px;
 }
 
 .lauCac3D::-webkit-scrollbar { width: 3px; }
 .lauCac3D::-webkit-scrollbar-thumb {
-  background: rgba(255, 204, 0, 0.3);
+  background: rgba(255, 204, 0, 0.35);
   border-radius: 3px;
 }
 
@@ -398,20 +398,20 @@
 
 .floatingCloudLeft {
   position: absolute;
-  top: 20px;
-  left: 10px;
-  font-size: 28px;
-  opacity: 0.35;
+  top: 15px;
+  left: 8px;
+  font-size: 26px;
+  opacity: 0.3;
   filter: blur(1px);
   animation: floatSlow 6s ease-in-out infinite alternate;
 }
 
 .floatingCloudRight {
   position: absolute;
-  bottom: 30px;
-  right: 10px;
-  font-size: 32px;
-  opacity: 0.35;
+  bottom: 25px;
+  right: 8px;
+  font-size: 28px;
+  opacity: 0.3;
   filter: blur(1px);
   animation: floatSlow 7s ease-in-out infinite alternate-reverse;
 }
@@ -421,168 +421,262 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 40px;
+  height: 45px;
   background: linear-gradient(to top, rgba(13, 22, 40, 0.95), transparent);
   pointer-events: none;
   z-index: 2;
 }
 
-/* 3D Spire roof */
+/* 3D Spire Roof on top */
 .spire3D {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 4px;
-  transform: translateZ(20px);
+  margin-bottom: 2px;
+  transform: translateZ(24px);
+}
+
+.spireCrownGlow {
+  position: absolute;
+  top: -8px;
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, #fff8dc 0%, #ffcc00 60%, transparent 100%);
+  filter: blur(4px);
+  animation: crownPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes crownPulse {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(1.3); opacity: 1; }
 }
 
 .spireNeedle {
   width: 4px;
-  height: 14px;
-  background: linear-gradient(to bottom, #fff8dc, #ffcc00);
+  height: 16px;
+  background: linear-gradient(to bottom, #ffffff, #ffcc00);
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-  filter: drop-shadow(0 0 6px #ffcc00);
+  filter: drop-shadow(0 0 8px #ffcc00);
 }
 
 .spireRoofTop {
-  width: 38px;
-  height: 8px;
-  background: linear-gradient(to bottom, #ffcc00, #b45309);
+  width: 44px;
+  height: 9px;
+  background: linear-gradient(to bottom, #fbbf24, #92400e);
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
 }
 
 .spireRoofBase {
-  width: 56px;
-  height: 9px;
-  background: linear-gradient(to bottom, #d97706, #7c2d12);
+  width: 64px;
+  height: 10px;
+  background: linear-gradient(to bottom, #d97706, #451a03);
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
   margin-top: -1px;
 }
 
-/* ─── TẦNG THÁP 3D (.tang) ─── */
+/* ─── TẦNG THÁP BẢO TÁC 3D (.tang) ─── */
 .tang {
   position: relative;
-  width: 100%;
-  min-height: 40px;
+  width: calc(100% - var(--tier-index) * 2px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: -4px; /* overlap eaves seamlessly */
+  transform: translateZ(calc(var(--tier-index) * -6px));
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Mái Ngói Cong (Pagoda Eaves) */
+.pagodaEaves {
+  position: relative;
+  width: 104%;
+  height: 11px;
+  display: flex;
+  align-items: flex-end;
+  z-index: 4;
+}
+
+.eaveBody {
+  flex: 1;
+  height: 9px;
+  background: linear-gradient(to bottom, #b45309 0%, #451a03 100%);
+  border-top: 1px solid #fef08a;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+}
+
+.eaveCornerLeft {
+  width: 12px;
+  height: 11px;
+  background: #b45309;
+  clip-path: polygon(100% 0%, 0% 40%, 100% 100%);
+}
+
+.eaveCornerRight {
+  width: 12px;
+  height: 11px;
+  background: #b45309;
+  clip-path: polygon(0% 0%, 100% 40%, 0% 100%);
+}
+
+/* Gian Điện Thần Tháp (Chamber Body) */
+.pagodaChamber {
+  position: relative;
+  width: 96%;
+  min-height: 52px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 4px 10px;
-  margin-bottom: 3px;
-  border-radius: 6px;
-  background: rgba(16, 25, 39, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transform: translateZ(calc(var(--tier-index) * -6px)) scale(calc(1 - var(--tier-index) * 0.015));
-  transition: transform 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
-  transform-style: preserve-3d;
-  will-change: transform, opacity;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 16, 26, 0.98) 100%);
+  border-left: 2px solid var(--aura-color, #ffcc00);
+  border-right: 2px solid var(--aura-color, #ffcc00);
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.8), 0 0 10px var(--aura-color, rgba(255,204,0,0.25));
+  z-index: 3;
+  padding: 3px 0;
 }
 
 /* Data state styling */
-.tang[data-trang-thai="hu-ao"] {
-  opacity: 0.25;
-  filter: blur(2px) grayscale(0.6);
+.tang[data-trang-thai="hu-ao"] .pagodaChamber {
+  opacity: 0.3;
+  filter: blur(1.5px) grayscale(0.7);
   border-style: dashed;
 }
 
-.tang[data-trang-thai="dang-ngung-thuc"] {
-  opacity: calc(0.4 + (parseFloat(var(--tien-do, 0)) / 100) * 0.55);
-  filter: blur(0.5px);
+.tang[data-trang-thai="dang-ngung-thuc"] .pagodaChamber {
+  opacity: calc(0.45 + (parseFloat(var(--tien-do, 0)) / 100) * 0.5);
   border-color: var(--aura-color, #38bdf8);
 }
 
-.tang[data-trang-thai="hoan-thien"] {
+.tang[data-trang-thai="hoan-thien"] .pagodaChamber {
   opacity: 1;
   filter: none;
   border-color: var(--aura-color, #ffcc00);
-  box-shadow: 0 0 12px var(--aura-color, rgba(255,204,0,0.3)), inset 0 0 8px rgba(0,0,0,0.5);
 }
 
-.tang[data-loai="menh-dang"] {
-  background: rgba(28, 10, 40, 0.9);
-}
-
-/* Khung Kiến Trúc (Tên + Số tầng) */
-.khungKienTruc {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
-
-.tangBadge {
-  font-family: var(--font-serif);
-  font-size: 9.5px;
-  font-weight: 700;
-  color: var(--aura-color, #ffcc00);
-  background: rgba(0, 0, 0, 0.4);
-  padding: 1px 5px;
-  border-radius: 3px;
-  border: 1px solid var(--aura-color, rgba(255,204,0,0.4));
-  flex-shrink: 0;
-}
-
-.tangTitle {
-  font-family: var(--font-serif);
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--aura-color, #ffcc00);
-  text-shadow: 0 0 8px var(--aura-color, rgba(255,204,0,0.6));
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ─── VIÊN KIM ĐAN (HÌNH CẦU HOẶC ĐÈN LỒNG THẬT) ─── */
-.kimDan {
-  position: relative;
-  width: 32px;
-  height: 32px;
+/* Đôi Cột Trụ 2 Bên */
+.pillarLeft {
+  width: 14px;
+  height: 100%;
+  background: linear-gradient(90deg, #78350f, #b45309);
+  border-right: 1px solid rgba(255,255,255,0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  animation: kimDanPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Thường = Hình Cầu Tròn Độc Lập (border-radius: 50% + radial-gradient) */
+.pillarRight {
+  width: 14px;
+  height: 100%;
+  background: linear-gradient(90deg, #b45309, #78350f);
+  border-left: 1px solid rgba(255,255,255,0.2);
+  flex-shrink: 0;
+}
+
+.floorBadgeSeal {
+  font-family: var(--font-serif);
+  font-size: 8px;
+  font-weight: 800;
+  color: #fff8dc;
+  writing-mode: vertical-rl;
+  text-shadow: 0 1px 2px #000;
+}
+
+/* Nội Điện Chính Giữa (Center Void Realm) */
+.centerChamberVoid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  position: relative;
+  padding: 2px 4px;
+}
+
+/* Biển Hiệu Treo Trên */
+.palacePlaque {
+  background: rgba(10, 16, 26, 0.85);
+  border: 1px solid var(--aura-color, rgba(255,204,0,0.5));
+  padding: 1px 8px;
+  border-radius: 3px;
+  margin-bottom: 2px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+
+.plaqueText {
+  font-family: var(--font-serif);
+  font-size: 9.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+/* ─── VIÊN KIM ĐAN / ĐÈN MỆNH ĐĂNG 3D TRUNG TÂM ─── */
+.kimDanCenterWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 2px 0;
+}
+
+.kimDanAuraRing {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px stroke var(--aura-color, #ffcc00);
+  background: radial-gradient(circle, var(--aura-color, rgba(255,204,0,0.3)) 0%, transparent 70%);
+  animation: auraPulseRing 2.4s ease-in-out infinite alternate;
+}
+
+.kimDan {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: kimDanFloat 3s ease-in-out infinite alternate;
+}
+
+/* Quả Cầu Tròn Độc Lập */
 .tang[data-loai="thuong"] .kimDan {
   border-radius: 50%;
-  box-shadow: 0 0 14px var(--aura-color, #ffcc00), 0 0 4px var(--aura-color, #ffcc00);
+  box-shadow: 0 0 18px var(--aura-color, #ffcc00), inset 0 0 6px rgba(255,255,255,0.8);
   border: 1.5px solid var(--aura-color, #ffcc00);
 }
 
-/* Mệnh Đăng = Dạng Đèn Lồng / Ngọn Đăng */
+/* Lồng Đèn Mệnh Đăng */
 .tang[data-loai="menh-dang"] .kimDan {
   border-radius: 6px;
   clip-path: polygon(20% 0%, 80% 0%, 100% 30%, 85% 100%, 15% 100%, 0% 30%);
-  box-shadow: 0 0 16px var(--aura-color, #a855f7);
+  box-shadow: 0 0 20px var(--aura-color, #a855f7);
   border: 1.5px solid var(--aura-color, #a855f7);
 }
 
-/* Lõi Kim Đan (Layer 2 - Radial Gradient Ngũ Hành) */
 .kimDanLoi {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(circle at 35% 35%, #ffffff 0%, var(--loi-color, #ffcc00) 60%, #0d1628 100%);
-  opacity: 0.85;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, var(--loi-color, #ffcc00) 65%, #050b14 100%);
+  opacity: 0.9;
 }
 
-/* Icon vật khảm đúc nổi trên bề mặt */
 .kimDanIcon {
   position: relative;
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.9));
+  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.95));
 }
 
 .kimDanParticles {
   position: absolute;
-  inset: -4px;
+  inset: -6px;
   pointer-events: none;
   z-index: 3;
 }
@@ -594,48 +688,51 @@
   animation: sparkleTwinkle 1.2s ease-in-out infinite alternate;
 }
 
-@keyframes kimDanPop {
-  0%   { transform: scale(0); opacity: 0; }
-  70%  { transform: scale(1.18); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
+@keyframes kimDanFloat {
+  0%   { transform: translateY(0px) scale(1); }
+  100% { transform: translateY(-3px) scale(1.03); }
 }
 
-@keyframes sparkleTwinkle {
-  0%   { opacity: 0.3; transform: scale(0.8); }
-  100% { opacity: 1;   transform: scale(1.2); }
+@keyframes auraPulseRing {
+  0%   { opacity: 0.3; transform: scale(0.9); }
+  100% { opacity: 0.8; transform: scale(1.15); }
 }
 
-/* Thanh ngưng thực */
-.ngungThucTrack {
-  position: relative;
-  width: 90px;
-  height: 12px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  overflow: hidden;
+/* Ngưng thực center */
+.ngungThucCenterBox {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 2px;
+  padding: 2px 0;
 }
 
-.ngungThucBar {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  background: linear-gradient(90deg, #38bdf8, var(--aura-color, #f97316));
-  border-radius: 6px;
+.mistCloudCenter {
+  font-size: 14px;
 }
 
-.ngungThucText {
-  position: relative;
-  z-index: 2;
+.ngungThucCenterLabel {
   font-family: var(--font-serif);
-  font-size: 8px;
+  font-size: 8.5px;
   font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 2px #000;
+  color: var(--aura-color, #38bdf8);
+  text-shadow: 0 0 6px var(--aura-color, rgba(56,189,248,0.6));
+}
+
+.hollowMistCenter {
+  font-family: var(--font-serif);
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
+}
+
+/* Lan Can Chân Tầng */
+.pagodaBalustrade {
+  width: 98%;
+  height: 5px;
+  background: linear-gradient(to bottom, #78350f, #451a03);
+  border-top: 1px solid rgba(255,204,0,0.4);
+  z-index: 4;
 }
 
 /* ─── Left Bar ─── */
