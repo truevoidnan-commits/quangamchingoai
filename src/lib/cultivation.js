@@ -1813,6 +1813,103 @@ export function buyArtifactWithTienTinhAndExp(artifactId) {
 export const buyArtifactWithPointsAndExp = buyArtifactWithTienTinhAndExp;
 
 /**
+ * THẺ TRẢI NGHIỆM KIM ĐAN V2 (Tiêu biến ngay lập tức sau khi dùng)
+ * - Đặt trạng thái: Trúc Cơ 4 Mệnh Hỏa, 120 Pháp Khiếu, 121 thất bại, 4 Mệnh Đăng random.
+ * - Cho random Vật Trấn Áp đủ dùng vào túi.
+ * - Thẻ tiêu biến NGAY khi bấm (hasUsedKimDanTrialV2 = true).
+ * - Mở cờ isKimDanTrialV2 = true để hiện nút "Thăng Cung" trong Kim Đan.
+ */
+export function activateKimDanTrialV2() {
+  const state = getCultivationState();
+  if (state.hasUsedKimDanTrialV2) {
+    throw new Error('Thẻ Trải Nghiệm Kim Đan đã tiêu biến vĩnh viễn!');
+  }
+
+  // Chọn 4 Mệnh Đăng random không trùng nhau
+  const allLampIds = LIFE_LAMPS.map(l => l.id);
+  const shuffled = [...allLampIds].sort(() => Math.random() - 0.5);
+  const randomLamps = shuffled.slice(0, 4);
+
+  // Chọn random Vật Trấn Áp – cần tối thiểu 7 cái (cho 7 Cung Tự Thân tối đa)
+  const allArtIds = SUPPRESSING_ARTIFACTS.map(a => a.id);
+  const shuffledArts = [...allArtIds].sort(() => Math.random() - 0.5);
+  const randomArts = shuffledArts.slice(0, Math.min(9, shuffledArts.length));
+
+  // Thiết lập trạng thái Trúc Cơ 4 Mệnh Hỏa – pháp khiếu 121 thất bại, 4 Mệnh Đăng đã hấp thụ
+  state.realm = 'truc_co';
+  state.phapKhieu = 120;
+  state.selfMenhHoa = 4;
+  state.has121st = false;
+  state.failed121st = true;         // 121 đã thất bại
+  state.attemptExp121 = 0;
+  state.absorbedLamps = randomLamps;  // 4 Mệnh Đăng đã hấp thụ
+  state.inventoryLamps = [];          // Không còn mệnh đăng chờ trong túi
+  state.expCurrentRealm = 0;
+  state.totalExp = 0;
+  state.tienTinh = 0;
+  state.dangDiem = 0;
+
+  // Vật Trấn Áp random đủ dùng
+  state.inventoryArtifacts = randomArts;
+
+  // Tiêu biến ngay lập tức + cờ hiện nút Thăng Cung
+  state.hasUsedKimDanTrialV2 = true;
+  state.isKimDanTrialV2 = true;
+
+  state.logs = [{
+    text: '📜 KÍCH HOẠT THẺ TRẢI NGHIỆM KIM ĐAN! Đã thiết lập Trúc Cơ 4 Mệnh Hỏa, 120 Pháp Khiếu (121 thất bại), 4 Mệnh Đăng ngẫu nhiên. Hãy tự đột phá lên Kim Đan!',
+    time: Date.now(),
+  }];
+
+  saveCultivationState(state);
+  return {
+    state,
+    message: '✨ Thẻ Trải Nghiệm Kim Đan đã kích hoạt! Đã thiết lập Trúc Cơ 4 Hỏa + 4 Mệnh Đăng random. Thẻ đã tiêu biến vĩnh viễn. Hãy tự Đột Phá Kim Đan!',
+    randomLamps,
+    randomArts,
+  };
+}
+
+/**
+ * THĂNG CUNG – Đẩy tiến độ Thiên Cung hiện tại lên 99.99% (bottleneck chờ Vật Trấn Áp)
+ * Chỉ hoạt động trong Kim Đan và khi còn Cung Tự Thân chưa hóa thực.
+ */
+export function thangCungKimDan() {
+  const state = getCultivationState();
+  if (state.realm !== 'kim_dan') {
+    throw new Error('Chỉ dùng được khi đang ở cảnh giới Kim Đan!');
+  }
+
+  const lampCount = (state.absorbedLamps || []).length;
+  const selfPalacesTotal = (state.maxThienCung || 0) - lampCount;
+  const selfRealized = state.realizedThienCung || 0;
+
+  if (selfRealized >= selfPalacesTotal) {
+    throw new Error('Toàn bộ Cung Tự Thân đã hóa thực! Không cần Thăng Cung nữa.');
+  }
+
+  const nextSelfPalaceNum = selfRealized + 1; // 1-indexed trong self palaces
+  const targetExp = getPalaceCost(nextSelfPalaceNum) - 1; // 99.99%
+
+  if ((state.currentThienCungExp || 0) >= targetExp) {
+    throw new Error('Cung Tự Thân hiện tại đã đạt 99.99%! Hãy khảm nạm Vật Trấn Áp.');
+  }
+
+  state.currentThienCungExp = targetExp;
+
+  state.logs.unshift({
+    text: `⬆️ THĂNG CUNG! Đã đẩy Cung Tự Thân ${nextSelfPalaceNum} lên 99.99% linh lực (${targetExp} Tu Vi). Hãy khảm nạm Vật Trấn Áp để hoàn tất 100% Cung Thật!`,
+    time: Date.now(),
+  });
+
+  saveCultivationState(state);
+  return {
+    state,
+    message: `⬆️ Thăng Cung thành công! Cung ${nextSelfPalaceNum} đạt 99.99% — cần Khảm Nạm Vật Trấn Áp để hoàn tất!`,
+  };
+}
+
+/**
  * Đột phá Ngưng Khí lên Trúc Cơ
  */
 export function breakthroughToTrucCo() {

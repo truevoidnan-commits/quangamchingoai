@@ -17,6 +17,8 @@ export default function CultivationModal({ isOpen, onClose }) {
     anchorPalace,
     sellArtifact,
     buyArtifact,
+    activateKimDanTrialV2,
+    thangCung,
     breakthroughToTrucCo,
     breakthroughToKimDan,
     attemptUnlock121,
@@ -191,6 +193,36 @@ export default function CultivationModal({ isOpen, onClose }) {
            ======================================================== */}
         {activeTab === 'status' && (
           <div className={styles.statusSection}>
+
+            {/* THẺ TRẢI NGHIỆM KIM ĐAN (1 lần duy nhất – tiêu biến ngay khi dùng) */}
+            {!cultivation.hasUsedKimDanTrialV2 && (
+              <div
+                className={styles.trialCardOffer}
+                style={{ borderColor: 'rgba(255,204,0,0.5)', boxShadow: '0 0 14px rgba(255,204,0,0.2)', marginBottom: 12 }}
+              >
+                <div className={styles.trialCardOfferInfo}>
+                  <span className={styles.trialOfferIcon}>🏮</span>
+                  <div>
+                    <h4 style={{ color: '#ffcc00', margin: 0, fontSize: 13 }}>THẺ TRẢI NGHIỆM KIM ĐAN (1 LẦN DUY NHẤT · TIÊU BIẾN NGAY)</h4>
+                    <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                      Thiết lập trạng thái <strong>Trúc Cơ 4 Mệnh Hỏa · 120 Pháp Khiếu (121 thất bại) · 4 Mệnh Đăng ngẫu nhiên</strong>.
+                      Tự tay đột phá Kim Đan, thử khảm nạm Vật Trấn Áp và đặt tên Cung với nút <strong>Thăng Cung</strong>.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className="btn-gold"
+                  style={{ fontSize: 11.5, padding: '7px 14px', fontWeight: 700, flexShrink: 0 }}
+                  onClick={() => {
+                    if (confirm('KÍCH HOẠT THẺ TRẢI NGHIỆM KIM ĐAN:\n\n• Trạng thái hiện tại sẽ bị XÓA SẠCH và thay bằng:\n  – Trúc Cơ 4 Mệnh Hỏa, 120 Pháp Khiếu (121 thất bại)\n  – 4 Mệnh Đăng ngẫu nhiên đã hấp thụ\n  – Random Vật Trấn Áp đủ dùng trong túi\n• Thẻ tiêu biến NGAY SAU KHI bấm nút này.\n• Khi lên Kim Đan sẽ có nút [Thăng Cung] để test trực tiếp.\n\nĐạo hữu có muốn kích hoạt?')) {
+                      triggerAction(activateKimDanTrialV2, 'Thẻ đã kích hoạt! Hãy tự Đột Phá lên Kim Đan.');
+                    }
+                  }}
+                >
+                  🏮 Kích Hoạt Thẻ Trải Nghiệm
+                </button>
+              </div>
+            )}
 
             {/* NGƯNG KHÍ VIEW */}
             {cultivation.realm === 'ngung_khi' && (
@@ -623,6 +655,17 @@ export default function CultivationModal({ isOpen, onClose }) {
                               />
                             </div>
                             <p className={styles.hintText}>📖 Đọc thêm chương để ngưng tụ linh lực Hóa Thực Thiên Cung tiếp theo (Yêu cầu lũy tiến: {targetPalaceExp} Tu Vi)!</p>
+
+                            {/* Nút Thăng Cung — chỉ hiển thị cho user đang dùng Kim Đan Trial V2 */}
+                            {cultivation.isKimDanTrialV2 && (
+                              <button
+                                className="btn-gold"
+                                style={{ width: '100%', marginTop: 10, fontSize: 12, padding: '8px', fontWeight: 700, letterSpacing: 0.5 }}
+                                onClick={() => triggerAction(thangCung)}
+                              >
+                                ⬆️ Thăng Cung (Đẩy Lên 99.99% — Cần Vật Trấn Áp)
+                              </button>
+                            )}
                           </div>
                         )
                       ) : (

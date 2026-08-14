@@ -17,6 +17,8 @@ import {
   buyArtifactWithPointsAndExp,
   breakthroughToTrucCo,
   breakthroughToKimDan,
+  activateKimDanTrialV2,
+  thangCungKimDan,
   attemptUnlock121st,
   manifestDaoAnh,
   injectThienMenhToDaoAnh,
@@ -100,6 +102,18 @@ export function useCultivation() {
 
   const handleBuyArtifact = useCallback((artifactId) => {
     const res = buyArtifactWithPointsAndExp(artifactId);
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
+  const handleActivateKimDanTrialV2 = useCallback(() => {
+    const res = activateKimDanTrialV2();
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
+  const handleThangCung = useCallback(() => {
+    const res = thangCungKimDan();
     setCultivation({ ...res.state });
     return res;
   }, []);
@@ -211,6 +225,8 @@ export function useCultivation() {
     anchorPalace: handleAnchorPalace,
     sellArtifact: handleSellArtifact,
     buyArtifact: handleBuyArtifact,
+    activateKimDanTrialV2: handleActivateKimDanTrialV2,
+    thangCung: handleThangCung,
     breakthroughToTrucCo: handleBreakthroughTrucCo,
     breakthroughToKimDan: handleBreakthroughKimDan,
     attemptUnlock121: handleUnlock121,
