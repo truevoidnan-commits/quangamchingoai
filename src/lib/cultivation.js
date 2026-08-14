@@ -1019,19 +1019,35 @@ const DEFAULT_STATE = {
  */
 export function convertToThienMenhIfInAnhRealm(state) {
   if (!state) return;
-  if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
-    state.isThienMenhUnlocked = true;
-    const expAmount = state.totalExp || 0;
-    const tienTinhAmount = (state.tienTinh || 0) * 10; // 1 Tiên Tinh = 10 Lực Thiên Mệnh
-    const totalConverted = expAmount + tienTinhAmount;
+  const isNguyenAnhStage = state.realm === 'gia_anh' || state.realm === 'nguyen_anh';
+  if (!isNguyenAnhStage) return;
 
-    if (totalConverted > 0) {
-      state.totalThienMenh = (state.totalThienMenh || 0) + totalConverted;
-      state.totalExp = 0;
-      state.tienTinh = 0;
-      state.dangDiem = 0;
+  state.isThienMenhUnlocked = true;
+
+  // 10 Tu Vi = 1 Lực Thiên Mệnh (Tỉ lệ 10:1)
+  const expAmount = state.totalExp || 0;
+  const tmFromExp = Math.floor(expAmount / 10);
+  const tienTinhAmount = state.tienTinh || 0;
+  const tmFromTienTinh = tienTinhAmount * 10; // 1 Tiên Tinh = 10 Lực Thiên Mệnh
+  const totalConverted = tmFromExp + tmFromTienTinh;
+
+  if (totalConverted > 0) {
+    state.totalThienMenh = (state.totalThienMenh || 0) + totalConverted;
+    state.totalExp = 0;
+    state.tienTinh = 0;
+    state.dangDiem = 0;
+    state.logs.unshift({
+      text: `✨ THIÊN MỆNH CHUYỂN HÓA! Đã chuyển đổi ${expAmount.toLocaleString()} Tu Vi (10 Tu Vi = 1 TM) và ${tienTinhAmount.toLocaleString()} Tiên Tinh thành +${totalConverted.toLocaleString()} Lực Thiên Mệnh!`,
+      time: Date.now(),
+    });
+  }
+
+  // Nếu đang ở Thẻ Thử Nghiệm V2: Cho sẵn 100.000 Lực Thiên Mệnh để người dùng trải nghiệm nạp & Độ Kiếp!
+  if (state.isKimDanTrialV2) {
+    if ((state.totalThienMenh || 0) < 100000) {
+      state.totalThienMenh = 100000;
       state.logs.unshift({
-        text: `✨ THIÊN MỆNH CHUYỂN HÓA! Đã chuyển đổi toàn bộ ${expAmount.toLocaleString()} Tu Vi và ${(tienTinhAmount / 10).toLocaleString()} Tiên Tinh thành +${totalConverted.toLocaleString()} Lực Thiên Mệnh!`,
+        text: '🏮 THẺ THỬ NGHIỆM V2: Đã cấp sẵn 100.000 Lực Thiên Mệnh để thỏa thích nạp Đạo Anh & thử nghiệm Độ Kiếp Đài!',
         time: Date.now(),
       });
     }
@@ -2154,6 +2170,9 @@ export function activateKimDanTrialV2() {
 
   // Vật Trấn Áp random đủ dùng
   state.inventoryArtifacts = randomArts;
+
+  // Cấp sẵn 100.000 Lực Thiên Mệnh cho thẻ thử nghiệm
+  state.totalThienMenh = 100000;
 
   // Tiêu biến ngay lập tức + cờ hiện nút Thăng Cung
   state.hasUsedKimDanTrialV2 = true;

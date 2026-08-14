@@ -386,9 +386,13 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                       {/* Nội điện: lamp palaces & realized palaces show golden core; bottleneck shows warning; hollow shows mist */}
                       {isRealized ? (
                         <div className={styles.realizedChamberContent}>
-                          {/* Viên Kim Đan tỏa sáng bên trong */}
+                          {/* Viên Kim Đan / Thần Đăng tỏa sáng bên trong */}
                           <div className={styles.goldenCoreOrbInside}>
-                            <span className={styles.orbGlowCore}>{isLampPalace ? '🏮' : elemTheme.icon}</span>
+                            {isLampPalace ? (
+                              <span className={styles.orbGlowCore} style={{ filter: `drop-shadow(0 0 6px ${elemTheme.color})` }}>🏮</span>
+                            ) : (
+                              <span className={styles.orbGlowCore} style={{ filter: `drop-shadow(0 0 8px ${elemTheme.color || '#ffcc00'})` }}>🟡</span>
+                            )}
                             <span className={styles.orbShimmerSparkle}>✨</span>
                           </div>
                           <span className={styles.chamberTitle} style={{ color: elemTheme.color, fontWeight: 700, textShadow: `0 0 6px ${elemTheme.glow}` }}>
