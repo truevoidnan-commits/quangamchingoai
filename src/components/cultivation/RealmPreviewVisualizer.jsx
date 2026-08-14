@@ -601,35 +601,8 @@ export default function RealmPreviewVisualizer({ cultivation }) {
               </div>
             </div>
 
-            {/* SVG Linh Khí Beams connecting Center Nguyen Anh to the 11 Orbiting Dao Anhs */}
-            <svg className={styles.qiBeamsSvg} viewBox="-160 -110 320 220">
-              {(daoAnhs || []).slice(0, 11).map((da, idx) => {
-                const totalCount = Math.max(1, Math.min(11, daoAnhs.length));
-                const angleDeg = (idx / totalCount) * 360 - 90;
-                const angleRad = (angleDeg * Math.PI) / 180;
-                const radiusX = 126;
-                const radiusY = 78;
-                const posX = Math.cos(angleRad) * radiusX;
-                const posY = Math.sin(angleRad) * radiusY;
-                const daTheme = getDaoAnhTheme(da, cultivation);
-                const beamColor = daTheme.color || '#38bdf8';
-
-                return (
-                  <line
-                    key={`beam_${da.id}`}
-                    x1="0"
-                    y1="0"
-                    x2={posX.toFixed(1)}
-                    y2={posY.toFixed(1)}
-                    stroke={beamColor}
-                    strokeWidth="1.2"
-                    strokeOpacity="0.4"
-                    strokeDasharray="4 3"
-                    className={styles.qiBeamLine}
-                  />
-                );
-              })}
-            </svg>
+            {/* Subtle Ethereal Astrolabe Zodiac Ring in Background */}
+            <div className={styles.astrolabeRing} />
 
             {/* Orbiting Dao Anh Guardians with Trấn Cung Bảo Vật & Công Pháp */}
             <div className={styles.daoAnhsOrbitList}>
@@ -672,9 +645,9 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                     style={{
                       transform: `translate(${posX.toFixed(1)}px, ${posY.toFixed(1)}px)`,
                       borderColor: artifactColor,
-                      boxShadow: `0 0 14px ${artifactColor}77`,
+                      boxShadow: `0 0 16px ${artifactColor}88, inset 0 0 6px ${artifactColor}44`,
                     }}
-                    title={`${da.name} · Trấn Vật: ${artifactName} (${da.currentKiep > 0 ? `${da.currentKiep} Kiếp` : 'Giả Anh 0 Kiếp'})`}
+                    title={`${da.name} · Trấn Vật: ${artifactName} (${da.currentKiep > 0 ? `${da.currentKiep} Lần Độ Kiếp` : 'Giả Anh 0 Kiếp'})`}
                   >
                     <span className={styles.miniIcon}>
                       {daItemObj ? (
@@ -686,17 +659,15 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                       )}
                     </span>
 
-                    {/* Huy hiệu Kiếp Quang gọn gàng (Không dùng vòng tròn mở rộng gây đè lên nhau) */}
+                    {/* Dấu Ấn Kiếp Quang Tiên Gia (Hàng sao ✦ phát sáng dưới chân) */}
                     {da.currentKiep > 0 && (
-                      <span
-                        className={styles.kiepMiniBadge}
-                        style={{
-                          background: artifactColor,
-                          boxShadow: `0 0 6px ${artifactColor}`,
-                        }}
-                      >
-                        {da.currentKiep}K
-                      </span>
+                      <div className={styles.kiepStarDots}>
+                        {Array.from({ length: Math.min(5, da.currentKiep) }).map((_, s) => (
+                          <span key={s} className={styles.starDot} style={{ color: artifactColor, textShadow: `0 0 4px ${artifactColor}` }}>
+                            ✦
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
                 );
