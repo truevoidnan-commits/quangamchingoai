@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { LIFE_LAMPS, LAMP_TIERS } from '../../lib/cultivation';
+import { LIFE_LAMPS, LAMP_TIERS, getPalaceNameFromArtifact } from '../../lib/cultivation';
 import styles from './RealmPreviewVisualizer.module.css';
 
 /**
@@ -392,7 +392,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                                 const lobj = lid ? LIFE_LAMPS.find(l => l.id === lid) : null;
                                 return lobj ? lobj.name.replace('Đăng', 'Cung') : `Chân Cung Mệnh Đăng ${lampIdx + 1}`;
                               }
-                              if (anchor) return `${anchor.icon} ${anchor.shortName}`;
+                              if (anchor) return `${anchor.icon} ${anchor.palaceName || getPalaceNameFromArtifact(anchor, palaceIdx, cultivation?.palaceAnchors)}`;
                               return `Cung Thật ${floorNum}`;
                             })()}
                           </span>
@@ -421,7 +421,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
           </div>
 
           <div className={styles.stageStatusBadge}>
-            <span>✨ {maxThienCung === 9 ? 'CỬU TRÙNG THIÊN LÂU' : `THIÊN CUNG BẢO THÁP (${maxThienCung} TẦNG)`} · {lampPalaceCount + realizedThienCung}/{maxThienCung} CHÂN CUNG HÓA THỰC (KIM ĐAN TRẤN VIÊN)</span>
+            <span>✨ {maxThienCung === 9 ? 'CỬU TRÙNG THIÊN LÂU' : `THIÊN CUNG BẢO THÁP (${maxThienCung} TẦNG)`} · {lampPalaceCount + realizedThienCung}/{maxThienCung} CUNG HÓA THỰC</span>
           </div>
         </div>
       )}

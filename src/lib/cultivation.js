@@ -1640,6 +1640,44 @@ export const buyLampWithPointsAndExp = buyLampWithTienTinhAndExp;
 export const burnExpForLamp = buyLampWithTienTinhAndExp;
 
 /**
+ * Chuyển đổi tên Vật Trấn Áp thành tên Thiên Cung chuẩn Tiên Hiệp (VD: Bàn Cổ Khai Thiên Đồ -> Bàn Cổ Khai Thiên Cung)
+ */
+export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = {}) {
+  if (!artifact) return `Thiên Cung Tự Thân ${palaceIdx + 1}`;
+  if (artifact.palaceName) return artifact.palaceName;
+
+  let baseName = artifact.name || artifact.shortName || '';
+  if (!baseName) return `Thiên Cung Tự Thân ${palaceIdx + 1}`;
+
+  if (baseName.endsWith(' Cung')) {
+    // Giữ nguyên
+  } else {
+    // Lược bỏ các từ vựng công pháp/bảo vật ở cuối để ghép từ "Cung" chuẩn tiên hiệp
+    const stripSuffixes = [' Đồ', ' Quyết', ' Pháp', ' Kinh', ' Điển', ' Thuật', ' Công', ' Trận'];
+    for (const suf of stripSuffixes) {
+      if (baseName.endsWith(suf)) {
+        baseName = baseName.slice(0, -suf.length);
+        break;
+      }
+    }
+    baseName = `${baseName} Cung`;
+  }
+
+  // Xử lý chống trùng tên nếu có nhiều cung trấn áp trùng tên vật phẩm
+  const existingNames = Object.entries(allAnchors || {})
+    .filter(([pIdx, a]) => String(pIdx) !== String(palaceIdx) && a)
+    .map(([_, a]) => a.palaceName || a.name);
+
+  if (existingNames.includes(baseName)) {
+    const rankWords = ['Đệ Nhất', 'Đệ Nhị', 'Đệ Tam', 'Đệ Tứ', 'Đệ Ngũ', 'Đệ Lục', 'Đệ Thất', 'Đệ Bát'];
+    const rankTag = rankWords[palaceIdx] || `Cung ${palaceIdx + 1}`;
+    baseName = `${baseName} (${rankTag})`;
+  }
+
+  return baseName;
+}
+
+/**
  * KHẢM NẠM VẬT TRẤN ÁP VÀO THIÊN CUNG (Đạt 100% Hóa Thực Cung Thật)
  * - Khi Thiên Cung đạt 99.99% (799/800 EXP), tu sĩ cần khảm nạm 1 Vật Trấn Áp từ Túi Trữ Vật.
  * - Vật Trấn Áp sẽ trấn thủ thiên cung vĩnh viễn, đưa Thiên Cung đạt 100% Cung Thật (+1 Cung chiến lực).
@@ -1685,6 +1723,7 @@ export function anchorPalaceWithArtifact(palaceIndex, artifactId) {
   if (!artObj) throw new Error('Dữ liệu Vật Trấn Áp không hợp lệ.');
 
   const tierInfo = LAMP_TIERS[artObj.tier] || LAMP_TIERS.ha_pham;
+  const palaceName = getPalaceNameFromArtifact(artObj, palaceIndex, state.palaceAnchors || {});
 
   // Trừ vật phẩm khỏi túi trữ vật
   invArtifacts.splice(artIndex, 1);
@@ -1696,6 +1735,7 @@ export function anchorPalaceWithArtifact(palaceIndex, artifactId) {
     id: artObj.id,
     name: artObj.name,
     shortName: artObj.shortName || artObj.name,
+    palaceName: palaceName,
     tier: artObj.tier,
     type: artObj.type,
     icon: artObj.icon,
@@ -1708,7 +1748,7 @@ export function anchorPalaceWithArtifact(palaceIndex, artifactId) {
   state.currentThienCungExp = 0;
 
   state.logs.unshift({
-    text: `👑 TRẤN CUNG THÀNH CÔNG! Đã dùng [${tierInfo.name}] ${artObj.name} (${artObj.type}) trấn áp Thiên Cung ${palaceIndex + 1}, hoàn tất Hóa Thực thành Cung Thật 100% (+1 Cung chiến lực)!`,
+    text: `👑 TRẤN CUNG THÀNH CÔNG! Đã dùng [${artObj.name}] trấn áp thành công, khởi sinh [${palaceName}] (100% Cung Thật, +1 Cung chiến lực)!`,
     time: Date.now(),
   });
 
@@ -1716,7 +1756,7 @@ export function anchorPalaceWithArtifact(palaceIndex, artifactId) {
   return {
     state,
     artifact: artObj,
-    message: `👑 Trấn Cung Thành Công! Đã dùng [${artObj.name}] hoàn tất 100% Cung Thật thứ ${state.realizedThienCung}!`,
+    message: `👑 Trấn Cung Thành Công! Đã dùng [${artObj.name}] hoàn tất 100% Hóa Thực [${palaceName}]!`,
   };
 }
 

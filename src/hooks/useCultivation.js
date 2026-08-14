@@ -25,6 +25,7 @@ import {
   attemptTribulationSingle,
   attemptTribulationAll,
   getRealmDisplayName,
+  getPalaceNameFromArtifact,
   getCombatPowerDisplay,
   getTotalMenhHoa,
   getTotalCombatPowerAnh,
@@ -212,6 +213,7 @@ export function useCultivation() {
   return {
     cultivation,
     displayName,
+    getPalaceNameFromArtifact,
     combatPowerDisplay,
     totalCombatPower,
     totalMenhHoa,

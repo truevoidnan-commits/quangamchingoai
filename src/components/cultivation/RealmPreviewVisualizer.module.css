@@ -783,21 +783,27 @@
   bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(10, 16, 26, 0.85);
-  border: 1px solid rgba(255, 204, 0, 0.4);
+  background: rgba(10, 16, 26, 0.88);
+  border: 1px solid rgba(255, 204, 0, 0.45);
   backdrop-filter: blur(8px);
-  padding: 3px 14px;
+  padding: 4px 12px;
   border-radius: var(--radius-full);
   z-index: 20;
+  max-width: 92%;
+  box-sizing: border-box;
+  text-align: center;
 }
 
 .stageStatusBadge span {
   font-family: var(--font-serif);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   color: #ffcc00;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.03em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 /* ========================================================

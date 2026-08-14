@@ -19,6 +19,7 @@ export default function CultivationModal({ isOpen, onClose }) {
     buyArtifact,
     activateKimDanTrialV2,
     thangCung,
+    getPalaceNameFromArtifact,
     breakthroughToTrucCo,
     breakthroughToKimDan,
     attemptUnlock121,
@@ -565,6 +566,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           const da = (cultivation.daoAnhs || []).find(d => d.palaceIndex === globalPalaceIdx);
                           const anchor = cultivation.palaceAnchors?.[globalPalaceIdx];
                           const isBottleneck = !isSelfRealized && selfNum === (selfRealized + 1) && cultivation.currentThienCungExp >= bottleneckExp;
+                          const derivedPalaceName = anchor ? (anchor.palaceName || getPalaceNameFromArtifact(anchor, globalPalaceIdx, cultivation.palaceAnchors)) : `Thiên Cung Tự Thân ${selfNum}`;
 
                           return (
                             <div
@@ -574,35 +576,29 @@ export default function CultivationModal({ isOpen, onClose }) {
                               <span className={styles.palaceIcon}>
                                 {da ? '👑' : anchor ? anchor.icon : isSelfRealized ? '🏛️' : isBottleneck ? '🔑' : '☁️'}
                               </span>
-                              <span className={styles.palaceName}>
-                                {da ? `${da.name} (${da.currentKiep}K)` : anchor ? `Cung Tự Thân ${selfNum} (${anchor.shortName})` : `Thiên Cung Tự Thân ${selfNum}`}
+                              <span className={styles.palaceName} style={anchor ? { color: '#ffcc00', fontWeight: 700 } : {}}>
+                                {da ? `${da.name} (${da.currentKiep}K)` : derivedPalaceName}
                               </span>
-                              <span className={styles.palaceStatus}>
-                                {da ? `✦ ${da.currentKiep} Anh` : anchor ? `✦ Trấn: ${anchor.name}` : isSelfRealized ? '✦ Cung Thật 100%' : isBottleneck ? '⚠️ Cần Trấn Vật (99.9%)' : 'Hư Ảo (0%)'}
+                              <span className={styles.palaceStatus} style={anchor ? { color: '#ffcc00' } : {}}>
+                                {da ? `✦ ${da.currentKiep} Anh` : anchor ? `✦ Cung Thật 100% (Trấn: ${anchor.shortName || anchor.name})` : isSelfRealized ? '✦ Cung Thật 100%' : isBottleneck ? '⚠️ Cần Trấn Vật (99.9%)' : 'Hư Ảo (0%)'}
                               </span>
 
                               {/* Button Hóa Đạo Anh khi toàn bộ cung đã hóa thật 100% */}
-                              {isSelfRealized && !da && (
-                                totalRealizedCung === cultivation.maxThienCung ? (
-                                  <button
-                                    className={styles.miniManifestBtn}
-                                    onClick={() => {
-                                      if (
-                                        confirm(
-                                          `XÁC NHẬN HÓA ĐẠO ANH:\n\n• Thiên Cung: Thiên Cung Tự Thân ${selfNum}\n• Chi phí: 1.000 Tu Vi (Linh lực thai nghén Đạo Anh)\n\nĐạo hữu có muốn tiêu hao 1.000 Tu Vi để thai nghén và khai sinh Đạo Anh tại Thiên Cung này?`
-                                        )
-                                      ) {
-                                        triggerAction(() => manifestDaoAnh(globalPalaceIdx), `Đã chuyển hóa thành công Thiên Cung Tự Thân ${selfNum} thành Đạo Anh!`);
-                                      }
-                                    }}
-                                  >
-                                    👑 Hóa Đạo Anh (1k EXP)
-                                  </button>
-                                ) : (
-                                  <span style={{ fontSize: 8.5, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                                    Chờ Hóa Thật Hết
-                                  </span>
-                                )
+                              {isSelfRealized && !da && totalRealizedCung === cultivation.maxThienCung && (
+                                <button
+                                  className={styles.miniManifestBtn}
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        `XÁC NHẬN HÓA ĐẠO ANH:\n\n• Thiên Cung: ${derivedPalaceName}\n• Chi phí: 1.000 Tu Vi (Linh lực thai nghén Đạo Anh)\n\nĐạo hữu có muốn tiêu hao 1.000 Tu Vi để thai nghén và khai sinh Đạo Anh tại Thiên Cung này?`
+                                      )
+                                    ) {
+                                      triggerAction(() => manifestDaoAnh(globalPalaceIdx), `Đã chuyển hóa thành công [${derivedPalaceName}] thành Đạo Anh!`);
+                                    }
+                                  }}
+                                >
+                                  👑 Hóa Đạo Anh (1k EXP)
+                                </button>
                               )}
 
                               {/* Button Khảm Nạm nhanh khi cung tự thân đang ở 99.99% */}
