@@ -421,7 +421,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
           </div>
 
           <div className={styles.stageStatusBadge}>
-            <span>🏛️ TÒA THIÊN LÂU: {lampPalaceCount + realizedThienCung}/{maxThienCung} TẦNG HÓA THẬT (CÓ KIM ĐAN)</span>
+            <span>✨ CỬU TRÙNG THIÊN LÂU · {lampPalaceCount + realizedThienCung}/{maxThienCung} CHÂN CUNG HÓA THỰC (KIM ĐAN TRẤN VIÊN)</span>
           </div>
         </div>
       )}

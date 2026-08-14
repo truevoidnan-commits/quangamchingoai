@@ -560,10 +560,10 @@ export default function CultivationModal({ isOpen, onClose }) {
                         {/* B. Các Thiên Cung Tự Thân (Cần Nạp Linh Lực & Khảm Nạm Vật Trấn Áp Để Hóa Thực) */}
                         {Array.from({ length: selfPalacesTotal }).map((_, sIdx) => {
                           const selfNum = sIdx + 1;
-                          const globalPalaceIdx = lampCount + sIdx;
+                          const globalPalaceIdx = sIdx;  // self palaces: index 0..selfPalacesTotal-1
                           const isSelfRealized = selfRealized >= selfNum;
                           const da = (cultivation.daoAnhs || []).find(d => d.palaceIndex === globalPalaceIdx);
-                          const anchor = cultivation.palaceAnchors?.[globalPalaceIdx] || cultivation.palaceAnchors?.[sIdx];
+                          const anchor = cultivation.palaceAnchors?.[globalPalaceIdx];
                           const isBottleneck = !isSelfRealized && selfNum === (selfRealized + 1) && cultivation.currentThienCungExp >= bottleneckExp;
 
                           return (
@@ -637,7 +637,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                             <button
                               className="btn-gold"
                               style={{ width: '100%', marginTop: 8, fontSize: 12, padding: '7px' }}
-                              onClick={() => setAnchorModalPalace(lampCount + selfRealized)}
+                              onClick={() => setAnchorModalPalace(selfRealized)}
                             >
                               🔑 Khảm Nạm Vật Trấn Áp Ngay
                             </button>
@@ -1333,7 +1333,7 @@ export default function CultivationModal({ isOpen, onClose }) {
               <div className={styles.anchorModalHeader}>
                 <div>
                   <h3 style={{ margin: 0, color: '#ffcc00', fontSize: 16 }}>
-                    👑 KHẢM NẠM VẬT TRẤN ÁP · THIÊN CUNG {anchorModalPalace + 1}
+                    👑 KHẢM NẠM VẬT TRẤN ÁP · THIÊN CUNG TỰ THÂN {anchorModalPalace + 1}
                   </h3>
                   <p style={{ margin: '4px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
                     Chọn một Pháp Khí, Công Pháp hoặc Dị Khí trong Túi Trữ Vật để trấn áp, hoàn tất 100% Cung Thật (+1 Cung chiến lực).
