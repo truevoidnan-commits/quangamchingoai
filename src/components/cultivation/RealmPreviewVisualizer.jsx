@@ -349,10 +349,10 @@ export default function RealmPreviewVisualizer({
                 <div className={styles.spireRoofTop} />
               </div>
 
-              {/* Các Tầng Lầu Các (Xếp từ tầng cao nhất xuống T1) */}
+              {/* Các Tầng Lầu Các (Xếp từ tầng cao nhất xuống T1, Mệnh Đăng ở tầng trên cùng) */}
               {Array.from({ length: maxThienCung }).map((_, i) => {
                 const floorNum = maxThienCung - i;
-                const palaceIdx = floorNum - 1;
+                const palaceIdx = i;
                 const selfPalacesTotal = maxThienCung - lampPalaceCount;
                 const isLampPalace = palaceIdx < lampPalaceCount;
                 const selfLocalIdx = isLampPalace ? null : palaceIdx - lampPalaceCount;
@@ -452,9 +452,11 @@ export default function RealmPreviewVisualizer({
                             </div>
 
                             {/* Status label / Button inside floor */}
-                            <span className={styles.floorStatusLabel} style={{ color: auraColor }}>
-                              {da ? (da.currentKiep > 0 ? `✦ ${da.currentKiep} Kiếp` : '✦ Giả Anh') : '✦ Chân Cung'}
-                            </span>
+                            {da && (
+                              <span className={styles.floorStatusLabel} style={{ color: auraColor }}>
+                                {da.currentKiep > 0 ? `✦ ${da.currentKiep} Kiếp` : '✦ Giả Anh'}
+                              </span>
+                            )}
                           </div>
                         )}
 

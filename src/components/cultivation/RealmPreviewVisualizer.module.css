@@ -14,7 +14,7 @@
 
 .visualizerWrapperTall {
   height: auto;
-  min-height: 520px;
+  min-height: 640px;
 }
 
 /* ========================================================
@@ -378,12 +378,12 @@
   transform-style: preserve-3d;
   transform: rotateX(8deg);
   width: 100%;
-  max-width: 340px;
+  max-width: 350px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-height: calc(100vh - 210px);
-  min-height: 520px;
+  max-height: calc(100vh - 160px);
+  min-height: 600px;
   overflow-y: auto;
   padding-right: 4px;
 }

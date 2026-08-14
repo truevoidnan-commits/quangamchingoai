@@ -613,10 +613,7 @@ export default function CultivationModal({ isOpen, onClose }) {
 
             {/* KIM ĐAN / GIẢ ANH / NGUYÊN ANH VIEW */}
             {(cultivation.realm === 'kim_dan' || cultivation.realm === 'gia_anh' || cultivation.realm === 'nguyen_anh') && (
-              <div className={styles.realmDetailCard}>
-                <h3 className={styles.cardHeader}>
-                  {isNguyenAnhStage ? `Thiên Cung & Đạo Anh (${cultivation.maxThienCung} Cung)` : `Thiên Cung Kim Đan (${cultivation.maxThienCung} Cung)`}
-                </h3>
+              <>
                 {(() => {
                   const lampList = cultivation.absorbedLamps || [];
                   const lampCount = lampList.length;
@@ -675,7 +672,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                     </>
                   );
                 })()}
-              </div>
+              </>
             )}
           </div>
         )}
