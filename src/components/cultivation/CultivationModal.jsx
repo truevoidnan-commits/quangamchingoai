@@ -18,6 +18,7 @@ export default function CultivationModal({ isOpen, onClose }) {
     sellArtifact,
     buyArtifact,
     activateKimDanTrialV2,
+    endKimDanTrialV2,
     thangCung,
     getLampPalaceName,
     getPalaceNameFromArtifact,
@@ -107,7 +108,47 @@ export default function CultivationModal({ isOpen, onClose }) {
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title="✦ ĐẠO LỘ TU TIÊN ✦" fullHeight>
       <div className={styles.container}>
-
+        {/* BANNER THỬ NGHIỆM KIM ĐAN V2 VỚI NÚT KẾT THÚC THỬ NGHIỆM */}
+        {cultivation.isKimDanTrialV2 && (
+          <div style={{
+            marginBottom: 12,
+            padding: '8px 12px',
+            background: 'linear-gradient(90deg, rgba(239, 68, 68, 0.25), rgba(249, 115, 22, 0.25))',
+            border: '1px solid rgba(239, 68, 68, 0.6)',
+            borderRadius: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            flexWrap: 'wrap',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 16 }}>🧪</span>
+              <div>
+                <div style={{ fontSize: 11.5, color: '#f87171', fontWeight: 700 }}>ĐANG TRẢI NGHIỆM KIM ĐAN V2</div>
+                <div style={{ fontSize: 9.5, color: 'var(--text-secondary)' }}>Thẻ đã kích hoạt 1 lần duy nhất · Bấm Kết Thúc để khôi phục Tu Vi ban đầu</div>
+              </div>
+            </div>
+            <button
+              className="btn-ghost"
+              style={{
+                fontSize: 10.5,
+                padding: '4px 10px',
+                color: '#f87171',
+                borderColor: 'rgba(248, 113, 113, 0.6)',
+                background: 'rgba(239, 68, 68, 0.15)',
+                fontWeight: 700,
+              }}
+              onClick={() => {
+                if (confirm('❌ BẠN CÓ CHẮC CHẮN MUỐN KẾT THÚC THỬ NGHIỆM?\n\n• Thẻ thử nghiệm sẽ tiêu biến vĩnh viễn.\n• Tu Vi và cảnh giới sẽ được khôi phục về trạng thái trước khi dùng thẻ.')) {
+                  triggerAction(endKimDanTrialV2, 'Đã kết thúc chế độ Thử Nghiệm Kim Đan.');
+                }
+              }}
+            >
+              ❌ Kết Thúc Thử Nghiệm
+            </button>
+          </div>
+        )}
 
         {/* Realm Hero Card with Dedicated Visual Animation */}
         <div className={styles.realmHeroCard}>
@@ -245,6 +286,34 @@ export default function CultivationModal({ isOpen, onClose }) {
                   }}
                 >
                   🏮 Kích Hoạt Thẻ Trải Nghiệm
+                </button>
+              </div>
+            )}
+
+            {cultivation.isKimDanTrialV2 && (
+              <div
+                className={styles.trialCardOffer}
+                style={{ borderColor: 'rgba(239, 68, 68, 0.6)', boxShadow: '0 0 14px rgba(239, 68, 68, 0.2)', marginBottom: 12, background: 'rgba(239, 68, 68, 0.08)' }}
+              >
+                <div className={styles.trialCardOfferInfo}>
+                  <span className={styles.trialOfferIcon}>🧪</span>
+                  <div>
+                    <h4 style={{ color: '#f87171', margin: 0, fontSize: 13 }}>ĐANG THỬ NGHIỆM KIM ĐAN V2</h4>
+                    <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                      Thẻ thử nghiệm đã dùng 1 lần duy nhất. Bấm nút bên để kết thúc thử nghiệm và khôi phục tu vi ban đầu bất kỳ lúc nào.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className="btn-ghost"
+                  style={{ fontSize: 11.5, padding: '7px 14px', fontWeight: 700, flexShrink: 0, color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.6)', background: 'rgba(239, 68, 68, 0.15)' }}
+                  onClick={() => {
+                    if (confirm('❌ BẠN CÓ CHẮC CHẮN MUỐN KẾT THÚC THỬ NGHIỆM?\n\n• Thẻ thử nghiệm sẽ tiêu biến vĩnh viễn.\n• Tu Vi và cảnh giới sẽ được khôi phục về trạng thái trước khi dùng thẻ.')) {
+                      triggerAction(endKimDanTrialV2, 'Đã kết thúc chế độ Thử Nghiệm Kim Đan.');
+                    }
+                  }}
+                >
+                  ❌ Kết Thúc Thử Nghiệm
                 </button>
               </div>
             )}

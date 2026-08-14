@@ -2085,6 +2085,31 @@ export function activateKimDanTrialV2() {
     throw new Error('Thẻ Trải Nghiệm Kim Đan đã tiêu biến vĩnh viễn!');
   }
 
+  // Sao lưu trạng thái hiện tại trước khi kích hoạt thẻ thử nghiệm
+  const backup = {
+    realm: state.realm,
+    expCurrentRealm: state.expCurrentRealm,
+    totalExp: state.totalExp,
+    phapKhieu: state.phapKhieu,
+    selfMenhHoa: state.selfMenhHoa,
+    has121st: state.has121st,
+    failed121st: state.failed121st,
+    attemptExp121: state.attemptExp121,
+    tienTinh: state.tienTinh,
+    inventoryLamps: state.inventoryLamps ? [...state.inventoryLamps] : [],
+    absorbedLamps: state.absorbedLamps ? [...state.absorbedLamps] : [],
+    inventoryArtifacts: state.inventoryArtifacts ? [...state.inventoryArtifacts] : [],
+    palaceAnchors: state.palaceAnchors ? { ...state.palaceAnchors } : {},
+    maxThienCung: state.maxThienCung,
+    realizedThienCung: state.realizedThienCung,
+    currentThienCungExp: state.currentThienCungExp,
+    totalThienMenh: state.totalThienMenh,
+    daoAnhs: state.daoAnhs ? [...state.daoAnhs] : [],
+    daoAnhProgress: state.daoAnhProgress ? { ...state.daoAnhProgress } : {},
+    chaptersReadCount: state.chaptersReadCount || 0,
+  };
+  state.preTrialBackupV2 = backup;
+
   // Chọn 4 Mệnh Đăng random không trùng nhau
   const allLampIds = LIFE_LAMPS.map(l => l.id);
   const shuffled = [...allLampIds].sort(() => Math.random() - 0.5);
@@ -2127,6 +2152,79 @@ export function activateKimDanTrialV2() {
     message: '✨ Thẻ Trải Nghiệm Kim Đan đã kích hoạt! Đã thiết lập Trúc Cơ 4 Hỏa + 4 Mệnh Đăng random. Thẻ đã tiêu biến vĩnh viễn. Hãy tự Đột Phá Kim Đan!',
     randomLamps,
     randomArts,
+  };
+}
+
+/**
+ * KẾT THÚC THỬ NGHIỆM KIM ĐAN V2
+ * - Tắt cờ isKimDanTrialV2 = false.
+ * - Khôi phục trạng thái backup nếu có (hoặc reset về ban đầu nếu không có backup).
+ * - Thẻ tiêu biến vĩnh viễn (hasUsedKimDanTrialV2 = true).
+ */
+export function endKimDanTrialV2() {
+  const state = getCultivationState();
+  if (!state.isKimDanTrialV2) {
+    throw new Error('Hiện tại không ở trong chế độ Thử Nghiệm Kim Đan!');
+  }
+
+  if (state.preTrialBackupV2) {
+    const backup = state.preTrialBackupV2;
+    state.realm = backup.realm || 'phap_khieu';
+    state.expCurrentRealm = backup.expCurrentRealm || 0;
+    state.totalExp = backup.totalExp || 0;
+    state.phapKhieu = backup.phapKhieu || 0;
+    state.selfMenhHoa = backup.selfMenhHoa || 0;
+    state.has121st = backup.has121st || false;
+    state.failed121st = backup.failed121st || false;
+    state.attemptExp121 = backup.attemptExp121 || 0;
+    state.tienTinh = backup.tienTinh || 0;
+    state.inventoryLamps = backup.inventoryLamps || [];
+    state.absorbedLamps = backup.absorbedLamps || [];
+    state.inventoryArtifacts = backup.inventoryArtifacts || [];
+    state.palaceAnchors = backup.palaceAnchors || {};
+    state.maxThienCung = backup.maxThienCung || 6;
+    state.realizedThienCung = backup.realizedThienCung || 0;
+    state.currentThienCungExp = backup.currentThienCungExp || 0;
+    state.totalThienMenh = backup.totalThienMenh || 0;
+    state.daoAnhs = backup.daoAnhs || [];
+    state.daoAnhProgress = backup.daoAnhProgress || {};
+    state.chaptersReadCount = backup.chaptersReadCount || 0;
+    state.preTrialBackupV2 = null;
+  } else {
+    // Reset về trạng thái sơ khai
+    state.realm = 'phap_khieu';
+    state.expCurrentRealm = 0;
+    state.totalExp = 0;
+    state.phapKhieu = 0;
+    state.selfMenhHoa = 0;
+    state.has121st = false;
+    state.failed121st = false;
+    state.attemptExp121 = 0;
+    state.tienTinh = 0;
+    state.inventoryLamps = [];
+    state.absorbedLamps = [];
+    state.inventoryArtifacts = [];
+    state.palaceAnchors = {};
+    state.maxThienCung = 6;
+    state.realizedThienCung = 0;
+    state.currentThienCungExp = 0;
+    state.totalThienMenh = 0;
+    state.daoAnhs = [];
+    state.daoAnhProgress = {};
+  }
+
+  state.isKimDanTrialV2 = false;
+  state.hasUsedKimDanTrialV2 = true;
+
+  state.logs.unshift({
+    text: '🚪 ĐÃ KẾT THÚC CHẾ ĐỘ THỬ NGHIỆM KIM ĐAN! Đã khôi phục cảnh giới tu vi ban đầu.',
+    time: Date.now(),
+  });
+
+  saveCultivationState(state);
+  return {
+    state,
+    message: '🚪 Đã kết thúc chế độ Thử Nghiệm Kim Đan và khôi phục tu vi ban đầu!',
   };
 }
 

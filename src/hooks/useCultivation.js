@@ -18,6 +18,7 @@ import {
   breakthroughToTrucCo,
   breakthroughToKimDan,
   activateKimDanTrialV2,
+  endKimDanTrialV2,
   thangCungKimDan,
   attemptUnlock121st,
   manifestDaoAnh,
@@ -115,6 +116,12 @@ export function useCultivation() {
 
   const handleActivateKimDanTrialV2 = useCallback(() => {
     const res = activateKimDanTrialV2();
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
+  const handleEndKimDanTrialV2 = useCallback(() => {
+    const res = endKimDanTrialV2();
     setCultivation({ ...res.state });
     return res;
   }, []);
@@ -244,6 +251,7 @@ export function useCultivation() {
     sellArtifact: handleSellArtifact,
     buyArtifact: handleBuyArtifact,
     activateKimDanTrialV2: handleActivateKimDanTrialV2,
+    endKimDanTrialV2: handleEndKimDanTrialV2,
     thangCung: handleThangCung,
     breakthroughToTrucCo: handleBreakthroughTrucCo,
     breakthroughToKimDan: handleBreakthroughKimDan,
