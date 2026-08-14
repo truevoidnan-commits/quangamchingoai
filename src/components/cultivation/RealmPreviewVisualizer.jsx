@@ -331,12 +331,11 @@ export default function RealmPreviewVisualizer({ cultivation }) {
           {/* 3D Pagoda Perspective Container */}
           <div className={styles.lauCacContainer}>
             <div className={styles.lauCac3D}>
-              {/* Mái chóp bảo tháp đỉnh cao nhất */}
+              {/* Mái chóp bảo tháp đỉnh cao nhất (Pagoda Crown) */}
               <div className={styles.spire3D}>
                 <div className={styles.spireCrownGlow} />
-                <div className={styles.spireNeedle} />
+                <div className={styles.spireLotusFinial}>⛩️</div>
                 <div className={styles.spireRoofTop} />
-                <div className={styles.spireRoofBase} />
               </div>
 
               {/* Các Tầng Lầu Các (Xếp từ tầng cao nhất xuống T1) */}
@@ -374,7 +373,9 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 })();
 
                 const tierKey = isLampPalace ? (lobj?.tier || 'than_pham') : (artifactObj?.tier || 'ha_pham');
-                const auraColor = isLampPalace ? '#d946ef' : (
+
+                // Imperial Flame Color for Mệnh Đăng (#fbbf24 Golden Flame, #f97316 Radiant Amber)
+                const auraColor = isLampPalace ? '#fbbf24' : (
                   tierKey === 'than_pham'   ? '#FF2D4D' :
                   tierKey === 'tien_pham'   ? '#FFD700' :
                   tierKey === 'cuc_pham'    ? '#8E44AD' :
@@ -382,7 +383,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                   tierKey === 'trung_pham'  ? '#4CAF50' : '#B0B0B0'
                 );
 
-                const loiColor = isLampPalace ? '#c084fc' : (elemTheme?.color || auraColor);
+                const loiColor = isLampPalace ? '#f97316' : (elemTheme?.color || auraColor);
                 const trangThai = isRealized ? 'hoan-thien' : isBottleneck ? 'dang-ngung-thuc' : expPercent > 0 ? 'dang-ngung-thuc' : 'hu-ao';
                 const loai = isLampPalace ? 'menh-dang' : 'thuong';
                 const tierIndex = i;
@@ -434,9 +435,9 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                               <div className={styles.kimDanLoi} />
                               <div className={styles.kimDanIcon}>
                                 <ArtifactIcon
-                                  item={isLampPalace ? (lobj || { tier: 'than_pham', color: '#d946ef', name: 'Mệnh Đăng' }) : artifactObj}
+                                  item={isLampPalace ? (lobj || { tier: 'than_pham', color: '#fbbf24', name: 'Mệnh Đăng' }) : artifactObj}
                                   isLamp={isLampPalace}
-                                  size={32}
+                                  size={42}
                                 />
                               </div>
                               <div className={styles.kimDanParticles}>
