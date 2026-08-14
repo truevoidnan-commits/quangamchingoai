@@ -563,8 +563,8 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 const totalCount = Math.max(1, Math.min(11, daoAnhs.length));
                 const angleDeg = (idx / totalCount) * 360 - 90;
                 const angleRad = (angleDeg * Math.PI) / 180;
-                const radiusX = 102; // Ngang
-                const radiusY = 66;  // Dọc (thu gọn để không chạm hoặc đè lên badge phía dưới)
+                const radiusX = 126; // Ngang (nới rộng khoảng cách giữa các Đạo Anh)
+                const radiusY = 78;  // Dọc (nới rộng theo chiều dọc cho thông thoáng)
                 const posX = Math.cos(angleRad) * radiusX;
                 const posY = Math.sin(angleRad) * radiusY;
 
@@ -594,17 +594,17 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                       {artifactIcon}
                     </span>
 
-                    {/* Vòng Tròn Hào Quang Vòng Lôi Kiếp Quay Xung Quanh Orb (1 vòng = 1 Kiếp) */}
+                    {/* Vòng Tròn Hào Quang Hào Sắc Quay Xung Quanh Orb (1 vòng trơn = 1 Kiếp, không dùng nét đứt gây nhức mắt) */}
                     {Array.from({ length: da.currentKiep || 0 }).map((_, rIdx) => (
                       <div
                         key={`kiep_ring_${rIdx}`}
                         className={styles.miniOrbKiepHaloRing}
                         style={{
-                          width: `${34 + rIdx * 8}px`,
-                          height: `${34 + rIdx * 8}px`,
-                          borderColor: artifactColor,
-                          animationDuration: `${2.5 + rIdx * 1.2}s`,
-                          boxShadow: `0 0 6px ${artifactColor}66`,
+                          width: `${34 + rIdx * 5}px`,
+                          height: `${34 + rIdx * 5}px`,
+                          borderColor: `${artifactColor}77`,
+                          boxShadow: `0 0 5px ${artifactColor}33`,
+                          animationDuration: `${3.5 + rIdx * 1.5}s`,
                         }}
                       />
                     ))}

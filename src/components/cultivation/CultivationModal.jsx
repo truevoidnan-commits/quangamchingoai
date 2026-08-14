@@ -873,7 +873,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           }}
                           onClick={() => triggerAction(fillAllDaoAnhThienMenh)}
                         >
-                          ⚡ NẠP ĐẦY 100% THIÊN MỆNH (TOÀN BỘ ĐẠO ANH)
+                          ⚡ NẠP ĐẦY 100% THIÊN MỆNH
                         </button>
                       )}
                     </>
@@ -1352,14 +1352,14 @@ export default function CultivationModal({ isOpen, onClose }) {
                   style={{ width: '100%', padding: '10px 14px', fontSize: 12.5, fontWeight: 800, background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
                   onClick={() => triggerAction(fillAllDaoAnhThienMenh)}
                 >
-                  ⚡ NẠP ĐẦY 100% THIÊN MỆNH (TOÀN BỘ ĐẠO ANH)
+                  ⚡ NẠP ĐẦY 100% THIÊN MỆNH
                 </button>
                 <button
                   className={`btn-gold ${styles.massTribulationBtn}`}
                   style={{ width: '100%', padding: '10px 14px', fontSize: 12.5, fontWeight: 700 }}
                   onClick={handleAllTribulation}
                 >
-                  👑 VẠN KIẾP TỀ THĂNG (ĐỒNG LOẠT VƯỢT KIẾP CHO CÁC ĐẠO ANH CÙNG NẤC KIẾP)
+                  👑 VẠN KIẾP TỀ THĂNG
                 </button>
               </div>
             </div>

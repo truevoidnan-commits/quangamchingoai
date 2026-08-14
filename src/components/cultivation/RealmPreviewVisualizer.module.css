@@ -778,9 +778,9 @@
   left: 50%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 1.2px dashed #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.45);
   pointer-events: none;
-  animation: rotateCenterSlow 5s linear infinite;
+  animation: rotateCenterSlow 6s linear infinite;
 }
 
 @keyframes rotateCenterSlow {
