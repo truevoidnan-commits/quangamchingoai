@@ -976,66 +976,65 @@
   pointer-events: none;
 }
 
-.miniInfantAltar {
+.octagonalJadeShrine {
   position: absolute;
   width: 44px;
-  height: 48px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(15, 23, 42, 0.98) 0%, rgba(5, 11, 20, 1) 100%);
+  border: 2px solid var(--aura-color, #22c3f0);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   pointer-events: auto;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
   z-index: 8;
-  filter: drop-shadow(0 0 10px var(--aura-color, #22c3f0));
 }
 
-.miniInfantAltar:hover {
-  transform: scale(1.25) !important;
-  filter: drop-shadow(0 0 18px var(--aura-color, #ffcc00));
+.octagonalJadeShrine:hover {
+  transform: scale(1.22) !important;
+  box-shadow: 0 0 24px var(--aura-color, #ffcc00) !important;
+  z-index: 20;
 }
 
-.miniInfantAura {
+.shrineAuraRing {
   position: absolute;
-  inset: -6px;
+  inset: -8px;
   border-radius: 50%;
   pointer-events: none;
   z-index: 1;
+  animation: shrinePulse 2.4s ease-in-out infinite alternate;
 }
 
-.miniInfantSvg {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+@keyframes shrinePulse {
+  0% { transform: scale(0.92); opacity: 0.5; }
+  100% { transform: scale(1.1); opacity: 0.9; }
+}
+
+.shrineArtifactCore {
   position: relative;
-  z-index: 2;
-  filter: drop-shadow(0 0 4px var(--aura-color, #38bdf8));
-  animation: floatSlow 3s ease-in-out infinite alternate;
-}
-
-.miniInfantCoreArtifact {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -20%);
-  z-index: 4;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  box-shadow: 0 0 8px var(--aura-color, #ffcc00);
 }
 
-.miniInfantKiepRing {
+.shrineKiepDots {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  border: 1px solid var(--aura-color, #38bdf8);
+  bottom: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  z-index: 4;
   pointer-events: none;
-  z-index: 5;
-  animation: rotateCenterSlow 6s linear infinite;
+}
+
+.shrineStarDot {
+  font-size: 8px;
+  line-height: 1;
+  animation: starSparkle 1.6s ease-in-out infinite alternate;
 }
 
 @keyframes starSparkle {
