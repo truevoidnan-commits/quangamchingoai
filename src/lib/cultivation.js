@@ -1061,49 +1061,64 @@ export function getDaoAnhTheme(daoAnh, state) {
   if (!daoAnh) return { icon: '👑', color: '#ffcc00', glow: 'rgba(255, 204, 0, 0.4)', bg: 'rgba(255, 204, 0, 0.08)' };
 
   const pIdx = daoAnh.palaceIndex;
+  const maxThienCung = state?.maxThienCung || 13;
   const lampList = state?.absorbedLamps || [];
   const lampCount = lampList.length;
+  const selfPalacesTotal = maxThienCung - lampCount;
 
-  if (pIdx < lampCount) {
-    // A. Nguồn gốc từ Mệnh Đăng
-    const lampId = lampList[pIdx];
+  const isLampPalace = pIdx >= selfPalacesTotal;
+
+  if (isLampPalace) {
+    // A. Nguồn gốc từ Mệnh Đăng (indices selfPalacesTotal ... maxThienCung - 1)
+    const lampIdx = pIdx - selfPalacesTotal;
+    const lampId = lampList[lampIdx];
     const lampObj = LIFE_LAMPS.find(l => l.id === lampId);
     if (lampObj) {
-      const tierInfo = LAMP_TIERS[lampObj.tier] || LAMP_TIERS.ha_pham;
+      const tierInfo = LAMP_TIERS[lampObj.tier] || LAMP_TIERS.than_pham;
+      const color = tierInfo.color || '#FF2D4D';
       return {
         icon: lampObj.icon || '🏮',
-        color: tierInfo.color || '#ffcc00',
-        glow: tierInfo.border || 'rgba(255, 204, 0, 0.4)',
-        bg: 'rgba(255, 204, 0, 0.12)',
+        color: color,
+        glow: tierInfo.border || `${color}aa`,
+        bg: `${color}18`,
         isLamp: true,
+        tier: lampObj.tier || 'than_pham',
         shortName: lampObj.shortName || lampObj.name,
       };
     }
   } else {
-    // B. Nguồn gốc từ Cung Tự Thân (Vật Trấn Áp)
-    const selfIdx = pIdx - lampCount;
-    const anchor = state?.palaceAnchors?.[selfIdx];
+    // B. Nguồn gốc từ Cung Tự Thân (indices 0 ... selfPalacesTotal - 1)
+    const anchor = state?.palaceAnchors?.[pIdx];
     if (anchor) {
-      const tierInfo = LAMP_TIERS[anchor.tier] || LAMP_TIERS.trung_pham;
-      const color = anchor.color || tierInfo?.color || '#38bdf8';
+      const artObj = SUPPRESSING_ARTIFACTS.find(a => a.id === anchor.id) || anchor;
+      const tierKey = artObj.tier || anchor.tier || 'ha_pham';
+      const tierInfo = LAMP_TIERS[tierKey] || LAMP_TIERS.ha_pham;
+      const color = artObj.color || tierInfo?.color || (
+        tierKey === 'than_pham'   ? '#FF2D4D' :
+        tierKey === 'tien_pham'   ? '#FFD700' :
+        tierKey === 'cuc_pham'    ? '#8E44AD' :
+        tierKey === 'thuong_pham' ? '#2E86DE' :
+        tierKey === 'trung_pham'  ? '#4CAF50' : '#B0B0B0'
+      );
       return {
-        icon: anchor.icon || '🏛️',
+        icon: artObj.icon || '🏛️',
         color,
-        glow: tierInfo?.border || `${color}66`,
-        bg: tierInfo?.bg || `${color}15`,
+        glow: tierInfo?.border || `${color}aa`,
+        bg: tierInfo?.bg || `${color}18`,
         isLamp: false,
-        shortName: anchor.shortName || anchor.name,
+        tier: tierKey,
+        shortName: artObj.shortName || artObj.name,
       };
     }
   }
 
   return {
-    icon: '✨',
-    color: '#ffcc00',
-    glow: 'rgba(255, 204, 0, 0.3)',
-    bg: 'rgba(255, 204, 0, 0.08)',
+    icon: '🏛️',
+    color: '#38bdf8',
+    glow: 'rgba(56, 189, 248, 0.4)',
+    bg: 'rgba(56, 189, 248, 0.08)',
     isLamp: false,
-    shortName: 'Thiên Cung',
+    shortName: daoAnh.name,
   };
 }
 

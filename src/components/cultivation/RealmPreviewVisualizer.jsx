@@ -686,20 +686,18 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                       )}
                     </span>
 
-                    {/* Vòng Tròn Hào Quang 1-5 Kiếp Quang Quay Xung Quanh Orb */}
-                    {Array.from({ length: da.currentKiep || 0 }).map((_, rIdx) => (
-                      <div
-                        key={`kiep_ring_${rIdx}`}
-                        className={styles.miniOrbKiepHaloRing}
+                    {/* Huy hiệu Kiếp Quang gọn gàng (Không dùng vòng tròn mở rộng gây đè lên nhau) */}
+                    {da.currentKiep > 0 && (
+                      <span
+                        className={styles.kiepMiniBadge}
                         style={{
-                          width: `${36 + rIdx * 5}px`,
-                          height: `${36 + rIdx * 5}px`,
-                          borderColor: `${artifactColor}aa`,
-                          boxShadow: `0 0 6px ${artifactColor}55`,
-                          animationDuration: `${3.5 + rIdx * 1.5}s`,
+                          background: artifactColor,
+                          boxShadow: `0 0 6px ${artifactColor}`,
                         }}
-                      />
-                    ))}
+                      >
+                        {da.currentKiep}K
+                      </span>
+                    )}
                   </div>
                 );
               })}
