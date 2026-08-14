@@ -674,9 +674,15 @@ export default function CultivationModal({ isOpen, onClose }) {
                                 className={`${styles.palaceCard} ${styles.palaceRealized} ${styles.palaceDaoAnh}`}
                                 style={{ borderColor: daTheme.color, boxShadow: `0 0 12px ${daTheme.glow}`, background: daTheme.bg }}
                               >
-                                <span className={styles.palaceIcon}>
-                                  {daTheme.icon}
-                                </span>
+                              <span className={styles.palaceIcon}>
+                                {isLampPalace && lampObj ? (
+                                  <ArtifactIcon item={lampObj} isLamp={true} size={32} />
+                                ) : anchor ? (
+                                  <ArtifactIcon item={artifactObj} isLamp={false} size={32} />
+                                ) : (
+                                  daTheme.icon
+                                )}
+                              </span>
                                 <span className={styles.palaceName} style={{ color: daTheme.color, fontWeight: 700 }}>
                                   {title}
                                 </span>
@@ -736,7 +742,11 @@ export default function CultivationModal({ isOpen, onClose }) {
                               className={`${styles.palaceCard} ${isRealized ? styles.palaceRealized : isBottleneck ? styles.palaceBottleneck : ''}`}
                             >
                               <span className={styles.palaceIcon}>
-                                {isLampPalace ? (lampObj?.icon || '🏮') : anchor ? anchor.icon : isSelfRealized ? '🏛️' : isBottleneck ? '🔑' : '☁️'}
+                                {isLampPalace && lampObj ? (
+                                  <ArtifactIcon item={lampObj} isLamp={true} size={32} />
+                                ) : anchor ? (
+                                  <ArtifactIcon item={artifactObj} isLamp={false} size={32} />
+                                ) : isSelfRealized ? '🏛️' : isBottleneck ? '🔑' : '☁️'}
                               </span>
                               <span className={styles.palaceName} style={{ color: isRealized || anchor ? '#ffcc00' : 'var(--text-muted)', fontWeight: 700 }}>
                                 {derivedPalaceName}

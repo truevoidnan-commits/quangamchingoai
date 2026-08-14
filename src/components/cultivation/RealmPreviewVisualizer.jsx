@@ -413,9 +413,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                     {/* Gian Điện Thần Tháp (Chamber Body) */}
                     <div className={styles.pagodaChamber}>
                       {/* Đôi Cột Trụ Đúc Nổi 2 Bên */}
-                      <div className={styles.pillarLeft}>
-                        <span className={styles.floorBadgeSeal}>T{floorNum}</span>
-                      </div>
+                      <div className={styles.pillarLeft} />
                       <div className={styles.pillarRight} />
 
                       {/* Nội Điện Chính Giữa (Center Void Realm) */}
