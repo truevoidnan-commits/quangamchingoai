@@ -618,7 +618,7 @@ export default function CultivationModal({ isOpen, onClose }) {
 
                   return (
                     <>
-                      {isNguyenAnhStage ? (
+                      {isNguyenAnhStage && (
                         <div style={{ marginBottom: 12 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
                             <h4 style={{ margin: 0, color: '#ffcc00', fontSize: 13, fontWeight: 700 }}>
@@ -630,14 +630,6 @@ export default function CultivationModal({ isOpen, onClose }) {
                             Nạp Lực Thiên Mệnh vào từng Đạo Anh để thai nghén rèn luyện chuẩn bị nghênh tiếp Thiên Kiếp trên <strong>Độ Kiếp Đài</strong>!
                           </p>
                         </div>
-                      ) : (
-                        <p className={styles.subtext}>
-                          • Tổng Chiến Lực Kim Đan: <strong>{totalRealizedCung}/{cultivation.maxThienCung} Cung Thật</strong> (gồm <strong>{lampCount} Chân Cung Mệnh Đăng</strong> + <strong>{selfRealized}/{selfPalacesTotal} Cung Tự Thân Hóa Thực</strong>).
-                          <br />
-                          • <strong>Chân Cung Mệnh Đăng</strong>: Hình thành vĩnh cửu từ Mệnh Đăng, <strong>100% Cung Thật</strong> ngay khi ngưng tụ Kim Đan, không cần đi Hóa Thực!
-                          <br />
-                          • <strong>Thiên Cung Tự Thân</strong>: Ban đầu Hư Ảo, khi nạp đủ 99.99% linh lực cần khảm nạm <strong>1 Vật Trấn Áp</strong> từ Túi Trữ Vật để hoàn tất 100% Cung Thật!
-                        </p>
                       )}
 
                       {/* Unified 11-Palace Grid */}
@@ -659,6 +651,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           const anchor = !isLampPalace ? cultivation.palaceAnchors?.[sIdx] : null;
                           const artifactObj = anchor ? ((SUPPRESSING_ARTIFACTS || []).find(a => a.id === anchor.id) || anchor) : null;
                           const isBottleneck = !isLampPalace && !isSelfRealized && selfNum === (selfRealized + 1) && cultivation.currentThienCungExp >= bottleneckExp;
+                          const isCurrentActiveSelf = !isLampPalace && !isSelfRealized && selfNum === (selfRealized + 1);
                           const derivedPalaceName = palaceName || (anchor ? (anchor.palaceName || getPalaceNameFromArtifact(anchor, sIdx, cultivation.palaceAnchors)) : `Thiên Cung Tự Thân ${selfNum}`);
                           const daoProg = cultivation.daoAnhProgress?.[globalPalaceIdx] || (cultivation.isKimDanTrialV2 ? 10000 : 0);
 
@@ -737,6 +730,10 @@ export default function CultivationModal({ isOpen, onClose }) {
                           }
 
                           // Case B: Palace is NOT yet manifested into Dao Anh
+                          const expPercent = isCurrentActiveSelf
+                            ? Math.min(99.99, Math.round((cultivation.currentThienCungExp / targetPalaceExp) * 10000) / 100)
+                            : 0;
+
                           return (
                             <div
                               key={`palace_${globalPalaceIdx}`}
@@ -752,9 +749,38 @@ export default function CultivationModal({ isOpen, onClose }) {
                               <span className={styles.palaceName} style={{ color: isRealized || anchor ? '#ffcc00' : 'var(--text-muted)', fontWeight: 700 }}>
                                 {derivedPalaceName}
                               </span>
-                              <span className={styles.palaceStatus} style={{ color: isRealized || anchor ? '#ffcc00' : 'var(--text-muted)' }}>
-                                {isRealized ? '✦ Chân Cung' : isBottleneck ? '⚠️ Cần Trấn Vật (99.9%)' : 'Hư Ảo (0%)'}
+                              <span className={styles.palaceStatus} style={{ color: isRealized || anchor ? '#ffcc00' : isBottleneck ? '#f97316' : 'var(--text-muted)' }}>
+                                {isRealized ? '✦ Chân Cung' : isBottleneck ? '⚠️ Cần Trấn Vật (99.9%)' : isCurrentActiveSelf ? `Hóa Thực ${expPercent}%` : 'Hư Ảo (0%)'}
                               </span>
+
+                              {/* Progress bar directly inside current active Hư Ảo palace */}
+                              {!isRealized && isCurrentActiveSelf && (
+                                <div style={{ marginTop: 6, width: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                  <div style={{ fontSize: 9, color: '#38bdf8', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Linh Lực:</span>
+                                    <strong>{cultivation.currentThienCungExp}/{targetPalaceExp} Tu Vi</strong>
+                                  </div>
+                                  <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                                    <div
+                                      style={{
+                                        width: `${expPercent}%`,
+                                        height: '100%',
+                                        background: 'linear-gradient(90deg, #38bdf8, #ffcc00)',
+                                        transition: 'width 0.3s ease',
+                                      }}
+                                    />
+                                  </div>
+                                  {cultivation.isKimDanTrialV2 && !isBottleneck && (
+                                    <button
+                                      className="btn-gold"
+                                      style={{ width: '100%', fontSize: 9.5, padding: '3px 4px', fontWeight: 700, marginTop: 2 }}
+                                      onClick={() => triggerAction(thangCung)}
+                                    >
+                                      ⬆️ Thăng Cung (99.99%)
+                                    </button>
+                                  )}
+                                </div>
+                              )}
 
                               {/* Button Khai Sinh Đạo Anh khi toàn bộ cung đã 100% Cung Thật */}
                               {isRealized && totalRealizedCung === cultivation.maxThienCung && (
@@ -798,75 +824,25 @@ export default function CultivationModal({ isOpen, onClose }) {
                               {isBottleneck && (
                                 <button
                                   className={styles.miniAnchorBtn}
+                                  style={{ marginTop: 4, width: '100%' }}
                                   onClick={() => setAnchorModalPalace(sIdx)}
                                 >
-                                  🔑 Khảm Nạm Trấn Vật
+                                  🔑 Khảm Nạm Trấn Vật Ngay
                                 </button>
                               )}
                             </div>
                           );
                         })}
                       </div>
-
-                      {/* Progress or Bottleneck Banner cho Thiên Cung Tự Thân khi chưa lên Nguyên Anh */}
-                      {!isNguyenAnhStage && (
-                        selfRealized < selfPalacesTotal ? (
-                          cultivation.currentThienCungExp >= bottleneckExp ? (
-                            <div className={styles.bottleneckNoticeCard}>
-                              <div className={styles.bottleneckNoticeHead}>
-                                <span style={{ fontSize: 18 }}>⚠️</span>
-                                <div>
-                                  <h4 style={{ color: '#f97316', margin: 0, fontSize: 13.5 }}>
-                                    THIÊN CUNG TỰ THÂN {selfRealized + 1} ĐẠT 99.99% TÍCH LŨY!
-                                  </h4>
-                                  <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
-                                    Linh lực đã đạt cực hạn ({bottleneckExp.toLocaleString()}/{targetPalaceExp.toLocaleString()} Tu Vi). Cần khảm nạm một <strong>Vật Trấn Áp (Pháp Khí, Dị Khí, Công Pháp...)</strong> để hoàn tất <strong>100% Cung Thật</strong>!
-                                  </p>
-                                </div>
-                              </div>
-                              <button
-                                className="btn-gold"
-                                style={{ width: '100%', marginTop: 8, fontSize: 12, padding: '7px' }}
-                                onClick={() => setAnchorModalPalace(selfRealized)}
-                              >
-                                🔑 Khảm Nạm Vật Trấn Áp Ngay
-                              </button>
-                            </div>
-                          ) : (
-                            <div className={styles.progressContainer}>
-                              <div className={styles.progressInfo}>
-                                <span>Tiến độ Hóa Thực Thiên Cung {cultivation.realizedThienCung + 1} thành Cung Thật:</span>
-                                <strong>{cultivation.currentThienCungExp}/{targetPalaceExp} Tu Vi</strong>
-                              </div>
-                              <div className={styles.progressBarBg}>
-                                <div
-                                  className={styles.progressBarFillCyan}
-                                  style={{ width: `${Math.min(100, (cultivation.currentThienCungExp / targetPalaceExp) * 100)}%` }}
-                                />
-                              </div>
-                              <p className={styles.hintText}>📖 Đọc thêm chương để ngưng tụ linh lực Hóa Thực Thiên Cung tiếp theo (Yêu cầu lũy tiến: {targetPalaceExp} Tu Vi)!</p>
-
-                              {cultivation.isKimDanTrialV2 && (
-                                <button
-                                  className="btn-gold"
-                                  style={{ width: '100%', marginTop: 10, fontSize: 12, padding: '8px', fontWeight: 700, letterSpacing: 0.5 }}
-                                  onClick={() => triggerAction(thangCung)}
-                                >
-                                  ⬆️ Thăng Cung (Đẩy Lên 99.99% — Cần Vật Trấn Áp)
-                                </button>
-                              )}
-                            </div>
-                          )
-                        ) : (
-                          <div className={styles.maxRankBadge}>
-                            ✨ TOÀN BỘ {cultivation.maxThienCung} THIÊN CUNG ĐÃ HÓA THÀNH CUNG THẬT 100%!
-                            {cultivation.realm === 'kim_dan' && (
-                              <p style={{ marginTop: 6, fontSize: 12, color: 'var(--accent-cyan)', fontWeight: 'normal' }}>
-                                👉 Nhấn "👑 Khai Sinh Đạo Anh" trên từng cung để ngưng tụ Đạo Anh Thần Thể mở khóa cảnh giới <strong>Nguyên Anh (Chiến lực tính bằng Anh)</strong>!
-                              </p>
-                            )}
-                          </div>
-                        )
+                      {selfRealized >= selfPalacesTotal && (
+                        <div className={styles.maxRankBadge}>
+                          ✨ TOÀN BỘ {cultivation.maxThienCung} THIÊN CUNG ĐÃ HÓA THÀNH CUNG THẬT 100%!
+                          {cultivation.realm === 'kim_dan' && (
+                            <p style={{ marginTop: 6, fontSize: 12, color: 'var(--accent-cyan)', fontWeight: 'normal' }}>
+                              👉 Nhấn "👑 Khai Sinh Đạo Anh" trên từng cung để ngưng tụ Đạo Anh Thần Thể mở khóa cảnh giới <strong>Nguyên Anh (Chiến lực tính bằng Anh)</strong>!
+                            </p>
+                          )}
+                        </div>
                       )}
                       {/* Nút Nạp Đầy 100% Thiên Mệnh cho Toàn Bộ Đạo Anh khi ở Giả Anh / Nguyên Anh */}
                       {isNguyenAnhStage && (cultivation.daoAnhs || []).length > 0 && (

@@ -373,11 +373,11 @@
   transform-style: preserve-3d;
   transform: rotateX(10deg);
   width: 100%;
-  max-width: 280px;
+  max-width: 320px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-height: 175px;
+  max-height: 460px;
   overflow-y: auto;
   padding-right: 4px;
 }
