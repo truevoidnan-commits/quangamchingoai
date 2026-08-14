@@ -735,7 +735,7 @@ export const LIFE_LAMPS = [
     poem: 'Tàn tiên vẫn lạc, phệ thần đoạt phách.',
   },
   {
-    id: 'thon_thien_ma_de',
+    id: 'sang_the_ban_nguyen',
     name: 'Sáng Thế Bản Nguyên Đăng',
     shortName: 'Sáng Thế Đăng',
     tier: 'than_pham',

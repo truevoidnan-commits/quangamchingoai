@@ -27,9 +27,9 @@ export const THAN_PHAM_AI_ICONS = {
 
 /** Map of Thần Phẩm Life Lamp IDs to AI-generated icons */
 export const LAMP_THAN_PHAM_AI_ICONS = {
-  tan_tien_phe_than: baseUrl + 'icons/than_pham/lamp_tan_tien_phe_than.jpg',
-  thon_thien_ma_de:  baseUrl + 'icons/than_pham/lamp_thon_thien_ma_de.jpg',
-  hon_don_so_khai:   baseUrl + 'icons/than_pham/lamp_hon_don_so_khai.jpg',
+  tan_tien_phe_than:  baseUrl + 'icons/than_pham/lamp_tan_tien_phe_than.jpg',
+  sang_the_ban_nguyen: baseUrl + 'icons/than_pham/lamp_sang_the_ban_nguyen.jpg',
+  hon_don_so_khai:    baseUrl + 'icons/than_pham/lamp_hon_don_so_khai.jpg',
 };
 
 /**
