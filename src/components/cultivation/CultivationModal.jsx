@@ -657,6 +657,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           const palaceName = isLampPalace ? getLampPalaceName(lampObj) : null;
 
                           const anchor = !isLampPalace ? cultivation.palaceAnchors?.[sIdx] : null;
+                          const artifactObj = anchor ? ((SUPPRESSING_ARTIFACTS || []).find(a => a.id === anchor.id) || anchor) : null;
                           const isBottleneck = !isLampPalace && !isSelfRealized && selfNum === (selfRealized + 1) && cultivation.currentThienCungExp >= bottleneckExp;
                           const derivedPalaceName = palaceName || (anchor ? (anchor.palaceName || getPalaceNameFromArtifact(anchor, sIdx, cultivation.palaceAnchors)) : `Thiên Cung Tự Thân ${selfNum}`);
                           const daoProg = cultivation.daoAnhProgress?.[globalPalaceIdx] || (cultivation.isKimDanTrialV2 ? 10000 : 0);

@@ -482,6 +482,8 @@ function SvgLamp({ color, size }) {
  */
 export default function ArtifactIcon({ item, isLamp = false, size = 28, className = '' }) {
   const [imgError, setImgError] = React.useState(false);
+  if (!item && !isLamp) return <span style={{ width: size, height: size, display: 'inline-block' }} />;
+
   const tier  = item?.tier  || 'ha_pham';
   const color = item?.color || TIER_COLORS[tier] || '#94a3b8';
   const glow  = TIER_GLOW[tier]  || 'rgba(148,163,184,0.5)';
