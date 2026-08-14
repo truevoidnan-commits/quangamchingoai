@@ -371,13 +371,14 @@
 
 .lauCac3D {
   transform-style: preserve-3d;
-  transform: rotateX(10deg);
+  transform: rotateX(8deg);
   width: 100%;
-  max-width: 320px;
+  max-width: 340px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-height: 460px;
+  max-height: calc(100vh - 210px);
+  min-height: 520px;
   overflow-y: auto;
   padding-right: 4px;
 }

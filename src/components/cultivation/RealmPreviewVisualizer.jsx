@@ -10,7 +10,14 @@ import styles from './RealmPreviewVisualizer.module.css';
  * 3. Kim Đan: Kim Đan trung tâm + Thiên Cung từ Hư Ảo chuyển sang Hóa Thực Hoàng Kim.
  * 4. Nguyên Anh: Thiên Cung mở cửa, Đạo Anh Thần Thể tĩnh tọa với Vòng Hào Quang 5 Kiếp Luân Hồi.
  */
-export default function RealmPreviewVisualizer({ cultivation }) {
+export default function RealmPreviewVisualizer({
+  cultivation,
+  onSetAnchorModalPalace,
+  onThangCung,
+  onManifestDaoAnh,
+  onInjectExpToDaoAnh,
+  onInjectThienMenh,
+}) {
   const realm = cultivation?.realm || 'ngung_khi';
   const phapKhieu = cultivation?.phapKhieu || 0;
   const selfHoa = cultivation?.selfMenhHoa || Math.floor(phapKhieu / 30);
@@ -22,6 +29,10 @@ export default function RealmPreviewVisualizer({ cultivation }) {
   const lampPalaceCount = (cultivation?.absorbedLamps || []).length;
   const realizedThienCung = cultivation?.realizedThienCung || 0;
   const daoAnhs = cultivation?.daoAnhs || [];
+
+  // Calculate target Palace EXP for current active self palace
+  const targetPalaceExp = cultivation?.targetPalaceExp || 2000;
+  const bottleneckExp = targetPalaceExp - 1;
 
   // Tạo danh sách 120 điểm sao tinh đồ theo 4 Nhánh Chòm Sao Xoắn Ốc Thiên Hà (mỗi nhánh 30 sao = 1-120)
   const { constellationStars, constellationPaths } = useMemo(() => {
@@ -343,19 +354,20 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 const floorNum = maxThienCung - i;
                 const palaceIdx = floorNum - 1;
                 const selfPalacesTotal = maxThienCung - lampPalaceCount;
-                const isLampPalace = palaceIdx >= selfPalacesTotal;
-                const selfLocalIdx = isLampPalace ? null : palaceIdx;
+                const isLampPalace = palaceIdx < lampPalaceCount;
+                const selfLocalIdx = isLampPalace ? null : palaceIdx - lampPalaceCount;
                 const isRealized = isLampPalace || (selfLocalIdx !== null && selfLocalIdx < realizedThienCung);
                 const da = (daoAnhs || []).find(d => d.palaceIndex === palaceIdx);
                 const daTheme = da ? getDaoAnhTheme(da, cultivation) : null;
-                const anchor = cultivation?.palaceAnchors?.[palaceIdx];
+                const anchor = !isLampPalace ? cultivation?.palaceAnchors?.[selfLocalIdx] : null;
                 const currentExp = cultivation?.currentThienCungExp || 0;
-                const isBottleneck = !isRealized && !isLampPalace && selfLocalIdx === realizedThienCung && currentExp >= 799;
-                const expPercent = (!isRealized && !isLampPalace && selfLocalIdx === realizedThienCung)
-                  ? Math.min(99.99, Math.round((currentExp / 800) * 100 * 100) / 100)
+                const isCurrentActiveSelf = !isLampPalace && !isRealized && selfLocalIdx === realizedThienCung;
+                const isBottleneck = isCurrentActiveSelf && currentExp >= bottleneckExp;
+                const expPercent = isCurrentActiveSelf
+                  ? Math.min(99.99, Math.round((currentExp / targetPalaceExp) * 100 * 100) / 100)
                   : 0;
 
-                const lampIdx = isLampPalace ? palaceIdx - selfPalacesTotal : null;
+                const lampIdx = isLampPalace ? palaceIdx : null;
                 const absLamps = cultivation?.absorbedLamps || [];
                 const lid = isLampPalace ? absLamps[lampIdx] : null;
                 const lobj = lid ? LIFE_LAMPS.find(l => l.id === lid) : null;
@@ -368,13 +380,12 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 const palaceName = (() => {
                   if (da) return formatDaoAnhTitle(da.name);
                   if (isLampPalace) return lobj ? getLampPalaceName(lobj) : `Mệnh Đăng Cung ${lampIdx + 1}`;
-                  if (anchor) return anchor.palaceName || getPalaceNameFromArtifact(anchor, palaceIdx, cultivation?.palaceAnchors);
-                  return `Thiên Cung ${floorNum}`;
+                  if (anchor) return anchor.palaceName || getPalaceNameFromArtifact(anchor, selfLocalIdx, cultivation?.palaceAnchors);
+                  return `Thiên Cung Tự Thân ${selfLocalIdx + 1}`;
                 })();
 
                 const tierKey = isLampPalace ? (lobj?.tier || 'than_pham') : (artifactObj?.tier || 'ha_pham');
 
-                // Imperial Flame Color for Mệnh Đăng (#fbbf24 Golden Flame, #f97316 Radiant Amber)
                 const auraColor = isLampPalace ? '#fbbf24' : (
                   tierKey === 'than_pham'   ? '#FF2D4D' :
                   tierKey === 'tien_pham'   ? '#FFD700' :
@@ -384,7 +395,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                 );
 
                 const loiColor = isLampPalace ? '#f97316' : (elemTheme?.color || auraColor);
-                const trangThai = isRealized ? 'hoan-thien' : isBottleneck ? 'dang-ngung-thuc' : expPercent > 0 ? 'dang-ngung-thuc' : 'hu-ao';
+                const trangThai = isRealized ? 'hoan-thien' : isBottleneck ? 'dang-ngung-thuc' : isCurrentActiveSelf ? 'dang-ngung-thuc' : 'hu-ao';
                 const loai = isLampPalace ? 'menh-dang' : 'thuong';
                 const tierIndex = i;
 
@@ -439,6 +450,11 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                                 <span className={styles.sparkle} style={{ bottom: -4, left: -4 }}>✨</span>
                               </div>
                             </div>
+
+                            {/* Status label / Button inside floor */}
+                            <span className={styles.floorStatusLabel} style={{ color: auraColor }}>
+                              {da ? (da.currentKiep > 0 ? `✦ ${da.currentKiep} Kiếp` : '✦ Giả Anh') : '✦ Chân Cung'}
+                            </span>
                           </div>
                         )}
 
@@ -447,19 +463,38 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                           <div className={styles.ngungThucCenterBox}>
                             <span className={styles.mistCloudCenter}>☁️</span>
                             <span className={styles.ngungThucCenterLabel}>
-                              {isBottleneck ? '⚡ 99.99% · Cần Vật Trấn Áp' : `Ngưng Thực ${expPercent}%`}
+                              {isBottleneck ? '⚠️ 99.99% · Cần Khảm Nạm' : `Hóa Thực ${expPercent}% (${currentExp.toLocaleString()}/${targetPalaceExp.toLocaleString()} Tu Vi)`}
                             </span>
-                            {expPercent > 0 && (
-                              <div className={styles.ngungThucTrack}>
-                                <div className={styles.ngungThucBar} style={{ width: `${expPercent}%` }} />
-                              </div>
-                            )}
+                            <div className={styles.ngungThucTrack}>
+                              <div className={styles.ngungThucBar} style={{ width: `${isBottleneck ? 100 : expPercent}%`, background: isBottleneck ? 'linear-gradient(90deg, #f97316, #ffcc00)' : 'linear-gradient(90deg, #38bdf8, #818cf8)' }} />
+                            </div>
+
+                            {/* Clickable button inside floor */}
+                            {isBottleneck ? (
+                              <button
+                                className="btn-gold"
+                                style={{ fontSize: 9.5, padding: '3px 8px', marginTop: 3, fontWeight: 700 }}
+                                onClick={() => onSetAnchorModalPalace && onSetAnchorModalPalace(selfLocalIdx)}
+                              >
+                                🔑 Khảm Nạm Trấn Vật Ngay
+                              </button>
+                            ) : cultivation?.isKimDanTrialV2 ? (
+                              <button
+                                className="btn-gold"
+                                style={{ fontSize: 9, padding: '2px 6px', marginTop: 3, fontWeight: 700 }}
+                                onClick={() => onThangCung && onThangCung()}
+                              >
+                                ⬆️ Thăng Cung (99.99%)
+                              </button>
+                            ) : null}
                           </div>
                         )}
 
                         {/* Mây mù khi chưa bắt đầu */}
                         {trangThai === 'hu-ao' && (
-                          <span className={styles.hollowMistCenter}>🌫️ Hư Ảo Mây Mù...</span>
+                          <div className={styles.ngungThucCenterBox}>
+                            <span className={styles.hollowMistCenter}>🌫️ Hư Ảo (0 / {targetPalaceExp.toLocaleString()} Tu Vi)</span>
+                          </div>
                         )}
                       </div>
                     </div>
