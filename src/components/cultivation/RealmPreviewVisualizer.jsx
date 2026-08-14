@@ -619,9 +619,21 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                     >
                       {artifactIcon}
                     </span>
-                    <span className={styles.miniKiep} style={{ color: artifactColor }}>
-                      {da.currentKiep}K
-                    </span>
+
+                    {/* Vòng Tròn Hào Quang Vòng Lôi Kiếp Quay Xung Quanh Orb (1 vòng = 1 Kiếp) */}
+                    {Array.from({ length: da.currentKiep || 0 }).map((_, rIdx) => (
+                      <div
+                        key={`kiep_ring_${rIdx}`}
+                        className={styles.miniOrbKiepHaloRing}
+                        style={{
+                          width: `${34 + rIdx * 8}px`,
+                          height: `${34 + rIdx * 8}px`,
+                          borderColor: artifactColor,
+                          animationDuration: `${2.5 + rIdx * 1.2}s`,
+                          boxShadow: `0 0 6px ${artifactColor}66`,
+                        }}
+                      />
+                    ))}
                   </div>
                 );
               })}

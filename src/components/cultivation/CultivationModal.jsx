@@ -22,6 +22,7 @@ export default function CultivationModal({ isOpen, onClose }) {
     getLampPalaceName,
     getPalaceNameFromArtifact,
     getPalaceElementTheme,
+    getDaoAnhTheme,
     breakthroughToTrucCo,
     breakthroughToKimDan,
     attemptUnlock121,
@@ -129,18 +130,33 @@ export default function CultivationModal({ isOpen, onClose }) {
               <span className={styles.statLabel}>Chương đã đọc</span>
               <span className={styles.statVal}>{cultivation.chaptersReadCount}</span>
             </div>
-            <div className={styles.statBox}>
-              <span className={styles.statLabel}>Số dư Tiên Tinh</span>
-              <span className={styles.statValCyan}>{currentTienTinh.toLocaleString()} TT</span>
-            </div>
-            <div className={styles.statBox}>
-              <span className={styles.statLabel}>Chiến Lực</span>
-              <span className={styles.statValGold}>{combatPowerDisplay}</span>
-            </div>
-            <div className={styles.statBox}>
-              <span className={styles.statLabel}>Tu Vi</span>
-              <span className={styles.statValCyan}>{(cultivation.totalExp || 0).toLocaleString()} Tu Vi</span>
-            </div>
+            {isNguyenAnhStage ? (
+              <div className={styles.statBox}>
+                <span className={styles.statLabel}>Lực Thiên Mệnh</span>
+                <span className={styles.statValGold}>{(cultivation.totalThienMenh || 0).toLocaleString()} TM</span>
+              </div>
+            ) : (
+              <>
+                <div className={styles.statBox}>
+                  <span className={styles.statLabel}>Số dư Tiên Tinh</span>
+                  <span className={styles.statValCyan}>{currentTienTinh.toLocaleString()} TT</span>
+                </div>
+                <div className={styles.statBox}>
+                  <span className={styles.statLabel}>Chiến Lực</span>
+                  <span className={styles.statValGold}>{combatPowerDisplay}</span>
+                </div>
+                <div className={styles.statBox}>
+                  <span className={styles.statLabel}>Tu Vi</span>
+                  <span className={styles.statValCyan}>{(cultivation.totalExp || 0).toLocaleString()} Tu Vi</span>
+                </div>
+              </>
+            )}
+            {isNguyenAnhStage && (
+              <div className={styles.statBox}>
+                <span className={styles.statLabel}>Chiến Lực</span>
+                <span className={styles.statValGold}>{combatPowerDisplay}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -152,24 +168,28 @@ export default function CultivationModal({ isOpen, onClose }) {
           >
             Cảnh Giới
           </button>
-          <button
-            className={`${styles.tabBtn} ${activeTab === 'lamps' ? styles.tabActive : ''}`}
-            onClick={() => setActiveTab('lamps')}
-          >
-            Mệnh Đăng ({absorbedCount} Đã Hấp Thụ)
-          </button>
-          <button
-            className={`${styles.tabBtn} ${activeTab === 'artifacts' ? styles.tabActive : ''}`}
-            onClick={() => setActiveTab('artifacts')}
-          >
-            Trấn Cung Vật ({artifactCount})
-          </button>
+          {!isNguyenAnhStage && (
+            <>
+              <button
+                className={`${styles.tabBtn} ${activeTab === 'lamps' ? styles.tabActive : ''}`}
+                onClick={() => setActiveTab('lamps')}
+              >
+                Mệnh Đăng ({absorbedCount} Đã Hấp Thụ)
+              </button>
+              <button
+                className={`${styles.tabBtn} ${activeTab === 'artifacts' ? styles.tabActive : ''}`}
+                onClick={() => setActiveTab('artifacts')}
+              >
+                Trấn Cung Vật ({artifactCount})
+              </button>
+            </>
+          )}
           {isNguyenAnhStage && (
             <button
               className={`${styles.tabBtn} ${activeTab === 'nguyen_anh' ? styles.tabActive : ''}`}
               onClick={() => setActiveTab('nguyen_anh')}
             >
-              Độ Kiếp Đài
+              ⚡ Độ Kiếp Đài
             </button>
           )}
           <button
@@ -531,6 +551,65 @@ export default function CultivationModal({ isOpen, onClose }) {
                         • <strong>Thiên Cung Tự Thân</strong>: Ban đầu Hư Ảo, khi nạp đủ 99.99% linh lực cần khảm nạm <strong>1 Vật Trấn Áp</strong> từ Túi Trữ Vật để hoàn tất 100% Cung Thật!
                       </p>
 
+                      {/* GLOBAL THIÊN MỆNH INJECTION PANEL WHEN IN GIẢ ANH / NGUYÊN ANH */}
+                      {isNguyenAnhStage && (
+                        <div style={{ marginBottom: 14, padding: 12, background: 'rgba(15, 23, 42, 0.88)', borderRadius: 10, border: '1px solid rgba(255, 204, 0, 0.4)', boxShadow: '0 0 15px rgba(255, 204, 0, 0.15)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
+                            <h4 style={{ margin: 0, color: '#ffcc00', fontSize: 13, fontWeight: 700 }}>
+                              ⚡ LỰC THIÊN MỆNH HIỆN CÓ: {(cultivation.totalThienMenh || 0).toLocaleString()} TM
+                            </h4>
+                            <span style={{ fontSize: 10, color: '#38bdf8' }}>📖 Đọc 1 chương: +30-50 TM</span>
+                          </div>
+                          <p style={{ margin: '0 0 8px', fontSize: 10.5, color: 'var(--text-secondary)' }}>
+                            Nạp Lực Thiên Mệnh vào từng Đạo Anh để thai nghén chuẩn bị nghênh tiếp Lôi Kiếp trên <strong>Độ Kiếp Đài</strong>!
+                          </p>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {(cultivation.daoAnhs || []).map(da => {
+                              const daTheme = getDaoAnhTheme(da, cultivation);
+                              const percent = Math.min(100, Math.floor((da.currentThienMenh / da.maxThienMenh) * 100));
+                              const needed = da.maxThienMenh - da.currentThienMenh;
+                              const availableTM = cultivation.totalThienMenh || 0;
+
+                              return (
+                                <div key={`tm_inj_${da.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 8px', background: 'rgba(30, 41, 59, 0.6)', borderRadius: 6, border: `1px solid ${daTheme.color}44` }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span style={{ fontSize: 13 }}>{daTheme.icon}</span>
+                                    <div>
+                                      <div style={{ fontSize: 11, color: daTheme.color, fontWeight: 700 }}>{da.name}</div>
+                                      <div style={{ fontSize: 9.5, color: 'var(--text-secondary)' }}>{da.currentThienMenh.toLocaleString()}/{da.maxThienMenh.toLocaleString()} TM ({percent}%)</div>
+                                    </div>
+                                  </div>
+
+                                  {da.currentKiep >= 5 ? (
+                                    <span style={{ fontSize: 10, color: '#ffcc00', fontWeight: 700 }}>👑 ĐÃ ĐẠI VIÊN MÃN</span>
+                                  ) : (
+                                    <div style={{ display: 'flex', gap: 4 }}>
+                                      <button
+                                        className="btn-cyan"
+                                        style={{ fontSize: 9.5, padding: '3px 8px' }}
+                                        disabled={availableTM <= 0 || needed <= 0}
+                                        onClick={() => triggerAction(() => injectThienMenh(da.id, Math.min(1000, needed)), `Đã nạp Thiên Mệnh vào [${da.name}]`)}
+                                      >
+                                        +1.000 TM
+                                      </button>
+                                      <button
+                                        className="btn-gold"
+                                        style={{ fontSize: 9.5, padding: '3px 8px', fontWeight: 700 }}
+                                        disabled={availableTM <= 0 || needed <= 0}
+                                        onClick={() => triggerAction(() => injectThienMenh(da.id, needed), `Đã nạp đầy Thiên Mệnh vào [${da.name}]`)}
+                                      >
+                                        ⚡ Nạp Đầy
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Palace Grid */}
                       <div className={styles.palaceGrid}>
                         {/* A. Các Chân Cung Mệnh Đăng (100% Cung Thật Vĩnh Cửu, Tự Động Mang Tên Mệnh Đăng) */}
@@ -538,6 +617,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           const lampObj = LIFE_LAMPS.find(l => l.id === lampId);
                           const globalPalaceIdx = idx;
                           const da = (cultivation.daoAnhs || []).find(d => d.palaceIndex === globalPalaceIdx);
+                          const daTheme = da ? getDaoAnhTheme(da, cultivation) : null;
                           const palaceName = lampObj ? getLampPalaceName(lampObj) : `Chân Cung Đăng ${idx + 1}`;
                           const daoProg = cultivation.daoAnhProgress?.[globalPalaceIdx] || (cultivation.isKimDanTrialV2 ? 10000 : 0);
 
@@ -545,14 +625,15 @@ export default function CultivationModal({ isOpen, onClose }) {
                             <div
                               key={`lamp_palace_${idx}`}
                               className={`${styles.palaceCard} ${styles.palaceRealized} ${da ? styles.palaceDaoAnh : ''}`}
+                              style={da ? { borderColor: daTheme.color, boxShadow: `0 0 12px ${daTheme.glow}`, background: daTheme.bg } : {}}
                             >
                               <span className={styles.palaceIcon}>
-                                {da ? '👑' : lampObj?.icon || '🏮'}
+                                {da ? daTheme.icon : lampObj?.icon || '🏮'}
                               </span>
-                              <span className={styles.palaceName} style={{ color: da ? 'var(--accent-cyan)' : '#ffcc00', fontWeight: 700 }}>
+                              <span className={styles.palaceName} style={{ color: da ? daTheme.color : '#ffcc00', fontWeight: 700 }}>
                                 {da ? `${da.name}${da.currentKiep > 0 ? ` (${da.currentKiep}K)` : ''}` : palaceName}
                               </span>
-                              <span className={styles.palaceStatus} style={{ color: da ? 'var(--accent-cyan)' : '#ffcc00' }}>
+                              <span className={styles.palaceStatus} style={{ color: da ? daTheme.color : '#ffcc00' }}>
                                 {da ? (da.currentKiep > 0 ? `✦ ${da.currentKiep} Kiếp` : '✦ Giả Anh (0 Kiếp)') : '✦ Chân Cung'}
                               </span>
 
@@ -603,6 +684,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           const globalPalaceIdx = lampCount + sIdx;  // self palaces: index 4..10
                           const isSelfRealized = selfRealized >= selfNum;
                           const da = (cultivation.daoAnhs || []).find(d => d.palaceIndex === globalPalaceIdx);
+                          const daTheme = da ? getDaoAnhTheme(da, cultivation) : null;
                           const anchor = cultivation.palaceAnchors?.[sIdx];
                           const isBottleneck = !isSelfRealized && selfNum === (selfRealized + 1) && cultivation.currentThienCungExp >= bottleneckExp;
                           const derivedPalaceName = anchor ? (anchor.palaceName || getPalaceNameFromArtifact(anchor, sIdx, cultivation.palaceAnchors)) : `Thiên Cung Tự Thân ${selfNum}`;
@@ -612,14 +694,15 @@ export default function CultivationModal({ isOpen, onClose }) {
                             <div
                               key={`self_palace_${selfNum}`}
                               className={`${styles.palaceCard} ${isSelfRealized ? styles.palaceRealized : isBottleneck ? styles.palaceBottleneck : ''} ${da ? styles.palaceDaoAnh : ''}`}
+                              style={da ? { borderColor: daTheme.color, boxShadow: `0 0 12px ${daTheme.glow}`, background: daTheme.bg } : {}}
                             >
                               <span className={styles.palaceIcon}>
-                                {da ? '👑' : anchor ? anchor.icon : isSelfRealized ? '🏛️' : isBottleneck ? '🔑' : '☁️'}
+                                {da ? daTheme.icon : anchor ? anchor.icon : isSelfRealized ? '🏛️' : isBottleneck ? '🔑' : '☁️'}
                               </span>
-                              <span className={styles.palaceName} style={anchor || da ? { color: da ? 'var(--accent-cyan)' : '#ffcc00', fontWeight: 700 } : {}}>
+                              <span className={styles.palaceName} style={anchor || da ? { color: da ? daTheme.color : '#ffcc00', fontWeight: 700 } : {}}>
                                 {da ? `${da.name}${da.currentKiep > 0 ? ` (${da.currentKiep}K)` : ''}` : derivedPalaceName}
                               </span>
-                              <span className={styles.palaceStatus} style={anchor || da ? { color: da ? 'var(--accent-cyan)' : '#ffcc00' } : {}}>
+                              <span className={styles.palaceStatus} style={anchor || da ? { color: da ? daTheme.color : '#ffcc00' } : {}}>
                                 {da ? (da.currentKiep > 0 ? `✦ ${da.currentKiep} Kiếp` : '✦ Giả Anh (0 Kiếp)') : isSelfRealized ? '✦ Chân Cung' : isBottleneck ? '⚠️ Cần Trấn Vật (99.9%)' : 'Hư Ảo (0%)'}
                               </span>
 
@@ -1196,9 +1279,9 @@ export default function CultivationModal({ isOpen, onClose }) {
             <div className={styles.tribulationHero}>
               <div className={styles.tribulationHeaderRow}>
                 <div>
-                  <h3 className={styles.cardHeader}>Độ Kiếp Đài</h3>
+                  <h3 className={styles.cardHeader}>⚡ CỬU THIÊN ĐỘ KIẾP ĐÀI</h3>
                   <p className={styles.subtext}>
-                    Chiến lực ở Nguyên Anh tính bằng <strong>Anh</strong> (Tối đa 65 Anh). Tích tụ Thiên Mệnh vào từng Đạo Anh để vượt qua <strong>5 Kiếp Luân Hồi</strong> (Mỗi kiếp = +1 Anh chiến lực).
+                    Nghênh tiếp Lôi Kiếp để lột xác Đạo Anh qua <strong>5 Kiếp Luân Hồi</strong>. Đạt từ <strong>70% Thiên Mệnh</strong> trở lên để đủ điều kiện Độ Kiếp!
                   </p>
                 </div>
               </div>
@@ -1206,9 +1289,10 @@ export default function CultivationModal({ isOpen, onClose }) {
               {/* Vạn Kiếp Tề Phi button */}
               <button
                 className={`btn-gold ${styles.massTribulationBtn}`}
+                style={{ width: '100%', padding: '10px 14px', fontSize: 12.5, fontWeight: 700 }}
                 onClick={handleAllTribulation}
               >
-                ⚡ VẠN KIẾP TỀ PHI (TOÀN BỘ ĐẠO ANH CÙNG VƯỢT KIẾP · THƯỞNG +50% THIÊN MỆNH)
+                👑 VẠN KIẾP TỀ PHI (TOÀN BỘ ĐẠO ANH CÙNG VƯỢT KIẾP · THƯỞNG +50% THIÊN MỆNH)
               </button>
             </div>
 
@@ -1220,6 +1304,7 @@ export default function CultivationModal({ isOpen, onClose }) {
             ) : (
               <div className={styles.daoAnhCardsGrid}>
                 {cultivation.daoAnhs.map(da => {
+                  const daTheme = getDaoAnhTheme(da, cultivation);
                   const percent = Math.min(100, Math.floor((da.currentThienMenh / da.maxThienMenh) * 100));
                   const isEligible = percent >= 70;
                   const successChance = Math.min(100, 50 + (percent - 70));
@@ -1227,28 +1312,34 @@ export default function CultivationModal({ isOpen, onClose }) {
                   return (
                     <div
                       key={da.id}
-                      className={`${styles.daoAnhCard} ${da.currentKiep >= 5 ? styles.daoAnhMax : ''} ${da.fromLamp ? styles.daoAnhLampProtected : ''}`}
+                      className={`${styles.daoAnhCard} ${da.currentKiep >= 5 ? styles.daoAnhMax : ''}`}
+                      style={{ borderColor: daTheme.color, boxShadow: `0 0 14px ${daTheme.glow}`, background: daTheme.bg }}
                     >
                       <div className={styles.daoAnhTop}>
-                        <span className={styles.daoAnhIcon}>{da.fromLamp ? '🏮' : '👑'}</span>
+                        <span className={styles.daoAnhIcon} style={{ textShadow: `0 0 10px ${daTheme.color}` }}>
+                          {daTheme.icon}
+                        </span>
                         <div className={styles.daoAnhInfo}>
-                          <h4 className={styles.daoAnhTitle}>{da.name}</h4>
-                          <span className={styles.daoAnhBadge}>
+                          <h4 className={styles.daoAnhTitle} style={{ color: daTheme.color, fontWeight: 700 }}>
+                            {da.name}
+                          </h4>
+                          <span className={styles.daoAnhBadge} style={{ color: daTheme.color }}>
                             {da.element || 'Thần Thể'} · Kiếp {da.currentKiep}/5 ({da.currentKiep} Anh)
-                            {da.fromLamp && ' · 🏮 Chân Hỏa Bảo Vệ'}
+                            {daTheme.isLamp && ' · 🏮 Chân Hỏa Bảo Vệ'}
                           </span>
                         </div>
                       </div>
 
-                      {/* Kiep Progress Rings */}
+                      {/* Kiep Indicators (Icons without ugly text) */}
                       <div className={styles.kiepRingsRow}>
                         {[1, 2, 3, 4, 5].map(k => (
                           <div
                             key={k}
                             className={`${styles.kiepDot} ${da.currentKiep >= k ? styles.kiepPassed : ''}`}
+                            style={da.currentKiep >= k ? { borderColor: daTheme.color, background: daTheme.color, color: '#000' } : {}}
                             title={`Kiếp thứ ${k}`}
                           >
-                            <span>{k}K</span>
+                            <span>{da.currentKiep >= k ? '⚡' : '◦'}</span>
                           </div>
                         ))}
                       </div>
@@ -1256,62 +1347,35 @@ export default function CultivationModal({ isOpen, onClose }) {
                       {da.currentKiep < 5 ? (
                         <>
                           {/* Progress Bar Thiên Mệnh */}
-                          <div className={styles.progressContainer}>
+                          <div className={styles.progressContainer} style={{ marginTop: 8 }}>
                             <div className={styles.progressInfo}>
                               <span>Tiến độ nạp Thiên Mệnh:</span>
-                              <strong>{da.currentThienMenh.toLocaleString()}/{da.maxThienMenh.toLocaleString()} TM ({percent}%)</strong>
+                              <strong style={{ color: daTheme.color }}>{da.currentThienMenh.toLocaleString()}/{da.maxThienMenh.toLocaleString()} TM ({percent}%)</strong>
                             </div>
                             <div className={styles.progressBarBg}>
                               <div
                                 className={styles.progressBarFillCyan}
-                                style={{ width: `${percent}%` }}
+                                style={{ width: `${percent}%`, background: percent >= 70 ? 'linear-gradient(90deg, #38bdf8, #ffcc00)' : 'linear-gradient(90deg, #0284c7, #38bdf8)' }}
                               />
                             </div>
                           </div>
 
-                          {/* Action Buttons */}
-                          <div className={styles.daoAnhActions}>
-                            {/* Quick Inject Buttons */}
-                            <div className={styles.injectGroup}>
-                              <button
-                                className="btn-ghost"
-                                style={{ fontSize: 11, padding: '4px 8px' }}
-                                onClick={() => triggerAction(() => injectThienMenh(da.id, 500), `Đã nạp +500 Thiên Mệnh vào ${da.name}`)}
-                                disabled={(cultivation.totalThienMenh || 0) < 500 || da.currentThienMenh >= da.maxThienMenh}
-                              >
-                                +500 TM
-                              </button>
-                              <button
-                                className="btn-ghost"
-                                style={{ fontSize: 11, padding: '4px 8px' }}
-                                onClick={() => triggerAction(() => injectThienMenh(da.id, 1000), `Đã nạp +1.000 Thiên Mệnh vào ${da.name}`)}
-                                disabled={(cultivation.totalThienMenh || 0) < 1000 || da.currentThienMenh >= da.maxThienMenh}
-                              >
-                                +1000 TM
-                              </button>
-                              <button
-                                className="btn-ghost"
-                                style={{ fontSize: 11, padding: '4px 8px' }}
-                                onClick={() => triggerAction(() => injectThienMenh(da.id, da.maxThienMenh - da.currentThienMenh), `Đã nạp đầy Thiên Mệnh vào ${da.name}`)}
-                                disabled={(cultivation.totalThienMenh || 0) <= 0 || da.currentThienMenh >= da.maxThienMenh}
-                              >
-                                Nạp Đầy
-                              </button>
-                            </div>
-
-                            {/* Tribulation Button */}
+                          {/* Single Clean Action Button for Độ Kiếp */}
+                          <div className={styles.daoAnhActions} style={{ marginTop: 10 }}>
                             <button
                               className={isEligible ? 'btn-gold' : 'btn-ghost'}
-                              style={{ fontSize: 12, padding: '6px 14px', fontWeight: 600 }}
+                              style={{ width: '100%', fontSize: 11.5, padding: '8px 12px', fontWeight: 700 }}
                               onClick={() => handleSingleTribulation(da.id)}
                               disabled={!isEligible}
                             >
-                              {isEligible ? `⚡ Nghênh Tiếp Thiên Kiếp (${successChance}%)` : `Độ Kiếp (Cần >= 70% TM)`}
+                              {isEligible 
+                                ? `⚡ NGHÊNH TIẾP THIÊN KIẾP (Thành công: ${successChance}%)` 
+                                : `🔒 CẦN TÍCH LŨY ≥ 70% THIÊN MỆNH ĐỂ ĐỘ KIẾP (Hiện: ${percent}%)`}
                             </button>
                           </div>
                         </>
                       ) : (
-                        <div className={styles.maxDaoAnhNotice}>
+                        <div className={styles.maxDaoAnhNotice} style={{ color: '#ffcc00', fontWeight: 700, textAlign: 'center', padding: '10px 0' }}>
                           👑 ĐẠO ANH ĐÃ VƯỢT QUA CỬU TRÙNG 5 KIẾP ĐẠI VIÊN MÃN (5 ANH CHIẾN LỰC)!
                         </div>
                       )}

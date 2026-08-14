@@ -1015,6 +1015,81 @@ const DEFAULT_STATE = {
 };
 
 /**
+ * Tự động chuyển đổi toàn bộ Tu Vi & Tiên Tinh còn dôi dư thành Lực Thiên Mệnh khi ở Giả Anh hoặc Nguyên Anh!
+ */
+export function convertToThienMenhIfInAnhRealm(state) {
+  if (!state) return;
+  if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
+    state.isThienMenhUnlocked = true;
+    const expAmount = state.totalExp || 0;
+    const tienTinhAmount = (state.tienTinh || 0) * 10; // 1 Tiên Tinh = 10 Lực Thiên Mệnh
+    const totalConverted = expAmount + tienTinhAmount;
+
+    if (totalConverted > 0) {
+      state.totalThienMenh = (state.totalThienMenh || 0) + totalConverted;
+      state.totalExp = 0;
+      state.tienTinh = 0;
+      state.dangDiem = 0;
+      state.logs.unshift({
+        text: `✨ THIÊN MỆNH CHUYỂN HÓA! Đã chuyển đổi toàn bộ ${expAmount.toLocaleString()} Tu Vi và ${(tienTinhAmount / 10).toLocaleString()} Tiên Tinh thành +${totalConverted.toLocaleString()} Lực Thiên Mệnh!`,
+        time: Date.now(),
+      });
+    }
+  }
+}
+
+/**
+ * Trả về Icon độc bản và hiệu ứng màu sắc tương ứng cho Đạo Anh dựa trên Mệnh Đăng hoặc Vật Trấn Áp nguồn gốc
+ */
+export function getDaoAnhTheme(daoAnh, state) {
+  if (!daoAnh) return { icon: '👑', color: '#ffcc00', glow: 'rgba(255, 204, 0, 0.4)', bg: 'rgba(255, 204, 0, 0.08)' };
+
+  const pIdx = daoAnh.palaceIndex;
+  const lampList = state?.absorbedLamps || [];
+  const lampCount = lampList.length;
+
+  if (pIdx < lampCount) {
+    // A. Nguồn gốc từ Mệnh Đăng
+    const lampId = lampList[pIdx];
+    const lampObj = LIFE_LAMPS.find(l => l.id === lampId);
+    if (lampObj) {
+      const tierInfo = LAMP_TIERS[lampObj.tier] || LAMP_TIERS.ha_pham;
+      return {
+        icon: lampObj.icon || '🏮',
+        color: tierInfo.color || '#ffcc00',
+        glow: tierInfo.border || 'rgba(255, 204, 0, 0.4)',
+        bg: 'rgba(255, 204, 0, 0.12)',
+        isLamp: true,
+        shortName: lampObj.shortName || lampObj.name,
+      };
+    }
+  } else {
+    // B. Nguồn gốc từ Cung Tự Thân (Vật Trấn Áp)
+    const selfIdx = pIdx - lampCount;
+    const anchor = state?.palaceAnchors?.[selfIdx];
+    if (anchor) {
+      return {
+        icon: anchor.icon || '🏛️',
+        color: '#38bdf8',
+        glow: 'rgba(56, 189, 248, 0.4)',
+        bg: 'rgba(14, 116, 144, 0.15)',
+        isLamp: false,
+        shortName: anchor.shortName || anchor.name,
+      };
+    }
+  }
+
+  return {
+    icon: '✨',
+    color: '#ffcc00',
+    glow: 'rgba(255, 204, 0, 0.3)',
+    bg: 'rgba(255, 204, 0, 0.08)',
+    isLamp: false,
+    shortName: 'Thiên Cung',
+  };
+}
+
+/**
  * Lấy state tu vi từ LocalStorage
  */
 export function getCultivationState() {
@@ -1041,6 +1116,9 @@ export function getCultivationState() {
         state.realm = 'truc_co';
       }
     }
+
+    // Tự động chuyển đổi Tu Vi & Tiên Tinh dôi dư sang Lực Thiên Mệnh ở Giả Anh / Nguyên Anh
+    convertToThienMenhIfInAnhRealm(state);
 
     return state;
   } catch (err) {
