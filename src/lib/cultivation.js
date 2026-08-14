@@ -2390,8 +2390,10 @@ export function getRealmDisplayName(state) {
   }
 
   if (state.realm === 'kim_dan') {
-    const realPalaces = state.realizedThienCung || 1;
-    return `Kim Đan ${realPalaces} Cung`;
+    const lampCount = (state.absorbedLamps || []).length;
+    const selfRealized = state.realizedThienCung || 0;
+    const totalRealCung = lampCount + selfRealized;
+    return `Kim Đan ${totalRealCung || 1} Cung`;
   }
 
   if (state.realm === 'gia_anh') {

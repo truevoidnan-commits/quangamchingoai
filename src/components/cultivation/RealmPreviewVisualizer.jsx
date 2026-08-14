@@ -18,7 +18,8 @@ export default function RealmPreviewVisualizer({ cultivation }) {
   const absorbedCount = absorbedLamps.length;
   const ngungKhiLevel = cultivation?.ngungKhiLevel || 1;
   const maxThienCung = cultivation?.maxThienCung || 6;
-  const realizedThienCung = cultivation?.realizedThienCung || 1;
+  const lampPalaceCount = (cultivation?.absorbedLamps || []).length;
+  const realizedThienCung = cultivation?.realizedThienCung || 0;
   const daoAnhs = cultivation?.daoAnhs || [];
 
   // Tạo danh sách 120 điểm sao tinh đồ theo 4 Nhánh Chòm Sao Xoắn Ốc Thiên Hà (mỗi nhánh 30 sao = 1-120)
@@ -338,17 +339,34 @@ export default function RealmPreviewVisualizer({ cultivation }) {
               {Array.from({ length: maxThienCung }).map((_, i) => {
                 // Tầng tính từ trên xuống: tầng maxThienCung -> tầng 1
                 const floorNum = maxThienCung - i;
-                const isRealized = realizedThienCung >= floorNum;
-                const isLampPalace = (floorNum - 1) >= maxThienCung - (cultivation?.absorbedLamps || []).length;
-                const da = (daoAnhs || []).find(d => d.palaceIndex === (floorNum - 1));
-                const anchor = cultivation?.palaceAnchors?.[floorNum - 1];
-                const isBottleneck = !isRealized && floorNum === realizedThienCung + 1 && (cultivation?.currentThienCungExp || 0) >= 799;
+                // Lamp palaces = the HIGHEST floors (indices: maxThienCung-lampPalaceCount .. maxThienCung-1)
+                // But floors are mapped: palaceIndex = floorNum - 1
+                // Self palaces = indices 0..selfPalacesTotal-1 (lower floors)
+                // Lamp palaces = indices lampPalaceCount..maxThienCung-1 (upper floors)
+                // floorNum goes from maxThienCung down to 1, so palaceIndex = floorNum-1
+                // Lamp palace condition: palaceIndex >= maxThienCung - lampPalaceCount
+                //   => floorNum - 1 >= maxThienCung - lampPalaceCount
+                //   => floorNum > maxThienCung - lampPalaceCount
+                const palaceIdx = floorNum - 1;
+                const selfPalacesTotal = maxThienCung - lampPalaceCount;
+                const isLampPalace = palaceIdx >= selfPalacesTotal; // upper floors = lamp palaces
+                // Self palace index within self palaces (1-indexed)
+                const selfNum = palaceIdx + 1; // among all palaces
+                const selfLocalIdx = isLampPalace ? null : palaceIdx; // 0-indexed within self palaces
+                // isRealized: lamp palaces always realized; self palaces realized if selfLocalIdx < realizedThienCung
+                const isRealized = isLampPalace || (selfLocalIdx !== null && selfLocalIdx < realizedThienCung);
+                const da = (daoAnhs || []).find(d => d.palaceIndex === palaceIdx);
+                const anchor = cultivation?.palaceAnchors?.[palaceIdx];
+                const isBottleneck = !isRealized && !isLampPalace && selfLocalIdx === realizedThienCung && (cultivation?.currentThienCungExp || 0) >= 799;
+                // Lamp palace info
+                const lampIdx = isLampPalace ? palaceIdx - selfPalacesTotal : null;
+                const absLamps = cultivation?.absorbedLamps || [];
 
                 return (
                   <div
                     key={floorNum}
                     className={`${styles.towerFloorRow} ${isRealized ? styles.floorRealized : isBottleneck ? styles.floorBottleneck : styles.floorHollow} ${isLampPalace ? styles.floorLamp : ''}`}
-                    title={`Tầng ${floorNum} (Thiên Cung ${floorNum}): ${isRealized ? (anchor ? `Hóa Thực 100% (Trấn Áp: ${anchor.name})` : isLampPalace ? 'Chân Cung Đăng (Hóa Thực 100%)' : 'Hóa Thực Cung Thật') : isBottleneck ? 'Đạt 99.99% (Đang chờ Khảm Nạm Vật Trấn Áp)' : 'Hư Ảo (Mây mù bao phủ)'}`}
+                    title={`Tầng ${floorNum}: ${isLampPalace ? 'Chân Cung Mệnh Đăng (100% Thật)' : isRealized ? (anchor ? `Hóa Thực 100% (Trấn: ${anchor.name})` : 'Hóa Thực Cung Thật') : isBottleneck ? 'Đạt 99.99% (Cần Vật Trấn Áp)' : 'Hư Ảo (Mây mù bao phủ)'}`}
                   >
                     {/* Mái ngói nhỏ của tầng */}
                     <div className={styles.floorRoofLine} />
@@ -358,16 +376,25 @@ export default function RealmPreviewVisualizer({ cultivation }) {
                       {/* Số tầng bên trái */}
                       <span className={styles.floorNumberBadge}>T{floorNum}</span>
 
-                      {/* Nội điện: Đã hóa thật thì có Kim Đan tỏa sáng, 99.99% thì báo chờ vật trấn áp, chưa hóa thật thì có Mây Mù bao phủ */}
+                      {/* Nội điện: lamp palaces & realized palaces show golden core; bottleneck shows warning; hollow shows mist */}
                       {isRealized ? (
                         <div className={styles.realizedChamberContent}>
                           {/* Viên Kim Đan tỏa sáng bên trong */}
                           <div className={styles.goldenCoreOrbInside}>
-                            <span className={styles.orbGlowCore}>🟡</span>
+                            <span className={styles.orbGlowCore}>{isLampPalace ? '🏮' : '🟡'}</span>
                             <span className={styles.orbShimmerSparkle}>✨</span>
                           </div>
-                          <span className={styles.chamberTitle}>
-                            {da ? `${da.name}` : anchor ? `${anchor.icon} ${anchor.shortName}` : isLampPalace ? '🏮 Chân Cung Đăng' : `Cung Thật ${floorNum}`}
+                          <span className={styles.chamberTitle} style={isLampPalace ? { color: '#ffcc00', fontWeight: 700 } : {}}>
+                            {(() => {
+                              if (da) return `${da.name}`;
+                              if (isLampPalace) {
+                                const lid = (cultivation?.absorbedLamps || [])[lampIdx];
+                                const lobj = lid ? LIFE_LAMPS.find(l => l.id === lid) : null;
+                                return lobj ? lobj.name.replace('Đăng', 'Cung') : `Chân Cung Mệnh Đăng ${lampIdx + 1}`;
+                              }
+                              if (anchor) return `${anchor.icon} ${anchor.shortName}`;
+                              return `Cung Thật ${floorNum}`;
+                            })()}
                           </span>
                         </div>
                       ) : isBottleneck ? (
@@ -384,7 +411,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
 
                       {/* Biểu tượng trạng thái bên phải */}
                       <span className={styles.floorRightBadge}>
-                        {da ? '👑' : anchor ? anchor.icon : isLampPalace ? '🏮' : isRealized ? '🏛️' : isBottleneck ? '🔑' : '🌫️'}
+                        {da ? '👑' : isLampPalace ? '🏮' : anchor ? anchor.icon : isRealized ? '🏛️' : isBottleneck ? '🔑' : '🌫️'}
                       </span>
                     </div>
                   </div>
@@ -394,7 +421,7 @@ export default function RealmPreviewVisualizer({ cultivation }) {
           </div>
 
           <div className={styles.stageStatusBadge}>
-            <span>🏛️ TÒA THIÊN LÂU: {realizedThienCung}/{maxThienCung} TẦNG HÓA THẬT (CÓ KIM ĐAN)</span>
+            <span>🏛️ TÒA THIÊN LÂU: {lampPalaceCount + realizedThienCung}/{maxThienCung} TẦNG HÓA THẬT (CÓ KIM ĐAN)</span>
           </div>
         </div>
       )}
