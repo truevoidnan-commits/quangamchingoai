@@ -204,6 +204,20 @@ export default function RealmPreviewVisualizer({
                   <stop offset="100%" stopColor="#0f172a" stopOpacity="0.95" />
                 </linearGradient>
 
+                {/* ClipPath cho 4 hình tròn Mệnh Đăng ở 4 góc */}
+                <clipPath id="cornerClip_corner_1">
+                  <circle cx="75" cy="75" r="14" />
+                </clipPath>
+                <clipPath id="cornerClip_corner_2">
+                  <circle cx="265" cy="75" r="14" />
+                </clipPath>
+                <clipPath id="cornerClip_corner_3">
+                  <circle cx="75" cy="265" r="14" />
+                </clipPath>
+                <clipPath id="cornerClip_corner_4">
+                  <circle cx="265" cy="265" r="14" />
+                </clipPath>
+
                 {/* Glow Filter for Stars */}
                 <filter id="starGlow" x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
@@ -241,89 +255,114 @@ export default function RealmPreviewVisualizer({
               />
 
               {/* VẼ 4 LỤC MANG TINH TẠI 4 GÓC (CHỨA MỆNH ĐĂNG / MỆNH HỎA GÓC) */}
-              {cornerHexagrams.map((c) => (
-                <g key={c.id}>
-                  {/* Vòng Tròn Ngoại Tiếp Của Lục Mang Tinh Góc */}
-                  <circle
-                    cx={c.cx}
-                    cy={c.cy}
-                    r={c.R_tip}
-                    fill="rgba(15, 23, 42, 0.65)"
-                    stroke={c.isComplete ? c.color : c.litCount > 0 ? c.color : 'rgba(56, 189, 248, 0.25)'}
-                    strokeWidth={c.isComplete ? 1.5 : 0.8}
-                    strokeDasharray={c.isComplete ? 'none' : '2, 3'}
-                    opacity={c.isComplete ? 0.95 : c.litCount > 0 ? 0.7 : 0.3}
-                  />
+              {cornerHexagrams.map((c) => {
+                const aiIconUrl = c.lampObj?.id ? LAMP_THAN_PHAM_AI_ICONS[c.lampObj.id] : null;
 
-                  {/* 2 Tam Giác Tạo Lục Mang Tinh (▲ và ▼) */}
-                  <path
-                    d={c.triUp}
-                    fill="none"
-                    stroke={c.litCount >= 15 ? c.color : 'rgba(255, 255, 255, 0.12)'}
-                    strokeWidth={c.litCount >= 15 ? 1.2 : 0.6}
-                  />
-                  <path
-                    d={c.triDown}
-                    fill="none"
-                    stroke={c.isComplete ? c.color : 'rgba(255, 255, 255, 0.12)'}
-                    strokeWidth={c.isComplete ? 1.2 : 0.6}
-                  />
-
-                  {/* 30 Ngôi Sao Pháp Khiếu Của Góc Này (Nằm Im Tuyệt Đối) */}
-                  {c.stars.map((star) => (
+                return (
+                  <g key={c.id}>
+                    {/* Vòng Tròn Ngoại Tiếp Của Lục Mang Tinh Góc */}
                     <circle
-                      key={star.idx}
-                      cx={star.cx}
-                      cy={star.cy}
-                      r={star.isLit ? (star.isVertex ? 3.2 : 2.2) : 1.2}
-                      fill={star.isLit ? star.color : 'rgba(255, 255, 255, 0.16)'}
-                      filter={star.isLit ? 'url(#starGlow)' : 'none'}
-                      className={`${styles.starDot} ${star.isLit ? styles.starLit : styles.starDim}`}
-                      style={{
-                        '--star-color': star.color,
-                      }}
+                      cx={c.cx}
+                      cy={c.cy}
+                      r={c.R_tip}
+                      fill="rgba(15, 23, 42, 0.65)"
+                      stroke={c.isComplete ? c.color : c.litCount > 0 ? c.color : 'rgba(56, 189, 248, 0.25)'}
+                      strokeWidth={c.isComplete ? 1.5 : 0.8}
+                      strokeDasharray={c.isComplete ? 'none' : '2, 3'}
+                      opacity={c.isComplete ? 0.95 : c.litCount > 0 ? 0.7 : 0.3}
                     />
-                  ))}
 
-                  {/* TÂM MỆNH ĐĂNG / MỆNH HỎA TẠI GÓC NÀY */}
-                  <g transform={`translate(${c.cx}, ${c.cy})`}>
-                    <circle
-                      cx="0"
-                      cy="0"
-                      r="14"
-                      fill="rgba(10, 16, 26, 0.92)"
-                      stroke={c.isComplete ? c.color : c.isFireLit ? c.color : 'rgba(255, 255, 255, 0.2)'}
-                      strokeWidth="1.2"
-                      style={{
-                        boxShadow: c.isComplete ? `0 0 10px ${c.glow}` : 'none',
-                      }}
+                    {/* 2 Tam Giác Tạo Lục Mang Tinh (▲ và ▼) */}
+                    <path
+                      d={c.triUp}
+                      fill="none"
+                      stroke={c.litCount >= 15 ? c.color : 'rgba(255, 255, 255, 0.12)'}
+                      strokeWidth={c.litCount >= 15 ? 1.2 : 0.6}
                     />
-                    <foreignObject x="-12" y="-12" width="24" height="24" style={{ overflow: 'visible' }}>
-                      <div style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {c.lampObj ? (
-                          <ArtifactIcon item={c.lampObj} isLamp={true} size={22} />
-                        ) : (
-                          <span style={{ fontSize: '13px', lineHeight: 1, color: c.isFireLit ? c.color : '#64748b' }}>
-                            {c.isFireLit ? '🔥' : '🕯️'}
-                          </span>
-                        )}
-                      </div>
-                    </foreignObject>
-                    {/* Tên Mệnh Đăng / Mệnh Hỏa Góc */}
-                    <text
-                      x="0"
-                      y="26"
-                      textAnchor="middle"
-                      fill={c.isComplete ? c.color : c.isFireLit ? c.color : '#64748b'}
-                      fontSize="8"
-                      fontWeight="700"
-                      fontFamily="var(--font-serif)"
-                    >
-                      {c.lampObj?.shortName || c.name}
-                    </text>
+                    <path
+                      d={c.triDown}
+                      fill="none"
+                      stroke={c.isComplete ? c.color : 'rgba(255, 255, 255, 0.12)'}
+                      strokeWidth={c.isComplete ? 1.2 : 0.6}
+                    />
+
+                    {/* 30 Ngôi Sao Pháp Khiếu Của Góc Này (Nằm Im Tuyệt Đối) */}
+                    {c.stars.map((star) => (
+                      <circle
+                        key={star.idx}
+                        cx={star.cx}
+                        cy={star.cy}
+                        r={star.isLit ? (star.isVertex ? 3.2 : 2.2) : 1.2}
+                        fill={star.isLit ? star.color : 'rgba(255, 255, 255, 0.16)'}
+                        filter={star.isLit ? 'url(#starGlow)' : 'none'}
+                        className={`${styles.starDot} ${star.isLit ? styles.starLit : styles.starDim}`}
+                        style={{
+                          '--star-color': star.color,
+                        }}
+                      />
+                    ))}
+
+                    {/* TÂM MỆNH ĐĂNG / MỆNH HỎA TẠI GÓC NÀY (DÙNG SVG NATIVE 100% KHÔNG LỆCH) */}
+                    <g>
+                      {/* Nền tròn tâm */}
+                      <circle
+                        cx={c.cx}
+                        cy={c.cy}
+                        r="14"
+                        fill="rgba(10, 16, 26, 0.95)"
+                        stroke={c.isComplete ? c.color : c.isFireLit ? c.color : 'rgba(255, 255, 255, 0.25)'}
+                        strokeWidth="1.2"
+                      />
+
+                      {/* Nếu có ảnh AI của Mệnh Đăng -> vẽ thẳng bằng SVG <image> */}
+                      {aiIconUrl ? (
+                        <image
+                          href={aiIconUrl}
+                          x={c.cx - 14}
+                          y={c.cy - 14}
+                          width="28"
+                          height="28"
+                          clipPath={`url(#cornerClip_${c.id})`}
+                          preserveAspectRatio="xMidYMid slice"
+                        />
+                      ) : (
+                        /* Nếu là Mệnh Hỏa / Chưa có Mệnh Đăng AI */
+                        <text
+                          x={c.cx}
+                          y={c.cy + 4.5}
+                          textAnchor="middle"
+                          fontSize="13"
+                        >
+                          {c.isFireLit ? '🔥' : '🕯️'}
+                        </text>
+                      )}
+
+                      {/* Viền sáng bảo hộ */}
+                      <circle
+                        cx={c.cx}
+                        cy={c.cy}
+                        r="14"
+                        fill="none"
+                        stroke={c.isComplete ? c.color : c.isFireLit ? c.color : 'rgba(255, 255, 255, 0.3)'}
+                        strokeWidth={c.isComplete ? 1.5 : 1}
+                      />
+
+                      {/* Tên Mệnh Đăng / Mệnh Hỏa Góc */}
+                      <text
+                        x={c.cx}
+                        y={c.cy + 25}
+                        textAnchor="middle"
+                        fill={c.isComplete ? c.color : c.isFireLit ? c.color : '#94a3b8'}
+                        fontSize="8"
+                        fontWeight="700"
+                        fontFamily="var(--font-serif)"
+                      >
+                        {c.lampObj?.shortName || c.name}
+                      </text>
+                    </g>
                   </g>
-                </g>
-              ))}
+                );
+              })}
 
               {/* TU SĨ TỌA THIỀN Ở CHÍNH GIỮA TRẬN PHÁP (CENTER DAOIST SILHOUETTE) */}
               <g transform="translate(170, 170)">
@@ -343,11 +382,6 @@ export default function RealmPreviewVisualizer({
 
                 {/* Đan Điền Core Vàng Sáng Rực */}
                 <circle cx="0" cy="8" r="4.5" fill="#ffcc00" filter="url(#starGlow)" className={styles.daoistDanDien} />
-
-                {/* Chú thích Tu Sĩ Tọa Thiền */}
-                <text x="0" y="38" textAnchor="middle" fill="#94a3b8" fontSize="8.5" fontWeight="600" fontFamily="var(--font-serif)">
-                  Tu Sĩ Tọa Thiền
-                </text>
               </g>
 
               {/* Hào Quang Cực Cảnh 121 (Nếu Mở Khóa) */}
