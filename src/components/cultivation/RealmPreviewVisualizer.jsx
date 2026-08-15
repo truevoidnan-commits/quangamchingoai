@@ -31,38 +31,47 @@ export default function RealmPreviewVisualizer({
   const daoAnhs = cultivation?.daoAnhs || [];
 
   // Calculate target Palace EXP for current active self palace
-  const targetPalaceExp = cultivation?.targetPalaceExp || 2000;
-  const bottleneckExp = targetPalaceExp - 1;
-
-  // Tạo danh sách 120 điểm sao tinh đồ theo 4 Nhánh Chòm Sao Xoắn Ốc Thiên Hà (mỗi nhánh 30 sao = 1-120)
-  const { constellationStars, constellationPaths } = useMemo(() => {
+  c  // Tạo danh sách 120 điểm sao tinh đồ theo 4 Đại Chòm Sao Tứ Tượng (Thanh Long, Chu Tước, Bạch Hổ, Huyền Vũ)
+  const { constellationStars, constellationPaths, quadrantList } = useMemo(() => {
     const stars = [];
     const paths = [];
-    const arms = 4; // 4 nhánh chòm sao (tương ứng 4 giai đoạn Trúc Cơ: 1-30, 31-60, 61-90, 91-120)
+    const arms = 4;
     const starsPerArm = 30;
 
+    const QUADRANTS = [
+      { id: 'thanh_long', name: 'Thanh Long', range: '1-30', color: '#38bdf8', glow: 'rgba(56, 189, 248, 0.95)', bgGrad: '#00f2fe', baseAngle: -3 * Math.PI / 4, icon: '🐉' },
+      { id: 'chu_tuoc',   name: 'Chu Tước',   range: '31-60', color: '#f97316', glow: 'rgba(249, 115, 22, 0.95)', bgGrad: '#ef4444', baseAngle: -Math.PI / 4, icon: '🦅' },
+      { id: 'bach_ho',    name: 'Bạch Hổ',    range: '61-90', color: '#fef08a', glow: 'rgba(254, 240, 138, 0.95)', bgGrad: '#e0e7ff', baseAngle: 3 * Math.PI / 4, icon: '🐅' },
+      { id: 'huyen_vu',   name: 'Huyền Vũ',   range: '91-120', color: '#c084fc', glow: 'rgba(192, 132, 252, 0.95)', bgGrad: '#ec4899', baseAngle: Math.PI / 4, icon: '🐢' },
+    ];
+
     for (let a = 0; a < arms; a++) {
-      const armBaseAngle = (a / arms) * (2 * Math.PI) - Math.PI / 4;
+      const q = QUADRANTS[a];
       const armPoints = [];
+      const litCount = Math.max(0, Math.min(starsPerArm, phapKhieu - a * starsPerArm));
+      const isArmComplete = litCount === starsPerArm;
 
       for (let s = 0; s < starsPerArm; s++) {
         const progress = s / (starsPerArm - 1);
-        // Xoắn ốc thiên hà từ bán kính 38px ra 95px, uốn lượn mượt mà
-        const spiralAngle = armBaseAngle + progress * (Math.PI * 0.7);
-        const radius = 38 + progress * 56;
-        const cx = 100 + Math.cos(spiralAngle) * radius;
-        const cy = 110 + Math.sin(spiralAngle) * (radius * 0.88);
+        // Xoắn ốc thiên hà uốn lượn hướng ra 4 góc
+        const spiralAngle = q.baseAngle + progress * (Math.PI * 0.52);
+        const radius = 44 + progress * 74;
+        const cx = 160 + Math.cos(spiralAngle) * radius;
+        const cy = 170 + Math.sin(spiralAngle) * (radius * 0.94);
 
         const idx = a * starsPerArm + s; // 0 đến 119
         const isLit = idx < phapKhieu;
+        const isMilestone = (s + 1) % 10 === 0;
 
         stars.push({
           idx,
           armIndex: a,
+          quadrant: q,
           starNum: idx + 1,
           cx,
           cy,
           isLit,
+          isMilestone,
         });
 
         armPoints.push(`${cx.toFixed(1)},${cy.toFixed(1)}`);
@@ -70,27 +79,32 @@ export default function RealmPreviewVisualizer({
 
       paths.push({
         armIndex: a,
+        quadrant: q,
         d: `M ${armPoints.join(' L ')}`,
         isAnyLit: phapKhieu > a * starsPerArm,
+        isComplete: isArmComplete,
+        litCount,
+        endPoint: armPoints[armPoints.length - 1],
       });
     }
 
-    return { constellationStars: stars, constellationPaths: paths };
+    return { constellationStars: stars, constellationPaths: paths, quadrantList: QUADRANTS };
   }, [phapKhieu]);
 
   // 4 Vị Trí Xung Quanh (Tây Bắc, Đông Bắc, Tây Nam, Đông Nam)
   // Quy tắc: Nếu có Mệnh Đăng hấp thụ thì THAY THẾ ngọn hỏa tại vị trí đó bằng Mệnh Đăng!
   const surroundingSlots = useMemo(() => {
     const slots = [
-      { id: 'pos_1', name: 'Vị Trí 1 (Tây Bắc)', posClass: styles.slotTopLeft },
-      { id: 'pos_2', name: 'Vị Trí 2 (Đông Bắc)', posClass: styles.slotTopRight },
-      { id: 'pos_3', name: 'Vị Trí 3 (Tây Nam)', posClass: styles.slotBottomLeft },
-      { id: 'pos_4', name: 'Vị Trí 4 (Đông Nam)', posClass: styles.slotBottomRight },
+      { id: 'pos_1', name: 'Thanh Long (Tây Bắc)', posClass: styles.slotTopLeft, quadIdx: 0 },
+      { id: 'pos_2', name: 'Chu Tước (Đông Bắc)', posClass: styles.slotTopRight, quadIdx: 1 },
+      { id: 'pos_3', name: 'Bạch Hổ (Tây Nam)', posClass: styles.slotBottomLeft, quadIdx: 2 },
+      { id: 'pos_4', name: 'Huyền Vũ (Đông Nam)', posClass: styles.slotBottomRight, quadIdx: 3 },
     ];
 
     return slots.map((slot, index) => {
       // Kiểm tra xem có Mệnh Đăng tương ứng ở vị trí này không
       const lampId = absorbedLamps[index];
+      const q = quadrantList[index];
       if (lampId) {
         const lamp = LIFE_LAMPS.find(l => l.id === lampId);
         const tier = lamp ? (LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham) : null;
@@ -102,8 +116,8 @@ export default function RealmPreviewVisualizer({
           icon: lamp?.icon || '🏮',
           title: lamp?.shortName || lamp?.name || 'Mệnh Đăng',
           tierName: tier?.name,
-          color: tier?.color || '#ffcc00',
-          glow: tier?.border || 'rgba(255, 204, 0, 0.8)',
+          color: tier?.color || q?.color || '#ffcc00',
+          glow: tier?.border || q?.glow || 'rgba(255, 204, 0, 0.8)',
           bg: tier?.bg,
         };
       }
@@ -118,11 +132,11 @@ export default function RealmPreviewVisualizer({
         icon: isFireLit ? '🔥' : '🕯️',
         title: `Mệnh Hỏa ${fireIndex}`,
         tierName: isFireLit ? 'Đã Thắp' : `${(fireIndex - 1) * 30 + 1}-${fireIndex * 30}`,
-        color: isFireLit ? '#f97316' : 'rgba(255, 255, 255, 0.3)',
-        glow: isFireLit ? 'rgba(249, 115, 22, 0.85)' : 'none',
+        color: isFireLit ? q?.color || '#f97316' : 'rgba(255, 255, 255, 0.3)',
+        glow: isFireLit ? q?.glow || 'rgba(249, 115, 22, 0.85)' : 'none',
       };
     });
-  }, [absorbedLamps, selfHoa]);
+  }, [absorbedLamps, selfHoa, quadrantList]);
 
   // Nếu có Mệnh Đăng thứ 5 (vị trí phụ dưới chân tọa đài)
   const fifthLamp = useMemo(() => {
@@ -143,7 +157,7 @@ export default function RealmPreviewVisualizer({
   }, [absorbedLamps]);
 
   return (
-    <div className={`${styles.visualizerWrapper} ${(realm === 'kim_dan' || realm === 'gia_anh' || realm === 'nguyen_anh') ? styles.visualizerWrapperTall : ''}`}>
+    <div className={`${styles.visualizerWrapper} ${realm === 'truc_co' ? styles.visualizerWrapperTrucCo : (realm === 'kim_dan' || realm === 'gia_anh' || realm === 'nguyen_anh') ? styles.visualizerWrapperTall : ''}`}>
       {/* ========================================================
           1. NGƯNG KHÍ VISUALIZER
          ======================================================== */}
@@ -184,47 +198,173 @@ export default function RealmPreviewVisualizer({
       )}
 
       {/* ========================================================
-          2. TRÚC CƠ VISUALIZER: TINH ĐỒ PHÁP KHIẾU & 4 HỎA / ĐĂNG + 121 ĐỈNH ĐẦU
+          2. TRÚC CƠ VISUALIZER: TINH ĐỒ PHÁP KHIẾU TỨ TƯỢNG & 4 HỎA/ĐĂNG
          ======================================================== */}
       {realm === 'truc_co' && (
         <div className={styles.trucCoStage}>
           {/* A. BỨC TINH ĐỒ CỬU THIÊN (CELESTIAL STAR CHART BACKGROUND) */}
           <div className={styles.starChartBackdrop}>
-            <svg viewBox="0 0 200 220" className={styles.starChartSvg}>
+            <svg viewBox="0 0 320 340" className={styles.starChartSvg}>
               <defs>
                 <radialGradient id="starChartGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#00f2fe" stopOpacity="0.22" />
-                  <stop offset="50%" stopColor="#0284c7" stopOpacity="0.08" />
+                  <stop offset="0%" stopColor="#00f2fe" stopOpacity="0.25" />
+                  <stop offset="45%" stopColor="#0284c7" stopOpacity="0.1" />
+                  <stop offset="85%" stopColor="#0f172a" stopOpacity="0.02" />
                   <stop offset="100%" stopColor="transparent" stopOpacity="0" />
                 </radialGradient>
+
+                {/* Gradients 4 Chòm Sao Tứ Tượng */}
+                <linearGradient id="azureDragonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#00f2fe" />
+                  <stop offset="100%" stopColor="#0284c7" />
+                </linearGradient>
+                <linearGradient id="vermilionBirdGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#fbbf24" />
+                  <stop offset="50%" stopColor="#f97316" />
+                  <stop offset="100%" stopColor="#ef4444" />
+                </linearGradient>
+                <linearGradient id="whiteTigerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ffffff" />
+                  <stop offset="60%" stopColor="#fef08a" />
+                  <stop offset="100%" stopColor="#6366f1" />
+                </linearGradient>
+                <linearGradient id="blackTortoiseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#e879f9" />
+                  <stop offset="50%" stopColor="#c084fc" />
+                  <stop offset="100%" stopColor="#7c3aed" />
+                </linearGradient>
+
+                {/* Glow Filter for Lit Stars & Paths */}
+                <filter id="starGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="1.8" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+                <filter id="superGlow" x="-100%" y="-100%" width="300%" height="300%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur1" />
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur2" />
+                  <feMerge>
+                    <feMergeNode in="blur1" />
+                    <feMergeNode in="blur2" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
               </defs>
 
-              {/* Tinh bàn thiên văn */}
-              <circle cx="100" cy="110" r="95" fill="url(#starChartGlow)" stroke="rgba(56, 189, 248, 0.18)" strokeWidth="1" strokeDasharray="3,3" />
-              <circle cx="100" cy="110" r="70" stroke="rgba(56, 189, 248, 0.14)" strokeWidth="1" />
-              <circle cx="100" cy="110" r="42" stroke="rgba(0, 242, 254, 0.2)" strokeWidth="1" strokeDasharray="2,2" />
+              {/* Tinh bàn thiên văn & Vòng Bát Quái xoay nền */}
+              <circle cx="160" cy="170" r="138" fill="url(#starChartGlow)" stroke="rgba(56, 189, 248, 0.12)" strokeWidth="1" strokeDasharray="3,4" />
+              <circle cx="160" cy="170" r="118" stroke="rgba(56, 189, 248, 0.2)" strokeWidth="1" strokeDasharray="4,6" />
+              <circle cx="160" cy="170" r="88" stroke="rgba(56, 189, 248, 0.16)" strokeWidth="1" />
+              <circle cx="160" cy="170" r="52" stroke="rgba(0, 242, 254, 0.24)" strokeWidth="1" strokeDasharray="2,3" />
 
-              {/* Đường Nối Tinh Đồ Giữa Các Ngôi Sao (Constellation Spiral Lines) */}
+              {/* Đường Nối Tinh Đồ Tứ Tượng (4 Constellation Spiral Paths) */}
               {constellationPaths.map((path) => (
                 <path
                   key={path.armIndex}
                   d={path.d}
                   fill="none"
-                  className={path.isAnyLit ? styles.constellationLineLit : styles.constellationLineDim}
+                  stroke={path.isComplete ? path.quadrant.color : path.isAnyLit ? path.quadrant.color : 'rgba(255,255,255,0.08)'}
+                  strokeWidth={path.isComplete ? 2 : path.isAnyLit ? 1.4 : 0.8}
+                  strokeDasharray={path.isComplete ? 'none' : '3, 4'}
+                  filter={path.isAnyLit ? 'url(#starGlow)' : 'none'}
+                  opacity={path.isComplete ? 0.95 : path.isAnyLit ? 0.75 : 0.25}
+                  className={path.isComplete ? styles.constellationCompletePath : ''}
                 />
               ))}
 
-              {/* 120 Ngôi Sao Pháp Khiếu Màu Xanh Dương Sáng */}
+              {/* 120 Ngôi Sao Pháp Khiếu Chia Theo 4 Chòm Tứ Tượng */}
               {constellationStars.map((star) => (
-                <circle
-                  key={star.idx}
-                  cx={star.cx}
-                  cy={star.cy}
-                  r={star.isLit ? 2.5 : 1.2}
-                  className={`${styles.starDot} ${star.isLit ? styles.starLit : styles.starDim}`}
-                  style={{ animationDelay: `${(star.idx % 15) * 0.1}s` }}
-                />
+                <g key={star.idx}>
+                  {star.isLit && star.isMilestone && (
+                    <circle
+                      cx={star.cx}
+                      cy={star.cy}
+                      r={6}
+                      fill="none"
+                      stroke={star.quadrant.color}
+                      strokeWidth="0.8"
+                      opacity="0.6"
+                      className={styles.milestonePulseRing}
+                    />
+                  )}
+                  <circle
+                    cx={star.cx}
+                    cy={star.cy}
+                    r={star.isLit ? (star.isMilestone ? 3.8 : 2.6) : 1.4}
+                    fill={star.isLit ? star.quadrant.color : 'rgba(255, 255, 255, 0.18)'}
+                    filter={star.isLit ? 'url(#starGlow)' : 'none'}
+                    className={`${styles.starDot} ${star.isLit ? styles.starLit : styles.starDim}`}
+                    style={{
+                      '--star-color': star.quadrant.color,
+                      animationDelay: `${(star.idx % 20) * 0.08}s`,
+                    }}
+                  />
+                </g>
               ))}
+
+              {/* Tọa Đài Sen Băng / Bát Quái Xoay Dưới Chân Tu Sĩ */}
+              <g className={styles.lotusThroneGroup} transform="translate(160, 170)">
+                <ellipse cx="0" cy="22" rx="34" ry="11" fill="rgba(34, 195, 240, 0.12)" stroke="rgba(34, 195, 240, 0.4)" strokeWidth="1" />
+                <ellipse cx="0" cy="22" rx="24" ry="7" fill="none" stroke="rgba(255, 204, 0, 0.5)" strokeWidth="0.8" strokeDasharray="3,3" />
+                {/* 8 cánh sen linh lực */}
+                {Array.from({ length: 8 }).map((_, li) => {
+                  const lAngle = (li / 8) * (2 * Math.PI);
+                  const lx = Math.cos(lAngle) * 32;
+                  const ly = Math.sin(lAngle) * 10 + 22;
+                  return (
+                    <circle key={li} cx={lx} cy={ly} r="2" fill="#38bdf8" opacity="0.75" />
+                  );
+                })}
+              </g>
+
+              {/* Tu Sĩ Tĩnh Tọa với Linh Mạch Nhâm Đốc Phát Sáng */}
+              <g transform="translate(110, 110)">
+                <defs>
+                  <linearGradient id="daoistSpineGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+                    <stop offset="0%" stopColor="#f59e0b" />
+                    <stop offset="40%" stopColor="#38bdf8" />
+                    <stop offset="80%" stopColor="#a855f7" />
+                    <stop offset="100%" stopColor="#ec4899" />
+                  </linearGradient>
+                  <linearGradient id="daoistBodyNewGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="rgba(34, 195, 240, 0.85)" />
+                    <stop offset="60%" stopColor="rgba(2, 132, 199, 0.75)" />
+                    <stop offset="100%" stopColor="rgba(15, 23, 42, 0.95)" />
+                  </linearGradient>
+                </defs>
+
+                {/* Hào quang thiền định (Auric aura) */}
+                <ellipse cx="50" cy="60" rx="38" ry="46" fill="rgba(34, 195, 240, 0.08)" filter="url(#superGlow)" />
+
+                {/* Hình bóng tu sĩ */}
+                <path
+                  d="M 50 18 Q 42 18 42 27 Q 42 34 46 38 L 38 45 Q 26 50 24 64 L 18 80 Q 14 90 26 95 L 38 98 Q 26 106 35 112 Q 50 116 65 112 Q 74 106 62 98 L 74 95 Q 86 90 82 80 L 76 64 Q 74 50 62 45 L 54 38 Q 58 34 58 27 Q 58 18 50 18 Z"
+                  fill="url(#daoistBodyNewGrad)"
+                  stroke="#38bdf8"
+                  strokeWidth="1.2"
+                />
+
+                {/* Cột Sống Linh Mạch Nhâm Đốc (Glowing Spinal Meridian) */}
+                <line x1="50" y1="102" x2="50" y2="24" stroke="url(#daoistSpineGrad)" strokeWidth="1.8" strokeLinecap="round" opacity="0.9" />
+
+                {/* 5 Luân Xa / Linh Khiếu Trọng Điểm */}
+                <circle cx="50" cy="98" r="2.2" fill="#f97316" /> {/* Hội Âm */}
+                <circle cx="50" cy="74" r="5" fill="#ffcc00" filter="url(#starGlow)" className={styles.daoistDanDien} /> {/* Đan Điền Core */}
+                <circle cx="50" cy="54" r="3.2" fill="#38bdf8" filter="url(#starGlow)" /> {/* Tâm Khiếu */}
+                <circle cx="50" cy="38" r="2.5" fill="#a855f7" /> {/* Yết Hầu */}
+                <circle cx="50" cy="24" r="3" fill="#ec4899" filter="url(#starGlow)" /> {/* Bách Hội Đỉnh Đầu */}
+              </g>
+
+              {/* Tia Sét Cực Cảnh 121 Kết Nối Thiên Địa (Khiếu 121 mở khóa) */}
+              {has121st && (
+                <g filter="url(#superGlow)">
+                  <line x1="160" y1="134" x2="160" y2="28" stroke="#ec4899" strokeWidth="2" strokeDasharray="3,2" className={styles.lightningBeam121} />
+                  <circle cx="160" cy="28" r="14" fill="none" stroke="#f472b6" strokeWidth="1.5" strokeDasharray="2,3" className={styles.crownAuraRing} />
+                  <circle cx="160" cy="28" r="7" fill="#ec4899" />
+                </g>
+              )}
             </svg>
           </div>
 
@@ -243,29 +383,7 @@ export default function RealmPreviewVisualizer({
             )}
           </div>
 
-          {/* C. TU SĨ TĨNH TỌA THIỀN ĐỊNH Ở TRUNG TÂM */}
-          <div className={styles.daoistCenterSilhouette}>
-            <svg viewBox="0 0 100 120" className={styles.daoistSvg}>
-              <defs>
-                <linearGradient id="daoistBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#22c3f0" stopOpacity="0.9" />
-                  <stop offset="50%" stopColor="#0284c7" stopOpacity="0.8" />
-                  <stop offset="100%" stopColor="#0f172a" stopOpacity="0.95" />
-                </linearGradient>
-              </defs>
-              {/* Meditating body contour */}
-              <path
-                d="M 50 18 Q 42 18 42 27 Q 42 34 46 38 L 38 45 Q 26 50 24 64 L 18 80 Q 14 90 26 95 L 38 98 Q 26 106 35 112 Q 50 116 65 112 Q 74 106 62 98 L 74 95 Q 86 90 82 80 L 76 64 Q 74 50 62 45 L 54 38 Q 58 34 58 27 Q 58 18 50 18 Z"
-                fill="url(#daoistBodyGrad)"
-                stroke="#22c3f0"
-                strokeWidth="1.2"
-              />
-              {/* Dan Dien Core Glow */}
-              <circle cx="50" cy="74" r="5" fill="#ffcc00" className={styles.daoistDanDien} />
-            </svg>
-          </div>
-
-          {/* D. 4 VỊ TRÍ LƠ LỬNG XUNG QUANH (MỆNH HỎA / THAY BẰNG MỆNH ĐĂNG) */}
+          {/* C. 4 VỊ TRÍ LƠ LỬNG XUNG QUANH (MỆNH HỎA / THAY BẰNG MỆNH ĐĂNG AI) */}
           <div className={styles.surroundingSlotsLayer}>
             {surroundingSlots.map((slot) => (
               <div
@@ -296,9 +414,9 @@ export default function RealmPreviewVisualizer({
                 ) : (
                   <div
                     className={`${styles.flameCardFloating} ${slot.isLit ? styles.flameCardLit : styles.flameCardDim}`}
-                    style={slot.isLit ? { borderColor: 'rgba(249, 115, 22, 0.6)', boxShadow: '0 0 10px rgba(249, 115, 22, 0.3)' } : {}}
+                    style={slot.isLit ? { borderColor: slot.color, boxShadow: `0 0 10px ${slot.glow}` } : {}}
                   >
-                    <span className={styles.slotIcon} style={{ filter: slot.isLit ? 'drop-shadow(0 0 6px #f97316)' : 'none' }}>
+                    <span className={styles.slotIcon} style={{ filter: slot.isLit ? `drop-shadow(0 0 6px ${slot.color})` : 'none' }}>
                       {slot.icon}
                     </span>
                     <span className={styles.slotName} style={{ color: slot.color }}>
