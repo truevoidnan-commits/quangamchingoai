@@ -304,6 +304,33 @@
   letter-spacing: 0.03em;
 }
 
+/* Layer Icon 4 Lục Mang Tinh Góc */
+.cornerHexagramIconsLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 7;
+}
+
+.cornerHexBadge {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(16, 25, 39, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+}
+
+.cornerHexFlameText {
+  font-size: 11px;
+}
+
 /* D. 4 Vị Trí Lơ Lửng Xung Quanh (Mệnh Hỏa / Mệnh Đăng) */
 .surroundingSlotsLayer {
   position: absolute;
