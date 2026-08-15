@@ -35,24 +35,25 @@ export default function RealmPreviewVisualizer({
   const targetPalaceExp = cultivation?.targetPalaceExp || 2000;
   const bottleneckExp = targetPalaceExp - 1;
 
-  // Tạo 4 Trận Pháp Lục Mang Tinh tại 4 góc (Mỗi góc 1 Lục Mang Tinh chứa đúng 30 Pháp Khiếu)
+  // Tạo 4 Trận Pháp Lục Mang Tinh tại 4 góc (Mỗi góc 1 Lục Mang Tinh chứa đúng 30 Pháp Khiếu với khoảng cách thoáng đãng)
   const { cornerHexagrams, activeLampObj } = useMemo(() => {
     const corners = [
-      { id: 'corner_1', name: 'Mệnh Hỏa 1', cx: 75,  cy: 75,  range: '1-30',   startIdx: 0,  color: '#38bdf8', glow: 'rgba(56, 189, 248, 0.9)' },
-      { id: 'corner_2', name: 'Mệnh Hỏa 2', cx: 265, cy: 75,  range: '31-60',  startIdx: 30, color: '#f97316', glow: 'rgba(249, 115, 22, 0.9)' },
-      { id: 'corner_3', name: 'Mệnh Hỏa 3', cx: 75,  cy: 265, range: '61-90',  startIdx: 60, color: '#fef08a', glow: 'rgba(254, 240, 138, 0.9)' },
-      { id: 'corner_4', name: 'Mệnh Hỏa 4', cx: 265, cy: 265, range: '91-120', startIdx: 90, color: '#c084fc', glow: 'rgba(192, 132, 252, 0.9)' },
+      { id: 'corner_1', name: 'Mệnh Hỏa 1', cx: 82,  cy: 82,  startIdx: 0,  color: '#38bdf8', glow: '#00f2fe' },
+      { id: 'corner_2', name: 'Mệnh Hỏa 2', cx: 278, cy: 82,  startIdx: 30, color: '#fb923c', glow: '#f97316' },
+      { id: 'corner_3', name: 'Mệnh Hỏa 3', cx: 82,  cy: 278, startIdx: 60, color: '#fef08a', glow: '#eab308' },
+      { id: 'corner_4', name: 'Mệnh Hỏa 4', cx: 278, cy: 278, startIdx: 90, color: '#c084fc', glow: '#a855f7' },
     ];
 
-    const R_tip = 46; // Bán kính đỉnh Lục Mang Tinh góc
-    const h = R_tip * 0.5; // 23
-    const w = R_tip * Math.sqrt(3) * 0.5; // ~39.84
+    const R_tip = 56; // Bán kính đỉnh Lục Mang Tinh góc (Mở rộng cho không gian thoáng đãng)
+    const R_circle = 60; // Vòng tròn ngoại tiếp
+    const h = R_tip * 0.5; // 28
+    const w = R_tip * Math.sqrt(3) * 0.5; // ~48.5
 
     const result = corners.map((c, cornerIdx) => {
-      const { cx, cy, startIdx, color } = c;
+      const { cx, cy, startIdx, color, glow } = c;
       const stars = [];
 
-      // 6 Đỉnh của Lục Mang Tinh tại góc này
+      // 6 Đỉnh của 2 Tam Giác Lục Mang Tinh
       // Tam Giác Dương (▲): Top, Right-Bottom, Left-Bottom
       const pTop = { x: cx, y: cy - R_tip };
       const pRB  = { x: cx + w, y: cy + h };
@@ -63,21 +64,21 @@ export default function RealmPreviewVisualizer({
       const pLT  = { x: cx - w, y: cy - h };
       const pRT  = { x: cx + w, y: cy - h };
 
-      // 6 Cạnh Thẳng của 2 Tam Giác (Mỗi cạnh 4 sao = 24 sao)
+      // 6 Cạnh Thẳng của 2 Tam Giác (Mỗi cạnh 3 sao phân bố đều = 18 sao)
       const edges = [
-        { from: pLB, to: pTop },
-        { from: pTop, to: pRB },
-        { from: pRB, to: pLB },
-        { from: pLT, to: pRT },
-        { from: pRT, to: pBot },
-        { from: pBot, to: pLT },
+        { from: pLB, to: pTop }, // Cạnh 1 (▲ Trái -> Đỉnh)
+        { from: pTop, to: pRB }, // Cạnh 2 (▲ Đỉnh -> Phải)
+        { from: pRB, to: pLB }, // Cạnh 3 (▲ Đáy Ngang)
+        { from: pLT, to: pRT }, // Cạnh 4 (▼ Đỉnh Ngang)
+        { from: pRT, to: pBot },// Cạnh 5 (▼ Phải -> Đáy)
+        { from: pBot, to: pLT },// Cạnh 6 (▼ Đáy -> Trái)
       ];
 
-      // 1. Rải 24 sao trên 6 cạnh tam giác (mỗi cạnh 4 sao)
       let localIdx = 0;
+      // 1. 18 Sao trên 6 cạnh của 2 tam giác (mỗi cạnh 3 sao tại t = 0.25, 0.5, 0.75)
       edges.forEach((edge) => {
-        for (let s = 0; s < 4; s++) {
-          const t = (s + 0.5) / 4;
+        for (let s = 1; s <= 3; s++) {
+          const t = s / 4;
           const sx = edge.from.x + t * (edge.to.x - edge.from.x);
           const sy = edge.from.y + t * (edge.to.y - edge.from.y);
           const globalIdx = startIdx + localIdx;
@@ -88,27 +89,34 @@ export default function RealmPreviewVisualizer({
             cy: Number(sy.toFixed(1)),
             isLit: globalIdx < phapKhieu,
             color,
+            glow,
+            type: 'edge',
           });
           localIdx++;
         }
       });
 
-      // 2. Rải 6 sao tại 6 đỉnh nằm trên đường viền vòng tròn (6 sao) => Tổng đúng 30 sao!
-      const outerVertices = [pTop, pRT, pRB, pBot, pLB, pLT];
-      outerVertices.forEach((v) => {
+      // 2. 12 Sao trên vòng tròn ngoại tiếp (cách đều nhau 30 độ quanh vòng tròn = 12 sao) => Tổng đúng 30 sao!
+      for (let k = 0; k < 12; k++) {
+        const rad = (k * 30 - 90) * (Math.PI / 180);
+        const sx = cx + R_circle * Math.cos(rad);
+        const sy = cy + R_circle * Math.sin(rad);
         const globalIdx = startIdx + localIdx;
+
         stars.push({
           idx: globalIdx,
-          cx: Number(v.x.toFixed(1)),
-          cy: Number(v.y.toFixed(1)),
+          cx: Number(sx.toFixed(1)),
+          cy: Number(sy.toFixed(1)),
           isLit: globalIdx < phapKhieu,
           color,
-          isVertex: true,
+          glow,
+          isVertex: k % 2 === 0,
+          type: 'circle',
         });
         localIdx++;
-      });
+      }
 
-      // Sắp xếp các sao theo thứ tự idx tăng dần (1 đến 30 của góc này)
+      // Sắp xếp theo thứ tự khiếu tăng dần
       stars.sort((a, b) => a.idx - b.idx);
 
       const triUp = `M ${pTop.x.toFixed(1)},${pTop.y.toFixed(1)} L ${pRB.x.toFixed(1)},${pRB.y.toFixed(1)} L ${pLB.x.toFixed(1)},${pLB.y.toFixed(1)} Z`;
@@ -125,6 +133,7 @@ export default function RealmPreviewVisualizer({
       return {
         ...c,
         R_tip,
+        R_circle,
         stars,
         triUp,
         triDown,
@@ -191,38 +200,39 @@ export default function RealmPreviewVisualizer({
       {realm === 'truc_co' && (
         <div className={styles.trucCoStage}>
           <div className={styles.starChartBackdrop}>
-            <svg viewBox="0 0 340 340" className={styles.starChartSvg}>
+            <svg viewBox="0 0 360 380" className={styles.starChartSvg}>
               <defs>
                 <radialGradient id="centerAltarGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#00f2fe" stopOpacity="0.25" />
-                  <stop offset="60%" stopColor="#0284c7" stopOpacity="0.08" />
+                  <stop offset="0%" stopColor="#00f2fe" stopOpacity="0.3" />
+                  <stop offset="60%" stopColor="#0284c7" stopOpacity="0.1" />
                   <stop offset="100%" stopColor="transparent" stopOpacity="0" />
                 </radialGradient>
 
                 <linearGradient id="daoistBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.95" />
+                  <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.95" />
                   <stop offset="60%" stopColor="#0284c7" stopOpacity="0.85" />
                   <stop offset="100%" stopColor="#0f172a" stopOpacity="0.95" />
                 </linearGradient>
 
-                {/* ClipPath cho 4 hình tròn Mệnh Đăng ở 4 góc */}
+                {/* ClipPath cho 4 hình tròn Mệnh Đăng ở 4 góc (r = 19px, đường kính 38px) */}
                 <clipPath id="cornerClip_corner_1">
-                  <circle cx="75" cy="75" r="14" />
+                  <circle cx="82" cy="82" r="19" />
                 </clipPath>
                 <clipPath id="cornerClip_corner_2">
-                  <circle cx="265" cy="75" r="14" />
+                  <circle cx="278" cy="82" r="19" />
                 </clipPath>
                 <clipPath id="cornerClip_corner_3">
-                  <circle cx="75" cy="265" r="14" />
+                  <circle cx="82" cy="278" r="19" />
                 </clipPath>
                 <clipPath id="cornerClip_corner_4">
-                  <circle cx="265" cy="265" r="14" />
+                  <circle cx="278" cy="278" r="19" />
                 </clipPath>
 
-                {/* Glow Filter for Stars */}
-                <filter id="starGlow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
+                {/* Super Glow Filter cho các Pháp Khiếu Rực Sáng */}
+                <filter id="superStarGlow" x="-80%" y="-80%" width="260%" height="260%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
                   <feMerge>
+                    <feMergeNode in="blur" />
                     <feMergeNode in="blur" />
                     <feMergeNode in="SourceGraphic" />
                   </feMerge>
@@ -233,31 +243,33 @@ export default function RealmPreviewVisualizer({
               {cornerHexagrams.map((c) => (
                 <line
                   key={`meridian_${c.id}`}
-                  x1="170"
-                  y1="170"
+                  x1="180"
+                  y1="180"
                   x2={c.cx}
                   y2={c.cy}
                   stroke={c.isComplete ? c.color : c.litCount > 0 ? c.color : 'rgba(255, 255, 255, 0.12)'}
-                  strokeWidth={c.isComplete ? 1.5 : c.litCount > 0 ? 1 : 0.6}
+                  strokeWidth={c.isComplete ? 1.6 : c.litCount > 0 ? 1.2 : 0.6}
                   strokeDasharray={c.isComplete ? 'none' : '3, 4'}
-                  opacity={c.isComplete ? 0.85 : c.litCount > 0 ? 0.5 : 0.25}
+                  opacity={c.isComplete ? 0.9 : c.litCount > 0 ? 0.6 : 0.25}
                 />
               ))}
 
               {/* VÒNG ĐẠI BÁT QUÁI BAO QUANH TU SĨ TRUNG TÂM */}
               <circle
-                cx="170"
-                cy="170"
-                r="36"
+                cx="180"
+                cy="180"
+                r="38"
                 fill="url(#centerAltarGlow)"
-                stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(56, 189, 248, 0.35)'}
-                strokeWidth={phapKhieu >= 120 ? 1.8 : 1}
+                stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(56, 189, 248, 0.4)'}
+                strokeWidth={phapKhieu >= 120 ? 2 : 1}
                 strokeDasharray={phapKhieu >= 120 ? 'none' : '3, 3'}
               />
 
               {/* VẼ 4 LỤC MANG TINH TẠI 4 GÓC (CHỨA MỆNH ĐĂNG / MỆNH HỎA GÓC) */}
               {cornerHexagrams.map((c) => {
                 const aiIconUrl = c.lampObj?.id ? LAMP_THAN_PHAM_AI_ICONS[c.lampObj.id] : null;
+                const labelText = c.lampObj?.shortName || c.name;
+                const labelWidth = Math.max(54, labelText.length * 6.5 + 14);
 
                 return (
                   <g key={c.id}>
@@ -265,64 +277,72 @@ export default function RealmPreviewVisualizer({
                     <circle
                       cx={c.cx}
                       cy={c.cy}
-                      r={c.R_tip}
-                      fill="rgba(15, 23, 42, 0.65)"
+                      r={c.R_circle}
+                      fill="rgba(15, 23, 42, 0.6)"
                       stroke={c.isComplete ? c.color : c.litCount > 0 ? c.color : 'rgba(56, 189, 248, 0.25)'}
-                      strokeWidth={c.isComplete ? 1.5 : 0.8}
+                      strokeWidth={c.isComplete ? 1.6 : 0.8}
                       strokeDasharray={c.isComplete ? 'none' : '2, 3'}
-                      opacity={c.isComplete ? 0.95 : c.litCount > 0 ? 0.7 : 0.3}
+                      opacity={c.isComplete ? 0.95 : c.litCount > 0 ? 0.75 : 0.3}
                     />
 
                     {/* 2 Tam Giác Tạo Lục Mang Tinh (▲ và ▼) */}
                     <path
                       d={c.triUp}
                       fill="none"
-                      stroke={c.litCount >= 15 ? c.color : 'rgba(255, 255, 255, 0.12)'}
-                      strokeWidth={c.litCount >= 15 ? 1.2 : 0.6}
+                      stroke={c.litCount >= 15 ? c.color : 'rgba(255, 255, 255, 0.15)'}
+                      strokeWidth={c.litCount >= 15 ? 1.4 : 0.7}
                     />
                     <path
                       d={c.triDown}
                       fill="none"
-                      stroke={c.isComplete ? c.color : 'rgba(255, 255, 255, 0.12)'}
-                      strokeWidth={c.isComplete ? 1.2 : 0.6}
+                      stroke={c.isComplete ? c.color : 'rgba(255, 255, 255, 0.15)'}
+                      strokeWidth={c.isComplete ? 1.4 : 0.7}
                     />
 
-                    {/* 30 Ngôi Sao Pháp Khiếu Của Góc Này (Nằm Im Tuyệt Đối) */}
+                    {/* 30 Ngôi Sao Pháp Khiếu Của Góc Này (Nằm Im Tuyệt Đối, Sáng Rực Rỡ) */}
                     {c.stars.map((star) => (
-                      <circle
-                        key={star.idx}
-                        cx={star.cx}
-                        cy={star.cy}
-                        r={star.isLit ? (star.isVertex ? 3.2 : 2.2) : 1.2}
-                        fill={star.isLit ? star.color : 'rgba(255, 255, 255, 0.16)'}
-                        filter={star.isLit ? 'url(#starGlow)' : 'none'}
-                        className={`${styles.starDot} ${star.isLit ? styles.starLit : styles.starDim}`}
-                        style={{
-                          '--star-color': star.color,
-                        }}
-                      />
+                      <g key={star.idx}>
+                        {/* Hào quang sao */}
+                        <circle
+                          cx={star.cx}
+                          cy={star.cy}
+                          r={star.isLit ? (star.isVertex ? 4.2 : 3.2) : 1.8}
+                          fill={star.isLit ? star.color : 'rgba(255, 255, 255, 0.16)'}
+                          filter={star.isLit ? 'url(#superStarGlow)' : 'none'}
+                          opacity={star.isLit ? 1 : 0.4}
+                        />
+                        {/* Nhân sáng trắng bên trong sao đã mở */}
+                        {star.isLit && (
+                          <circle
+                            cx={star.cx}
+                            cy={star.cy}
+                            r={star.isVertex ? 1.8 : 1.3}
+                            fill="#ffffff"
+                          />
+                        )}
+                      </g>
                     ))}
 
-                    {/* TÂM MỆNH ĐĂNG / MỆNH HỎA TẠI GÓC NÀY (DÙNG SVG NATIVE 100% KHÔNG LỆCH) */}
+                    {/* TÂM MỆNH ĐĂNG / MỆNH HỎA TẠI GÓC NÀY (RỘNG 38px RÕ NÉT) */}
                     <g>
                       {/* Nền tròn tâm */}
                       <circle
                         cx={c.cx}
                         cy={c.cy}
-                        r="14"
+                        r="19"
                         fill="rgba(10, 16, 26, 0.95)"
                         stroke={c.isComplete ? c.color : c.isFireLit ? c.color : 'rgba(255, 255, 255, 0.25)'}
-                        strokeWidth="1.2"
+                        strokeWidth="1.5"
                       />
 
-                      {/* Nếu có ảnh AI của Mệnh Đăng -> vẽ thẳng bằng SVG <image> */}
+                      {/* Nếu có ảnh AI của Mệnh Đăng -> vẽ thẳng bằng SVG <image> (rộng 38px) */}
                       {aiIconUrl ? (
                         <image
                           href={aiIconUrl}
-                          x={c.cx - 14}
-                          y={c.cy - 14}
-                          width="28"
-                          height="28"
+                          x={c.cx - 19}
+                          y={c.cy - 19}
+                          width="38"
+                          height="38"
                           clipPath={`url(#cornerClip_${c.id})`}
                           preserveAspectRatio="xMidYMid slice"
                         />
@@ -330,67 +350,81 @@ export default function RealmPreviewVisualizer({
                         /* Nếu là Mệnh Hỏa / Chưa có Mệnh Đăng AI */
                         <text
                           x={c.cx}
-                          y={c.cy + 4.5}
+                          y={c.cy + 5.5}
                           textAnchor="middle"
-                          fontSize="13"
+                          fontSize="16"
                         >
                           {c.isFireLit ? '🔥' : '🕯️'}
                         </text>
                       )}
 
-                      {/* Viền sáng bảo hộ */}
+                      {/* Viền sáng bảo hộ bên ngoài Mệnh Đăng */}
                       <circle
                         cx={c.cx}
                         cy={c.cy}
-                        r="14"
+                        r="19"
                         fill="none"
-                        stroke={c.isComplete ? c.color : c.isFireLit ? c.color : 'rgba(255, 255, 255, 0.3)'}
-                        strokeWidth={c.isComplete ? 1.5 : 1}
+                        stroke={c.isComplete ? c.color : c.isFireLit ? c.color : 'rgba(255, 255, 255, 0.35)'}
+                        strokeWidth={c.isComplete ? 2 : 1.2}
                       />
 
-                      {/* Tên Mệnh Đăng / Mệnh Hỏa Góc */}
-                      <text
-                        x={c.cx}
-                        y={c.cy + 25}
-                        textAnchor="middle"
-                        fill={c.isComplete ? c.color : c.isFireLit ? c.color : '#94a3b8'}
-                        fontSize="8"
-                        fontWeight="700"
-                        fontFamily="var(--font-serif)"
-                      >
-                        {c.lampObj?.shortName || c.name}
-                      </text>
+                      {/* KHUNG BADGE TÊN MỆNH ĐĂNG / MỆNH HỎA GÓC (ĐẶT BÊN NGOÀI KHÔNG BỊ CHE) */}
+                      <g transform={`translate(${c.cx}, ${c.cy + c.R_circle + 13})`}>
+                        <rect
+                          x={-labelWidth / 2}
+                          y="-9"
+                          width={labelWidth}
+                          height="18"
+                          rx="9"
+                          fill="rgba(10, 16, 26, 0.88)"
+                          stroke={c.isComplete ? c.color : c.isFireLit ? c.color : 'rgba(255, 255, 255, 0.2)'}
+                          strokeWidth="1"
+                        />
+                        <text
+                          x="0"
+                          y="3.5"
+                          textAnchor="middle"
+                          fill={c.isComplete ? c.color : c.isFireLit ? c.color : '#94a3b8'}
+                          fontSize="8.5"
+                          fontWeight="700"
+                          fontFamily="var(--font-serif)"
+                        >
+                          {labelText}
+                        </text>
+                      </g>
                     </g>
                   </g>
                 );
               })}
 
               {/* TU SĨ TỌA THIỀN Ở CHÍNH GIỮA TRẬN PHÁP (CENTER DAOIST SILHOUETTE) */}
-              <g transform="translate(170, 170)">
+              <g transform="translate(180, 180)">
                 {/* Hào quang thiền định */}
-                <ellipse cx="0" cy="0" rx="30" ry="34" fill="rgba(56, 189, 248, 0.08)" stroke="rgba(56, 189, 248, 0.35)" strokeWidth="1" strokeDasharray="3,3" />
+                <ellipse cx="0" cy="0" rx="32" ry="36" fill="rgba(56, 189, 248, 0.08)" stroke="rgba(56, 189, 248, 0.35)" strokeWidth="1" strokeDasharray="3,3" />
 
                 {/* Đầu tu sĩ */}
-                <circle cx="0" cy="-18" r="7.5" fill="url(#daoistBodyGrad)" stroke="#38bdf8" strokeWidth="1" />
+                <circle cx="0" cy="-19" r="8" fill="url(#daoistBodyGrad)" stroke="#38bdf8" strokeWidth="1" />
 
                 {/* Thân & Dáng Ngồi Kiết Già (Lotus Silhouette) */}
                 <path
-                  d="M 0 -10 C -7 -10, -16 -4, -18 4 C -20 12, -27 17, -25 21 C -23 25, -12 25, 0 25 C 12 25, 23 25, 25 21 C 27 17, 20 12, 18 4 C 16 -4, 7 -10, 0 -10 Z"
+                  d="M 0 -11 C -8 -11, -17 -4, -19 4 C -21 12, -29 18, -27 22 C -25 26, -13 26, 0 26 C 13 26, 25 26, 27 22 C 29 18, 21 12, 19 4 C 17 -4, 8 -11, 0 -11 Z"
                   fill="url(#daoistBodyGrad)"
                   stroke="#38bdf8"
                   strokeWidth="1.2"
                 />
 
                 {/* Đan Điền Core Vàng Sáng Rực */}
-                <circle cx="0" cy="8" r="4.5" fill="#ffcc00" filter="url(#starGlow)" className={styles.daoistDanDien} />
+                <circle cx="0" cy="9" r="5" fill="#ffcc00" filter="url(#superStarGlow)" className={styles.daoistDanDien} />
+                <circle cx="0" cy="9" r="2" fill="#ffffff" />
               </g>
 
               {/* Hào Quang Cực Cảnh 121 (Nếu Mở Khóa) */}
               {has121st && (
                 <g>
-                  <line x1="170" y1="134" x2="170" y2="45" stroke="#ec4899" strokeWidth="2" strokeDasharray="3,2" className={styles.lightningBeam121} />
-                  <circle cx="170" cy="45" r="8" fill="none" stroke="#f472b6" strokeWidth="1.5" className={styles.crownAuraRing} />
-                  <circle cx="170" cy="45" r="4.5" fill="#ec4899" />
+                  <line x1="180" y1="142" x2="180" y2="40" stroke="#ec4899" strokeWidth="2" strokeDasharray="3,2" className={styles.lightningBeam121} />
+                  <circle cx="180" cy="40" r="9" fill="none" stroke="#f472b6" strokeWidth="1.5" className={styles.crownAuraRing} />
+                  <circle cx="180" cy="40" r="5" fill="#ec4899" />
+                  <circle cx="180" cy="40" r="2" fill="#ffffff" />
                 </g>
               )}
             </svg>
