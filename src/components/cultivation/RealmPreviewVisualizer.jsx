@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { LIFE_LAMPS, LAMP_TIERS, SUPPRESSING_ARTIFACTS, getPalaceNameFromArtifact, getPalaceElementTheme, getLampPalaceName, formatDaoAnhTitle, getDaoAnhTheme } from '../../lib/cultivation';
+import { LAMP_THAN_PHAM_AI_ICONS } from '../../lib/artifactIcons';
 import ArtifactIcon from './ArtifactIcon';
 import styles from './RealmPreviewVisualizer.module.css';
 
