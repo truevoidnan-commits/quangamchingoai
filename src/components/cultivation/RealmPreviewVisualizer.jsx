@@ -35,27 +35,25 @@ export default function RealmPreviewVisualizer({
   const bottleneckExp = targetPalaceExp - 1;
 
   // Tạo danh sách 120 điểm sao tinh đồ theo chu vi hình LỤC MANG TINH ĐẠI TRẬN (6 cánh, 12 cạnh × 10 sao)
-  const { constellationStars, hexagramPathD, triangleUpD, triangleDownD, starVertices, activeLampObj } = useMemo(() => {
+  const { constellationStars, hexagramPathD, triangleUpD, triangleDownD, activeLampObj } = useMemo(() => {
     const stars = [];
     const cx = 160;
     const cy = 165;
-    const R_tip = 102; // Bán kính 6 đỉnh nhọn của sao
-    const R_val = R_tip / Math.sqrt(3); // Bán kính 6 góc lõm giữa các cánh (~58.9px)
 
-    // 12 Đỉnh tạo thành đường viền Lục Mang Tinh theo chiều kim đồng hồ từ Đỉnh 12h
+    // 12 Tọa độ Đỉnh và Góc Lõm chuẩn xác tuyệt đối của Lục Mang Tinh (Bán kính đỉnh 96px, bán kính góc lõm 55.43px)
     const V = [
-      { x: cx, cy: cy - R_tip },                                                     // V0 (Tip 0, 12h)
-      { x: cx + R_val * Math.cos(-Math.PI / 3), y: cy + R_val * Math.sin(-Math.PI / 3) }, // V1 (Valley 0, 1h)
-      { x: cx + R_tip * Math.cos(-Math.PI / 6), y: cy + R_tip * Math.sin(-Math.PI / 6) }, // V2 (Tip 1, 2h)
-      { x: cx + R_val, y: cy },                                                      // V3 (Valley 1, 3h)
-      { x: cx + R_tip * Math.cos(Math.PI / 6),  y: cy + R_tip * Math.sin(Math.PI / 6) },  // V4 (Tip 2, 4h)
-      { x: cx + R_val * Math.cos(Math.PI / 3),  y: cy + R_val * Math.sin(Math.PI / 3) },  // V5 (Valley 2, 5h)
-      { x: cx, y: cy + R_tip },                                                      // V6 (Tip 3, 6h)
-      { x: cx + R_val * Math.cos(2 * Math.PI / 3), y: cy + R_val * Math.sin(2 * Math.PI / 3) }, // V7 (Valley 3, 7h)
-      { x: cx + R_tip * Math.cos(5 * Math.PI / 6), y: cy + R_tip * Math.sin(5 * Math.PI / 6) }, // V8 (Tip 4, 8h)
-      { x: cx - R_val, y: cy },                                                      // V9 (Valley 4, 9h)
-      { x: cx + R_tip * Math.cos(-5 * Math.PI / 6), y: cy + R_tip * Math.sin(-5 * Math.PI / 6) }, // V10 (Tip 5, 10h)
-      { x: cx + R_val * Math.cos(-2 * Math.PI / 3), y: cy + R_val * Math.sin(-2 * Math.PI / 3) }, // V11 (Valley 5, 11h)
+      { x: 160.00, y: 69.00 },  // V0 (Tip 0 - Đỉnh 12h, Trên cùng)
+      { x: 187.71, y: 117.00 }, // V1 (Valley 0 - 1h)
+      { x: 243.14, y: 117.00 }, // V2 (Tip 1 - 2h, Phải Trên)
+      { x: 215.43, y: 165.00 }, // V3 (Valley 1 - 3h)
+      { x: 243.14, y: 213.00 }, // V4 (Tip 2 - 4h, Phải Dưới)
+      { x: 187.71, y: 213.00 }, // V5 (Valley 2 - 5h)
+      { x: 160.00, y: 261.00 }, // V6 (Tip 3 - 6h, Dưới cùng)
+      { x: 132.29, y: 213.00 }, // V7 (Valley 3 - 7h)
+      { x: 76.86,  y: 213.00 }, // V8 (Tip 4 - 8h, Trái Dưới)
+      { x: 104.57, y: 165.00 }, // V9 (Valley 4 - 9h)
+      { x: 76.86,  y: 117.00 }, // V10 (Tip 5 - 10h, Trái Trên)
+      { x: 132.29, y: 117.00 }, // V11 (Valley 5 - 11h)
     ];
 
     // Rải đều 120 Pháp Khiếu trên 12 cạnh viền Lục Mang Tinh (Mỗi cạnh 10 sao = 120 sao)
@@ -67,7 +65,7 @@ export default function RealmPreviewVisualizer({
       for (let s = 0; s < starsPerSeg; s++) {
         const t = (s + 0.5) / starsPerSeg;
         const sx = p1.x + t * (p2.x - p1.x);
-        const sy = (p1.y || p1.cy) + t * ((p2.y || p2.cy) - (p1.y || p1.cy));
+        const sy = p1.y + t * (p2.y - p1.y);
 
         const globalIdx = seg * starsPerSeg + s; // 0 đến 119
         const isLit = globalIdx < phapKhieu;
@@ -79,8 +77,8 @@ export default function RealmPreviewVisualizer({
         stars.push({
           idx: globalIdx,
           seg,
-          cx: Number(sx.toFixed(1)),
-          cy: Number(sy.toFixed(1)),
+          cx: Number(sx.toFixed(2)),
+          cy: Number(sy.toFixed(2)),
           isLit,
           isMilestone,
           color: starColor,
@@ -89,11 +87,11 @@ export default function RealmPreviewVisualizer({
     }
 
     // SVG path string cho toàn bộ viền Lục Mang Tinh
-    const hexPath = V.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(1)},${(pt.y || pt.cy).toFixed(1)}`).join(' ') + ' Z';
+    const hexPath = V.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(2)},${pt.y.toFixed(2)}`).join(' ') + ' Z';
 
     // 2 Tam Giác Lớn Lồng Nhau (Tam Giác Dương ▲ & Tam Giác Âm ▼)
-    const triUp = `M ${V[0].x.toFixed(1)},${(V[0].y || V[0].cy).toFixed(1)} L ${V[4].x.toFixed(1)},${(V[4].y || V[4].cy).toFixed(1)} L ${V[8].x.toFixed(1)},${(V[8].y || V[8].cy).toFixed(1)} Z`;
-    const triDown = `M ${V[6].x.toFixed(1)},${(V[6].y || V[6].cy).toFixed(1)} L ${V[10].x.toFixed(1)},${(V[10].y || V[10].cy).toFixed(1)} L ${V[2].x.toFixed(1)},${(V[2].y || V[2].cy).toFixed(1)} Z`;
+    const triUp = `M ${V[0].x.toFixed(2)},${V[0].y.toFixed(2)} L ${V[4].x.toFixed(2)},${V[4].y.toFixed(2)} L ${V[8].x.toFixed(2)},${V[8].y.toFixed(2)} Z`;
+    const triDown = `M ${V[6].x.toFixed(2)},${V[6].y.toFixed(2)} L ${V[10].x.toFixed(2)},${V[10].y.toFixed(2)} L ${V[2].x.toFixed(2)},${V[2].y.toFixed(2)} Z`;
 
     const absorbedLampObjs = (cultivation?.absorbedLamps || []).map(id => LIFE_LAMPS.find(l => l.id === id)).filter(Boolean);
     const activeLamp = absorbedLampObjs[0] || LIFE_LAMPS[0];
@@ -103,7 +101,6 @@ export default function RealmPreviewVisualizer({
       hexagramPathD: hexPath,
       triangleUpD: triUp,
       triangleDownD: triDown,
-      starVertices: V,
       activeLampObj: activeLamp,
     };
   }, [phapKhieu, cultivation?.absorbedLamps]);
