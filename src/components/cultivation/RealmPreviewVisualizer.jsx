@@ -98,6 +98,7 @@ export default function RealmPreviewVisualizer({
           ...slot,
           type: 'lamp',
           isLit: true,
+          lampObj: lamp,
           icon: lamp?.icon || '🏮',
           title: lamp?.shortName || lamp?.name || 'Mệnh Đăng',
           tierName: tier?.name,
@@ -130,6 +131,7 @@ export default function RealmPreviewVisualizer({
       const lamp = LIFE_LAMPS.find(l => l.id === lampId);
       const tier = lamp ? (LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham) : null;
       return {
+        lampObj: lamp,
         icon: lamp?.icon || '🏮',
         title: lamp?.shortName || lamp?.name || 'Mệnh Đăng 5',
         color: tier?.color || '#ffcc00',
@@ -281,7 +283,11 @@ export default function RealmPreviewVisualizer({
                     }}
                   >
                     <span className={styles.slotIcon} style={{ filter: `drop-shadow(0 0 6px ${slot.color})` }}>
-                      {slot.icon}
+                      {slot.lampObj ? (
+                        <ArtifactIcon item={slot.lampObj} isLamp={true} size={28} />
+                      ) : (
+                        slot.icon
+                      )}
                     </span>
                     <span className={styles.slotName} style={{ color: slot.color }}>
                       {slot.title}
@@ -314,7 +320,13 @@ export default function RealmPreviewVisualizer({
                     backgroundColor: fifthLamp.bg || 'rgba(16, 25, 39, 0.9)',
                   }}
                 >
-                  <span className={styles.slotIcon}>{fifthLamp.icon}</span>
+                  <span className={styles.slotIcon}>
+                    {fifthLamp.lampObj ? (
+                      <ArtifactIcon item={fifthLamp.lampObj} isLamp={true} size={28} />
+                    ) : (
+                      fifthLamp.icon
+                    )}
+                  </span>
                   <span className={styles.slotName} style={{ color: fifthLamp.color }}>{fifthLamp.title}</span>
                 </div>
               </div>

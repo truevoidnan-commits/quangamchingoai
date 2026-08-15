@@ -432,7 +432,11 @@ export default function CultivationModal({ isOpen, onClose }) {
                           title={`[${tier?.name}] ${lamp?.name || 'Mệnh Đăng'}`}
                         >
                           <span className={styles.slotIconAnimated} style={{ filter: `drop-shadow(0 0 6px ${tier?.color})` }}>
-                            {lamp?.icon || '🏮'}
+                            {lamp ? (
+                              <ArtifactIcon item={lamp} isLamp={true} size={28} />
+                            ) : (
+                              '🏮'
+                            )}
                           </span>
                           <span className={styles.slotTitleText} style={{ color: tier?.color }}>
                             {lamp?.shortName || lamp?.name || `Đăng ${idx}`}
@@ -479,7 +483,11 @@ export default function CultivationModal({ isOpen, onClose }) {
                           title={`[${tier5?.name}] ${lamp5?.name || 'Mệnh Đăng 5'}`}
                         >
                           <span className={styles.slotIconAnimated} style={{ filter: `drop-shadow(0 0 6px ${tier5?.color})` }}>
-                            {lamp5?.icon || '🏮'}
+                            {lamp5 ? (
+                              <ArtifactIcon item={lamp5} isLamp={true} size={28} />
+                            ) : (
+                              '🏮'
+                            )}
                           </span>
                           <span className={styles.slotTitleText} style={{ color: tier5?.color }}>
                             {lamp5?.shortName || lamp5?.name || 'Đăng 5'}
