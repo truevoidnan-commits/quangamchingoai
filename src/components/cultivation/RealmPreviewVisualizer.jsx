@@ -35,46 +35,30 @@ export default function RealmPreviewVisualizer({
   const targetPalaceExp = cultivation?.targetPalaceExp || 2000;
   const bottleneckExp = targetPalaceExp - 1;
 
-  // PHƯƠNG ÁN 1: LƯỠNG NGHI SONG LONG TRIỀU NHẬT (THÁI CỰC CHỮ S & MẮT ÂM DƯƠNG)
-  const { taijiSPath, yangStars, yinStars, outerStars, lampAltars, activeLampObj, fifthLampObj } = useMemo(() => {
+  // PHƯƠNG ÁN 1: THÁI CỰC ĐẠI TRẬN PHÁP (CHUẨN TOÁN HỌC KHÔNG TRÙNG LẶP, CỰC KỲ THOÁNG ĐÃNG)
+  const { sCurveTopStars, sCurveBotStars, outerLeftStars, outerRightStars, allStars, lampAltars, activeLampObj, fifthLampObj } = useMemo(() => {
     const cx = 180;
     const cy = 185;
-    const R = 136; // Bán kính vòng Thái Cực Đồ lớn
+    const R = 135; // Bán kính vòng tròn Thái Cực
+    const rSub = R / 2; // 67.5
 
-    // 1. TỌA ĐỘ 2 MẮT ÂM - DƯƠNG (NƠI ĐẶT 4 MỆNH ĐĂNG THEO CẶP HOẶC 4 PHƯƠNG VỊ THÁI CỰC)
-    // - Mắt Dương (Bên Trái / Phía Trên): cx = 120, cy = 145 (Đặt Mệnh Đăng 1 & Mệnh Đăng 2)
-    // - Mắt Âm (Bên Phải / Phía Dưới): cx = 240, cy = 225 (Đặt Mệnh Đăng 3 & Mệnh Đăng 4)
-    const eyeYang = { x: 122, y: 148, r: 24 };
-    const eyeYin = { x: 238, y: 222, r: 24 };
+    // 1. Tọa Độ 2 Mắt Âm - Dương Cổ Điển
+    // - Mắt Dương (Nửa Trên): (cx, cy - rSub) = (180, 117.5)
+    // - Mắt Âm (Nửa Dưới): (cx, cy + rSub) = (180, 252.5)
+    // - Đài Đèn Cánh Trái: (cx - R, cy) = (45, 185)
+    // - Đài Đèn Cánh Phải: (cx + R, cy) = (315, 185)
 
-    // 2. PHÂN BỐ 120 PHÁP KHIẾU:
-    // - 30 Khiếu Nhánh Dương (Hỏa 1: 1-30): Uốn lượn theo nửa trên của đường cong chữ S và ôm quanh Mắt Dương.
-    // - 30 Khiếu Nhánh Thiếu Dương (Hỏa 2: 31-60): Men theo vòng cung Dương ngoài cùng bên trái (90° -> 270°).
-    // - 30 Khiếu Nhánh Âm (Hỏa 3: 61-90): Uốn lượn theo nửa dưới của đường cong chữ S và ôm quanh Mắt Âm.
-    // - 30 Khiếu Nhánh Thiếu Âm (Hỏa 4: 91-120): Men theo vòng cung Âm ngoài cùng bên phải (270° -> 90°).
+    const allStarsList = [];
 
-    const allStars = [];
-
-    // Nhánh 1 (Khiếu 1-30, Xanh Lam #38bdf8): Đường cong S trên & quanh Mắt Dương
+    // NHÁNH 1: 30 SAO ĐƯỜNG CONG CHỮ S NỬA TRÊN (DƯƠNG QUÂN: KHIẾU 1-30, XANH LAM)
+    // Chạy từ đỉnh (180, 50) uốn cong hình bán nguyệt về tâm (180, 185)
     for (let i = 0; i < 30; i++) {
       const t = (i + 0.5) / 30;
-      let sx, sy;
-      if (t < 0.65) {
-        // Chạy dọc theo nửa trên đường chữ S (từ đỉnh 0, -R uốn vào tâm)
-        const prog = t / 0.65;
-        const angle = -Math.PI / 2 + Math.PI * prog;
-        const rSub = R / 2;
-        sx = cx + rSub * Math.sin(angle);
-        sy = cy - rSub + rSub * Math.cos(angle);
-      } else {
-        // Vòng quanh Mắt Dương
-        const prog = (t - 0.65) / 0.35;
-        const angle = prog * 2 * Math.PI - Math.PI / 2;
-        sx = eyeYang.x + 32 * Math.cos(angle);
-        sy = eyeYang.y + 32 * Math.sin(angle);
-      }
+      const angle = -Math.PI / 2 + Math.PI * t; // -90° -> +90°
+      const sx = cx + rSub * Math.cos(angle);
+      const sy = (cy - rSub) + rSub * Math.sin(angle);
 
-      allStars.push({
+      allStarsList.push({
         idx: i,
         cx: Number(sx.toFixed(1)),
         cy: Number(sy.toFixed(1)),
@@ -86,16 +70,16 @@ export default function RealmPreviewVisualizer({
       });
     }
 
-    // Nhánh 2 (Khiếu 31-60, Đỏ Cam #fb923c): Vòng cung ngoài bên Trái (Dương Ngư Viền)
+    // NHÁNH 2: 30 SAO VÒNG NGOÀI CÁNH TRÁI (DƯƠNG TIÊU: KHIẾU 31-60, ĐỎ CAM)
+    // Chạy từ đỉnh (180, 50) men theo vòng cung bên trái xuống đáy (180, 320)
     for (let i = 0; i < 30; i++) {
       const globalIdx = 30 + i;
       const t = (i + 0.5) / 30;
-      // Góc từ -90° (đỉnh) qua 180° (trái) tới 90° (đáy)
-      const angle = -Math.PI / 2 - Math.PI * t;
+      const angle = -Math.PI / 2 - Math.PI * t; // -90° -> -270° (qua góc 180° trái)
       const sx = cx + R * Math.cos(angle);
       const sy = cy + R * Math.sin(angle);
 
-      allStars.push({
+      allStarsList.push({
         idx: globalIdx,
         cx: Number(sx.toFixed(1)),
         cy: Number(sy.toFixed(1)),
@@ -107,27 +91,16 @@ export default function RealmPreviewVisualizer({
       });
     }
 
-    // Nhánh 3 (Khiếu 61-90, Hoàng Kim #fef08a): Đường cong S dưới & quanh Mắt Âm
+    // NHÁNH 3: 30 SAO ĐƯỜNG CONG CHỮ S NỬA DƯỚI (ÂM QUÂN: KHIẾU 61-90, HOÀNG KIM)
+    // Chạy từ tâm (180, 185) uốn cong hình bán nguyệt xuống đáy (180, 320)
     for (let i = 0; i < 30; i++) {
       const globalIdx = 60 + i;
       const t = (i + 0.5) / 30;
-      let sx, sy;
-      if (t < 0.65) {
-        // Chạy dọc theo nửa dưới đường chữ S (từ tâm uốn xuống đáy 0, R)
-        const prog = t / 0.65;
-        const angle = Math.PI * prog;
-        const rSub = R / 2;
-        sx = cx - rSub * Math.sin(angle);
-        sy = cy + rSub - rSub * Math.cos(angle);
-      } else {
-        // Vòng quanh Mắt Âm
-        const prog = (t - 0.65) / 0.35;
-        const angle = prog * 2 * Math.PI + Math.PI / 2;
-        sx = eyeYin.x + 32 * Math.cos(angle);
-        sy = eyeYin.y + 32 * Math.sin(angle);
-      }
+      const angle = Math.PI / 2 + Math.PI * t; // +90° -> +270°
+      const sx = cx + rSub * Math.cos(angle);
+      const sy = (cy + rSub) + rSub * Math.sin(angle);
 
-      allStars.push({
+      allStarsList.push({
         idx: globalIdx,
         cx: Number(sx.toFixed(1)),
         cy: Number(sy.toFixed(1)),
@@ -139,16 +112,16 @@ export default function RealmPreviewVisualizer({
       });
     }
 
-    // Nhánh 4 (Khiếu 91-120, Tử Quang #c084fc): Vòng cung ngoài bên Phải (Âm Ngư Viền)
+    // NHÁNH 4: 30 SAO VÒNG NGOÀI CÁNH PHẢI (ÂM TIÊU: KHIẾU 91-120, TỬ QUANG)
+    // Chạy từ đáy (180, 320) men theo vòng cung bên phải lên đỉnh (180, 50)
     for (let i = 0; i < 30; i++) {
       const globalIdx = 90 + i;
       const t = (i + 0.5) / 30;
-      // Góc từ 90° (đáy) qua 0° (phải) tới -90° (đỉnh)
-      const angle = Math.PI / 2 - Math.PI * t;
+      const angle = Math.PI / 2 - Math.PI * t; // +90° -> -90° (qua góc 0° phải)
       const sx = cx + R * Math.cos(angle);
       const sy = cy + R * Math.sin(angle);
 
-      allStars.push({
+      allStarsList.push({
         idx: globalIdx,
         cx: Number(sx.toFixed(1)),
         cy: Number(sy.toFixed(1)),
@@ -160,19 +133,16 @@ export default function RealmPreviewVisualizer({
       });
     }
 
-    // Đường cong phân giới Âm Dương S-Curve Path
-    const sPath = `M ${cx} ${cy - R} A ${R / 2} ${R / 2} 0 0 1 ${cx} ${cy} A ${R / 2} ${R / 2} 0 0 0 ${cx} ${cy + R}`;
-
-    // CẤU HÌNH 4 MỆNH ĐĂNG TỌA TRẤN THÁI CỰC:
-    // Đèn 1: Mắt Dương (122, 148)
-    // Đèn 2: Cánh Trái Dương (cx - R, cy) = (44, 185)
-    // Đèn 3: Mắt Âm (238, 222)
-    // Đèn 4: Cánh Phải Âm (cx + R, cy) = (316, 185)
+    // 4 TÒA MỆNH ĐĂNG ĐẶT TẠI 4 VỊ TRÍ CHIẾN LƯỢC:
+    // Đèn 1: Mắt Dương (180, 117.5)
+    // Đèn 2: Cánh Trái (45, 185)
+    // Đèn 3: Mắt Âm (180, 252.5)
+    // Đèn 4: Cánh Phải (315, 185)
     const lampPositions = [
-      { id: 'lamp_1', name: 'Mệnh Hỏa 1', x: 122, y: 148, color: '#38bdf8' },
-      { id: 'lamp_2', name: 'Mệnh Hỏa 2', x: 44,  y: 185, color: '#fb923c' },
-      { id: 'lamp_3', name: 'Mệnh Hỏa 3', x: 238, y: 222, color: '#fef08a' },
-      { id: 'lamp_4', name: 'Mệnh Hỏa 4', x: 316, y: 185, color: '#c084fc' },
+      { id: 'lamp_1', name: 'Mệnh Hỏa 1', x: 180, y: 117.5, color: '#38bdf8' },
+      { id: 'lamp_2', name: 'Mệnh Hỏa 2', x: 45,  y: 185,   color: '#fb923c' },
+      { id: 'lamp_3', name: 'Mệnh Hỏa 3', x: 180, y: 252.5, color: '#fef08a' },
+      { id: 'lamp_4', name: 'Mệnh Hỏa 4', x: 315, y: 185,   color: '#c084fc' },
     ];
 
     const absorbedLampObjs = (cultivation?.absorbedLamps || []).map(id => LIFE_LAMPS.find(l => l.id === id)).filter(Boolean);
@@ -194,11 +164,7 @@ export default function RealmPreviewVisualizer({
     });
 
     return {
-      taijiSPath: sPath,
-      yangStars: allStars.filter(s => s.stage === 1),
-      yinStars: allStars.filter(s => s.stage === 3),
-      outerStars: allStars.filter(s => s.stage === 2 || s.stage === 4),
-      allStars,
+      allStars: allStarsList,
       lampAltars: altars,
       activeLampObj: activeLamp,
       fifthLampObj: fifthLamp,
@@ -247,7 +213,7 @@ export default function RealmPreviewVisualizer({
       )}
 
       {/* ========================================================
-          2. TRÚC CƠ VISUALIZER: LƯỠNG NGHI SONG LONG TRIỀU NHẬT (THÁI CỰC CHỮ S & MẮT ÂM DƯƠNG)
+          2. TRÚC CƠ VISUALIZER: THÁI CỰC LƯỠNG NGHI (120 PHÁP KHIẾU + 5 MỆNH ĐĂNG)
          ======================================================== */}
       {realm === 'truc_co' && (
         <div className={styles.trucCoStage}>
@@ -266,11 +232,11 @@ export default function RealmPreviewVisualizer({
                   <stop offset="100%" stopColor="#0f172a" stopOpacity="0.95" />
                 </linearGradient>
 
-                {/* ClipPath cho 4 Mệnh Đăng Thái Cực (r = 18px, đường kính 36px) */}
-                <clipPath id="taijiClip_lamp_1"><circle cx="0" cy="0" r="18" /></clipPath>
-                <clipPath id="taijiClip_lamp_2"><circle cx="0" cy="0" r="18" /></clipPath>
-                <clipPath id="taijiClip_lamp_3"><circle cx="0" cy="0" r="18" /></clipPath>
-                <clipPath id="taijiClip_lamp_4"><circle cx="0" cy="0" r="18" /></clipPath>
+                {/* ClipPath cho 4 Mệnh Đăng (r = 17px, đường kính 34px) */}
+                <clipPath id="taijiClip_lamp_1"><circle cx="0" cy="0" r="17" /></clipPath>
+                <clipPath id="taijiClip_lamp_2"><circle cx="0" cy="0" r="17" /></clipPath>
+                <clipPath id="taijiClip_lamp_3"><circle cx="0" cy="0" r="17" /></clipPath>
+                <clipPath id="taijiClip_lamp_4"><circle cx="0" cy="0" r="17" /></clipPath>
                 <clipPath id="taijiClip_crown"><circle cx="180" cy="38" r="16" /></clipPath>
 
                 {/* Super Glow Filter cho các Pháp Khiếu Rực Sáng */}
@@ -378,29 +344,29 @@ export default function RealmPreviewVisualizer({
                 </g>
               </g>
 
-              {/* B. ĐƯỜNG CONG THÁI CỰC CHỮ S & VÒNG ÂM DƯƠNG QUỸ ĐẠO */}
+              {/* B. ĐƯỜNG DẪN QUỸ ĐẠO THÁI CỰC CHỮ S & VÒNG NGOÀI */}
               <g>
-                {/* Đường phân giới Âm Dương S-Curve */}
+                {/* Đường cong chữ S bán nguyệt trên & dưới */}
                 <path
-                  d={taijiSPath}
+                  d="M 180 50 A 67.5 67.5 0 0 1 180 185 A 67.5 67.5 0 0 0 180 320"
                   fill="none"
                   stroke="rgba(56, 189, 248, 0.4)"
-                  strokeWidth="1.8"
+                  strokeWidth="1.6"
                   strokeDasharray="4, 3"
                 />
 
-                {/* Vòng tròn ngoại vi Thái Cực R=136 */}
+                {/* Vòng tròn ngoại vi Thái Cực R=135 */}
                 <circle
                   cx="180"
                   cy="185"
-                  r="136"
+                  r="135"
                   fill="none"
-                  stroke="rgba(56, 189, 248, 0.3)"
-                  strokeWidth="1.2"
+                  stroke="rgba(56, 189, 248, 0.28)"
+                  strokeWidth="1"
                   strokeDasharray="3, 4"
                 />
 
-                {/* 120 NGÔI SAO PHÁP KHIẾU UỐN LƯỢN DỌC THEO THÁI CỰC ĐỒ */}
+                {/* 120 NGÔI SAO PHÁP KHIẾU PHÂN BỐ CÂN XỨNG TOÁN HỌC */}
                 {allStars.map((star) => (
                   <g key={star.idx}>
                     {/* Hào quang sao */}
@@ -429,7 +395,7 @@ export default function RealmPreviewVisualizer({
               {lampAltars.map((altar) => {
                 const aiIconUrl = altar.lampObj?.id ? LAMP_THAN_PHAM_AI_ICONS[altar.lampObj.id] : null;
                 const labelText = altar.lampObj?.shortName || altar.name;
-                const labelWidth = Math.max(52, labelText.length * 6.5 + 14);
+                const labelWidth = Math.max(50, labelText.length * 6.5 + 14);
 
                 return (
                   <g key={altar.id} transform={`translate(${altar.x}, ${altar.y})`}>
@@ -437,7 +403,7 @@ export default function RealmPreviewVisualizer({
                     <circle
                       cx="0"
                       cy="0"
-                      r="18"
+                      r="17"
                       fill="rgba(10, 16, 26, 0.95)"
                       stroke={altar.isComplete ? altar.color : altar.isFireLit ? altar.color : 'rgba(255, 255, 255, 0.25)'}
                       strokeWidth="1.5"
@@ -447,15 +413,15 @@ export default function RealmPreviewVisualizer({
                     {aiIconUrl ? (
                       <image
                         href={aiIconUrl}
-                        x="-18"
-                        y="-18"
-                        width="36"
-                        height="36"
+                        x="-17"
+                        y="-17"
+                        width="34"
+                        height="34"
                         clipPath={`url(#taijiClip_${altar.id})`}
                         preserveAspectRatio="xMidYMid slice"
                       />
                     ) : (
-                      <text x="0" y="5.5" textAnchor="middle" fontSize="16">
+                      <text x="0" y="5.5" textAnchor="middle" fontSize="15">
                         {altar.isFireLit ? '🔥' : '🕯️'}
                       </text>
                     )}
@@ -464,20 +430,20 @@ export default function RealmPreviewVisualizer({
                     <circle
                       cx="0"
                       cy="0"
-                      r="18"
+                      r="17"
                       fill="none"
                       stroke={altar.isComplete ? altar.color : altar.isFireLit ? altar.color : 'rgba(255, 255, 255, 0.35)'}
                       strokeWidth={altar.isComplete ? 2 : 1.2}
                     />
 
                     {/* Khung Badge tên Mệnh Đăng */}
-                    <g transform="translate(0, 26)">
+                    <g transform="translate(0, 24)">
                       <rect
                         x={-labelWidth / 2}
-                        y="-8.5"
+                        y="-8"
                         width={labelWidth}
-                        height="17"
-                        rx="8.5"
+                        height="16"
+                        rx="8"
                         fill="rgba(10, 16, 26, 0.88)"
                         stroke={altar.isComplete ? altar.color : altar.isFireLit ? altar.color : 'rgba(255, 255, 255, 0.2)'}
                         strokeWidth="1"
@@ -487,7 +453,7 @@ export default function RealmPreviewVisualizer({
                         y="3"
                         textAnchor="middle"
                         fill={altar.isComplete ? altar.color : altar.isFireLit ? altar.color : '#94a3b8'}
-                        fontSize="8.5"
+                        fontSize="8"
                         fontWeight="700"
                         fontFamily="var(--font-serif)"
                       >
@@ -501,22 +467,22 @@ export default function RealmPreviewVisualizer({
               {/* D. TU SĨ TỌA THIỀN Ở TRUNG TÂM THÁI CỰC */}
               <g transform="translate(180, 185)">
                 {/* Hào quang thiền định */}
-                <ellipse cx="0" cy="0" rx="32" ry="36" fill="rgba(56, 189, 248, 0.08)" stroke="rgba(56, 189, 248, 0.35)" strokeWidth="1" strokeDasharray="3,3" />
+                <ellipse cx="0" cy="0" rx="26" ry="28" fill="rgba(56, 189, 248, 0.08)" stroke="rgba(56, 189, 248, 0.35)" strokeWidth="1" strokeDasharray="3,3" />
 
                 {/* Đầu tu sĩ */}
-                <circle cx="0" cy="-19" r="8" fill="url(#daoistBodyGrad)" stroke="#38bdf8" strokeWidth="1" />
+                <circle cx="0" cy="-16" r="7" fill="url(#daoistBodyGrad)" stroke="#38bdf8" strokeWidth="1" />
 
                 {/* Thân & Dáng Ngồi Kiết Già */}
                 <path
-                  d="M 0 -11 C -8 -11, -17 -4, -19 4 C -21 12, -29 18, -27 22 C -25 26, -13 26, 0 26 C 13 26, 25 26, 27 22 C 29 18, 21 12, 19 4 C 17 -4, 8 -11, 0 -11 Z"
+                  d="M 0 -9 C -7 -9, -14 -3, -16 3 C -18 10, -24 15, -22 18 C -20 21, -10 21, 0 21 C 10 21, 20 21, 22 18 C 24 15, 18 10, 16 3 C 14 -3, 7 -9, 0 -9 Z"
                   fill="url(#daoistBodyGrad)"
                   stroke="#38bdf8"
                   strokeWidth="1.2"
                 />
 
                 {/* Đan Điền Core Vàng Sáng Rực */}
-                <circle cx="0" cy="9" r="5" fill="#ffcc00" filter="url(#superStarGlow)" className={styles.daoistDanDien} />
-                <circle cx="0" cy="9" r="2" fill="#ffffff" />
+                <circle cx="0" cy="7" r="4.5" fill="#ffcc00" filter="url(#superStarGlow)" className={styles.daoistDanDien} />
+                <circle cx="0" cy="7" r="1.8" fill="#ffffff" />
               </g>
 
               {/* E. MỆNH ĐĂNG THỨ 5 (KHIẾU 121 - CỰC CẢNH THIÊN ĐỈNH ĐĂNG) */}
