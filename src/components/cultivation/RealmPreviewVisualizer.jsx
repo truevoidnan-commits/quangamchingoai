@@ -189,13 +189,12 @@ export default function RealmPreviewVisualizer({
          ======================================================== */}
       {realm === 'truc_co' && (
         <div className={styles.trucCoStage}>
-          {/* A. BỨC TINH ĐỒ 4 GÓC LỤC MANG TINH (4 CORNER HEXAGRAMS SVG) */}
           <div className={styles.starChartBackdrop}>
             <svg viewBox="0 0 340 340" className={styles.starChartSvg}>
               <defs>
                 <radialGradient id="centerAltarGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#fbbf24" stopOpacity={phapKhieu >= 120 ? 0.65 : 0.25} />
-                  <stop offset="60%" stopColor="#f59e0b" stopOpacity={phapKhieu >= 120 ? 0.35 : 0.08} />
+                  <stop offset="0%" stopColor="#fbbf24" stopOpacity={phapKhieu >= 120 ? 0.7 : 0.3} />
+                  <stop offset="60%" stopColor="#f59e0b" stopOpacity={phapKhieu >= 120 ? 0.4 : 0.1} />
                   <stop offset="100%" stopColor="transparent" stopOpacity="0" />
                 </radialGradient>
 
@@ -217,10 +216,10 @@ export default function RealmPreviewVisualizer({
                   y1="170"
                   x2={c.cx}
                   y2={c.cy}
-                  stroke={c.isComplete ? c.color : c.litCount > 0 ? c.color : 'rgba(255, 255, 255, 0.08)'}
+                  stroke={c.isComplete ? c.color : c.litCount > 0 ? c.color : 'rgba(255, 255, 255, 0.12)'}
                   strokeWidth={c.isComplete ? 1.5 : c.litCount > 0 ? 1 : 0.6}
                   strokeDasharray={c.isComplete ? 'none' : '3, 4'}
-                  opacity={c.isComplete ? 0.8 : c.litCount > 0 ? 0.5 : 0.2}
+                  opacity={c.isComplete ? 0.85 : c.litCount > 0 ? 0.5 : 0.25}
                 />
               ))}
 
@@ -230,8 +229,8 @@ export default function RealmPreviewVisualizer({
                 cy="170"
                 r="36"
                 fill="url(#centerAltarGlow)"
-                stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(255, 204, 0, 0.35)'}
-                strokeWidth={phapKhieu >= 120 ? 1.5 : 0.8}
+                stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(255, 204, 0, 0.4)'}
+                strokeWidth={phapKhieu >= 120 ? 1.8 : 1}
                 strokeDasharray={phapKhieu >= 120 ? 'none' : '3, 3'}
               />
 
@@ -243,7 +242,7 @@ export default function RealmPreviewVisualizer({
                     cx={c.cx}
                     cy={c.cy}
                     r={c.R_tip}
-                    fill="rgba(15, 23, 42, 0.6)"
+                    fill="rgba(15, 23, 42, 0.65)"
                     stroke={c.isComplete ? c.color : c.litCount > 0 ? c.color : 'rgba(56, 189, 248, 0.25)'}
                     strokeWidth={c.isComplete ? 1.5 : 0.8}
                     strokeDasharray={c.isComplete ? 'none' : '2, 3'}
@@ -264,16 +263,6 @@ export default function RealmPreviewVisualizer({
                     strokeWidth={c.isComplete ? 1.2 : 0.6}
                   />
 
-                  {/* Tâm Nhỏ Của Lục Mang Tinh Góc */}
-                  <circle
-                    cx={c.cx}
-                    cy={c.cy}
-                    r="12"
-                    fill="rgba(10, 16, 26, 0.8)"
-                    stroke={c.isComplete ? c.color : 'rgba(255, 255, 255, 0.15)'}
-                    strokeWidth="0.8"
-                  />
-
                   {/* 30 Ngôi Sao Pháp Khiếu Của Góc Này (Nằm Im Tuyệt Đối) */}
                   {c.stars.map((star) => (
                     <circle
@@ -289,8 +278,69 @@ export default function RealmPreviewVisualizer({
                       }}
                     />
                   ))}
+
+                  {/* Tâm Nhỏ & Icon Của Lục Mang Tinh Góc */}
+                  <g transform={`translate(${c.cx}, ${c.cy})`}>
+                    <circle
+                      cx="0"
+                      cy="0"
+                      r="12"
+                      fill="rgba(10, 16, 26, 0.9)"
+                      stroke={c.isComplete ? c.color : 'rgba(255, 255, 255, 0.2)'}
+                      strokeWidth="1"
+                    />
+                    <foreignObject x="-10" y="-10" width="20" height="20" style={{ overflow: 'visible' }}>
+                      <div style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {c.lampObj ? (
+                          <ArtifactIcon item={c.lampObj} isLamp={true} size={18} />
+                        ) : (
+                          <span style={{ fontSize: '11px', lineHeight: 1, color: c.isFireLit ? c.color : '#64748b' }}>
+                            {c.isFireLit ? '🔥' : '🕯️'}
+                          </span>
+                        )}
+                      </div>
+                    </foreignObject>
+                  </g>
                 </g>
               ))}
+
+              {/* ĐẠI MỆNH ĐĂNG TỌA TRẤN TRUNG TÂM (ĐƯỢC NHÚNG TRỰC TIẾP TRONG SVG ĐẢM BẢO KHÔNG BAO GIỜ LỆCH) */}
+              <g transform="translate(170, 170)">
+                <circle
+                  cx="0"
+                  cy="0"
+                  r="26"
+                  fill="rgba(10, 16, 26, 0.95)"
+                  stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(255, 204, 0, 0.5)'}
+                  strokeWidth={phapKhieu >= 120 ? 2 : 1.2}
+                />
+                <foreignObject x="-24" y="-24" width="48" height="48" style={{ overflow: 'visible' }}>
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: phapKhieu === 0 ? 0.45 : Math.min(1, 0.5 + 0.5 * (phapKhieu / 120)),
+                      filter: phapKhieu >= 120 ? 'drop-shadow(0 0 16px rgba(255, 204, 0, 0.9))' : 'none',
+                    }}
+                  >
+                    <ArtifactIcon item={activeLampObj} isLamp={true} size={44} />
+                  </div>
+                </foreignObject>
+                <text
+                  x="0"
+                  y="38"
+                  textAnchor="middle"
+                  fill={phapKhieu >= 120 ? '#ffcc00' : '#cbd5e1'}
+                  fontSize="10"
+                  fontWeight="700"
+                  fontFamily="var(--font-serif)"
+                >
+                  {activeLampObj?.shortName || activeLampObj?.name || 'Mệnh Đăng'}
+                </text>
+              </g>
 
               {/* Hào Quang Cực Cảnh 121 (Nếu Mở Khóa) */}
               {has121st && (
@@ -301,63 +351,6 @@ export default function RealmPreviewVisualizer({
                 </g>
               )}
             </svg>
-          </div>
-
-          {/* B. ICON TRUNG TÂM CỦA 4 LỤC MANG TINH GÓC (HIỂN THỊ MỆNH ĐĂNG / MỆNH HỎA GÓC) */}
-          <div className={styles.cornerHexagramIconsLayer}>
-            {cornerHexagrams.map((c) => (
-              <div
-                key={`badge_${c.id}`}
-                className={styles.cornerHexBadge}
-                style={{
-                  top: `${c.cy}px`,
-                  left: `${c.cx}px`,
-                  borderColor: c.isComplete ? c.color : 'rgba(255, 255, 255, 0.15)',
-                  boxShadow: c.isComplete ? `0 0 10px ${c.glow}` : 'none',
-                }}
-                title={`${c.name} (${c.litCount}/30 Khiếu)`}
-              >
-                {c.lampObj ? (
-                  <ArtifactIcon item={c.lampObj} isLamp={true} size={20} />
-                ) : (
-                  <span className={styles.cornerHexFlameText} style={{ color: c.isFireLit ? c.color : 'var(--text-muted)' }}>
-                    {c.isFireLit ? '🔥' : '🕯️'}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* C. ĐẠI MỆNH ĐĂNG TỌA TRẤN TRUNG TÂM TOÀN TRẬN */}
-          <div
-            className={styles.centerHexagramLampWrap}
-            style={{
-              top: '170px',
-              left: '170px',
-              opacity: phapKhieu === 0 ? 0.45 : Math.min(1, 0.5 + 0.5 * (phapKhieu / 120)),
-              filter: phapKhieu >= 120
-                ? 'drop-shadow(0 0 18px rgba(255, 204, 0, 0.95)) drop-shadow(0 0 30px rgba(249, 115, 22, 0.75))'
-                : phapKhieu > 0
-                ? `drop-shadow(0 0 ${4 + Math.floor(phapKhieu / 10)}px rgba(255, 204, 0, 0.6))`
-                : 'none',
-            }}
-          >
-            <div className={`${styles.hexagramLampCore} ${phapKhieu >= 120 ? styles.hexagramLampBlazing : ''}`}>
-              <ArtifactIcon
-                item={activeLampObj}
-                isLamp={true}
-                size={48}
-              />
-              {phapKhieu >= 120 && (
-                <div className={styles.hexagramBlazeAura}>
-                  <span className={styles.sparkle} style={{ top: -6, right: -6 }}>✦</span>
-                  <span className={styles.sparkle} style={{ bottom: -6, left: -6 }}>✨</span>
-                </div>
-              )}
-            </div>
-            <span className={styles.hexagramLampName} style={{ color: phapKhieu >= 120 ? '#ffcc00' : 'var(--text-secondary)' }}>
-              {activeLampObj?.shortName || activeLampObj?.name || 'Mệnh Đăng'}
-            </span>
           </div>
 
           {/* D. MỆNH HỎA CỰC CẢNH THỨ 5 (KHIẾU 121) - NGAY TRÊN ĐỈNH ĐẦU */}
