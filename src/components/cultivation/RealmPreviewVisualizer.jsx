@@ -34,71 +34,70 @@ export default function RealmPreviewVisualizer({
   const targetPalaceExp = cultivation?.targetPalaceExp || 2000;
   const bottleneckExp = targetPalaceExp - 1;
 
-  // Tạo danh sách 120 điểm sao tinh đồ theo chu vi hình LỤC MANG TINH ĐẠI TRẬN (6 cánh, 12 cạnh × 10 sao)
-  const { constellationStars, hexagramPathD, triangleUpD, triangleDownD, activeLampObj } = useMemo(() => {
+  // Tạo danh sách 120 điểm sao tinh đồ rải đều trên 6 cạnh thẳng của 2 Tam Giác Lục Mang Tinh (Mỗi cạnh 20 sao)
+  const { constellationStars, triangleUpD, triangleDownD, activeLampObj } = useMemo(() => {
     const stars = [];
     const cx = 160;
     const cy = 165;
+    const R = 100; // Bán kính đỉnh
+    const h = R * 0.5; // 50
+    const w = R * Math.sqrt(3) * 0.5; // 86.60
 
-    // 12 Tọa độ Đỉnh và Góc Lõm chuẩn xác tuyệt đối của Lục Mang Tinh (Bán kính đỉnh 96px, bán kính góc lõm 55.43px)
-    const V = [
-      { x: 160.00, y: 69.00 },  // V0 (Tip 0 - Đỉnh 12h, Trên cùng)
-      { x: 187.71, y: 117.00 }, // V1 (Valley 0 - 1h)
-      { x: 243.14, y: 117.00 }, // V2 (Tip 1 - 2h, Phải Trên)
-      { x: 215.43, y: 165.00 }, // V3 (Valley 1 - 3h)
-      { x: 243.14, y: 213.00 }, // V4 (Tip 2 - 4h, Phải Dưới)
-      { x: 187.71, y: 213.00 }, // V5 (Valley 2 - 5h)
-      { x: 160.00, y: 261.00 }, // V6 (Tip 3 - 6h, Dưới cùng)
-      { x: 132.29, y: 213.00 }, // V7 (Valley 3 - 7h)
-      { x: 76.86,  y: 213.00 }, // V8 (Tip 4 - 8h, Trái Dưới)
-      { x: 104.57, y: 165.00 }, // V9 (Valley 4 - 9h)
-      { x: 76.86,  y: 117.00 }, // V10 (Tip 5 - 10h, Trái Trên)
-      { x: 132.29, y: 117.00 }, // V11 (Valley 5 - 11h)
+    // 6 Đỉnh của 2 Tam Giác Lớn Lục Mang Tinh
+    // Tam Giác Dương (▲): Top (160, 65), Right-Bottom (246.6, 215), Left-Bottom (73.4, 215)
+    const pTop = { x: cx, y: cy - R };       // (160, 65)
+    const pRB = { x: cx + w, y: cy + h };    // (246.6, 215)
+    const pLB = { x: cx - w, y: cy + h };    // (73.4, 215)
+
+    // Tam Giác Âm (▼): Bottom (160, 265), Left-Top (73.4, 115), Right-Top (246.6, 115)
+    const pBot = { x: cx, y: cy + R };       // (160, 265)
+    const pLT = { x: cx - w, y: cy - h };    // (73.4, 115)
+    const pRT = { x: cx + w, y: cy - h };    // (246.6, 115)
+
+    // 6 Cạnh Thẳng của 2 Tam Giác (Mỗi cạnh 20 sao = 120 sao tổng cộng)
+    const edges = [
+      { from: pLB, to: pTop,  startIdx: 0,   endIdx: 20 },  // Cạnh 1 (▲ Trái -> Đỉnh): 1-20
+      { from: pTop, to: pRB,  startIdx: 20,  endIdx: 40 },  // Cạnh 2 (▲ Đỉnh -> Phải): 21-40
+      { from: pRB, to: pLB,  startIdx: 40,  endIdx: 60 },  // Cạnh 3 (▲ Đáy Ngang): 41-60
+      { from: pLT, to: pRT,  startIdx: 60,  endIdx: 80 },  // Cạnh 4 (▼ Đỉnh Ngang): 61-80
+      { from: pRT, to: pBot, startIdx: 80,  endIdx: 100 }, // Cạnh 5 (▼ Phải -> Đáy): 81-100
+      { from: pBot, to: pLT, startIdx: 100, endIdx: 120 }, // Cạnh 6 (▼ Đáy -> Trái): 101-120
     ];
 
-    // Rải đều 120 Pháp Khiếu trên 12 cạnh viền Lục Mang Tinh (Mỗi cạnh 10 sao = 120 sao)
-    const starsPerSeg = 10;
-    for (let seg = 0; seg < 12; seg++) {
-      const p1 = V[seg];
-      const p2 = V[(seg + 1) % 12];
+    const starsPerEdge = 20;
+    edges.forEach((edge, edgeIdx) => {
+      for (let s = 0; s < starsPerEdge; s++) {
+        const t = (s + 0.5) / starsPerEdge;
+        const sx = edge.from.x + t * (edge.to.x - edge.from.x);
+        const sy = edge.from.y + t * (edge.to.y - edge.from.y);
 
-      for (let s = 0; s < starsPerSeg; s++) {
-        const t = (s + 0.5) / starsPerSeg;
-        const sx = p1.x + t * (p2.x - p1.x);
-        const sy = p1.y + t * (p2.y - p1.y);
-
-        const globalIdx = seg * starsPerSeg + s; // 0 đến 119
+        const globalIdx = edgeIdx * starsPerEdge + s; // 0 đến 119
         const isLit = globalIdx < phapKhieu;
         const isMilestone = (globalIdx + 1) % 30 === 0;
 
-        // 4 Giai đoạn Mệnh Hỏa (0-29: Hỏa 1, 30-59: Hỏa 2, 60-89: Hỏa 3, 90-119: Hỏa 4)
+        // Màu theo 4 giai đoạn Mệnh Hỏa
         const starColor = globalIdx < 30 ? '#38bdf8' : globalIdx < 60 ? '#f97316' : globalIdx < 90 ? '#fef08a' : '#c084fc';
 
         stars.push({
           idx: globalIdx,
-          seg,
-          cx: Number(sx.toFixed(2)),
-          cy: Number(sy.toFixed(2)),
+          cx: Number(sx.toFixed(1)),
+          cy: Number(sy.toFixed(1)),
           isLit,
           isMilestone,
           color: starColor,
         });
       }
-    }
+    });
 
-    // SVG path string cho toàn bộ viền Lục Mang Tinh
-    const hexPath = V.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(2)},${pt.y.toFixed(2)}`).join(' ') + ' Z';
-
-    // 2 Tam Giác Lớn Lồng Nhau (Tam Giác Dương ▲ & Tam Giác Âm ▼)
-    const triUp = `M ${V[0].x.toFixed(2)},${V[0].y.toFixed(2)} L ${V[4].x.toFixed(2)},${V[4].y.toFixed(2)} L ${V[8].x.toFixed(2)},${V[8].y.toFixed(2)} Z`;
-    const triDown = `M ${V[6].x.toFixed(2)},${V[6].y.toFixed(2)} L ${V[10].x.toFixed(2)},${V[10].y.toFixed(2)} L ${V[2].x.toFixed(2)},${V[2].y.toFixed(2)} Z`;
+    // 2 Tam Giác Lớn Tạo Hình Lục Mang Tinh
+    const triUp = `M ${pTop.x.toFixed(1)},${pTop.y.toFixed(1)} L ${pRB.x.toFixed(1)},${pRB.y.toFixed(1)} L ${pLB.x.toFixed(1)},${pLB.y.toFixed(1)} Z`;
+    const triDown = `M ${pBot.x.toFixed(1)},${pBot.y.toFixed(1)} L ${pLT.x.toFixed(1)},${pLT.y.toFixed(1)} L ${pRT.x.toFixed(1)},${pRT.y.toFixed(1)} Z`;
 
     const absorbedLampObjs = (cultivation?.absorbedLamps || []).map(id => LIFE_LAMPS.find(l => l.id === id)).filter(Boolean);
     const activeLamp = absorbedLampObjs[0] || LIFE_LAMPS[0];
 
     return {
       constellationStars: stars,
-      hexagramPathD: hexPath,
       triangleUpD: triUp,
       triangleDownD: triDown,
       activeLampObj: activeLamp,
@@ -178,64 +177,55 @@ export default function RealmPreviewVisualizer({
               </defs>
 
               {/* Vòng Tròn Bao Quanh Ngoài Cùng (Outer Celestial Circle) */}
+              {/* Vòng Tròn Bao Quanh Ngoài Cùng (Outer Celestial Circle) */}
               <circle
                 cx="160"
                 cy="165"
-                r="102"
+                r="100"
                 fill="url(#starChartGlow)"
-                stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(56, 189, 248, 0.28)'}
+                stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(56, 189, 248, 0.35)'}
                 strokeWidth={phapKhieu >= 120 ? 1.8 : 1}
                 strokeDasharray={phapKhieu >= 120 ? 'none' : '3, 4'}
               />
-              <circle cx="160" cy="165" r="108" fill="none" stroke="rgba(56, 189, 248, 0.12)" strokeWidth="0.8" strokeDasharray="2, 4" />
+              <circle cx="160" cy="165" r="106" fill="none" stroke="rgba(56, 189, 248, 0.12)" strokeWidth="0.8" strokeDasharray="2, 4" />
 
-              {/* Khung 2 Tam Giác Lục Mang Tinh (Hexagram Geometric Lines) */}
+              {/* Khung 2 Tam Giác Lục Mang Tinh (2 Equilateral Triangles ▲ & ▼) */}
               <path
                 d={triangleUpD}
                 fill="none"
-                stroke={phapKhieu >= 60 ? 'rgba(56, 189, 248, 0.45)' : 'rgba(255, 255, 255, 0.08)'}
-                strokeWidth={phapKhieu >= 60 ? 1.2 : 0.8}
+                stroke={phapKhieu >= 60 ? '#38bdf8' : 'rgba(255, 255, 255, 0.15)'}
+                strokeWidth={phapKhieu >= 60 ? 1.4 : 0.8}
               />
               <path
                 d={triangleDownD}
                 fill="none"
-                stroke={phapKhieu >= 120 ? 'rgba(249, 115, 22, 0.45)' : 'rgba(255, 255, 255, 0.08)'}
-                strokeWidth={phapKhieu >= 120 ? 1.2 : 0.8}
-              />
-
-              {/* Đường Viền Lục Mang Tinh Liên Kết Các Sao */}
-              <path
-                d={hexagramPathD}
-                fill="none"
-                stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(56, 189, 248, 0.2)'}
-                strokeWidth={phapKhieu >= 120 ? 1.5 : 0.8}
-                strokeDasharray={phapKhieu >= 120 ? 'none' : '2, 3'}
+                stroke={phapKhieu >= 120 ? '#f97316' : 'rgba(255, 255, 255, 0.15)'}
+                strokeWidth={phapKhieu >= 120 ? 1.4 : 0.8}
               />
 
               {/* Vòng Bát Trận Tâm Trận Bao Quanh Mệnh Đăng (Center Core Altar Ring) */}
               <circle
                 cx="160"
                 cy="165"
-                r="36"
+                r="34"
                 fill="url(#hexagramCoreGlow)"
                 stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(255, 204, 0, 0.35)'}
                 strokeWidth={phapKhieu >= 120 ? 1.5 : 0.8}
                 strokeDasharray={phapKhieu >= 120 ? 'none' : '3, 3'}
               />
 
-              {/* 120 Ngôi Sao Pháp Khiếu Rải Đều 12 Cạnh Viền Lục Mang Tinh */}
+              {/* 120 Ngôi Sao Pháp Khiếu Rải Đều Trên 6 Cạnh Thẳng Của 2 Tam Giác */}
               {constellationStars.map((star) => (
                 <circle
                   key={star.idx}
                   cx={star.cx}
                   cy={star.cy}
-                  r={star.isLit ? (star.isMilestone ? 3.5 : 2.5) : 1.4}
+                  r={star.isLit ? (star.isMilestone ? 3.4 : 2.4) : 1.4}
                   fill={star.isLit ? star.color : 'rgba(255, 255, 255, 0.16)'}
                   filter={star.isLit ? 'url(#starGlow)' : 'none'}
                   className={`${styles.starDot} ${star.isLit ? styles.starLit : styles.starDim}`}
                   style={{
                     '--star-color': star.color,
-                    animationDelay: `${(star.idx % 12) * 0.1}s`,
                   }}
                 />
               ))}

@@ -172,16 +172,15 @@
 }
 
 .starDot {
-  transition: all 0.4s ease;
+  pointer-events: none;
 }
 
 .starLit {
-  filter: drop-shadow(0 0 4px var(--star-color, #00f2fe)) drop-shadow(0 0 8px var(--star-color, #38bdf8));
-  animation: starTwinkleCustom 2s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 3px var(--star-color, #00f2fe));
 }
 
 .starDim {
-  opacity: 0.35;
+  opacity: 0.25;
 }
 
 .lightningBeam121 {
