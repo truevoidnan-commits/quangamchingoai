@@ -239,6 +239,20 @@ export default function RealmPreviewVisualizer({
                 </filter>
               </defs>
 
+              {/* BÁT QUÁI THÁI CỰC LA BÀN XOAY TRÒN LÀM NỀN PHÍA SAU TOÀN BỘ TRẬN PHÁP */}
+              <g className={styles.rotatingBaguaGroup}>
+                <image
+                  href={`${import.meta.env.BASE_URL}images/bagua_taiji_compass.png`}
+                  x="5"
+                  y="5"
+                  width="350"
+                  height="350"
+                  opacity={phapKhieu >= 120 ? 0.55 : 0.38}
+                  style={{ mixBlendMode: 'screen' }}
+                  preserveAspectRatio="xMidYMid meet"
+                />
+              </g>
+
               {/* Đường Kinh Mạch Nối Từ Tâm Tới 4 Góc Lục Mang Tinh */}
               {cornerHexagrams.map((c) => (
                 <line

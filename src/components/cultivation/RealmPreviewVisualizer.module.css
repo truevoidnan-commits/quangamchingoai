@@ -144,6 +144,20 @@
   opacity: 0.98;
 }
 
+.rotatingBaguaGroup {
+  animation: rotateBaguaSlow 80s linear infinite;
+  transform-origin: 180px 180px;
+}
+
+@keyframes rotateBaguaSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .constellationCompletePath {
   animation: pulseCompletePath 2s ease-in-out infinite alternate;
 }
