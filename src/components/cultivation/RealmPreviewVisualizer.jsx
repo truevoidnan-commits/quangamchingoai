@@ -239,18 +239,109 @@ export default function RealmPreviewVisualizer({
                 </filter>
               </defs>
 
-              {/* BÁT QUÁI THÁI CỰC LA BÀN XOAY TRÒN LÀM NỀN PHÍA SAU TOÀN BỘ TRẬN PHÁP */}
+              {/* BÁT QUÁI THÁI CỰC LA BÀN THUẦN SVG TỰ TẠO XOAY TRÒN LÀM NỀN */}
               <g className={styles.rotatingBaguaGroup}>
-                <image
-                  href={`${import.meta.env.BASE_URL}images/bagua_taiji_compass.png`}
-                  x="5"
-                  y="5"
-                  width="350"
-                  height="350"
-                  opacity={phapKhieu >= 120 ? 0.55 : 0.38}
-                  style={{ mixBlendMode: 'screen' }}
-                  preserveAspectRatio="xMidYMid meet"
-                />
+                <g transform="translate(180, 180)">
+                  {/* 1. Các Vòng Tròn Đồng Tâm Đậm Chất Trận Pháp (Concentric Celestial Rings) */}
+                  <circle cx="0" cy="0" r="172" fill="none" stroke="rgba(56, 189, 248, 0.15)" strokeWidth="1.2" />
+                  <circle cx="0" cy="0" r="166" fill="none" stroke="rgba(56, 189, 248, 0.35)" strokeWidth="0.8" strokeDasharray="3, 4" />
+                  <circle cx="0" cy="0" r="148" fill="none" stroke="rgba(56, 189, 248, 0.2)" strokeWidth="0.8" />
+                  <circle cx="0" cy="0" r="132" fill="none" stroke="rgba(56, 189, 248, 0.25)" strokeWidth="1" />
+                  <circle cx="0" cy="0" r="112" fill="none" stroke="rgba(56, 189, 248, 0.2)" strokeWidth="0.8" strokeDasharray="2, 3" />
+                  <circle cx="0" cy="0" r="92" fill="none" stroke="rgba(56, 189, 248, 0.25)" strokeWidth="0.8" />
+                  <circle cx="0" cy="0" r="74" fill="none" stroke="rgba(56, 189, 248, 0.3)" strokeWidth="1" />
+                  <circle cx="0" cy="0" r="54" fill="none" stroke="rgba(56, 189, 248, 0.2)" strokeWidth="0.8" strokeDasharray="2, 4" />
+                  <circle cx="0" cy="0" r="38" fill="none" stroke="rgba(255, 204, 0, 0.35)" strokeWidth="1.2" />
+
+                  {/* 2. Vành Ngoài: 72 Khắc Vạch Chu Thiên Độ Số (72 Outer Tick Marks) */}
+                  {Array.from({ length: 72 }).map((_, i) => {
+                    const deg = i * 5;
+                    const rad = (deg * Math.PI) / 180;
+                    const isMajor = i % 6 === 0;
+                    const isSemi = i % 3 === 0;
+                    const r1 = 166;
+                    const r2 = isMajor ? 148 : isSemi ? 154 : 160;
+                    return (
+                      <line
+                        key={`tick_${i}`}
+                        x1={r1 * Math.cos(rad)}
+                        y1={r1 * Math.sin(rad)}
+                        x2={r2 * Math.cos(rad)}
+                        y2={r2 * Math.sin(rad)}
+                        stroke={isMajor ? 'rgba(56, 189, 248, 0.5)' : 'rgba(56, 189, 248, 0.2)'}
+                        strokeWidth={isMajor ? 1.2 : 0.6}
+                      />
+                    );
+                  })}
+
+                  {/* 3. Vành Giữa: 24 Cung Phương Vị La Bàn (24 Celestial Sectors) */}
+                  {Array.from({ length: 24 }).map((_, i) => {
+                    const deg = i * 15;
+                    const rad = (deg * Math.PI) / 180;
+                    return (
+                      <line
+                        key={`sector_${i}`}
+                        x1={132 * Math.cos(rad)}
+                        y1={132 * Math.sin(rad)}
+                        x2={112 * Math.cos(rad)}
+                        y2={112 * Math.sin(rad)}
+                        stroke="rgba(56, 189, 248, 0.22)"
+                        strokeWidth="0.7"
+                      />
+                    );
+                  })}
+
+                  {/* 4. Vành Bát Quái Cổ: 8 Quẻ Tiên Thiên Bát Quái (8 Trigrams: Càn, Khảm, Cấn, Chấn, Tốn, Ly, Khôn, Đoài) */}
+                  {[
+                    { name: '☰ CÀN', deg: 0,   lines: [1, 1, 1] }, // Dương - Dương - Dương
+                    { name: '☱ ĐOÀI', deg: 45,  lines: [0, 1, 1] }, // Âm - Dương - Dương
+                    { name: '☲ LY',   deg: 90,  lines: [1, 0, 1] }, // Dương - Âm - Dương
+                    { name: '☳ CHẤN', deg: 135, lines: [0, 0, 1] }, // Âm - Âm - Dương
+                    { name: '☷ KHÔN', deg: 180, lines: [0, 0, 0] }, // Âm - Âm - Âm
+                    { name: '☶ CẤN',  deg: 225, lines: [1, 0, 0] }, // Dương - Âm - Âm
+                    { name: '☵ KHẢM', deg: 270, lines: [0, 1, 0] }, // Âm - Dương - Âm
+                    { name: '☴ TỐN',  deg: 315, lines: [1, 1, 0] }, // Dương - Dương - Âm
+                  ].map((trigram, i) => (
+                    <g key={`trigram_${i}`} transform={`rotate(${trigram.deg})`}>
+                      {/* Đường phân cung Bát Quái */}
+                      <line x1="0" y1="-92" x2="0" y2="-74" stroke="rgba(56, 189, 248, 0.25)" strokeWidth="0.8" />
+
+                      {/* Vẽ 3 Hào của Quẻ (3 Yao Bars) */}
+                      {trigram.lines.map((isYang, lineIdx) => {
+                        const yPos = -76 - lineIdx * 5;
+                        return isYang ? (
+                          /* Hào Dương: Vạch Liền ─── */
+                          <line
+                            key={`yao_${lineIdx}`}
+                            x1="-10"
+                            y1={yPos}
+                            x2="10"
+                            y2={yPos}
+                            stroke="rgba(56, 189, 248, 0.6)"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                          />
+                        ) : (
+                          /* Hào Âm: Vạch Đứt ─ ─ */
+                          <g key={`yao_${lineIdx}`}>
+                            <line x1="-10" y1={yPos} x2="-2" y2={yPos} stroke="rgba(56, 189, 248, 0.6)" strokeWidth="1.8" strokeLinecap="round" />
+                            <line x1="2" y1={yPos} x2="10" y2={yPos} stroke="rgba(56, 189, 248, 0.6)" strokeWidth="1.8" strokeLinecap="round" />
+                          </g>
+                        );
+                      })}
+                    </g>
+                  ))}
+
+                  {/* 5. Tâm Thái Cực Âm Dương (Taiji Yin-Yang Core) */}
+                  <g opacity="0.45">
+                    <circle cx="0" cy="0" r="26" fill="rgba(15, 23, 42, 0.9)" stroke="rgba(56, 189, 248, 0.4)" strokeWidth="1" />
+                    {/* Nửa Dương Trắng */}
+                    <path d="M 0 -26 A 26 26 0 0 1 0 26 A 13 13 0 0 1 0 0 A 13 13 0 0 0 0 -26 Z" fill="rgba(56, 189, 248, 0.25)" />
+                    {/* Mắt Âm & Mắt Dương */}
+                    <circle cx="0" cy="-13" r="3.5" fill="rgba(15, 23, 42, 0.95)" stroke="rgba(56, 189, 248, 0.5)" strokeWidth="0.8" />
+                    <circle cx="0" cy="13" r="3.5" fill="rgba(56, 189, 248, 0.5)" />
+                  </g>
+                </g>
               </g>
 
               {/* Đường Kinh Mạch Nối Từ Tâm Tới 4 Góc Lục Mang Tinh */}
