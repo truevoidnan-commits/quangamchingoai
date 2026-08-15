@@ -34,55 +34,51 @@ export default function RealmPreviewVisualizer({
   const targetPalaceExp = cultivation?.targetPalaceExp || 2000;
   const bottleneckExp = targetPalaceExp - 1;
 
-  // Tạo danh sách 120 điểm sao tinh đồ theo hình LỤC MANG TINH ĐẠI TRẬN (Hexagram 6 cánh)
-  const { constellationStars, hexagramEdges, hexagramTriangles, activeLampObj } = useMemo(() => {
+  // Tạo danh sách 120 điểm sao tinh đồ theo chu vi hình LỤC MANG TINH ĐẠI TRẬN (6 cánh, 12 cạnh × 10 sao)
+  const { constellationStars, hexagramPathD, triangleUpD, triangleDownD, starVertices, activeLampObj } = useMemo(() => {
     const stars = [];
-    const edges = [];
     const cx = 160;
     const cy = 165;
-    const R = 106; // Bán kính 6 đỉnh ngoài của Lục Mang Tinh
+    const R_tip = 102; // Bán kính 6 đỉnh nhọn của sao
+    const R_val = R_tip / Math.sqrt(3); // Bán kính 6 góc lõm giữa các cánh (~58.9px)
 
-    // 6 Đỉnh của Lục Mang Tinh (Hexagram Vertices)
-    // V0: Đỉnh 12h (-90°), V1: 2h (-30°), V2: 4h (30°), V3: 6h (90°), V4: 8h (150°), V5: 10h (-150°)
-    const vertices = [
-      { x: cx, y: cy - R },                                              // V0: (160, 59)
-      { x: cx + R * Math.cos(-Math.PI / 6), y: cy + R * Math.sin(-Math.PI / 6) }, // V1: (251.8, 112)
-      { x: cx + R * Math.cos(Math.PI / 6),  y: cy + R * Math.sin(Math.PI / 6) },  // V2: (251.8, 218)
-      { x: cx, y: cy + R },                                              // V3: (160, 271)
-      { x: cx - R * Math.cos(Math.PI / 6), y: cy + R * Math.sin(Math.PI / 6) },  // V4: (68.2, 218)
-      { x: cx - R * Math.cos(-Math.PI / 6), y: cy + R * Math.sin(-Math.PI / 6) }, // V5: (68.2, 112)
+    // 12 Đỉnh tạo thành đường viền Lục Mang Tinh theo chiều kim đồng hồ từ Đỉnh 12h
+    const V = [
+      { x: cx, cy: cy - R_tip },                                                     // V0 (Tip 0, 12h)
+      { x: cx + R_val * Math.cos(-Math.PI / 3), y: cy + R_val * Math.sin(-Math.PI / 3) }, // V1 (Valley 0, 1h)
+      { x: cx + R_tip * Math.cos(-Math.PI / 6), y: cy + R_tip * Math.sin(-Math.PI / 6) }, // V2 (Tip 1, 2h)
+      { x: cx + R_val, y: cy },                                                      // V3 (Valley 1, 3h)
+      { x: cx + R_tip * Math.cos(Math.PI / 6),  y: cy + R_tip * Math.sin(Math.PI / 6) },  // V4 (Tip 2, 4h)
+      { x: cx + R_val * Math.cos(Math.PI / 3),  y: cy + R_val * Math.sin(Math.PI / 3) },  // V5 (Valley 2, 5h)
+      { x: cx, y: cy + R_tip },                                                      // V6 (Tip 3, 6h)
+      { x: cx + R_val * Math.cos(2 * Math.PI / 3), y: cy + R_val * Math.sin(2 * Math.PI / 3) }, // V7 (Valley 3, 7h)
+      { x: cx + R_tip * Math.cos(5 * Math.PI / 6), y: cy + R_tip * Math.sin(5 * Math.PI / 6) }, // V8 (Tip 4, 8h)
+      { x: cx - R_val, y: cy },                                                      // V9 (Valley 4, 9h)
+      { x: cx + R_tip * Math.cos(-5 * Math.PI / 6), y: cy + R_tip * Math.sin(-5 * Math.PI / 6) }, // V10 (Tip 5, 10h)
+      { x: cx + R_val * Math.cos(-2 * Math.PI / 3), y: cy + R_val * Math.sin(-2 * Math.PI / 3) }, // V11 (Valley 5, 11h)
     ];
 
-    // 6 Cạnh nối tạo thành 2 Tam Giác Lớn lồng nhau (Mỗi cạnh 20 sao = 120 sao tổng cộng)
-    // Tam Giác Dương (Hướng Lên): V4 -> V0 -> V2 -> V4
-    // Tam Giác Âm (Hướng Xuống): V5 -> V1 -> V3 -> V5
-    const edgeDefs = [
-      { from: vertices[4], to: vertices[0], range: '1-20',   hoaIdx: 1, color: '#38bdf8' }, // Cạnh 0: Trái Dưới -> Đỉnh
-      { from: vertices[0], to: vertices[2], range: '21-40',  hoaIdx: 1, color: '#38bdf8' }, // Cạnh 1: Đỉnh -> Phải Dưới
-      { from: vertices[2], to: vertices[4], range: '41-60',  hoaIdx: 2, color: '#f97316' }, // Cạnh 2: Đáy Tam Giác Dương
-      { from: vertices[5], to: vertices[1], range: '61-80',  hoaIdx: 3, color: '#fef08a' }, // Cạnh 3: Đỉnh Ngang Tam Giác Âm
-      { from: vertices[1], to: vertices[3], range: '81-100', hoaIdx: 4, color: '#c084fc' }, // Cạnh 4: Phải Trên -> Đáy
-      { from: vertices[3], to: vertices[5], range: '101-120',hoaIdx: 4, color: '#c084fc' }, // Cạnh 5: Đáy -> Trái Trên
-    ];
+    // Rải đều 120 Pháp Khiếu trên 12 cạnh viền Lục Mang Tinh (Mỗi cạnh 10 sao = 120 sao)
+    const starsPerSeg = 10;
+    for (let seg = 0; seg < 12; seg++) {
+      const p1 = V[seg];
+      const p2 = V[(seg + 1) % 12];
 
-    const starsPerEdge = 20;
+      for (let s = 0; s < starsPerSeg; s++) {
+        const t = (s + 0.5) / starsPerSeg;
+        const sx = p1.x + t * (p2.x - p1.x);
+        const sy = (p1.y || p1.cy) + t * ((p2.y || p2.cy) - (p1.y || p1.cy));
 
-    edgeDefs.forEach((eDef, edgeIdx) => {
-      for (let s = 0; s < starsPerEdge; s++) {
-        const t = (s + 0.5) / starsPerEdge;
-        const sx = eDef.from.x + t * (eDef.to.x - eDef.from.x);
-        const sy = eDef.from.y + t * (eDef.to.y - eDef.from.y);
-
-        const globalIdx = edgeIdx * starsPerEdge + s; // 0 đến 119
+        const globalIdx = seg * starsPerSeg + s; // 0 đến 119
         const isLit = globalIdx < phapKhieu;
-        const isMilestone = (s + 1) % 10 === 0;
+        const isMilestone = (globalIdx + 1) % 30 === 0;
 
-        // Xác định màu sắc theo 4 Mệnh Hỏa (0-29: Hỏa 1, 30-59: Hỏa 2, 60-89: Hỏa 3, 90-119: Hỏa 4)
+        // 4 Giai đoạn Mệnh Hỏa (0-29: Hỏa 1, 30-59: Hỏa 2, 60-89: Hỏa 3, 90-119: Hỏa 4)
         const starColor = globalIdx < 30 ? '#38bdf8' : globalIdx < 60 ? '#f97316' : globalIdx < 90 ? '#fef08a' : '#c084fc';
 
         stars.push({
           idx: globalIdx,
-          edgeIndex: edgeIdx,
+          seg,
           cx: Number(sx.toFixed(1)),
           cy: Number(sy.toFixed(1)),
           isLit,
@@ -90,91 +86,27 @@ export default function RealmPreviewVisualizer({
           color: starColor,
         });
       }
+    }
 
-      edges.push({
-        edgeIdx,
-        d: `M ${eDef.from.x.toFixed(1)},${eDef.from.y.toFixed(1)} L ${eDef.to.x.toFixed(1)},${eDef.to.y.toFixed(1)}`,
-        color: eDef.color,
-        isLit: phapKhieu > edgeIdx * starsPerEdge,
-        isComplete: phapKhieu >= (edgeIdx + 1) * starsPerEdge,
-      });
-    });
+    // SVG path string cho toàn bộ viền Lục Mang Tinh
+    const hexPath = V.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(1)},${(pt.y || pt.cy).toFixed(1)}`).join(' ') + ' Z';
 
-    // 2 Tam Giác Lớn tạo Lục Mang Tinh
-    const triUp = `M ${vertices[0].x},${vertices[0].y} L ${vertices[2].x},${vertices[2].y} L ${vertices[4].x},${vertices[4].y} Z`;
-    const triDown = `M ${vertices[5].x},${vertices[5].y} L ${vertices[1].x},${vertices[1].y} L ${vertices[3].x},${vertices[3].y} Z`;
+    // 2 Tam Giác Lớn Lồng Nhau (Tam Giác Dương ▲ & Tam Giác Âm ▼)
+    const triUp = `M ${V[0].x.toFixed(1)},${(V[0].y || V[0].cy).toFixed(1)} L ${V[4].x.toFixed(1)},${(V[4].y || V[4].cy).toFixed(1)} L ${V[8].x.toFixed(1)},${(V[8].y || V[8].cy).toFixed(1)} Z`;
+    const triDown = `M ${V[6].x.toFixed(1)},${(V[6].y || V[6].cy).toFixed(1)} L ${V[10].x.toFixed(1)},${(V[10].y || V[10].cy).toFixed(1)} L ${V[2].x.toFixed(1)},${(V[2].y || V[2].cy).toFixed(1)} Z`;
 
     const absorbedLampObjs = (cultivation?.absorbedLamps || []).map(id => LIFE_LAMPS.find(l => l.id === id)).filter(Boolean);
     const activeLamp = absorbedLampObjs[0] || LIFE_LAMPS[0];
 
     return {
       constellationStars: stars,
-      hexagramEdges: edges,
-      hexagramTriangles: { triUp, triDown, vertices, R },
+      hexagramPathD: hexPath,
+      triangleUpD: triUp,
+      triangleDownD: triDown,
+      starVertices: V,
       activeLampObj: activeLamp,
     };
   }, [phapKhieu, cultivation?.absorbedLamps]);
-
-  // 4 Vị Trí Xung Quanh (Tây Bắc, Đông Bắc, Tây Nam, Đông Nam)
-  const surroundingSlots = useMemo(() => {
-    const slots = [
-      { id: 'pos_1', name: 'Mệnh Hỏa 1 (Tây Bắc)', posClass: styles.slotTopLeft, color: '#38bdf8' },
-      { id: 'pos_2', name: 'Mệnh Hỏa 2 (Đông Bắc)', posClass: styles.slotTopRight, color: '#f97316' },
-      { id: 'pos_3', name: 'Mệnh Hỏa 3 (Tây Nam)', posClass: styles.slotBottomLeft, color: '#fef08a' },
-      { id: 'pos_4', name: 'Mệnh Hỏa 4 (Đông Nam)', posClass: styles.slotBottomRight, color: '#c084fc' },
-    ];
-
-    return slots.map((slot, index) => {
-      const lampId = absorbedLamps[index];
-      if (lampId) {
-        const lamp = LIFE_LAMPS.find(l => l.id === lampId);
-        const tier = lamp ? (LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham) : null;
-        return {
-          ...slot,
-          type: 'lamp',
-          isLit: true,
-          lampObj: lamp,
-          icon: lamp?.icon || '🏮',
-          title: lamp?.shortName || lamp?.name || 'Mệnh Đăng',
-          tierName: tier?.name,
-          color: tier?.color || slot.color || '#ffcc00',
-          glow: tier?.border || 'rgba(255, 204, 0, 0.8)',
-          bg: tier?.bg,
-        };
-      }
-
-      const fireIndex = index + 1;
-      const isFireLit = selfHoa >= fireIndex;
-      return {
-        ...slot,
-        type: 'fire',
-        isLit: isFireLit,
-        icon: isFireLit ? '🔥' : '🕯️',
-        title: `Mệnh Hỏa ${fireIndex}`,
-        tierName: isFireLit ? 'Đã Thắp' : `${(fireIndex - 1) * 30 + 1}-${fireIndex * 30}`,
-        color: isFireLit ? slot.color : 'rgba(255, 255, 255, 0.3)',
-        glow: isFireLit ? 'rgba(249, 115, 22, 0.85)' : 'none',
-      };
-    });
-  }, [absorbedLamps, selfHoa]);
-
-  // Nếu có Mệnh Đăng thứ 5 (vị trí phụ dưới chân tọa đài)
-  const fifthLamp = useMemo(() => {
-    if (absorbedLamps.length >= 5) {
-      const lampId = absorbedLamps[4];
-      const lamp = LIFE_LAMPS.find(l => l.id === lampId);
-      const tier = lamp ? (LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham) : null;
-      return {
-        lampObj: lamp,
-        icon: lamp?.icon || '🏮',
-        title: lamp?.shortName || lamp?.name || 'Mệnh Đăng 5',
-        color: tier?.color || '#ffcc00',
-        glow: tier?.border || 'rgba(255, 204, 0, 0.8)',
-        bg: tier?.bg,
-      };
-    }
-    return null;
-  }, [absorbedLamps]);
 
   return (
     <div className={`${styles.visualizerWrapper} ${realm === 'truc_co' ? styles.visualizerWrapperTrucCo : (realm === 'kim_dan' || realm === 'gia_anh' || realm === 'nguyen_anh') ? styles.visualizerWrapperTall : ''}`}>
@@ -227,14 +159,14 @@ export default function RealmPreviewVisualizer({
             <svg viewBox="0 0 320 330" className={styles.starChartSvg}>
               <defs>
                 <radialGradient id="starChartGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#00f2fe" stopOpacity={phapKhieu >= 120 ? 0.35 : 0.15} />
-                  <stop offset="60%" stopColor="#0284c7" stopOpacity={phapKhieu >= 120 ? 0.15 : 0.04} />
+                  <stop offset="0%" stopColor="#00f2fe" stopOpacity={phapKhieu >= 120 ? 0.3 : 0.12} />
+                  <stop offset="60%" stopColor="#0284c7" stopOpacity={phapKhieu >= 120 ? 0.12 : 0.03} />
                   <stop offset="100%" stopColor="transparent" stopOpacity="0" />
                 </radialGradient>
 
                 <radialGradient id="hexagramCoreGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#fbbf24" stopOpacity={phapKhieu >= 120 ? 0.6 : 0.25} />
-                  <stop offset="50%" stopColor="#f59e0b" stopOpacity={phapKhieu >= 120 ? 0.3 : 0.1} />
+                  <stop offset="0%" stopColor="#fbbf24" stopOpacity={phapKhieu >= 120 ? 0.65 : 0.2} />
+                  <stop offset="60%" stopColor="#f59e0b" stopOpacity={phapKhieu >= 120 ? 0.35 : 0.08} />
                   <stop offset="100%" stopColor="transparent" stopOpacity="0" />
                 </radialGradient>
 
@@ -246,62 +178,62 @@ export default function RealmPreviewVisualizer({
                     <feMergeNode in="SourceGraphic" />
                   </feMerge>
                 </filter>
-                <filter id="lampCenterGlow" x="-100%" y="-100%" width="300%" height="300%">
-                  <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur1" />
-                  <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur2" />
-                  <feMerge>
-                    <feMergeNode in="blur1" />
-                    <feMergeNode in="blur2" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
               </defs>
 
               {/* Vòng Tròn Bao Quanh Ngoài Cùng (Outer Celestial Circle) */}
               <circle
                 cx="160"
                 cy="165"
-                r={hexagramTriangles.R}
+                r="102"
                 fill="url(#starChartGlow)"
-                stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(56, 189, 248, 0.3)'}
+                stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(56, 189, 248, 0.28)'}
                 strokeWidth={phapKhieu >= 120 ? 1.8 : 1}
-                strokeDasharray={phapKhieu >= 120 ? 'none' : '4, 4'}
+                strokeDasharray={phapKhieu >= 120 ? 'none' : '3, 4'}
               />
-              <circle cx="160" cy="165" r={hexagramTriangles.R + 6} fill="none" stroke="rgba(56, 189, 248, 0.12)" strokeWidth="0.8" strokeDasharray="2, 4" />
+              <circle cx="160" cy="165" r="108" fill="none" stroke="rgba(56, 189, 248, 0.12)" strokeWidth="0.8" strokeDasharray="2, 4" />
 
-              {/* Khung 2 Tam Giác Lục Mang Tinh (Hexagram Geometric Array) */}
+              {/* Khung 2 Tam Giác Lục Mang Tinh (Hexagram Geometric Lines) */}
               <path
-                d={hexagramTriangles.triUp}
+                d={triangleUpD}
                 fill="none"
-                stroke={phapKhieu >= 60 ? 'rgba(56, 189, 248, 0.6)' : 'rgba(255, 255, 255, 0.12)'}
-                strokeWidth={phapKhieu >= 60 ? 1.5 : 0.8}
+                stroke={phapKhieu >= 60 ? 'rgba(56, 189, 248, 0.45)' : 'rgba(255, 255, 255, 0.08)'}
+                strokeWidth={phapKhieu >= 60 ? 1.2 : 0.8}
               />
               <path
-                d={hexagramTriangles.triDown}
+                d={triangleDownD}
                 fill="none"
-                stroke={phapKhieu >= 120 ? 'rgba(249, 115, 22, 0.6)' : 'rgba(255, 255, 255, 0.12)'}
+                stroke={phapKhieu >= 120 ? 'rgba(249, 115, 22, 0.45)' : 'rgba(255, 255, 255, 0.08)'}
+                strokeWidth={phapKhieu >= 120 ? 1.2 : 0.8}
+              />
+
+              {/* Đường Viền Lục Mang Tinh Liên Kết Các Sao */}
+              <path
+                d={hexagramPathD}
+                fill="none"
+                stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(56, 189, 248, 0.2)'}
                 strokeWidth={phapKhieu >= 120 ? 1.5 : 0.8}
+                strokeDasharray={phapKhieu >= 120 ? 'none' : '2, 3'}
               />
 
-              {/* Vòng Bát Trận Tâm Trận (Center Core Aura Ring) */}
+              {/* Vòng Bát Trận Tâm Trận Bao Quanh Mệnh Đăng (Center Core Altar Ring) */}
               <circle
                 cx="160"
                 cy="165"
-                r="38"
+                r="36"
                 fill="url(#hexagramCoreGlow)"
                 stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(255, 204, 0, 0.35)'}
                 strokeWidth={phapKhieu >= 120 ? 1.5 : 0.8}
                 strokeDasharray={phapKhieu >= 120 ? 'none' : '3, 3'}
               />
 
-              {/* 120 Ngôi Sao Pháp Khiếu Rải Đều 6 Cạnh Lục Mang Tinh */}
+              {/* 120 Ngôi Sao Pháp Khiếu Rải Đều 12 Cạnh Viền Lục Mang Tinh */}
               {constellationStars.map((star) => (
                 <circle
                   key={star.idx}
                   cx={star.cx}
                   cy={star.cy}
-                  r={star.isLit ? (star.isMilestone ? 3.6 : 2.5) : 1.4}
-                  fill={star.isLit ? star.color : 'rgba(255, 255, 255, 0.18)'}
+                  r={star.isLit ? (star.isMilestone ? 3.5 : 2.5) : 1.4}
+                  fill={star.isLit ? star.color : 'rgba(255, 255, 255, 0.16)'}
                   filter={star.isLit ? 'url(#starGlow)' : 'none'}
                   className={`${styles.starDot} ${star.isLit ? styles.starLit : styles.starDim}`}
                   style={{
@@ -314,9 +246,9 @@ export default function RealmPreviewVisualizer({
               {/* Hào Quang Cực Cảnh 121 (Nếu Mở Khóa) */}
               {has121st && (
                 <g>
-                  <line x1="160" y1="127" x2="160" y2="59" stroke="#ec4899" strokeWidth="2" strokeDasharray="3,2" className={styles.lightningBeam121} />
-                  <circle cx="160" cy="59" r="8" fill="none" stroke="#f472b6" strokeWidth="1.5" className={styles.crownAuraRing} />
-                  <circle cx="160" cy="59" r="4.5" fill="#ec4899" />
+                  <line x1="160" y1="129" x2="160" y2="63" stroke="#ec4899" strokeWidth="2" strokeDasharray="3,2" className={styles.lightningBeam121} />
+                  <circle cx="160" cy="63" r="8" fill="none" stroke="#f472b6" strokeWidth="1.5" className={styles.crownAuraRing} />
+                  <circle cx="160" cy="63" r="4.5" fill="#ec4899" />
                 </g>
               )}
             </svg>
@@ -326,11 +258,11 @@ export default function RealmPreviewVisualizer({
           <div
             className={styles.centerHexagramLampWrap}
             style={{
-              opacity: phapKhieu === 0 ? 0.5 : Math.min(1, 0.55 + 0.45 * (phapKhieu / 120)),
+              opacity: phapKhieu === 0 ? 0.45 : Math.min(1, 0.5 + 0.5 * (phapKhieu / 120)),
               filter: phapKhieu >= 120
-                ? 'drop-shadow(0 0 16px rgba(255, 204, 0, 0.9)) drop-shadow(0 0 30px rgba(249, 115, 22, 0.7))'
+                ? 'drop-shadow(0 0 16px rgba(255, 204, 0, 0.9)) drop-shadow(0 0 28px rgba(249, 115, 22, 0.7))'
                 : phapKhieu > 0
-                ? `drop-shadow(0 0 ${6 + Math.floor(phapKhieu / 10)}px rgba(255, 204, 0, 0.6))`
+                ? `drop-shadow(0 0 ${4 + Math.floor(phapKhieu / 10)}px rgba(255, 204, 0, 0.6))`
                 : 'none',
             }}
           >
@@ -363,74 +295,6 @@ export default function RealmPreviewVisualizer({
               <div className={styles.crownFlameLocked} title="Pháp Khiếu 121: Chưa Khai Mở">
                 <span className={styles.crownIconDim}>🕯️</span>
                 <span className={styles.crownLabelDim}>121 KHIẾU</span>
-              </div>
-            )}
-          </div>
-
-          {/* D. 4 VỊ TRÍ LƠ LỬNG XUNG QUANH (MỆNH HỎA / THAY BẰNG MỆNH ĐĂNG AI) */}
-          <div className={styles.surroundingSlotsLayer}>
-            {surroundingSlots.map((slot) => (
-              <div
-                key={slot.id}
-                className={`${styles.floatingElementWrap} ${slot.posClass}`}
-                title={slot.title}
-              >
-                {slot.type === 'lamp' ? (
-                  <div
-                    className={styles.divineLampCardFloating}
-                    style={{
-                      borderColor: slot.color,
-                      boxShadow: `0 0 14px ${slot.glow}`,
-                      backgroundColor: slot.bg || 'rgba(16, 25, 39, 0.9)',
-                    }}
-                  >
-                    <span className={styles.slotIcon} style={{ filter: `drop-shadow(0 0 6px ${slot.color})` }}>
-                      {slot.lampObj ? (
-                        <ArtifactIcon item={slot.lampObj} isLamp={true} size={28} />
-                      ) : (
-                        slot.icon
-                      )}
-                    </span>
-                    <span className={styles.slotName} style={{ color: slot.color }}>
-                      {slot.title}
-                    </span>
-                  </div>
-                ) : (
-                  <div
-                    className={`${styles.flameCardFloating} ${slot.isLit ? styles.flameCardLit : styles.flameCardDim}`}
-                    style={slot.isLit ? { borderColor: slot.color, boxShadow: `0 0 10px ${slot.glow}` } : {}}
-                  >
-                    <span className={styles.slotIcon} style={{ filter: slot.isLit ? `drop-shadow(0 0 6px ${slot.color})` : 'none' }}>
-                      {slot.icon}
-                    </span>
-                    <span className={styles.slotName} style={{ color: slot.color }}>
-                      {slot.title}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* Mệnh Đăng thứ 5 nếu có */}
-            {fifthLamp && (
-              <div className={styles.fifthLampWrap} title={fifthLamp.title}>
-                <div
-                  className={styles.divineLampCardFloating}
-                  style={{
-                    borderColor: fifthLamp.color,
-                    boxShadow: `0 0 14px ${fifthLamp.glow}`,
-                    backgroundColor: fifthLamp.bg || 'rgba(16, 25, 39, 0.9)',
-                  }}
-                >
-                  <span className={styles.slotIcon}>
-                    {fifthLamp.lampObj ? (
-                      <ArtifactIcon item={fifthLamp.lampObj} isLamp={true} size={28} />
-                    ) : (
-                      fifthLamp.icon
-                    )}
-                  </span>
-                  <span className={styles.slotName} style={{ color: fifthLamp.color }}>{fifthLamp.title}</span>
-                </div>
               </div>
             )}
           </div>
