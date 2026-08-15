@@ -31,7 +31,10 @@ export default function RealmPreviewVisualizer({
   const daoAnhs = cultivation?.daoAnhs || [];
 
   // Calculate target Palace EXP for current active self palace
-  c  // Tạo danh sách 120 điểm sao tinh đồ theo 4 Đại Chòm Sao Tứ Tượng (Thanh Long, Chu Tước, Bạch Hổ, Huyền Vũ)
+  const targetPalaceExp = cultivation?.targetPalaceExp || 2000;
+  const bottleneckExp = targetPalaceExp - 1;
+
+  // Tạo danh sách 120 điểm sao tinh đồ theo 4 Đại Chòm Sao Tứ Tượng (Thanh Long, Chu Tước, Bạch Hổ, Huyền Vũ)
   const { constellationStars, constellationPaths, quadrantList } = useMemo(() => {
     const stars = [];
     const paths = [];
