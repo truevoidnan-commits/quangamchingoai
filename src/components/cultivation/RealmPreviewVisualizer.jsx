@@ -35,87 +35,171 @@ export default function RealmPreviewVisualizer({
   const targetPalaceExp = cultivation?.targetPalaceExp || 2000;
   const bottleneckExp = targetPalaceExp - 1;
 
-  // TỨ TƯỢNG QUY NHẤT TINH VÂN: 4 Dải Ngân Hà Xoắn Ốc (Mỗi nhánh 30 Pháp Khiếu = 120 Khiếu)
-  const { spiralArms, activeLampObj, fifthLampObj } = useMemo(() => {
-    const armsConfig = [
-      { id: 'arm_1', name: 'Mệnh Hỏa 1', startAngle: 0,   color: '#38bdf8', glow: '#00f2fe', startIdx: 0 },   // Nhánh 1 (Xanh Lam - Mệnh Hỏa 1: 1-30)
-      { id: 'arm_2', name: 'Mệnh Hỏa 2', startAngle: 90,  color: '#fb923c', glow: '#f97316', startIdx: 30 },  // Nhánh 2 (Đỏ Cam - Mệnh Hỏa 2: 31-60)
-      { id: 'arm_3', name: 'Mệnh Hỏa 3', startAngle: 180, color: '#fef08a', glow: '#eab308', startIdx: 60 },  // Nhánh 3 (Hoàng Kim - Mệnh Hỏa 3: 61-90)
-      { id: 'arm_4', name: 'Mệnh Hỏa 4', startAngle: 270, color: '#c084fc', glow: '#a855f7', startIdx: 90 },  // Nhánh 4 (Tử Quang - Mệnh Hỏa 4: 91-120)
-    ];
-
+  // PHƯƠNG ÁN 1: LƯỠNG NGHI SONG LONG TRIỀU NHẬT (THÁI CỰC CHỮ S & MẮT ÂM DƯƠNG)
+  const { taijiSPath, yangStars, yinStars, outerStars, lampAltars, activeLampObj, fifthLampObj } = useMemo(() => {
     const cx = 180;
     const cy = 185;
-    const starsPerArm = 30;
-    const rStart = 42;  // Bán kính xuất phát gần Tu Sĩ
-    const rEnd = 138;   // Bán kính vươn ra đầu mút Mệnh Đăng
-    const totalTheta = 1.6 * Math.PI; // Góc xoắn ốc (~290 độ)
+    const R = 136; // Bán kính vòng Thái Cực Đồ lớn
 
-    const arms = armsConfig.map((arm, armIdx) => {
-      const stars = [];
-      const baseRad = (arm.startAngle * Math.PI) / 180;
-      let pathD = '';
+    // 1. TỌA ĐỘ 2 MẮT ÂM - DƯƠNG (NƠI ĐẶT 4 MỆNH ĐĂNG THEO CẶP HOẶC 4 PHƯƠNG VỊ THÁI CỰC)
+    // - Mắt Dương (Bên Trái / Phía Trên): cx = 120, cy = 145 (Đặt Mệnh Đăng 1 & Mệnh Đăng 2)
+    // - Mắt Âm (Bên Phải / Phía Dưới): cx = 240, cy = 225 (Đặt Mệnh Đăng 3 & Mệnh Đăng 4)
+    const eyeYang = { x: 122, y: 148, r: 24 };
+    const eyeYin = { x: 238, y: 222, r: 24 };
 
-      for (let s = 0; s < starsPerArm; s++) {
-        const t = (s + 0.5) / starsPerArm; // 0..1
-        const r = rStart + (rEnd - rStart) * Math.pow(t, 0.88); // Đường cong xoắn ốc Archimedes mượt mà
-        const theta = baseRad + totalTheta * t;
+    // 2. PHÂN BỐ 120 PHÁP KHIẾU:
+    // - 30 Khiếu Nhánh Dương (Hỏa 1: 1-30): Uốn lượn theo nửa trên của đường cong chữ S và ôm quanh Mắt Dương.
+    // - 30 Khiếu Nhánh Thiếu Dương (Hỏa 2: 31-60): Men theo vòng cung Dương ngoài cùng bên trái (90° -> 270°).
+    // - 30 Khiếu Nhánh Âm (Hỏa 3: 61-90): Uốn lượn theo nửa dưới của đường cong chữ S và ôm quanh Mắt Âm.
+    // - 30 Khiếu Nhánh Thiếu Âm (Hỏa 4: 91-120): Men theo vòng cung Âm ngoài cùng bên phải (270° -> 90°).
 
-        const sx = cx + r * Math.cos(theta);
-        const sy = cy + r * Math.sin(theta);
-        const globalIdx = arm.startIdx + s;
+    const allStars = [];
 
-        stars.push({
-          idx: globalIdx,
-          cx: Number(sx.toFixed(1)),
-          cy: Number(sy.toFixed(1)),
-          isLit: globalIdx < phapKhieu,
-          isMilestone: (globalIdx + 1) % 10 === 0,
-          color: arm.color,
-          glow: arm.glow,
-        });
-
-        if (s === 0) {
-          pathD += `M ${sx.toFixed(1)} ${sy.toFixed(1)}`;
-        } else {
-          pathD += ` L ${sx.toFixed(1)} ${sy.toFixed(1)}`;
-        }
+    // Nhánh 1 (Khiếu 1-30, Xanh Lam #38bdf8): Đường cong S trên & quanh Mắt Dương
+    for (let i = 0; i < 30; i++) {
+      const t = (i + 0.5) / 30;
+      let sx, sy;
+      if (t < 0.65) {
+        // Chạy dọc theo nửa trên đường chữ S (từ đỉnh 0, -R uốn vào tâm)
+        const prog = t / 0.65;
+        const angle = -Math.PI / 2 + Math.PI * prog;
+        const rSub = R / 2;
+        sx = cx + rSub * Math.sin(angle);
+        sy = cy - rSub + rSub * Math.cos(angle);
+      } else {
+        // Vòng quanh Mắt Dương
+        const prog = (t - 0.65) / 0.35;
+        const angle = prog * 2 * Math.PI - Math.PI / 2;
+        sx = eyeYang.x + 32 * Math.cos(angle);
+        sy = eyeYang.y + 32 * Math.sin(angle);
       }
 
-      // Tọa độ đầu mút ngoài cùng nơi đặt Mệnh Đăng (Outer Tip Lamp Altar)
-      const endTheta = baseRad + totalTheta * 1.06;
-      const endR = rEnd + 14;
-      const lampPos = {
-        x: Number((cx + endR * Math.cos(endTheta)).toFixed(1)),
-        y: Number((cy + endR * Math.sin(endTheta)).toFixed(1)),
-      };
+      allStars.push({
+        idx: i,
+        cx: Number(sx.toFixed(1)),
+        cy: Number(sy.toFixed(1)),
+        isLit: i < phapKhieu,
+        isMilestone: (i + 1) % 10 === 0,
+        color: '#38bdf8',
+        glow: '#00f2fe',
+        stage: 1,
+      });
+    }
 
-      const litCount = Math.max(0, Math.min(30, phapKhieu - arm.startIdx));
-      const isComplete = litCount === 30;
+    // Nhánh 2 (Khiếu 31-60, Đỏ Cam #fb923c): Vòng cung ngoài bên Trái (Dương Ngư Viền)
+    for (let i = 0; i < 30; i++) {
+      const globalIdx = 30 + i;
+      const t = (i + 0.5) / 30;
+      // Góc từ -90° (đỉnh) qua 180° (trái) tới 90° (đáy)
+      const angle = -Math.PI / 2 - Math.PI * t;
+      const sx = cx + R * Math.cos(angle);
+      const sy = cy + R * Math.sin(angle);
 
-      // Mệnh Đăng / Mệnh Hỏa tương ứng tại nhánh này
-      const lampId = (cultivation?.absorbedLamps || [])[armIdx];
-      const lampObj = lampId ? LIFE_LAMPS.find(l => l.id === lampId) : null;
-      const isFireLit = (cultivation?.selfHoa || 0) >= (armIdx + 1);
+      allStars.push({
+        idx: globalIdx,
+        cx: Number(sx.toFixed(1)),
+        cy: Number(sy.toFixed(1)),
+        isLit: globalIdx < phapKhieu,
+        isMilestone: (globalIdx + 1) % 10 === 0,
+        color: '#fb923c',
+        glow: '#f97316',
+        stage: 2,
+      });
+    }
 
-      return {
-        ...arm,
-        stars,
-        pathD,
-        lampPos,
-        litCount,
-        isComplete,
-        lampObj,
-        isFireLit,
-      };
-    });
+    // Nhánh 3 (Khiếu 61-90, Hoàng Kim #fef08a): Đường cong S dưới & quanh Mắt Âm
+    for (let i = 0; i < 30; i++) {
+      const globalIdx = 60 + i;
+      const t = (i + 0.5) / 30;
+      let sx, sy;
+      if (t < 0.65) {
+        // Chạy dọc theo nửa dưới đường chữ S (từ tâm uốn xuống đáy 0, R)
+        const prog = t / 0.65;
+        const angle = Math.PI * prog;
+        const rSub = R / 2;
+        sx = cx - rSub * Math.sin(angle);
+        sy = cy + rSub - rSub * Math.cos(angle);
+      } else {
+        // Vòng quanh Mắt Âm
+        const prog = (t - 0.65) / 0.35;
+        const angle = prog * 2 * Math.PI + Math.PI / 2;
+        sx = eyeYin.x + 32 * Math.cos(angle);
+        sy = eyeYin.y + 32 * Math.sin(angle);
+      }
+
+      allStars.push({
+        idx: globalIdx,
+        cx: Number(sx.toFixed(1)),
+        cy: Number(sy.toFixed(1)),
+        isLit: globalIdx < phapKhieu,
+        isMilestone: (globalIdx + 1) % 10 === 0,
+        color: '#fef08a',
+        glow: '#eab308',
+        stage: 3,
+      });
+    }
+
+    // Nhánh 4 (Khiếu 91-120, Tử Quang #c084fc): Vòng cung ngoài bên Phải (Âm Ngư Viền)
+    for (let i = 0; i < 30; i++) {
+      const globalIdx = 90 + i;
+      const t = (i + 0.5) / 30;
+      // Góc từ 90° (đáy) qua 0° (phải) tới -90° (đỉnh)
+      const angle = Math.PI / 2 - Math.PI * t;
+      const sx = cx + R * Math.cos(angle);
+      const sy = cy + R * Math.sin(angle);
+
+      allStars.push({
+        idx: globalIdx,
+        cx: Number(sx.toFixed(1)),
+        cy: Number(sy.toFixed(1)),
+        isLit: globalIdx < phapKhieu,
+        isMilestone: (globalIdx + 1) % 10 === 0,
+        color: '#c084fc',
+        glow: '#a855f7',
+        stage: 4,
+      });
+    }
+
+    // Đường cong phân giới Âm Dương S-Curve Path
+    const sPath = `M ${cx} ${cy - R} A ${R / 2} ${R / 2} 0 0 1 ${cx} ${cy} A ${R / 2} ${R / 2} 0 0 0 ${cx} ${cy + R}`;
+
+    // CẤU HÌNH 4 MỆNH ĐĂNG TỌA TRẤN THÁI CỰC:
+    // Đèn 1: Mắt Dương (122, 148)
+    // Đèn 2: Cánh Trái Dương (cx - R, cy) = (44, 185)
+    // Đèn 3: Mắt Âm (238, 222)
+    // Đèn 4: Cánh Phải Âm (cx + R, cy) = (316, 185)
+    const lampPositions = [
+      { id: 'lamp_1', name: 'Mệnh Hỏa 1', x: 122, y: 148, color: '#38bdf8' },
+      { id: 'lamp_2', name: 'Mệnh Hỏa 2', x: 44,  y: 185, color: '#fb923c' },
+      { id: 'lamp_3', name: 'Mệnh Hỏa 3', x: 238, y: 222, color: '#fef08a' },
+      { id: 'lamp_4', name: 'Mệnh Hỏa 4', x: 316, y: 185, color: '#c084fc' },
+    ];
 
     const absorbedLampObjs = (cultivation?.absorbedLamps || []).map(id => LIFE_LAMPS.find(l => l.id === id)).filter(Boolean);
     const activeLamp = absorbedLampObjs[0] || LIFE_LAMPS[0];
     const fifthLamp = absorbedLampObjs[4] || null;
 
+    const altars = lampPositions.map((lp, idx) => {
+      const lampId = (cultivation?.absorbedLamps || [])[idx];
+      const lampObj = lampId ? LIFE_LAMPS.find(l => l.id === lampId) : null;
+      const isFireLit = (cultivation?.selfHoa || 0) >= (idx + 1);
+      const isComplete = phapKhieu >= (idx + 1) * 30;
+
+      return {
+        ...lp,
+        lampObj,
+        isFireLit,
+        isComplete,
+      };
+    });
+
     return {
-      spiralArms: arms,
+      taijiSPath: sPath,
+      yangStars: allStars.filter(s => s.stage === 1),
+      yinStars: allStars.filter(s => s.stage === 3),
+      outerStars: allStars.filter(s => s.stage === 2 || s.stage === 4),
+      allStars,
+      lampAltars: altars,
       activeLampObj: activeLamp,
       fifthLampObj: fifthLamp,
     };
@@ -163,7 +247,7 @@ export default function RealmPreviewVisualizer({
       )}
 
       {/* ========================================================
-          2. TRÚC CƠ VISUALIZER: TỨ TƯỢNG QUY NHẤT TINH VÂN (4 NHÁNH XOẮN ỐC + 5 MỆNH ĐĂNG)
+          2. TRÚC CƠ VISUALIZER: LƯỠNG NGHI SONG LONG TRIỀU NHẬT (THÁI CỰC CHỮ S & MẮT ÂM DƯƠNG)
          ======================================================== */}
       {realm === 'truc_co' && (
         <div className={styles.trucCoStage}>
@@ -182,12 +266,12 @@ export default function RealmPreviewVisualizer({
                   <stop offset="100%" stopColor="#0f172a" stopOpacity="0.95" />
                 </linearGradient>
 
-                {/* ClipPath cho 4 Mệnh Đăng ở 4 nhánh mút xoắn ốc (r = 18px, đường kính 36px) */}
-                <clipPath id="spiralClip_arm_1"><circle cx="0" cy="0" r="18" /></clipPath>
-                <clipPath id="spiralClip_arm_2"><circle cx="0" cy="0" r="18" /></clipPath>
-                <clipPath id="spiralClip_arm_3"><circle cx="0" cy="0" r="18" /></clipPath>
-                <clipPath id="spiralClip_arm_4"><circle cx="0" cy="0" r="18" /></clipPath>
-                <clipPath id="spiralClip_crown"><circle cx="180" cy="38" r="16" /></clipPath>
+                {/* ClipPath cho 4 Mệnh Đăng Thái Cực (r = 18px, đường kính 36px) */}
+                <clipPath id="taijiClip_lamp_1"><circle cx="0" cy="0" r="18" /></clipPath>
+                <clipPath id="taijiClip_lamp_2"><circle cx="0" cy="0" r="18" /></clipPath>
+                <clipPath id="taijiClip_lamp_3"><circle cx="0" cy="0" r="18" /></clipPath>
+                <clipPath id="taijiClip_lamp_4"><circle cx="0" cy="0" r="18" /></clipPath>
+                <clipPath id="taijiClip_crown"><circle cx="180" cy="38" r="16" /></clipPath>
 
                 {/* Super Glow Filter cho các Pháp Khiếu Rực Sáng */}
                 <filter id="superStarGlow" x="-80%" y="-80%" width="260%" height="260%">
@@ -294,138 +378,148 @@ export default function RealmPreviewVisualizer({
                 </g>
               </g>
 
-              {/* B. VẼ 4 NHÁNH NGÂN HÀ XOẮN ỐC (TỨ TƯỢNG QUY NHẤT TINH VÂN) */}
-              {spiralArms.map((arm) => {
-                const aiIconUrl = arm.lampObj?.id ? LAMP_THAN_PHAM_AI_ICONS[arm.lampObj.id] : null;
-                const labelText = arm.lampObj?.shortName || arm.name;
+              {/* B. ĐƯỜNG CONG THÁI CỰC CHỮ S & VÒNG ÂM DƯƠNG QUỸ ĐẠO */}
+              <g>
+                {/* Đường phân giới Âm Dương S-Curve */}
+                <path
+                  d={taijiSPath}
+                  fill="none"
+                  stroke="rgba(56, 189, 248, 0.4)"
+                  strokeWidth="1.8"
+                  strokeDasharray="4, 3"
+                />
+
+                {/* Vòng tròn ngoại vi Thái Cực R=136 */}
+                <circle
+                  cx="180"
+                  cy="185"
+                  r="136"
+                  fill="none"
+                  stroke="rgba(56, 189, 248, 0.3)"
+                  strokeWidth="1.2"
+                  strokeDasharray="3, 4"
+                />
+
+                {/* 120 NGÔI SAO PHÁP KHIẾU UỐN LƯỢN DỌC THEO THÁI CỰC ĐỒ */}
+                {allStars.map((star) => (
+                  <g key={star.idx}>
+                    {/* Hào quang sao */}
+                    <circle
+                      cx={star.cx}
+                      cy={star.cy}
+                      r={star.isLit ? (star.isMilestone ? 4.2 : 3.2) : 1.8}
+                      fill={star.isLit ? star.color : 'rgba(255, 255, 255, 0.16)'}
+                      filter={star.isLit ? 'url(#superStarGlow)' : 'none'}
+                      opacity={star.isLit ? 1 : 0.4}
+                    />
+                    {/* Nhân sáng trắng bên trong sao đã khai mở */}
+                    {star.isLit && (
+                      <circle
+                        cx={star.cx}
+                        cy={star.cy}
+                        r={star.isMilestone ? 1.8 : 1.3}
+                        fill="#ffffff"
+                      />
+                    )}
+                  </g>
+                ))}
+              </g>
+
+              {/* C. 4 TÒA MỆNH ĐĂNG TỌA TRẤN THÁI CỰC */}
+              {lampAltars.map((altar) => {
+                const aiIconUrl = altar.lampObj?.id ? LAMP_THAN_PHAM_AI_ICONS[altar.lampObj.id] : null;
+                const labelText = altar.lampObj?.shortName || altar.name;
                 const labelWidth = Math.max(52, labelText.length * 6.5 + 14);
 
                 return (
-                  <g key={arm.id}>
-                    {/* Dải Quỹ Đạo Xoắn Ốc Tinh Vân */}
-                    <path
-                      d={arm.pathD}
-                      fill="none"
-                      stroke={arm.isComplete ? arm.color : arm.litCount > 0 ? arm.color : 'rgba(255, 255, 255, 0.12)'}
-                      strokeWidth={arm.isComplete ? 2 : arm.litCount > 0 ? 1.4 : 0.8}
-                      strokeDasharray={arm.isComplete ? 'none' : '3, 4'}
-                      opacity={arm.isComplete ? 0.9 : arm.litCount > 0 ? 0.65 : 0.25}
+                  <g key={altar.id} transform={`translate(${altar.x}, ${altar.y})`}>
+                    {/* Nền đài đèn */}
+                    <circle
+                      cx="0"
+                      cy="0"
+                      r="18"
+                      fill="rgba(10, 16, 26, 0.95)"
+                      stroke={altar.isComplete ? altar.color : altar.isFireLit ? altar.color : 'rgba(255, 255, 255, 0.25)'}
+                      strokeWidth="1.5"
                     />
 
-                    {/* 30 Ngôi Sao Pháp Khiếu Dọc Theo Nhánh Xoắn Ốc */}
-                    {arm.stars.map((star) => (
-                      <g key={star.idx}>
-                        {/* Hào quang sao */}
-                        <circle
-                          cx={star.cx}
-                          cy={star.cy}
-                          r={star.isLit ? (star.isMilestone ? 4.4 : 3.4) : 1.8}
-                          fill={star.isLit ? star.color : 'rgba(255, 255, 255, 0.16)'}
-                          filter={star.isLit ? 'url(#superStarGlow)' : 'none'}
-                          opacity={star.isLit ? 1 : 0.4}
-                        />
-                        {/* Nhân sáng trắng lõi sao đã khai mở */}
-                        {star.isLit && (
-                          <circle
-                            cx={star.cx}
-                            cy={star.cy}
-                            r={star.isMilestone ? 2 : 1.4}
-                            fill="#ffffff"
-                          />
-                        )}
-                      </g>
-                    ))}
-
-                    {/* MỆNH ĐĂNG ĐẦU MÚT NHÁNH (OUTER TIP LIFE LAMP) */}
-                    <g transform={`translate(${arm.lampPos.x}, ${arm.lampPos.y})`}>
-                      {/* Nền đài đèn */}
-                      <circle
-                        cx="0"
-                        cy="0"
-                        r="18"
-                        fill="rgba(10, 16, 26, 0.95)"
-                        stroke={arm.isComplete ? arm.color : arm.isFireLit ? arm.color : 'rgba(255, 255, 255, 0.25)'}
-                        strokeWidth="1.5"
+                    {/* Ảnh AI Mệnh Đăng */}
+                    {aiIconUrl ? (
+                      <image
+                        href={aiIconUrl}
+                        x="-18"
+                        y="-18"
+                        width="36"
+                        height="36"
+                        clipPath={`url(#taijiClip_${altar.id})`}
+                        preserveAspectRatio="xMidYMid slice"
                       />
+                    ) : (
+                      <text x="0" y="5.5" textAnchor="middle" fontSize="16">
+                        {altar.isFireLit ? '🔥' : '🕯️'}
+                      </text>
+                    )}
 
-                      {/* Ảnh AI Mệnh Đăng (rộng 36px) */}
-                      {aiIconUrl ? (
-                        <image
-                          href={aiIconUrl}
-                          x="-18"
-                          y="-18"
-                          width="36"
-                          height="36"
-                          clipPath={`url(#spiralClip_${arm.id})`}
-                          preserveAspectRatio="xMidYMid slice"
-                        />
-                      ) : (
-                        <text x="0" y="5.5" textAnchor="middle" fontSize="16">
-                          {arm.isFireLit ? '🔥' : '🕯️'}
-                        </text>
-                      )}
+                    {/* Viền hào quang */}
+                    <circle
+                      cx="0"
+                      cy="0"
+                      r="18"
+                      fill="none"
+                      stroke={altar.isComplete ? altar.color : altar.isFireLit ? altar.color : 'rgba(255, 255, 255, 0.35)'}
+                      strokeWidth={altar.isComplete ? 2 : 1.2}
+                    />
 
-                      {/* Viền hào quang */}
-                      <circle
-                        cx="0"
-                        cy="0"
-                        r="18"
-                        fill="none"
-                        stroke={arm.isComplete ? arm.color : arm.isFireLit ? arm.color : 'rgba(255, 255, 255, 0.35)'}
-                        strokeWidth={arm.isComplete ? 2 : 1.2}
+                    {/* Khung Badge tên Mệnh Đăng */}
+                    <g transform="translate(0, 26)">
+                      <rect
+                        x={-labelWidth / 2}
+                        y="-8.5"
+                        width={labelWidth}
+                        height="17"
+                        rx="8.5"
+                        fill="rgba(10, 16, 26, 0.88)"
+                        stroke={altar.isComplete ? altar.color : altar.isFireLit ? altar.color : 'rgba(255, 255, 255, 0.2)'}
+                        strokeWidth="1"
                       />
-
-                      {/* Khung Badge tên Mệnh Đăng / Mệnh Hỏa */}
-                      <g transform="translate(0, 26)">
-                        <rect
-                          x={-labelWidth / 2}
-                          y="-8.5"
-                          width={labelWidth}
-                          height="17"
-                          rx="8.5"
-                          fill="rgba(10, 16, 26, 0.88)"
-                          stroke={arm.isComplete ? arm.color : arm.isFireLit ? arm.color : 'rgba(255, 255, 255, 0.2)'}
-                          strokeWidth="1"
-                        />
-                        <text
-                          x="0"
-                          y="3"
-                          textAnchor="middle"
-                          fill={arm.isComplete ? arm.color : arm.isFireLit ? arm.color : '#94a3b8'}
-                          fontSize="8.5"
-                          fontWeight="700"
-                          fontFamily="var(--font-serif)"
-                        >
-                          {labelText}
-                        </text>
-                      </g>
+                      <text
+                        x="0"
+                        y="3"
+                        textAnchor="middle"
+                        fill={altar.isComplete ? altar.color : altar.isFireLit ? altar.color : '#94a3b8'}
+                        fontSize="8.5"
+                        fontWeight="700"
+                        fontFamily="var(--font-serif)"
+                      >
+                        {labelText}
+                      </text>
                     </g>
                   </g>
                 );
               })}
 
-              {/* C. TU SĨ TỌA THIỀN Ở TRUNG TÂM (CENTER DAOIST MEDITATION) */}
+              {/* D. TU SĨ TỌA THIỀN Ở TRUNG TÂM THÁI CỰC */}
               <g transform="translate(180, 185)">
                 {/* Hào quang thiền định */}
-                <ellipse cx="0" cy="0" rx="34" ry="38" fill="rgba(56, 189, 248, 0.08)" stroke="rgba(56, 189, 248, 0.35)" strokeWidth="1" strokeDasharray="3,3" />
+                <ellipse cx="0" cy="0" rx="32" ry="36" fill="rgba(56, 189, 248, 0.08)" stroke="rgba(56, 189, 248, 0.35)" strokeWidth="1" strokeDasharray="3,3" />
 
                 {/* Đầu tu sĩ */}
-                <circle cx="0" cy="-20" r="8.5" fill="url(#daoistBodyGrad)" stroke="#38bdf8" strokeWidth="1" />
+                <circle cx="0" cy="-19" r="8" fill="url(#daoistBodyGrad)" stroke="#38bdf8" strokeWidth="1" />
 
                 {/* Thân & Dáng Ngồi Kiết Già */}
                 <path
-                  d="M 0 -12 C -9 -12, -18 -4, -20 4 C -22 13, -30 19, -28 23 C -26 27, -14 27, 0 27 C 14 27, 26 27, 28 23 C 30 19, 22 13, 20 4 C 18 -4, 9 -12, 0 -12 Z"
+                  d="M 0 -11 C -8 -11, -17 -4, -19 4 C -21 12, -29 18, -27 22 C -25 26, -13 26, 0 26 C 13 26, 25 26, 27 22 C 29 18, 21 12, 19 4 C 17 -4, 8 -11, 0 -11 Z"
                   fill="url(#daoistBodyGrad)"
                   stroke="#38bdf8"
                   strokeWidth="1.2"
                 />
 
                 {/* Đan Điền Core Vàng Sáng Rực */}
-                <circle cx="0" cy="10" r="5.5" fill="#ffcc00" filter="url(#superStarGlow)" className={styles.daoistDanDien} />
-                <circle cx="0" cy="10" r="2.2" fill="#ffffff" />
+                <circle cx="0" cy="9" r="5" fill="#ffcc00" filter="url(#superStarGlow)" className={styles.daoistDanDien} />
+                <circle cx="0" cy="9" r="2" fill="#ffffff" />
               </g>
 
-              {/* D. MỆNH ĐĂNG THỨ 5 (KHIẾU 121 - CỰC CẢNH THIÊN ĐỈNH ĐĂNG) */}
+              {/* E. MỆNH ĐĂNG THỨ 5 (KHIẾU 121 - CỰC CẢNH THIÊN ĐỈNH ĐĂNG) */}
               <g transform="translate(180, 38)">
                 {/* Tia Lôi Kiếp nối từ Thiên Đỉnh Đăng xuống Đỉnh Đầu Tu Sĩ */}
                 <line
@@ -458,7 +552,7 @@ export default function RealmPreviewVisualizer({
                     y="-16"
                     width="32"
                     height="32"
-                    clipPath="url(#spiralClip_crown)"
+                    clipPath="url(#taijiClip_crown)"
                     preserveAspectRatio="xMidYMid slice"
                     opacity={has121st ? 1 : 0.4}
                   />
