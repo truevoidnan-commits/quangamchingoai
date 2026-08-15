@@ -185,7 +185,7 @@ export default function RealmPreviewVisualizer({
       )}
 
       {/* ========================================================
-          2. TRÚC CƠ VISUALIZER: 4 LỤC MANG TINH TẠI 4 GÓC & ĐẠI MỆNH ĐĂNG TRUNG TÂM
+          2. TRÚC CƠ VISUALIZER: 4 LỤC MANG TINH TẠI 4 GÓC & TU SĨ TỌA THIỀN TRUNG TÂM
          ======================================================== */}
       {realm === 'truc_co' && (
         <div className={styles.trucCoStage}>
@@ -193,10 +193,16 @@ export default function RealmPreviewVisualizer({
             <svg viewBox="0 0 340 340" className={styles.starChartSvg}>
               <defs>
                 <radialGradient id="centerAltarGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#fbbf24" stopOpacity={phapKhieu >= 120 ? 0.7 : 0.3} />
-                  <stop offset="60%" stopColor="#f59e0b" stopOpacity={phapKhieu >= 120 ? 0.4 : 0.1} />
+                  <stop offset="0%" stopColor="#00f2fe" stopOpacity="0.25" />
+                  <stop offset="60%" stopColor="#0284c7" stopOpacity="0.08" />
                   <stop offset="100%" stopColor="transparent" stopOpacity="0" />
                 </radialGradient>
+
+                <linearGradient id="daoistBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.95" />
+                  <stop offset="60%" stopColor="#0284c7" stopOpacity="0.85" />
+                  <stop offset="100%" stopColor="#0f172a" stopOpacity="0.95" />
+                </linearGradient>
 
                 {/* Glow Filter for Stars */}
                 <filter id="starGlow" x="-50%" y="-50%" width="200%" height="200%">
@@ -223,18 +229,18 @@ export default function RealmPreviewVisualizer({
                 />
               ))}
 
-              {/* Vòng Đại Bát Quái Bao Quanh Tâm Trận */}
+              {/* VÒNG ĐẠI BÁT QUÁI BAO QUANH TU SĨ TRUNG TÂM */}
               <circle
                 cx="170"
                 cy="170"
                 r="36"
                 fill="url(#centerAltarGlow)"
-                stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(255, 204, 0, 0.4)'}
+                stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(56, 189, 248, 0.35)'}
                 strokeWidth={phapKhieu >= 120 ? 1.8 : 1}
                 strokeDasharray={phapKhieu >= 120 ? 'none' : '3, 3'}
               />
 
-              {/* VẼ 4 LỤC MANG TINH TẠI 4 GÓC */}
+              {/* VẼ 4 LỤC MANG TINH TẠI 4 GÓC (CHỨA MỆNH ĐĂNG / MỆNH HỎA GÓC) */}
               {cornerHexagrams.map((c) => (
                 <g key={c.id}>
                   {/* Vòng Tròn Ngoại Tiếp Của Lục Mang Tinh Góc */}
@@ -279,66 +285,68 @@ export default function RealmPreviewVisualizer({
                     />
                   ))}
 
-                  {/* Tâm Nhỏ & Icon Của Lục Mang Tinh Góc */}
+                  {/* TÂM MỆNH ĐĂNG / MỆNH HỎA TẠI GÓC NÀY */}
                   <g transform={`translate(${c.cx}, ${c.cy})`}>
                     <circle
                       cx="0"
                       cy="0"
-                      r="12"
-                      fill="rgba(10, 16, 26, 0.9)"
-                      stroke={c.isComplete ? c.color : 'rgba(255, 255, 255, 0.2)'}
-                      strokeWidth="1"
+                      r="14"
+                      fill="rgba(10, 16, 26, 0.92)"
+                      stroke={c.isComplete ? c.color : c.isFireLit ? c.color : 'rgba(255, 255, 255, 0.2)'}
+                      strokeWidth="1.2"
+                      style={{
+                        boxShadow: c.isComplete ? `0 0 10px ${c.glow}` : 'none',
+                      }}
                     />
-                    <foreignObject x="-10" y="-10" width="20" height="20" style={{ overflow: 'visible' }}>
-                      <div style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <foreignObject x="-12" y="-12" width="24" height="24" style={{ overflow: 'visible' }}>
+                      <div style={{ width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {c.lampObj ? (
-                          <ArtifactIcon item={c.lampObj} isLamp={true} size={18} />
+                          <ArtifactIcon item={c.lampObj} isLamp={true} size={22} />
                         ) : (
-                          <span style={{ fontSize: '11px', lineHeight: 1, color: c.isFireLit ? c.color : '#64748b' }}>
+                          <span style={{ fontSize: '13px', lineHeight: 1, color: c.isFireLit ? c.color : '#64748b' }}>
                             {c.isFireLit ? '🔥' : '🕯️'}
                           </span>
                         )}
                       </div>
                     </foreignObject>
+                    {/* Tên Mệnh Đăng / Mệnh Hỏa Góc */}
+                    <text
+                      x="0"
+                      y="26"
+                      textAnchor="middle"
+                      fill={c.isComplete ? c.color : c.isFireLit ? c.color : '#64748b'}
+                      fontSize="8"
+                      fontWeight="700"
+                      fontFamily="var(--font-serif)"
+                    >
+                      {c.lampObj?.shortName || c.name}
+                    </text>
                   </g>
                 </g>
               ))}
 
-              {/* ĐẠI MỆNH ĐĂNG TỌA TRẤN TRUNG TÂM (ĐƯỢC NHÚNG TRỰC TIẾP TRONG SVG ĐẢM BẢO KHÔNG BAO GIỜ LỆCH) */}
+              {/* TU SĨ TỌA THIỀN Ở CHÍNH GIỮA TRẬN PHÁP (CENTER DAOIST SILHOUETTE) */}
               <g transform="translate(170, 170)">
-                <circle
-                  cx="0"
-                  cy="0"
-                  r="26"
-                  fill="rgba(10, 16, 26, 0.95)"
-                  stroke={phapKhieu >= 120 ? '#ffcc00' : 'rgba(255, 204, 0, 0.5)'}
-                  strokeWidth={phapKhieu >= 120 ? 2 : 1.2}
+                {/* Hào quang thiền định */}
+                <ellipse cx="0" cy="0" rx="30" ry="34" fill="rgba(56, 189, 248, 0.08)" stroke="rgba(56, 189, 248, 0.35)" strokeWidth="1" strokeDasharray="3,3" />
+
+                {/* Đầu tu sĩ */}
+                <circle cx="0" cy="-18" r="7.5" fill="url(#daoistBodyGrad)" stroke="#38bdf8" strokeWidth="1" />
+
+                {/* Thân & Dáng Ngồi Kiết Già (Lotus Silhouette) */}
+                <path
+                  d="M 0 -10 C -7 -10, -16 -4, -18 4 C -20 12, -27 17, -25 21 C -23 25, -12 25, 0 25 C 12 25, 23 25, 25 21 C 27 17, 20 12, 18 4 C 16 -4, 7 -10, 0 -10 Z"
+                  fill="url(#daoistBodyGrad)"
+                  stroke="#38bdf8"
+                  strokeWidth="1.2"
                 />
-                <foreignObject x="-24" y="-24" width="48" height="48" style={{ overflow: 'visible' }}>
-                  <div
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      opacity: phapKhieu === 0 ? 0.45 : Math.min(1, 0.5 + 0.5 * (phapKhieu / 120)),
-                      filter: phapKhieu >= 120 ? 'drop-shadow(0 0 16px rgba(255, 204, 0, 0.9))' : 'none',
-                    }}
-                  >
-                    <ArtifactIcon item={activeLampObj} isLamp={true} size={44} />
-                  </div>
-                </foreignObject>
-                <text
-                  x="0"
-                  y="38"
-                  textAnchor="middle"
-                  fill={phapKhieu >= 120 ? '#ffcc00' : '#cbd5e1'}
-                  fontSize="10"
-                  fontWeight="700"
-                  fontFamily="var(--font-serif)"
-                >
-                  {activeLampObj?.shortName || activeLampObj?.name || 'Mệnh Đăng'}
+
+                {/* Đan Điền Core Vàng Sáng Rực */}
+                <circle cx="0" cy="8" r="4.5" fill="#ffcc00" filter="url(#starGlow)" className={styles.daoistDanDien} />
+
+                {/* Chú thích Tu Sĩ Tọa Thiền */}
+                <text x="0" y="38" textAnchor="middle" fill="#94a3b8" fontSize="8.5" fontWeight="600" fontFamily="var(--font-serif)">
+                  Tu Sĩ Tọa Thiền
                 </text>
               </g>
 
