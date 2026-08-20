@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>THIÊN ĐẠO TU LUYỆN OS - Main Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;family=Playfair+Display:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "slate-50": "#f8fafc",
+                      "tertiary-fixed": "#f0dbff",
+                      "tertiary-container": "#f0dbff",
+                      "secondary-fixed": "#c4e7ff",
+                      "on-secondary-fixed": "#001e2c",
+                      "primary-container": "#f2e580",
+                      "on-primary-fixed-variant": "#4f4800",
+                      "secondary-container": "#00a6e0",
+                      "on-tertiary": "#490081",
+                      "deep-space": "#0a0a0a",
+                      "surface-bright": "#31394d",
+                      "surface-container-highest": "#2d3449",
+                      "primary-fixed-dim": "#d5c867",
+                      "on-primary-container": "#6f650a",
+                      "on-error": "#690005",
+                      "on-surface": "#dae2fd",
+                      "on-secondary": "#00354a",
+                      "secondary-fixed-dim": "#7bd0ff",
+                      "flame-orange": "#fb923c",
+                      "inverse-primary": "#695f02",
+                      "slate-600": "#475569",
+                      "on-secondary-container": "#00374d",
+                      "secondary": "#7bd0ff",
+                      "surface-container-low": "#131b2e",
+                      "error": "#ffb4ab",
+                      "on-tertiary-container": "#8147bb",
+                      "on-secondary-fixed-variant": "#004c69",
+                      "slate-800": "#1e293b",
+                      "outline": "#95917f",
+                      "primary": "#ffffff",
+                      "on-primary": "#363100",
+                      "tertiary": "#ffffff",
+                      "surface-dim": "#0b1326",
+                      "surface-container-lowest": "#060e20",
+                      "inverse-surface": "#dae2fd",
+                      "background": "#0b1326",
+                      "on-background": "#dae2fd",
+                      "on-error-container": "#ffdad6",
+                      "inverse-on-surface": "#283044",
+                      "surface-container-high": "#222a3d",
+                      "on-primary-fixed": "#201c00",
+                      "surface": "#0b1326",
+                      "surface-container": "#171f33",
+                      "neon-pink": "#ec4899",
+                      "surface-variant": "#2d3449",
+                      "on-surface-variant": "#ccc7b3",
+                      "outline-variant": "#4a4738",
+                      "error-container": "#93000a",
+                      "primary-fixed": "#f2e580",
+                      "on-tertiary-fixed-variant": "#62259b",
+                      "slate-400": "#94a3b8",
+                      "surface-tint": "#d5c867",
+                      "tertiary-fixed-dim": "#ddb8ff",
+                      "on-tertiary-fixed": "#2c0051"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin-mobile": "16px",
+                      "panel-padding": "24px",
+                      "unit": "4px",
+                      "margin-desktop": "32px",
+                      "gutter": "16px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "headline-sm": [
+                              "Playfair Display"
+                      ],
+                      "headline-md": [
+                              "Playfair Display"
+                      ],
+                      "label-md": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-lg-mobile": [
+                              "Playfair Display"
+                      ],
+                      "headline-lg": [
+                              "Playfair Display"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-sm": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "0.1em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>body {
+    background-color: theme("colors.deep-space");
+    color: theme("colors.on-surface");
+    background-image: linear-gradient(rgba(10, 10, 10, 0.9), rgba(10, 10, 10, 0.9)), url(https://lh3.googleusercontent.com/aida-public/AB6AXuAta5m5PapcQBGfszpODuTEktIwEZUQSSZodBZ325bBgWyPyxjwa6TnDfYpBa8ePmDufDeHRA6oGmCIY54DHh_sqhzF6fvq9SVyBjmNkzHDq95WmO_-00nFMu4UoAdL16iHRZzY9nMm5lSTkCBDuAN9ZTHPIQby3bzmGwOVpuxHkfuyoXaL6K1u1nAxN_kcCqvx6w-EqZjSOXQXwThhjta-vBWWKp2UqJGPhuKSf8XYWvBkVJIYzVgFTvHbe2M4awScm8C-kjLltQ);
+    background-size: cover;
+    background-attachment: fixed;
+    overflow-x: hidden
+    }
+.glass-panel {
+    background-color: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid theme("colors.slate-800")
+    }
+.glow-border-primary {
+    border: 1px solid rgba(242, 229, 128, 0.5);
+    /* primary-fixed */
+    box-shadow: 0 0 15px rgba(242, 229, 128, 0.1)
+    }
+.glow-border-secondary {
+    border: 1px solid rgba(123, 208, 255, 0.5);
+    /* secondary */
+    box-shadow: 0 0 15px rgba(123, 208, 255, 0.1)
+    }
+.bg-grid {
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px
+    }
+.bagua-ring {
+    animation: spin 60s linear infinite
+    }
+.bagua-ring-reverse {
+    animation: spin-reverse 40s linear infinite
+    }
+@keyframes spin {
+    100% {
+        transform: rotate(360deg);
+        }
+    }
+@keyframes spin-reverse {
+    100% {
+        transform: rotate(-360deg);
+        }
+    }
+.pulse-glow {
+    animation: pulse-glow 2s infinite alternate
+    }
+@keyframes pulse-glow {
+    0% {
+        box-shadow: 0 0 10px rgba(242, 229, 128, 0.2);
+        } 100% {
+        box-shadow: 0 0 25px rgba(242, 229, 128, 0.6);
+        }
+    }
+/* Progress Bar Glows */
+.progress-gold {
+    box-shadow: 0 0 8px theme("colors.primary-fixed")
+    }
+.progress-cyan {
+    box-shadow: 0 0 8px theme("colors.secondary")
+    }
+.progress-orange {
+    box-shadow: 0 0 8px theme("colors.flame-orange")
+    }
+.progress-purple {
+    box-shadow: 0 0 8px theme("colors.tertiary-fixed")
+    }</style>
+</head>
+<body class="font-body-lg text-body-lg min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-deep-space/70 backdrop-blur-xl border-b border-outline-variant/30 shadow-[0_0_20px_rgba(213,200,103,0.15)] flex justify-between items-center px-margin-desktop py-4">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-primary-fixed">
+<img alt="Cultivator Profile Avatar" class="w-full h-full object-cover" data-alt="A striking digital portrait of a cyber-cultivator avatar in a deep space setting. The avatar features futuristic, glowing cybernetic enhancements integrated with traditional Eastern cultivation aesthetics. Illuminated by soft, ethereal gold and cyan lighting against a midnight dark background. The mood is powerful and mysterious." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDyYStLTnLvctDukgY1c1IkF-hHZZnh6cePo5xP-K-ohWkNvsxhOFQUo8cjOsDHTUMmNvAAZXm7qo-GGbPJ_zdQ4WS-SG91AWHxAXCxqUmyctdoQ2mZmr2KR6kwSQKhK0RGCWsI-OVlr_oK4WFZet1zr1GKi0zRLQp8UQjT3IpxW1CIldftKyDiqjlWbsqrYd7L291nzztWai0Wy1jWtyOunyZZ7DzquHgjTGW8xkTNWAQu9kTDE20MuV6XHElIczrchDLDyZopw"/>
+</div>
+<h1 class="font-headline-lg text-headline-lg font-bold tracking-widest text-primary drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">THIÊN ĐẠO TU LUYỆN OS</h1>
+<div class="ml-8 px-4 py-1 rounded-full border border-primary-fixed bg-primary-fixed/10 text-primary-fixed font-label-md text-label-md">
+                Trúc Cơ Cảnh
+            </div>
+</div>
+<div class="flex items-center gap-6 text-on-surface-variant">
+<span class="material-symbols-outlined hover:text-primary-fixed-dim transition-colors cursor-pointer text-[24px]">search</span>
+<span class="material-symbols-outlined hover:text-primary-fixed-dim transition-colors cursor-pointer text-[24px]">notifications_active</span>
+<span class="material-symbols-outlined hover:text-primary-fixed-dim transition-colors cursor-pointer text-[24px]">settings_suggest</span>
+</div>
+</header>
+<!-- SideNavBar (Hidden on Desktop, used as mobile nav concept) -->
+<!-- Suppressed based on layout instructions prioritizing 3-column desktop view -->
+<!-- Main Content Area -->
+<main class="flex-grow pt-24 pb-8 px-margin-desktop w-full max-w-[1920px] mx-auto flex flex-col xl:flex-row gap-6 relative z-10 h-screen overflow-hidden">
+<!-- Left Column: Cultivation Rail -->
+<aside class="glass-panel glow-border-secondary rounded-xl w-full xl:w-80 flex-shrink-0 flex flex-col p-panel-padding overflow-y-auto hidden md:flex h-[calc(100vh-8rem)]">
+<h2 class="font-headline-md text-headline-md text-secondary mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined">account_tree</span>
+                Kinh Mạch
+            </h2>
+<div class="space-y-6">
+<!-- Branch 1 -->
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-2">
+<span class="text-primary-fixed">Thái Dương</span>
+<span class="text-on-surface-variant">85%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-fixed progress-gold w-[85%] rounded-full relative">
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full blur-[2px]"></div>
+</div>
+</div>
+</div>
+<!-- Branch 2 -->
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-2">
+<span class="text-secondary">Thiếu Âm</span>
+<span class="text-on-surface-variant">62%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary progress-cyan w-[62%] rounded-full relative">
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full blur-[2px]"></div>
+</div>
+</div>
+</div>
+<!-- Branch 3 -->
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-2">
+<span class="text-flame-orange">Thiếu Dương</span>
+<span class="text-on-surface-variant">40%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-flame-orange progress-orange w-[40%] rounded-full relative">
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full blur-[2px]"></div>
+</div>
+</div>
+</div>
+<!-- Branch 4 -->
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-2">
+<span class="text-tertiary-fixed">Thái Âm</span>
+<span class="text-on-surface-variant">15%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-tertiary-fixed progress-purple w-[15%] rounded-full relative">
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full blur-[2px]"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-auto pt-6 border-t border-outline-variant/30">
+<div class="text-center font-label-md text-label-md text-on-surface-variant mb-2">TỔNG LƯU THÔNG</div>
+<div class="text-3xl font-headline-lg text-primary text-center tracking-widest drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">50.5%</div>
+</div>
+</aside>
+<!-- Central Column: Central Map -->
+<section class="flex-grow glass-panel rounded-xl relative overflow-hidden bg-grid flex items-center justify-center h-[calc(100vh-8rem)]">
+<!-- Central Tai Chi / Bagua Graphic Placeholder -->
+<div class="relative w-[400px] h-[400px] md:w-[600px] md:h-[600px] flex items-center justify-center">
+<!-- Outer Rings -->
+<div class="absolute inset-0 rounded-full border border-secondary/20 bagua-ring"></div>
+<div class="absolute inset-4 rounded-full border border-primary-fixed/30 bagua-ring-reverse" style="border-style: dashed; border-width: 2px;"></div>
+<div class="absolute inset-12 rounded-full border border-tertiary-fixed/20 bagua-ring"></div>
+<!-- Inner Core -->
+<div class="w-48 h-48 rounded-full bg-surface-container-highest/80 backdrop-blur-md border border-secondary shadow-[0_0_40px_rgba(123,208,255,0.2)] flex items-center justify-center relative z-10 pulse-glow">
+<span class="material-symbols-outlined text-[64px] text-secondary">hdr_strong</span>
+</div>
+<!-- Connecting Lines (Meridians) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" viewbox="0 0 600 600">
+<circle cx="300" cy="300" fill="none" r="150" stroke="rgba(123, 208, 255, 0.3)" stroke-dasharray="4 4" stroke-width="1"></circle>
+<!-- Nodes -->
+<circle class="progress-gold" cx="300" cy="100" fill="#f2e580" r="8"></circle>
+<circle class="progress-cyan" cx="500" cy="300" fill="#7bd0ff" r="8"></circle>
+<circle class="progress-orange" cx="300" cy="500" fill="#fb923c" r="8"></circle>
+<circle class="progress-purple" cx="100" cy="300" fill="#f0dbff" r="8"></circle>
+<!-- Lines connecting to core -->
+<line stroke="rgba(242, 229, 128, 0.5)" stroke-width="2" x1="300" x2="300" y1="100" y2="250"></line>
+<line stroke="rgba(123, 208, 255, 0.5)" stroke-width="2" x1="500" x2="350" y1="300" y2="300"></line>
+<line stroke="rgba(251, 146, 60, 0.5)" stroke-width="2" x1="300" x2="300" y1="500" y2="350"></line>
+<line stroke="rgba(240, 219, 255, 0.5)" stroke-width="2" x1="100" x2="250" y1="300" y2="300"></line>
+</svg>
+</div>
+<!-- Map Controls -->
+<div class="absolute bottom-6 right-6 flex flex-col gap-2">
+<button class="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-on-surface hover:text-primary-fixed transition-colors active:scale-95">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-on-surface hover:text-primary-fixed transition-colors active:scale-95">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<button class="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-on-surface hover:text-secondary transition-colors active:scale-95 mt-2">
+<span class="material-symbols-outlined">my_location</span>
+</button>
+</div>
+</section>
+<!-- Right Column: Command Panel -->
+<aside class="w-full xl:w-80 flex-shrink-0 flex flex-col gap-6 h-[calc(100vh-8rem)]">
+<!-- Node Detail Card -->
+<div class="glass-panel glow-border-primary rounded-xl p-panel-padding flex-grow relative overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-secondary/10 rounded-full blur-[40px] -mr-16 -mt-16"></div>
+<div class="flex items-center gap-3 mb-4 border-b border-outline-variant/30 pb-4">
+<span class="material-symbols-outlined text-primary-fixed text-[32px]">scatter_plot</span>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-primary">Bắc Đẩu Thất Tinh</h3>
+<p class="font-label-md text-label-md text-secondary">Node Chi Tiết</p>
+</div>
+</div>
+<div class="space-y-4 font-body-md text-body-md text-on-surface-variant">
+<div class="flex justify-between items-center bg-surface-container-low p-2 rounded border border-outline-variant/20">
+<span class="text-on-surface">Thuộc Tính (Element)</span>
+<span class="text-secondary font-label-md">Thủy</span>
+</div>
+<div class="bg-surface-container-low p-3 rounded border border-outline-variant/20">
+<p>Node cốt lõi trong hệ thống kinh mạch, giúp ổn định linh lực.</p>
+</div>
+<div class="pt-4 space-y-2 border-t border-outline-variant/30">
+<div class="flex justify-between font-label-md text-label-md">
+<span>Độ tinh khiết</span>
+<span class="text-primary-fixed">92%</span>
+</div>
+<div class="flex justify-between font-label-md text-label-md">
+<span>Tốc độ hấp thụ</span>
+<span class="text-secondary">1.2x</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Area -->
+<div class="glass-panel rounded-xl p-6 flex flex-col items-center justify-center border border-outline-variant/30">
+<p class="font-label-md text-label-md text-on-surface-variant text-center mb-4">Sẵn sàng tuần hoàn linh khí</p>
+<button class="w-full py-4 rounded-full bg-gradient-to-r from-[#ca8a04] to-[#fef08a] text-on-primary font-headline-sm text-headline-sm font-bold tracking-widest shadow-[0_0_20px_rgba(254,240,138,0.4)] hover:shadow-[0_0_30px_rgba(254,240,138,0.6)] hover:scale-[1.02] active:scale-95 transition-all duration-300">
+                    [ VẬN KHÍ ]
+                </button>
+</div>
+</aside>
+</main>
+</body></html>

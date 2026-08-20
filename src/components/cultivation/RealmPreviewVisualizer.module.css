@@ -1,15 +1,32 @@
-.visualizerWrapper {
+.visualizerWrapperKimDanFull {
   position: relative;
   width: 100%;
-  height: 250px;
+  height: 100%;
+  min-height: 100%;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 0;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
+  box-shadow: none;
+  background: #040710;
+}
+
+.visualizerWrapper {
+  position: relative;
+  width: 100%;
+  min-height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: var(--radius-xl);
   background: radial-gradient(circle at center, rgba(16, 25, 39, 0.5) 0%, rgba(10, 16, 26, 0.9) 100%);
   margin: 4px 0 10px;
   box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
 }
 
 .visualizerWrapper.visualizerWrapperTall {
@@ -124,6 +141,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background-image: url('/images/truc_co_galaxy_bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.trucCoStage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(2, 8, 20, 0.35) 0%, rgba(5, 12, 28, 0.55) 100%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* A. Bức Tinh Đồ Cửu Thiên Phía Sau */
@@ -482,16 +512,16 @@
 
 .lauCac3D {
   transform-style: preserve-3d;
-  transform: rotateX(8deg);
+  transform: rotateX(6deg);
   width: 100%;
-  max-width: 350px;
+  max-width: 460px;
   display: flex;
   flex-direction: column;
   align-items: center;
   max-height: calc(100vh - 160px);
   min-height: 600px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 10px 8px 40px;
 }
 
 .lauCac3D::-webkit-scrollbar { width: 3px; }
@@ -539,32 +569,35 @@
   z-index: 2;
 }
 
-/* 3D Spire Roof on top */
+/* 3D Spire Roof on top (Grand Proportional Roof) */
 .spire3D {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-bottom: 2px;
+  width: 100%;
+  max-width: 420px;
   transform: translateZ(24px);
+  z-index: 8;
 }
 
 .spireCrownGlow {
   position: absolute;
-  top: -6px;
-  width: 24px;
-  height: 24px;
+  top: -10px;
+  width: 44px;
+  height: 44px;
   background: radial-gradient(circle, #fff8dc 0%, #fbbf24 60%, transparent 100%);
-  filter: blur(4px);
+  filter: blur(8px);
   animation: crownPulse 2s ease-in-out infinite alternate;
 }
 
 .spireLotusFinial {
-  font-size: 16px;
+  font-size: 26px;
   line-height: 1;
-  filter: drop-shadow(0 0 8px #fbbf24);
+  filter: drop-shadow(0 0 12px #fbbf24);
   z-index: 2;
-  margin-bottom: -4px;
+  margin-bottom: -2px;
 }
 
 @keyframes crownPulse {
@@ -573,151 +606,155 @@
 }
 
 .spireRoofTop {
-  width: 72px;
-  height: 12px;
-  background: linear-gradient(to bottom, #d97706 0%, #78350f 100%);
-  border-top: 1.5px solid #fef08a;
+  width: 96%;
+  height: 24px;
+  background: linear-gradient(to bottom, #f59e0b 0%, #b45309 50%, #451a03 100%);
+  border-top: 2px solid #fef08a;
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-  box-shadow: 0 3px 6px rgba(0,0,0,0.7);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.8);
 }
 
 .spireRoofBase {
-  width: 64px;
-  height: 10px;
+  width: 90%;
+  height: 16px;
   background: linear-gradient(to bottom, #d97706, #451a03);
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-  margin-top: -1px;
+  margin-top: -2px;
 }
 
-/* ─── TẦNG THÁP BẢO TÁC 3D (.tang) ─── */
+/* ─── TẦNG THÁP BẢO TÁC 3D TIÊN HIỆP (.tang) ─── */
 .tang {
   position: relative;
-  width: calc(100% - var(--tier-index) * 2px);
+  width: 100%;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: -4px; /* overlap eaves seamlessly */
-  transform: translateZ(calc(var(--tier-index) * -6px));
+  margin-bottom: 2px;
+  transform: translateZ(calc(var(--tier-index) * -4px));
   transition: transform 0.3s ease, opacity 0.3s ease;
   transform-style: preserve-3d;
-  will-change: transform;
 }
 
-/* Mái Ngói Cong (Pagoda Eaves) */
+/* Mái Ngói Cong / Thanh Xà Ngang (.pagodaEaves) */
 .pagodaEaves {
   position: relative;
   width: 104%;
-  height: 11px;
+  height: 14px;
   display: flex;
   align-items: flex-end;
-  z-index: 4;
+  z-index: 5;
 }
 
 .eaveBody {
   flex: 1;
-  height: 9px;
+  height: 11px;
   background: linear-gradient(to bottom, #b45309 0%, #451a03 100%);
-  border-top: 1px solid #fef08a;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  border-top: 1.5px solid #fef08a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
 }
 
 .eaveCornerLeft {
-  width: 12px;
-  height: 11px;
+  width: 16px;
+  height: 14px;
   background: #b45309;
   clip-path: polygon(100% 0%, 0% 40%, 100% 100%);
 }
 
 .eaveCornerRight {
-  width: 12px;
-  height: 11px;
+  width: 16px;
+  height: 14px;
   background: #b45309;
   clip-path: polygon(0% 0%, 100% 40%, 0% 100%);
 }
+
+/* Thân Cung Điện (.pagodaChamber) */
 .pagodaChamber {
   position: relative;
   width: 96%;
-  min-height: 72px;
+  min-height: 84px;
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(10, 16, 26, 0.98) 100%);
-  border-left: 2px solid var(--aura-color, #ffcc00);
-  border-right: 2px solid var(--aura-color, #ffcc00);
-  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.85), 0 0 12px var(--aura-color, rgba(255,204,0,0.25));
+  border-left: 2.5px solid var(--aura-color, #ffcc00);
+  border-right: 2.5px solid var(--aura-color, #ffcc00);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.85), 0 0 14px var(--aura-color, rgba(255,204,0,0.3));
   z-index: 3;
-  padding: 4px 0;
+  padding: 6px 12px;
 }
 
 /* Data state styling */
 .tang[data-trang-thai="hu-ao"] .pagodaChamber {
-  opacity: 0.3;
-  filter: blur(1.5px) grayscale(0.7);
-  border-style: dashed;
+  opacity: 0.85;
+  border-left: 2px solid rgba(255, 204, 0, 0.3);
+  border-right: 2px solid rgba(255, 204, 0, 0.3);
 }
 
 .tang[data-trang-thai="dang-ngung-thuc"] .pagodaChamber {
-  opacity: calc(0.45 + (parseFloat(var(--tien-do, 0)) / 100) * 0.5);
-  border-color: var(--aura-color, #38bdf8);
+  opacity: 1;
+  border-color: var(--aura-color, #ffcc00);
 }
 
 .tang[data-trang-thai="hoan-thien"] .pagodaChamber {
   opacity: 1;
-  filter: none;
   border-color: var(--aura-color, #ffcc00);
 }
 
 /* Nội Điện Chính Giữa (Center Void Realm) */
 .centerChamberVoid {
-  flex: 1;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 0;
   position: relative;
-  padding: 2px 4px;
 }
 
-/* Biển Hiệu Treo Trên */
+/* Biển Hiệu Hoành Phi Sơn Son Dát Vàng (.palacePlaque) */
 .palacePlaque {
-  background: rgba(10, 16, 26, 0.88);
-  border: 1px solid var(--aura-color, rgba(255,204,0,0.6));
-  padding: 1px 10px;
-  border-radius: 3px;
-  margin-bottom: 3px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.8);
+  background: rgba(10, 16, 26, 0.92);
+  border: 1px solid var(--aura-color, rgba(255,204,0,0.7));
+  padding: 3px 14px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 8px var(--aura-color, rgba(255,204,0,0.3));
 }
 
 .plaqueText {
-  font-family: var(--font-serif);
-  font-size: 9.5px;
+  font-family: 'Noto Serif', serif;
+  font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
   letter-spacing: 0.5px;
+  color: var(--aura-color, #ffcc00);
+  text-shadow: 0 0 8px var(--aura-color, rgba(255,204,0,0.6));
 }
 
-/* ─── VIÊN KIM ĐAN / ĐÈN MỆNH ĐĂNG 3D TRUNG TÂM (56px) ─── */
+/* ─── VIÊN KIM ĐAN / ĐÈN MỆNH ĐĂNG 3D TRUNG TÂM (.kimDanCenterWrapper) ─── */
 .kimDanCenterWrapper {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 3px 0;
+  margin: 6px 0;
 }
 
 .kimDanAuraRing {
   position: absolute;
-  inset: -12px;
+  inset: -10px;
   border-radius: 50%;
-  border: 1.5px stroke var(--aura-color, #ffcc00);
-  background: radial-gradient(circle, var(--aura-color, rgba(255,204,0,0.4)) 0%, transparent 70%);
+  border: 1px solid var(--aura-color, #a855f7);
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.12) 0%, rgba(168, 85, 247, 0.02) 55%, transparent 75%);
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.25);
   animation: auraPulseRing 2.4s ease-in-out infinite alternate;
 }
 
 .kimDan {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 54px;
+  height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -725,50 +762,94 @@
   animation: kimDanFloat 3s ease-in-out infinite alternate;
 }
 
-/* Quả Cầu Tròn Độc Lập */
+/* Quả Cầu Tròn Độc Lập - Kim Đan Thần Nhụy / Bảo Vật */
 .tang[data-loai="thuong"] .kimDan {
   border-radius: 50%;
-  box-shadow: 0 0 24px var(--aura-color, #ffcc00), inset 0 0 10px rgba(255,255,255,0.9);
-  border: 2px solid var(--aura-color, #ffcc00);
+  box-shadow: 0 0 16px var(--aura-color, #38bdf8);
+  border: 1.5px solid var(--aura-color, #38bdf8);
+  overflow: hidden;
+  background: radial-gradient(circle at 35% 35%, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
 }
 
-/* Lồng Đèn Mệnh Đăng - Imperial Flame Glow */
+/* Lồng Đèn Mệnh Đăng - Lục Giác Tiên Đạo Thần Bí Độc Bản */
 .tang[data-loai="menh-dang"] .kimDan {
   border-radius: 8px;
   clip-path: polygon(20% 0%, 80% 0%, 100% 30%, 85% 100%, 15% 100%, 0% 30%);
-  box-shadow: 0 0 28px var(--aura-color, #fbbf24), inset 0 0 12px rgba(255,255,255,0.9);
-  border: 2px solid var(--aura-color, #fbbf24);
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.35), inset 0 0 8px rgba(168, 85, 247, 0.2);
+  border: 1.5px solid rgba(192, 132, 252, 0.85);
+  background: radial-gradient(circle at 50% 50%, rgba(28, 14, 42, 0.92) 0%, rgba(10, 14, 26, 0.98) 100%);
 }
 
 .kimDanLoi {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(circle at 35% 35%, #ffffff 0%, var(--loi-color, #ffcc00) 65%, #050b14 100%);
-  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .kimDanIcon {
   position: relative;
   z-index: 2;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.95));
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
 }
 
-.kimDanParticles {
-  position: absolute;
-  inset: -6px;
-  pointer-events: none;
-  z-index: 3;
+.kimDanIcon img,
+.kimDanIcon svg {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: inherit !important;
 }
 
-.sparkle {
-  position: absolute;
-  font-size: 8px;
-  color: #fff;
-  animation: sparkleTwinkle 1.2s ease-in-out infinite alternate;
+/* Ngưng thực center (Ảnh 3 & Ảnh 4) */
+.ngungThucCenterBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.mistCloudCenter {
+  font-size: 18px;
+  animation: floatSlow 3s ease-in-out infinite;
+}
+
+.ngungThucCenterLabel {
+  font-family: 'Noto Serif', serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--aura-color, #c2d8ee);
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+}
+
+.thangCungQuickBtn {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border: 1px solid #fef08a;
+  color: #000;
+  font-weight: 800;
+  font-size: 11px;
+  padding: 4px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(255, 204, 0, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  transition: all 0.2s ease;
+}
+
+.thangCungQuickBtn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 24px rgba(255, 204, 0, 0.9);
 }
 
 @keyframes kimDanFloat {
@@ -779,34 +860,6 @@
 @keyframes auraPulseRing {
   0%   { opacity: 0.3; transform: scale(0.9); }
   100% { opacity: 0.8; transform: scale(1.15); }
-}
-
-/* Ngưng thực center */
-.ngungThucCenterBox {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 0;
-}
-
-.mistCloudCenter {
-  font-size: 14px;
-}
-
-.ngungThucCenterLabel {
-  font-family: var(--font-serif);
-  font-size: 8.5px;
-  font-weight: 700;
-  color: var(--aura-color, #38bdf8);
-  text-shadow: 0 0 6px var(--aura-color, rgba(56,189,248,0.6));
-}
-
-.hollowMistCenter {
-  font-family: var(--font-serif);
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.35);
-  font-style: italic;
 }
 
 /* Lan Can Chân Tầng */

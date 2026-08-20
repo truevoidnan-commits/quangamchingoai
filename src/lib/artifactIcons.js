@@ -3,7 +3,7 @@
 // Maps artifact IDs & life lamp IDs to their custom icon sources.
 // =========================================================================
 
-const baseUrl = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/';
+const baseUrl = (typeof import.meta !== 'undefined' && import.meta?.env?.BASE_URL ? import.meta.env.BASE_URL : '/').replace(/\/$/, '') + '/';
 
 /** Map of all 16 Thần Phẩm artifact IDs to AI-generated PNG/JPG icons */
 export const THAN_PHAM_AI_ICONS = {

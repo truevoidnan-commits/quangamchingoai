@@ -37,7 +37,7 @@
 }
 
 .logoText {
-  font-family: var(--font-serif);
+  font-family: 'Noto Serif', serif;
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -65,7 +65,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  font-family: var(--font-serif);
+  font-family: 'Noto Serif', serif;
   cursor: pointer;
   box-shadow: 0 0 10px rgba(255, 204, 0, 0.2);
   transition: all var(--transition-fast);

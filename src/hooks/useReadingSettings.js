@@ -47,6 +47,7 @@ export const READING_THEMES = {
 };
 
 export const FONT_OPTIONS = [
+  { id: 'be-vietnam', label: 'Be Vietnam Pro', css: "'Be Vietnam Pro', sans-serif" },
   { id: 'serif', label: 'Serif', css: "'Noto Serif', Georgia, serif" },
   { id: 'sans', label: 'Sans', css: "'Noto Sans', system-ui, sans-serif" },
   { id: 'mono', label: 'Mono', css: "'Courier New', monospace" },

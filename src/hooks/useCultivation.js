@@ -16,10 +16,12 @@ import {
   sellArtifactForPoints,
   buyArtifactWithPointsAndExp,
   breakthroughToTrucCo,
+  setNgungKhiActivePath,
   breakthroughToKimDan,
   activateKimDanTrialV2,
   endKimDanTrialV2,
   thangCungKimDan,
+  unlockNextPhapKhieu,
   attemptUnlock121st,
   manifestDaoAnh,
   injectExpToDaoAnh,
@@ -183,6 +185,13 @@ export function useCultivation() {
     return res;
   }, []);
 
+  const handleSetDaoAnhStrategy = useCallback((strategy) => {
+    const state = getCultivationState();
+    state.daoAnhTargetStrategy = strategy;
+    saveCultivationState(state);
+    setCultivation({ ...state });
+  }, []);
+
 
   const handleReset = useCallback(() => {
     const next = resetCultivationState();
@@ -236,9 +245,22 @@ export function useCultivation() {
     return res;
   }, []);
 
+  const handleUnlockNextPhapKhieu = useCallback(() => {
+    const res = unlockNextPhapKhieu();
+    setCultivation({ ...res });
+    return res;
+  }, []);
+
+  const handleSetNgungKhiPath = useCallback((path) => {
+    const res = setNgungKhiActivePath(path);
+    setCultivation({ ...res });
+    return res;
+  }, []);
+
   return {
     cultivation,
     displayName,
+    setNgungKhiPath: handleSetNgungKhiPath,
     getLampPalaceName,
     getPalaceNameFromArtifact,
     getPalaceElementTheme,
@@ -262,13 +284,18 @@ export function useCultivation() {
     thangCung: handleThangCung,
     breakthroughToTrucCo: handleBreakthroughTrucCo,
     breakthroughToKimDan: handleBreakthroughKimDan,
+    unlockNextPhapKhieu: handleUnlockNextPhapKhieu,
+    khaiKhieu: handleUnlockNextPhapKhieu,
     attemptUnlock121: handleUnlock121,
+    attempt121Breakthrough: handleUnlock121,
     manifestDaoAnh: handleManifestDaoAnh,
     injectExpToDaoAnh: handleInjectExpToDaoAnh,
     injectThienMenh: handleInjectThienMenh,
     attemptTribulationSingle: handleTribulationSingle,
     attemptTribulationAll: handleTribulationAll,
     fillAllDaoAnhThienMenh: handleFillAllDaoAnhThienMenh,
+    fillAllDaoAnhExp: handleFillAllDaoAnhThienMenh,
+    setDaoAnhStrategy: handleSetDaoAnhStrategy,
     resetCultivation: handleReset,
     debugAddChapter,
     debugGiveAllLamps,

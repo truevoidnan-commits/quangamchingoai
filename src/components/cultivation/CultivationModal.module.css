@@ -55,6 +55,14 @@
   margin-bottom: 14px;
 }
 
+.realmVisualizerWrapper {
+  margin: 14px -18px 0;
+  width: calc(100% + 36px);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+}
+
 .statsRow {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

@@ -25,21 +25,55 @@ const CULTIVATION_KEY = 'tcl_cultivation_state_v3';
 export const MIN_EXP_PER_CYCLE = 50; // Random từ 50 đến 100 Tu Vi mỗi chu kỳ 60s
 export const MAX_EXP_PER_CYCLE = 100;
 export const EXP_PER_CHAPTER = 75; // Giá trị trung bình
+export const MIN_EXP_PER_CYCLE_NGUYEN_ANH = 200; // Random từ 200 đến 300 Tu Vi mỗi chu kỳ khi ở Giả Anh / Nguyên Anh
+export const MAX_EXP_PER_CYCLE_NGUYEN_ANH = 300;
 export const THIEN_MENH_PER_EXP = 10;
 export const MAX_ABSORBED_LAMPS = 5;
 
+// ========================================================
+// 1. NGƯNG KHÍ KỲ — HAI CON ĐƯỜNG TU LUYỆN (THỂ & PHÁP)
+// ========================================================
+
+// A. Luyện Thể — Hải Sơn Quyết (Khí Huyết Tôi Thân: 1 Hổ -> 1 Bạt)
+export const HAI_SON_QUYET_LAYERS = [
+  { level: 1, name: '1 Hổ', desc: '1 Hổ Khí Huyết', cost: 80, target: 80 },
+  { level: 2, name: '2 Hổ', desc: '2 Hổ Khí Huyết', cost: 120, target: 200 },
+  { level: 3, name: '3 Hổ', desc: '3 Hổ Khí Huyết', cost: 180, target: 380 },
+  { level: 4, name: '4 Hổ', desc: '4 Hổ Khí Huyết', cost: 240, target: 620 },
+  { level: 5, name: '1 Tiêu', desc: '5 Hổ = 1 Tiêu Khí Huyết', cost: 320, target: 940 },
+  { level: 6, name: '1 Tiêu 1 Hổ', desc: '6 Hổ Khí Huyết', cost: 420, target: 1360 },
+  { level: 7, name: '1 Tiêu 2 Hổ', desc: 'Huyết Hổ Hóa Hình (Khí Huyết Hóa Ảnh)', cost: 540, target: 1900, hasPhantom: true, phantomName: 'Huyết Hổ Hóa Hình' },
+  { level: 8, name: '1 Tiêu 3 Hổ', desc: 'Huyết Hổ Cuồng Nộ', cost: 680, target: 2580, hasPhantom: true, phantomName: 'Huyết Hổ Cuồng Nộ' },
+  { level: 9, name: '1 Tiêu 4 Hổ', desc: 'Huyết Hổ Thôn Thiên', cost: 840, target: 3420, hasPhantom: true, phantomName: 'Huyết Hổ Thôn Thiên' },
+  { level: 10, name: '1 Bạt (Đại Viên Mãn)', desc: '2 Tiêu = 1 Bạt Khí Huyết Đại Viên Mãn', cost: 1080, target: 4500, hasPhantom: true, phantomName: 'Thần Thú Huyết Hổ Hoàn Thiện' }
+];
+
+// B. Pháp Tu — Hóa Hải Kinh (Linh Lực Cấm Hải: 1 Lãng -> 1 Cấm Hải)
+export const HOA_HAI_KINH_LAYERS = [
+  { level: 1, name: '1 Lãng Khí', desc: 'Linh Khí Sơ Khởi (1 Lãng)', cost: 80, target: 80 },
+  { level: 2, name: '2 Lãng Khí', desc: 'Linh Lưu Tụ Hội (2 Lãng)', cost: 120, target: 200 },
+  { level: 3, name: '3 Lãng Khí', desc: 'Linh Ba Trùng Điệp (3 Lãng)', cost: 180, target: 380 },
+  { level: 4, name: '4 Lãng Khí', desc: 'Linh Triều Khởi Ba (4 Lãng)', cost: 240, target: 620 },
+  { level: 5, name: '1 Tuyền Hải', desc: 'Linh Tuyền Xuất Thế (1 Tuyền = 5 Lãng)', cost: 320, target: 940 },
+  { level: 6, name: '1 Tuyền 1 Lãng', desc: 'Triều Tịch Cuồn Cuộn', cost: 420, target: 1360 },
+  { level: 7, name: '1 Tuyền 2 Lãng', desc: 'Cấm Hải Long Kình (Linh Hải Hóa Kình)', cost: 540, target: 1900, hasPhantom: true, phantomName: 'Cấm Hải Long Kình' },
+  { level: 8, name: '1 Tuyền 3 Lãng', desc: 'Long Kình Bạt Lãng', cost: 680, target: 2580, hasPhantom: true, phantomName: 'Long Kình Bạt Lãng' },
+  { level: 9, name: '1 Tuyền 4 Lãng', desc: 'Vạn Lưu Quy Hải', cost: 840, target: 3420, hasPhantom: true, phantomName: 'Vạn Lưu Quy Hải' },
+  { level: 10, name: 'Cấm Hải Viên Mãn', desc: '2 Tuyền = 1 Cấm Hải Đại Viên Mãn', cost: 1080, target: 4500, hasPhantom: true, phantomName: 'Thái Cổ Long Kình Thôn Thiên' }
+];
+
 // Đường cong EXP lũy tiến cho 10 tầng Ngưng Khí
 export const NGUNG_KHI_THRESHOLDS = [
-  0,     // Tầng 1 (1 Hổ)
-  80,    // Tầng 2 (2 Hổ)
-  200,   // Tầng 3 (3 Hổ)
-  380,   // Tầng 4 (4 Hổ)
-  620,   // Tầng 5 (1 Tiêu)
-  940,   // Tầng 6 (1 Tiêu 1 Hổ)
-  1360,  // Tầng 7 (1 Tiêu 2 Hổ)
-  1900,  // Tầng 8 (1 Tiêu 3 Hổ)
-  2580,  // Tầng 9 (1 Tiêu 4 Hổ)
-  3420,  // Tầng 10 (1 Bạt - Đại Viên Mãn)
+  0,     // Tầng 1 (1 Hổ / 1 Lãng)
+  80,    // Tầng 2 (2 Hổ / 2 Lãng)
+  200,   // Tầng 3 (3 Hổ / 3 Lãng)
+  380,   // Tầng 4 (4 Hổ / 4 Lãng)
+  620,   // Tầng 5 (1 Tiêu / 1 Tuyền)
+  940,   // Tầng 6 (1 Tiêu 1 Hổ / 1 Tuyền 1 Lãng)
+  1360,  // Tầng 7 (Khí Huyết Hóa Hổ / Cấm Hải Long Kình)
+  1900,  // Tầng 8 (1 Tiêu 3 Hổ / 1 Tuyền 3 Lãng)
+  2580,  // Tầng 9 (1 Tiêu 4 Hổ / 1 Tuyền 4 Lãng)
+  3420,  // Tầng 10 (1 Bạt / 1 Cấm Hải - Đại Viên Mãn)
   4500,  // Sẵn sàng Trúc Cơ
 ];
 
@@ -67,48 +101,60 @@ export function getOpenedPhapKhieuFromExp(exp) {
 export const EXP_PER_PHAP_KHIEU = 70; // Giữ để tương thích ngược
 export const EXP_FOR_121_ATTEMPT = 800; // Tích lũy 800 EXP sau 120 khiếu để mượn cơ duyên xung kích
 
-// Chi phí Tu Vi lũy tiến cho 9 Thiên Cung Kim Đan (Khởi điểm Cung 1: 2.000 Tu Vi -> Cung 9: 27.000 Tu Vi)
+// Chi phí Tu Vi lũy tiến cho các Thiên Cung Tự Thân Kim Đan (Khởi điểm Cung 1: 2.000 Tu Vi -> Cung 8: 20.000 Tu Vi)
 export const KIM_DAN_PALACE_COSTS = [
   0,
-  2000,  // Cung 1
-  3000,  // Cung 2
-  4500,  // Cung 3
-  6500,  // Cung 4
-  9000,  // Cung 5
-  12000, // Cung 6
-  16000, // Cung 7
-  21000, // Cung 8
-  27000, // Cung 9
+  2000,  // Cung 1: 2.000 Tu Vi
+  3200,  // Cung 2: 3.200 Tu Vi (+1.200)
+  4800,  // Cung 3: 4.800 Tu Vi (+1.600)
+  6800,  // Cung 4: 6.800 Tu Vi (+2.000)
+  9200,  // Cung 5: 9.200 Tu Vi (+2.400)
+  12000, // Cung 6: 12.000 Tu Vi (+2.800)
+  15500, // Cung 7: 15.500 Tu Vi (+3.500)
+  20000, // Cung 8: 20.000 Tu Vi (+4.500)
 ];
 
 export function getPalaceCost(palaceNum) {
-  const num = Math.min(9, Math.max(1, palaceNum));
-  return KIM_DAN_PALACE_COSTS[num] || 2000;
+  const num = Math.min(8, Math.max(1, palaceNum));
+  return KIM_DAN_PALACE_COSTS[num] || (2000 + (num - 1) * 2000);
 }
 
 export const EXP_PER_THIEN_CUNG = 2000; // Giữ để tương thích ngược
 export const EXP_PER_DAO_ANH = 10000; // 10.000 Tu Vi để thai nghén hoàn tất 1 Đạo Anh vào Thiên Cung Thật
 
-// Ngưỡng Thiên Mệnh chuẩn cho 5 Kiếp của mỗi Đạo Anh
-export const KIEP_THIEN_MENH_REQUIREMENTS = [
-  3000,  // Kiếp 1: 3000 TM
-  7000,  // Kiếp 2: 7000 TM
-  13000, // Kiếp 3: 13000 TM
-  22000, // Kiếp 4: 22000 TM
-  35000, // Kiếp 5: 35000 TM
+// Ngưỡng Linh Lực (Tu Vi/EXP) cho từng Kiếp của mỗi Đạo Anh
+export const KIEP_EXP_REQUIREMENTS = [
+  5000,   // Kiếp 1: 5.000 Tu Vi
+  12000,  // Kiếp 2: 12.000 Tu Vi
+  25000,  // Kiếp 3: 25.000 Tu Vi
+  40000,  // Kiếp 4: 40.000 Tu Vi (theo yêu cầu)
+  50000,  // Kiếp 5: 50.000 Tu Vi (theo yêu cầu)
 ];
 
-export const TIEN_TINH_RATIO = 5; // Tỉ lệ quy đổi 1 Tu Vi = 5 Tiên Tinh
+// Phần thưởng Lực Thiên Mệnh cơ bản khi Đạo Anh vượt kiếp thành công theo từng Phẩm Cấp
+export const TIER_BASE_THIEN_MENH_REWARDS = {
+  ha_pham: 300,
+  trung_pham: 800,
+  thuong_pham: 2000,
+  cuc_pham: 5000,
+  tien_pham: 12000,
+  than_pham: 30000,
+};
+
+// Giữ để tương thích ngược
+export const KIEP_THIEN_MENH_REQUIREMENTS = KIEP_EXP_REQUIREMENTS;
+
+export const TIEN_TINH_RATIO = 5; // 1 Tiên Tinh = 5 Tu Vi
 export const DANG_DIEM_RATIO = TIEN_TINH_RATIO; // alias tương thích ngược
 
-// 6 Phẩm cấp độ hiếm của Mệnh Đăng kèm giá Tu Vi, Thiên Mệnh (10:1) và Tiên Tinh (1:5)
+// 6 Phẩm cấp độ hiếm của Mệnh Đăng kèm giá Tu Vi (priceExp) và Tiên Tinh (1 Tiên Tinh = 5 Tu Vi)
 export const LAMP_TIERS = {
-  ha_pham: { id: 'ha_pham', name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.12)', border: 'rgba(226, 232, 240, 0.4)', weight: 0.45, priceExp: 500, priceTM: 50, tienTinh: 2500, dangDiem: 2500 },
-  trung_pham: { id: 'trung_pham', name: 'Trung Phẩm', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.4)', weight: 0.28, priceExp: 1200, priceTM: 120, tienTinh: 6000, dangDiem: 6000 },
-  thuong_pham: { id: 'thuong_pham', name: 'Thượng Phẩm', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.4)', weight: 0.15, priceExp: 2500, priceTM: 250, tienTinh: 12500, dangDiem: 12500 },
-  cuc_pham: { id: 'cuc_pham', name: 'Cực Phẩm', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.12)', border: 'rgba(168, 85, 247, 0.4)', weight: 0.08, priceExp: 5000, priceTM: 500, tienTinh: 25000, dangDiem: 25000 },
-  tien_pham: { id: 'tien_pham', name: 'Tiên Phẩm', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.6)', weight: 0.032, priceExp: 10000, priceTM: 1000, tienTinh: 50000, dangDiem: 50000 },
-  than_pham: { id: 'than_pham', name: 'Thần Phẩm', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.18)', border: 'rgba(239, 68, 68, 0.7)', weight: 0.008, priceExp: 25000, priceTM: 2500, tienTinh: 125000, dangDiem: 125000 },
+  ha_pham: { id: 'ha_pham', name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.12)', border: 'rgba(226, 232, 240, 0.4)', weight: 0.45, priceExp: 500, priceTM: 50, tienTinh: 100, dangDiem: 100 },
+  trung_pham: { id: 'trung_pham', name: 'Trung Phẩm', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.4)', weight: 0.28, priceExp: 1200, priceTM: 120, tienTinh: 240, dangDiem: 240 },
+  thuong_pham: { id: 'thuong_pham', name: 'Thượng Phẩm', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.4)', weight: 0.15, priceExp: 2500, priceTM: 250, tienTinh: 500, dangDiem: 500 },
+  cuc_pham: { id: 'cuc_pham', name: 'Cực Phẩm', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.12)', border: 'rgba(168, 85, 247, 0.4)', weight: 0.08, priceExp: 5000, priceTM: 500, tienTinh: 1000, dangDiem: 1000 },
+  tien_pham: { id: 'tien_pham', name: 'Tiên Phẩm', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.6)', weight: 0.032, priceExp: 10000, priceTM: 1000, tienTinh: 2000, dangDiem: 2000 },
+  than_pham: { id: 'than_pham', name: 'Thần Phẩm', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.18)', border: 'rgba(239, 68, 68, 0.7)', weight: 0.008, priceExp: 25000, priceTM: 2500, tienTinh: 5000, dangDiem: 5000 },
 };
 
 // Danh sách 72 Mệnh Đăng Thần Thoại (12 Đèn / Cấp Phẩm)
@@ -951,7 +997,7 @@ export const SUPPRESSING_ARTIFACTS = [
   { id: 'thien_dao_an', name: 'Thiên Đạo Sơ Tâm Quyết', shortName: 'Sơ Tâm Quyết', tier: 'than_pham', type: 'Quyền Bính Vũ Trụ Tâm Pháp', icon: '🏛️', color: '#ef4444', desc: 'Tâm pháp tượng trưng cho ý chí nguyên thủy của Thiên Đạo, hiệu lệnh muôn loài vạn vật.', poem: 'Thiên đạo sơ tâm, thống ngự vạn giới.' },
   { id: 'hu_vo_ban_nguyen', name: 'Hư Vô Tịch Diệt Ma Điển', shortName: 'Tịch Diệt Ma Điển', tier: 'than_pham', type: 'Tịch Diệt Thần Công', icon: '🌫️', color: '#ef4444', desc: 'Ma điển hư vô nuốt trọn mọi quy tắc vật lý, đưa tu sĩ chạm đến cảnh giới vô vi tối cao.', poem: 'Hư vô tịch diệt, vạn pháp quy không.' },
   { id: 'khoi_nguyen_moc', name: 'Khởi Nguyên Thế Giới Mộc', shortName: 'Thế Giới Mộc', tier: 'than_pham', type: 'Nâng Đỡ Vạn Giới', icon: '🌳', color: '#ef4444', desc: 'Nhánh cây Thế Giới nâng đỡ hàng ngàn vũ trụ, rễ cây đâm sâu vào bản nguyên thời gian.', poem: 'Thế giới thần mộc, nâng đỡ chư thiên.' },
-  { id: 'luan_hoi_ban', name: 'Lục Đạo Luân Hồi Chân Kinh', shortName: 'Luân Hồi Chân Kinh', tier: 'than_pham', type: 'Quy Tắc Sinh Tử Chí Cao Điển', icon: '☯️', color: '#ef4444', desc: 'Chân kinh xoay chuyển bánh xe luân hồi sinh tử của muôn vàn sinh linh trong vũ trụ.', poem: 'Bánh xe luân hồi, sinh tử tuần hoàn.' },
+  { id: 'luan_hoi_ban', name: 'Lục Đạo Luân Hồi Chân Kinh', shortName: 'Lục Đạo Luân Hồi', tier: 'than_pham', type: 'Quy Tắc Sinh Tử Chí Cao Điển', icon: '☯️', color: '#ef4444', desc: 'Chân kinh xoay chuyển bánh xe luân hồi sinh tử của muôn vàn sinh linh trong vũ trụ.', poem: 'Bánh xe luân hồi, sinh tử tuần hoàn.' },
   { id: 'tuc_menh_toa', name: 'Túc Mệnh Thần Tỏa', shortName: 'Túc Mệnh Tỏa', tier: 'than_pham', type: 'Trói Buộc Chư Thiên', icon: '⛓️', color: '#ef4444', desc: 'Sợi xích vàng trói buộc số mệnh của cả thần ma, không kẻ nào có thể thoát khỏi.', poem: 'Túc mệnh thần tỏa, khóa chặt thiên mệnh.' },
   { id: 'thuong_thuong_kiem', name: 'Thượng Thương Phạt Thiên Kiếm Điển', shortName: 'Phạt Thiên Kiếm Điển', tier: 'than_pham', type: 'Nghịch Mệnh Kiếm Quyết', icon: '⚔️', color: '#ef4444', desc: 'Kiếm điển được Thượng Thương tôi luyện từ thiên kiếp, chém đứt mọi ràng buộc số phận.', poem: 'Phạt thiên nhất kiếm, nghịch chuyển càn khôn.' },
   { id: 'dai_la_chuong', name: 'Đại La Thiên Cương Chướng', shortName: 'Thiên Cương Chướng', tier: 'than_pham', type: 'Phòng Ngự Tối Thượng', icon: '🛡️', color: '#ef4444', desc: 'Bức tường khí giới hạn bảo hộ tối cao của cõi Đại La, miễn nhiễm mọi đòn tấn công hủy diệt.', poem: 'Đại La hộ thể, vạn kiếp bất xâm.' },
@@ -970,8 +1016,15 @@ const DEFAULT_STATE = {
   // Cảnh giới: 'ngung_khi' | 'truc_co' | 'kim_dan' | 'gia_anh' | 'nguyen_anh'
   realm: 'ngung_khi',
 
-  // Ngưng khí
-  ngungKhiLevel: 1, // 1 to 10
+  // Ngưng khí: Hai con đường Luyện Thể (Hải Sơn) & Pháp Tu (Hóa Hải)
+  ngungKhiLevel: 1, // 1 to 10 (tổng quát)
+  ngungKhiTheLevel: 1, // 1 to 10 (Luyện Thể - Hải Sơn Quyết)
+  ngungKhiPhapLevel: 1, // 1 to 10 (Pháp Tu - Hóa Hải Kinh)
+  ngungKhiTheExp: 0, // 0 to 4500
+  ngungKhiPhapExp: 0, // 0 to 4500
+  ngungKhiActivePath: 'the', // 'the' | 'phap'
+  isSongTuVienMan: false, // Cả 2 đường đạt 10 tầng
+  hasSongTuBonus: false, // Nhận đặc quyền Thể Pháp Song Tuyệt
   readyBreakthroughTrucCo: false,
 
   // Trúc cơ
@@ -1015,7 +1068,8 @@ const DEFAULT_STATE = {
 };
 
 /**
- * Tự động chuyển đổi toàn bộ Tu Vi & Tiên Tinh còn dôi dư thành Lực Thiên Mệnh khi ở Giả Anh hoặc Nguyên Anh!
+ * Mở khóa cờ Thiên Mệnh khi ở Giả Anh hoặc Nguyên Anh
+ * (Điểm Thiên Mệnh CHỈ được nhận khi Đạo Anh Độ Kiếp thành công)
  */
 export function convertToThienMenhIfInAnhRealm(state) {
   if (!state) return;
@@ -1023,34 +1077,8 @@ export function convertToThienMenhIfInAnhRealm(state) {
   if (!isNguyenAnhStage) return;
 
   state.isThienMenhUnlocked = true;
-
-  // 10 Tu Vi = 1 Lực Thiên Mệnh (Tỉ lệ 10:1), 1 Tiên Tinh = 2 Lực Thiên Mệnh (Tỉ lệ 1:2)
-  const expAmount = state.totalExp || 0;
-  const tmFromExp = Math.floor(expAmount / 10);
-  const tienTinhAmount = state.tienTinh || 0;
-  const tmFromTienTinh = tienTinhAmount * 2; // 1 Tiên Tinh = 2 Lực Thiên Mệnh
-  const totalConverted = tmFromExp + tmFromTienTinh;
-
-  if (totalConverted > 0) {
-    state.totalThienMenh = (state.totalThienMenh || 0) + totalConverted;
-    state.totalExp = 0;
-    state.tienTinh = 0;
-    state.dangDiem = 0;
-    state.logs.unshift({
-      text: `✨ THIÊN MỆNH CHUYỂN HÓA! Đã chuyển đổi ${expAmount.toLocaleString()} Tu Vi (10 Tu Vi = 1 TM) và ${tienTinhAmount.toLocaleString()} Tiên Tinh (1 TT = 2 TM) thành +${totalConverted.toLocaleString()} Lực Thiên Mệnh!`,
-      time: Date.now(),
-    });
-  }
-
-  // Nếu đang ở Thẻ Thử Nghiệm V2: Cho sẵn 100.000 Lực Thiên Mệnh để người dùng trải nghiệm nạp & Độ Kiếp!
-  if (state.isKimDanTrialV2) {
-    if ((state.totalThienMenh || 0) < 100000) {
-      state.totalThienMenh = 100000;
-      state.logs.unshift({
-        text: '🏮 THẺ THỬ NGHIỆM V2: Đã cấp sẵn 100.000 Lực Thiên Mệnh để thỏa thích nạp Đạo Anh & thử nghiệm Độ Kiếp Đài!',
-        time: Date.now(),
-      });
-    }
+  if (state.totalThienMenh === undefined || state.totalThienMenh === null) {
+    state.totalThienMenh = 0;
   }
 }
 
@@ -1137,6 +1165,23 @@ export function getCultivationState() {
     }
     state.dangDiem = state.tienTinh;
 
+    // Khởi tạo các chỉ số Ngưng Khí Thể & Pháp nếu chưa có
+    if (state.ngungKhiTheExp === undefined) {
+      state.ngungKhiTheExp = state.realm === 'ngung_khi' ? (state.expCurrentRealm || state.totalExp || 0) : 4500;
+    }
+    if (state.ngungKhiPhapExp === undefined) {
+      state.ngungKhiPhapExp = state.realm === 'ngung_khi' ? (state.expCurrentRealm || state.totalExp || 0) : 4500;
+    }
+    if (!state.ngungKhiActivePath || state.ngungKhiActivePath === 'song_tu') {
+      state.ngungKhiActivePath = 'the';
+    }
+    if (!state.ngungKhiTheLevel) {
+      state.ngungKhiTheLevel = state.ngungKhiLevel || 1;
+    }
+    if (!state.ngungKhiPhapLevel) {
+      state.ngungKhiPhapLevel = state.ngungKhiLevel || 1;
+    }
+
     // Tự động khôi phục nếu người dùng bị kẹt ở trạng thái trial cũ trên Safari / iPhone
     if (state.isNguyenAnhTrial) {
       state.isNguyenAnhTrial = false;
@@ -1147,6 +1192,101 @@ export function getCultivationState() {
         state.preTrialBackup = null;
       } else if (state.realm === 'nguyen_anh') {
         state.realm = 'truc_co';
+      }
+    }
+
+    if (state.has121st || state.phapKhieu >= 121) {
+      state.has121st = true;
+      state.selfMenhHoa = Math.max(state.selfMenhHoa || 0, 5);
+    }
+
+    if (state.realm === 'kim_dan') {
+      const lampCount = (state.absorbedLamps || []).length;
+      const selfPalacesMax = Math.max(1, (state.maxThienCung || 6) - lampCount);
+      if ((state.realizedThienCung || 0) > selfPalacesMax) {
+        state.realizedThienCung = selfPalacesMax;
+      }
+    }
+
+    if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
+      const lampCount = (state.absorbedLamps || []).length;
+      const selfRealized = state.realizedThienCung || 0;
+      const totalRealized = lampCount + selfRealized;
+
+      // Tự động sửa nếu danh sách Đạo Anh bị thiếu hoặc có tên NaN
+      const hasInvalidDaoAnhs = !state.daoAnhs || state.daoAnhs.length < totalRealized || state.daoAnhs.some(d => d.palaceIndex === undefined || (d.name && d.name.includes('NaN')));
+      if (hasInvalidDaoAnhs && totalRealized > 0) {
+        const existingMap = {};
+        (state.daoAnhs || []).forEach(d => {
+          if (d.palaceIndex !== undefined && !d.name?.includes('NaN')) {
+            existingMap[d.palaceIndex] = d;
+          }
+        });
+
+        state.daoAnhs = [];
+        for (let i = 0; i < totalRealized; i++) {
+          const isLampPalace = i < lampCount;
+          let elementAttr = 'Ngũ Hành Thần Thể';
+          let daoAnhTitle = '';
+          let palaceName = '';
+          let tier = 'than_pham';
+
+          if (isLampPalace) {
+            const lampId = (state.absorbedLamps || [])[i];
+            const lampObj = LIFE_LAMPS.find(l => l.id === lampId);
+            tier = lampObj ? lampObj.tier : 'ha_pham';
+            palaceName = lampObj ? getLampPalaceName(lampObj) : `Chân Cung #${i + 1}`;
+            daoAnhTitle = formatDaoAnhTitle(palaceName);
+            let shortName = lampObj ? (lampObj.shortName || lampObj.name) : `Đăng ${i + 1}`;
+            shortName = shortName.replace(/Mệnh Đăng|Thần Đăng|Đăng|Cung/g, '').trim();
+            elementAttr = `${shortName} Thần Thể`;
+          } else {
+            const selfLocalIdx = (maxThienCung - 1) - i;
+            const anchor = state.palaceAnchors?.[selfLocalIdx] || state.palaceAnchors?.[i - lampCount] || state.palaceAnchors?.[i];
+            const artObj = anchor ? ((SUPPRESSING_ARTIFACTS || []).find(a => a.id === anchor.id) || anchor) : null;
+            tier = anchor?.tier || artObj?.tier || 'than_pham';
+            if (anchor || artObj) {
+              const aId = anchor?.id || artObj?.id;
+              const aName = anchor?.name || artObj?.name || '';
+              if (aId === 'luan_hoi_ban' || aName.includes('Luân Hồi')) {
+                palaceName = 'Lục Đạo Luân Hồi Cung';
+              } else if (aId && typeof getPalaceNameForArtifact === 'function') {
+                palaceName = getPalaceNameForArtifact(artObj || anchor) || anchor.palaceName || `${artObj?.shortName || artObj?.name} Cung`;
+              } else {
+                palaceName = anchor.palaceName || `${artObj?.shortName || artObj?.name || 'Bảo Vật'} Cung`;
+              }
+            } else {
+              palaceName = `Thiên Cung Tự Thân #${selfLocalIdx >= 0 ? selfLocalIdx + 1 : i + 1}`;
+            }
+            daoAnhTitle = formatDaoAnhTitle(palaceName);
+            elementAttr = anchor ? `${anchor.shortName || anchor.name} Thần Thể` : 'Thiên Địa Thần Thể';
+          }
+
+          if (existingMap[i]) {
+            const existing = existingMap[i];
+            existing.palaceIndex = i;
+            existing.palaceName = palaceName;
+            existing.name = daoAnhTitle;
+            existing.element = elementAttr;
+            existing.tier = tier;
+            state.daoAnhs.push(existing);
+          } else {
+            state.daoAnhs.push({
+              id: `da_${i}_${Date.now()}`,
+              palaceIndex: i,
+              palaceName: palaceName,
+              name: daoAnhTitle,
+              element: elementAttr,
+              fromLamp: isLampPalace,
+              tier: tier,
+              currentKiep: 0,
+              currentExp: 0,
+              maxExp: KIEP_EXP_REQUIREMENTS[0] || 5000,
+              currentThienMenh: 0,
+              maxThienMenh: KIEP_EXP_REQUIREMENTS[0] || 5000,
+            });
+          }
+        }
       }
     }
 
@@ -1210,13 +1350,23 @@ export function getCombatPowerDisplay(state) {
   if (!state) state = getCultivationState();
 
   if (state.realm === 'ngung_khi') {
-    const lvl = state.ngungKhiLevel || 1;
-    if (lvl === 10) return '1 Bạt';
-    if (lvl >= 5) {
-      const remainingHo = lvl - 5;
-      return remainingHo > 0 ? `1 Tiêu ${remainingHo} Hổ` : '1 Tiêu';
+    const theLvl = state.ngungKhiTheLevel || state.ngungKhiLevel || 1;
+    const phapLvl = state.ngungKhiPhapLevel || state.ngungKhiLevel || 1;
+
+    const theDesc = theLvl === 10 ? '1 Bạt' : theLvl >= 5 ? (theLvl - 5 > 0 ? `1 Tiêu ${theLvl - 5} Hổ` : '1 Tiêu') : `${theLvl} Hổ`;
+    const phapDesc = phapLvl === 10 ? '1 Cấm Hải' : phapLvl >= 5 ? (phapLvl - 5 > 0 ? `1 Tuyền ${phapLvl - 5} Lãng` : '1 Tuyền') : `${phapLvl} Lãng`;
+
+    if (state.isSongTuVienMan || (theLvl >= 10 && phapLvl >= 10)) {
+      return '1 Bạt · 1 Cấm Hải (👑 Song Tuyệt)';
     }
-    return `${lvl} Hổ`;
+
+    if (state.ngungKhiActivePath === 'the') {
+      return `${theDesc} Khí Huyết`;
+    } else if (state.ngungKhiActivePath === 'phap') {
+      return `${phapDesc} Linh Lực`;
+    } else {
+      return `Thể: ${theDesc} · Pháp: ${phapDesc}`;
+    }
   }
 
   if (state.realm === 'truc_co') {
@@ -1226,8 +1376,9 @@ export function getCombatPowerDisplay(state) {
 
   if (state.realm === 'kim_dan') {
     const lampCount = (state.absorbedLamps || []).length;
-    const selfRealized = state.realizedThienCung !== undefined ? state.realizedThienCung : 0;
-    const totalRealizedCung = lampCount + selfRealized;
+    const selfPalacesMax = Math.max(1, (state.maxThienCung || 6) - lampCount);
+    const selfRealized = Math.min(selfPalacesMax, state.realizedThienCung !== undefined ? state.realizedThienCung : 0);
+    const totalRealizedCung = Math.min(state.maxThienCung || 13, lampCount + selfRealized);
     return `${totalRealizedCung} Cung`;
   }
 
@@ -1250,7 +1401,21 @@ export function isGrandCompletion(state) {
   if (!state) state = getCultivationState();
 
   if (state.realm === 'ngung_khi') {
-    return state.ngungKhiLevel >= 10 && (state.readyBreakthroughTrucCo || state.expCurrentRealm >= NGUNG_KHI_THRESHOLDS[10]);
+    const path = state.ngungKhiActivePath === 'phap' ? 'phap' : 'the';
+    const theExp = state.ngungKhiTheExp !== undefined ? state.ngungKhiTheExp : (state.expCurrentRealm || state.totalExp || 0);
+    const phapExp = state.ngungKhiPhapExp !== undefined ? state.ngungKhiPhapExp : (state.expCurrentRealm || state.totalExp || 0);
+    const theMax = theExp >= 4500;
+    const phapMax = phapExp >= 4500;
+
+    // Nếu cả 2 nhánh đều max -> Đạt đại viên mãn hoàn toàn
+    if (theMax && phapMax) return true;
+
+    // Nếu nhánh đang dồn linh lực đã max -> Tạm thời chuyển thành Tiên Tinh cho đến khi chuyển nhánh kia
+    if (path === 'the' && theMax) return true;
+    if (path === 'phap' && phapMax) return true;
+
+    // Nhánh đang dồn linh lực chưa max -> Vẫn tiếp tục nhận Tu Vi bình thường
+    return false;
   }
 
   if (state.realm === 'truc_co') {
@@ -1263,7 +1428,10 @@ export function isGrandCompletion(state) {
   }
 
   if (state.realm === 'kim_dan') {
-    return state.realizedThienCung >= state.maxThienCung;
+    const lampCount = (state.absorbedLamps || []).length;
+    const selfPalacesMax = Math.max(1, (state.maxThienCung || 6) - lampCount);
+    const isAllPalacesReal = (state.realizedThienCung || 0) >= selfPalacesMax;
+    return isAllPalacesReal && (state.daoAnhExp || 0) >= EXP_PER_DAO_ANH;
   }
 
   if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
@@ -1282,14 +1450,19 @@ export function isGrandCompletion(state) {
  */
 export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   const state = getCultivationState();
-  const key = `${novelId}_${chapterId}`;
+  let gainedExp = 0;
 
-  const isFirstRead = !state.readChapterIds[key];
-  // Random mức tăng tu vi từ 50 đến 100 mỗi chu kỳ 60s
-  const gainedExp = Math.floor(Math.random() * (MAX_EXP_PER_CYCLE - MIN_EXP_PER_CYCLE + 1)) + MIN_EXP_PER_CYCLE;
-
-  state.readChapterIds[key] = Date.now();
-  state.chaptersReadCount = Object.keys(state.readChapterIds).length;
+  if (typeof novelId === 'number') {
+    gainedExp = novelId;
+  } else {
+    const key = `${novelId}_${chapterId}`;
+    state.readChapterIds[key] = Date.now();
+    state.chaptersReadCount = Object.keys(state.readChapterIds).length;
+    const isAnhRealm = state.realm === 'gia_anh' || state.realm === 'nguyen_anh';
+    const minExp = isAnhRealm ? MIN_EXP_PER_CYCLE_NGUYEN_ANH : MIN_EXP_PER_CYCLE;
+    const maxExp = isAnhRealm ? MAX_EXP_PER_CYCLE_NGUYEN_ANH : MAX_EXP_PER_CYCLE;
+    gainedExp = Math.floor(Math.random() * (maxExp - minExp + 1)) + minExp;
+  }
 
   const isGrand = isGrandCompletion(state);
   let convertedToTienTinh = 0;
@@ -1307,12 +1480,82 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     state.totalExp += gainedExp;
   }
 
-  // LỰC THIÊN MỆNH: Chỉ mở khóa và tích lũy khi ở Giả Anh hoặc Nguyên Anh (+100 - 300 TM mỗi lần ngộ đạo)
+  // TỰ ĐỘNG NẠP LINH LỰC VÀO ĐẠO ANH KHI Ở GIẢ ANH HOẶC NGUYÊN ANH
   let gainedThienMenh = 0;
   if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
     state.isThienMenhUnlocked = true;
-    gainedThienMenh = Math.floor(Math.random() * 201) + 100; // +100 đến 300 TM
-    state.totalThienMenh = (state.totalThienMenh || 0) + gainedThienMenh;
+    if (!state.daoAnhTargetStrategy) state.daoAnhTargetStrategy = 'auto_80'; // 'auto_80' hoặc 'auto_100'
+
+    const daoAnhs = state.daoAnhs || [];
+    const activeDaoAnhs = daoAnhs.filter(da => (da.currentKiep || 0) < 5);
+
+    if (activeDaoAnhs.length > 0) {
+      let candidates = [];
+      if (state.daoAnhTargetStrategy === 'auto_80') {
+        candidates = activeDaoAnhs.filter(da => {
+          const maxExp = da.maxExp || KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
+          return Math.floor(((da.currentExp || 0) / maxExp) * 100) < 80;
+        });
+      } else {
+        candidates = activeDaoAnhs.filter(da => {
+          const maxExp = da.maxExp || KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
+          return Math.floor(((da.currentExp || 0) / maxExp) * 100) < 100;
+        });
+      }
+
+      // Nếu tất cả đều đã vượt mốc chiến lược, cho phép nạp đầy 100%
+      if (candidates.length === 0) {
+        candidates = activeDaoAnhs.filter(da => {
+          const maxExp = da.maxExp || KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
+          return (da.currentExp || 0) < maxExp;
+        });
+      }
+
+      let targetDa = null;
+      if (state.currentFeedingDaoAnhId) {
+        targetDa = candidates.find(da => da.id === state.currentFeedingDaoAnhId);
+      }
+
+      if (!targetDa && candidates.length > 0) {
+        const randIdx = Math.floor(Math.random() * candidates.length);
+        targetDa = candidates[randIdx];
+        state.currentFeedingDaoAnhId = targetDa.id;
+      }
+
+      if (targetDa) {
+        if (!targetDa.maxExp) {
+          targetDa.maxExp = KIEP_EXP_REQUIREMENTS[targetDa.currentKiep || 0] || 5000;
+        }
+        const oldPercent = Math.floor(((targetDa.currentExp || 0) / targetDa.maxExp) * 100);
+        const needed = targetDa.maxExp - (targetDa.currentExp || 0);
+        const inject = Math.min(gainedExp, needed);
+        targetDa.currentExp = (targetDa.currentExp || 0) + inject;
+        const newPercent = Math.floor((targetDa.currentExp / targetDa.maxExp) * 100);
+
+        // Báo động khi vừa chạm mốc 80% (ngưỡng bắt đầu đủ điều kiện độ kiếp)
+        if (oldPercent < 80 && newPercent >= 80) {
+          breakthrough = {
+            type: 'dao_anh_80',
+            title: '⚡ ĐẠO ANH ĐẠT 80% LINH LỰC!',
+            subtitle: `[${targetDa.name}] đã nạp đạt 80% Linh Lực (${targetDa.currentExp.toLocaleString()}/${targetDa.maxExp.toLocaleString()} Tu Vi)! Đã đủ điều kiện Nghênh Tiếp Thiên Kiếp!`,
+            badge: '✦ THIÊN KIẾP SẴN SÀNG ✦',
+            icon: '⚡',
+            theme: 'purple',
+            daoAnhId: targetDa.id,
+            daoAnhName: targetDa.name,
+          };
+          state.logs.unshift({
+            text: `⚡ [${targetDa.name}] đã tích lũy đạt 80% Linh Lực (${targetDa.currentExp.toLocaleString()}/${targetDa.maxExp.toLocaleString()} Tu Vi)! Đã đủ điều kiện Nghênh Tiếp Thiên Kiếp!`,
+            time: Date.now(),
+          });
+          if (state.daoAnhTargetStrategy === 'auto_80') {
+            state.currentFeedingDaoAnhId = null; // Chuyển sang Đạo Anh khác ở chu kỳ tiếp theo
+          }
+        } else if (newPercent >= 100) {
+          state.currentFeedingDaoAnhId = null;
+        }
+      }
+    }
   }
 
   let droppedLamp = null;
@@ -1398,34 +1641,80 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   // Xử lý tiến độ theo từng cảnh giới với đường cong EXP lũy tiến (Chỉ tăng khi CHƯA ĐẠT ĐẠI VIÊN MÃN)
   if (!isGrand) {
     if (state.realm === 'ngung_khi') {
-      state.expCurrentRealm += gainedExp;
+      const path = state.ngungKhiActivePath === 'phap' ? 'phap' : 'the';
+      const theGained = path === 'the' ? gainedExp : 0;
+      const phapGained = path === 'phap' ? gainedExp : 0;
 
-      for (let lvl = 10; lvl >= 1; lvl--) {
-        if (state.expCurrentRealm >= NGUNG_KHI_THRESHOLDS[lvl - 1]) {
-          if (lvl > state.ngungKhiLevel) {
-            state.ngungKhiLevel = lvl;
-            const cpStr = getCombatPowerDisplay({ ...state, ngungKhiLevel: lvl });
-            breakthrough = {
-              type: 'layer',
-              title: `ĐỘT PHÁ NGƯNG KHÍ TẦNG ${lvl}!`,
-              subtitle: `Chiến lực: ${cpStr}`,
-              icon: '⚡',
-            };
-            state.logs.unshift({
-              text: `Đột phá thành công! Tiến nhập Ngưng Khí Tầng ${lvl} (Chiến lực: ${cpStr}).`,
-              time: Date.now(),
-            });
+      const prevTheLvl = state.ngungKhiTheLevel || 1;
+      const prevPhapLvl = state.ngungKhiPhapLevel || 1;
+
+      if (theGained > 0) {
+        state.ngungKhiTheExp = Math.min(4500, (state.ngungKhiTheExp || 0) + theGained);
+        for (let lvl = 10; lvl >= 1; lvl--) {
+          if (state.ngungKhiTheExp >= NGUNG_KHI_THRESHOLDS[lvl - 1]) {
+            state.ngungKhiTheLevel = lvl;
+            break;
           }
-          break;
         }
       }
 
-      if (state.expCurrentRealm >= NGUNG_KHI_THRESHOLDS[10] && !state.readyBreakthroughTrucCo) {
+      if (phapGained > 0) {
+        state.ngungKhiPhapExp = Math.min(4500, (state.ngungKhiPhapExp || 0) + phapGained);
+        for (let lvl = 10; lvl >= 1; lvl--) {
+          if (state.ngungKhiPhapExp >= NGUNG_KHI_THRESHOLDS[lvl - 1]) {
+            state.ngungKhiPhapLevel = lvl;
+            break;
+          }
+        }
+      }
+
+      state.ngungKhiLevel = Math.max(state.ngungKhiTheLevel || 1, state.ngungKhiPhapLevel || 1);
+      state.expCurrentRealm = Math.max(state.ngungKhiTheExp || 0, state.ngungKhiPhapExp || 0);
+
+      // Kiểm tra đột phá tầng Luyện Thể
+      if (state.ngungKhiTheLevel > prevTheLvl) {
+        const layerInfo = HAI_SON_QUYET_LAYERS[state.ngungKhiTheLevel - 1];
+        breakthrough = {
+          type: 'layer',
+          title: `HẢI SƠN QUYẾT ĐỘT PHÁ TẦNG ${state.ngungKhiTheLevel}!`,
+          subtitle: state.ngungKhiTheLevel >= 7 ? `🔥 KÍCH HOẠT DỊ TƯỢNG: ${layerInfo?.phantomName || 'Huyết Hổ Hóa Hình'}!` : `Khí Huyết: ${layerInfo?.desc}`,
+          icon: state.ngungKhiTheLevel >= 7 ? '🐯' : '⚔️',
+        };
+        state.logs.unshift({
+          text: `Tôi luyện thành công Hải Sơn Quyết Tầng ${state.ngungKhiTheLevel} (${layerInfo?.desc}). ${state.ngungKhiTheLevel === 7 ? 'Khí Huyết Hóa Ảnh - Huyết Hổ Thần Thú hiển hiện uy phong lẫm liệt!' : ''}`,
+          time: Date.now(),
+        });
+      }
+
+      // Kiểm tra đột phá tầng Pháp Tu
+      if (state.ngungKhiPhapLevel > prevPhapLvl) {
+        const layerInfo = HOA_HAI_KINH_LAYERS[state.ngungKhiPhapLevel - 1];
+        breakthrough = {
+          type: 'layer',
+          title: `HÓA HẢI KINH ĐỘT PHÁ TẦNG ${state.ngungKhiPhapLevel}!`,
+          subtitle: state.ngungKhiPhapLevel >= 7 ? `🌊 KÍCH HOẠT DỊ TƯỢNG: ${layerInfo?.phantomName || 'Cấm Hải Long Kình'}!` : `Linh Lực: ${layerInfo?.desc}`,
+          icon: state.ngungKhiPhapLevel >= 7 ? '🐋' : '🌊',
+        };
+        state.logs.unshift({
+          text: `Đột phá Hóa Hải Kinh Tầng ${state.ngungKhiPhapLevel} (${layerInfo?.desc}). ${state.ngungKhiPhapLevel === 7 ? 'Linh Lực Hóa Hải - Cấm Hải Long Kình quẫy đuôi xé toạc càn khôn!' : ''}`,
+          time: Date.now(),
+        });
+      }
+
+      // Kiểm tra Đại Viên Mãn
+      const isTheMax = (state.ngungKhiTheExp || 0) >= 4500;
+      const isPhapMax = (state.ngungKhiPhapExp || 0) >= 4500;
+
+      if (isTheMax && isPhapMax) {
+        state.isSongTuVienMan = true;
+      }
+
+      if ((isTheMax || isPhapMax) && !state.readyBreakthroughTrucCo) {
         state.readyBreakthroughTrucCo = true;
         breakthrough = {
           type: 'realm',
-          title: 'NGƯNG KHÍ ĐẠI VIÊN MÃN!',
-          subtitle: 'Đã sẵn sàng đột phá Trúc Cơ',
+          title: isTheMax && isPhapMax ? '👑 THỂ PHÁP SONG TU ĐẠI VIÊN MÃN!' : 'NGƯNG KHÍ ĐẠI VIÊN MÃN!',
+          subtitle: isTheMax && isPhapMax ? 'Thể Pháp Song Tuyệt - Đã sẵn sàng Trúc Cơ Cực Cảnh' : 'Đã sẵn sàng đột phá Trúc Cơ',
           icon: '🔥',
         };
       }
@@ -1455,38 +1744,39 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
         state.attemptExp121 = Math.min(EXP_FOR_121_ATTEMPT, (state.attemptExp121 || 0) + gainedExp);
       }
     } else if (state.realm === 'kim_dan') {
-      if (state.realizedThienCung < state.maxThienCung) {
-        const lampBonusCount = (state.absorbedLamps || []).length;
-        const lampPalaceStartIndex = state.maxThienCung - lampBonusCount;
-        const isCurrentLampPalace = state.realizedThienCung >= lampPalaceStartIndex;
+      const lampBonusCount = (state.absorbedLamps || []).length;
+      const selfPalacesMax = Math.max(1, state.maxThienCung - lampBonusCount);
 
-        if (isCurrentLampPalace) {
-          // Cung hình thành từ Mệnh Đăng luôn luôn đạt 100% Hóa Thực tự động (Vật Trấn Áp chính là Mệnh Đăng)
-          state.realizedThienCung += 1;
-          state.currentThienCungExp = 0;
+      if (state.realizedThienCung < selfPalacesMax) {
+        // Cung tự thân: Tích lũy tới 99.99% (targetPalaceExp - 1) và dừng lại chờ Vật Trấn Áp
+        const targetPalaceExp = getPalaceCost(state.realizedThienCung + 1);
+        const bottleneckExp = targetPalaceExp - 1;
+        if (state.currentThienCungExp < bottleneckExp) {
+          state.currentThienCungExp = Math.min(bottleneckExp, state.currentThienCungExp + gainedExp);
+          if (state.currentThienCungExp >= bottleneckExp) {
+            state.logs.unshift({
+              text: `⚠️ THIÊN CUNG ${state.realizedThienCung + 1} ĐẠT 99.99%! Đã tích lũy đủ ${bottleneckExp}/${targetPalaceExp} EXP linh lực, cần khảm nạm một Vật Trấn Áp để đạt 100% Hóa Thực thành Cung Thật!`,
+              time: Date.now(),
+            });
+          }
+        }
+      } else {
+        // Toàn bộ Thiên Cung đã Hóa Thực 100%: Điền trực tiếp vào thanh Thai Nghén Đạo Anh (10.000 Tu Vi)!
+        const prevDaoAnhExp = state.daoAnhExp || 0;
+        state.daoAnhExp = Math.min(EXP_PER_DAO_ANH, prevDaoAnhExp + gainedExp);
+        state.currentThienCungExp = state.daoAnhExp;
+
+        if (state.daoAnhExp >= EXP_PER_DAO_ANH && prevDaoAnhExp < EXP_PER_DAO_ANH) {
           breakthrough = {
-            type: 'cung',
-            title: `HÓA THỰC CHÂN CUNG MỆNH ĐĂNG!`,
-            subtitle: `Chiến lực: ${state.realizedThienCung} Cung Thật`,
-            icon: '🏮',
+            type: 'dao_anh',
+            title: '👑 THAI NGHÉN ĐẠO ANH VIÊN MÃN!',
+            subtitle: 'Đã tích lũy đủ 10.000/10.000 Tu Vi, sẵn sàng Khai Sinh Đạo Anh!',
+            icon: '👑',
           };
           state.logs.unshift({
-            text: `Mệnh Đăng Thượng Cổ tỏa hào quang! Đã Hóa Thực thành công Chân Cung thứ ${state.realizedThienCung}/${state.maxThienCung} thành Cung Thật 100% (+1 Cung chiến lực)!`,
+            text: '👑 THAI NGHÉN ĐẠO ANH VIÊN MÃN! Đã tích lũy đủ 10.000/10.000 Tu Vi linh lực, sẵn sàng Khai Sinh Đạo Anh phi thăng Nguyên Anh!',
             time: Date.now(),
           });
-        } else {
-          // Cung tự thân: Tích lũy tới 99.99% (targetPalaceExp - 1) và dừng lại chờ Vật Trấn Áp
-          const targetPalaceExp = getPalaceCost(state.realizedThienCung + 1);
-          const bottleneckExp = targetPalaceExp - 1;
-          if (state.currentThienCungExp < bottleneckExp) {
-            state.currentThienCungExp = Math.min(bottleneckExp, state.currentThienCungExp + gainedExp);
-            if (state.currentThienCungExp >= bottleneckExp) {
-              state.logs.unshift({
-                text: `⚠️ THIÊN CUNG ${state.realizedThienCung + 1} ĐẠT 99.99%! Đã tích lũy đủ ${bottleneckExp}/${targetPalaceExp} EXP linh lực, cần khảm nạm một Vật Trấn Áp để đạt 100% Hóa Thực thành Cung Thật!`,
-                time: Date.now(),
-              });
-            }
-          }
         }
       }
     }
@@ -1517,7 +1807,9 @@ export function absorbLifeLamp(lampId) {
   const currentAbsorbed = state.absorbedLamps || [];
 
   if (state.realm === 'truc_co') {
-    const selfHoa = state.selfMenhHoa || Math.floor((state.phapKhieu || 0) / 30);
+    const baseHoa = Math.floor((state.phapKhieu || 0) / 30);
+    const secretHoa = (state.has121st || state.phapKhieu >= 121) ? 1 : 0;
+    const selfHoa = Math.max(state.selfMenhHoa || 0, baseHoa + secretHoa);
     if (selfHoa < 1) {
       throw new Error('Cần thắp sáng ít nhất 1 Mệnh Hỏa tự thân ở Trúc Cơ mới có thể hấp thụ Mệnh Đăng.');
     }
@@ -1613,9 +1905,10 @@ function applyExpBurn(state, deficitExp) {
       }
     } else if (state.realm === 'truc_co') {
       state.expCurrentRealm = Math.max(0, state.expCurrentRealm - deficitExp);
-      state.phapKhieu = Math.min(120, Math.max(0, Math.floor(state.expCurrentRealm / EXP_PER_PHAP_KHIEU)));
-      state.selfMenhHoa = Math.floor(state.phapKhieu / 30);
-      // PHÁP KHIẾU 121 BẢO TOÀN
+      state.phapKhieu = getOpenedPhapKhieuFromExp(state.expCurrentRealm);
+      const baseHoa = Math.floor(state.phapKhieu / 30);
+      const secretHoa = state.has121st ? 1 : 0;
+      state.selfMenhHoa = baseHoa + secretHoa;
     } else if (state.realm === 'kim_dan') {
       const absorbedLampCount = (state.absorbedLamps || []).length;
       const minRealizedPalaces = 1 + absorbedLampCount;
@@ -1660,7 +1953,7 @@ export function sellLampForTienTinh(lampId) {
   }
 
   const tier = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
-  const gainedTienTinh = tier.tienTinh || tier.dangDiem || (tier.priceExp * TIEN_TINH_RATIO);
+  const gainedTienTinh = tier.tienTinh || tier.dangDiem || Math.floor(tier.priceExp / TIEN_TINH_RATIO);
 
   // Xóa khỏi túi trữ vật
   state.inventoryLamps = state.inventoryLamps.filter(id => id !== lampId);
@@ -1686,7 +1979,7 @@ export const sellLampForPoints = sellLampForTienTinh;
 
 /**
  * MUA MỆNH ĐĂNG BẰNG TIÊN TINH & ĐỐT TU VI BÙ THIẾU (Nghịch Thiên Hoán Đăng)
- * - Ưu tiên trừ Tiên Tinh trước (1 Tu Vi = 5 Tiên Tinh).
+ * - Ưu tiên trừ Tiên Tinh trước (1 Tiên Tinh = 5 Tu Vi).
  * - Nếu Tiên Tinh không đủ: Tự động trừ hết Tiên Tinh hiện có và đốt phần Tu Vi (hoặc Thiên Mệnh) còn thiếu!
  */
 export function buyLampWithTienTinhAndExp(lampId) {
@@ -1700,7 +1993,7 @@ export function buyLampWithTienTinhAndExp(lampId) {
   }
 
   const tier = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
-  const totalCostTienTinh = tier.tienTinh || tier.dangDiem || (tier.priceExp * TIEN_TINH_RATIO);
+  const totalCostTienTinh = tier.tienTinh || tier.dangDiem || Math.floor(tier.priceExp / TIEN_TINH_RATIO);
   const userTienTinh = state.tienTinh || state.dangDiem || 0;
   const isNguyenAnhStage = state.realm === 'gia_anh' || state.realm === 'nguyen_anh';
 
@@ -1719,7 +2012,7 @@ export function buyLampWithTienTinhAndExp(lampId) {
     state.tienTinh = 0;
     state.dangDiem = 0;
     const remainingTienTinhDeficit = totalCostTienTinh - userTienTinh;
-    deficitExp = Math.ceil(remainingTienTinhDeficit / TIEN_TINH_RATIO);
+    deficitExp = remainingTienTinhDeficit * TIEN_TINH_RATIO;
 
     const burnRes = applyExpBurn(state, deficitExp);
     deficitTM = burnRes.deficitTM;
@@ -1909,7 +2202,7 @@ export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = 
     'thien_dao_an': 'Thiên Đạo Sơ Tâm Cung',
     'hu_vo_ban_nguyen': 'Hư Vô Tịch Diệt Cung',
     'khoi_nguyen_moc': 'Thế Giới Mộc Cung',
-    'luan_hoi_ban': 'Luân Hồi Chân Kinh Cung',
+    'luan_hoi_ban': 'Lục Đạo Luân Hồi Cung',
     'tuc_menh_toa': 'Túc Mệnh Thần Tỏa Cung',
     'thuong_thuong_kiem': 'Phạt Thiên Kiếm Cung',
     'dai_la_chuong': 'Đại La Thiên Cương Cung',
@@ -2085,7 +2378,7 @@ export function buyArtifactWithTienTinhAndExp(artifactId) {
   if (!art) throw new Error('Vật Trấn Áp không tồn tại.');
 
   const tier = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
-  const priceTienTinh = tier.tienTinh || tier.dangDiem || (tier.priceExp * TIEN_TINH_RATIO);
+  const priceTienTinh = tier.tienTinh || tier.dangDiem || Math.floor(tier.priceExp / TIEN_TINH_RATIO);
   const userTienTinh = state.tienTinh || state.dangDiem || 0;
 
   if (userTienTinh >= priceTienTinh) {
@@ -2107,7 +2400,7 @@ export function buyArtifactWithTienTinhAndExp(artifactId) {
 
   // Tiên Tinh không đủ -> Dùng hết Tiên Tinh + Đốt phần Tu Vi còn thiếu
   const remainingPoints = priceTienTinh - userTienTinh;
-  const neededExp = Math.ceil(remainingPoints / TIEN_TINH_RATIO);
+  const neededExp = remainingPoints * TIEN_TINH_RATIO;
 
   state.tienTinh = 0;
   state.dangDiem = 0;
@@ -2195,8 +2488,8 @@ export function activateKimDanTrialV2() {
   // Vật Trấn Áp random đủ dùng
   state.inventoryArtifacts = randomArts;
 
-  // Cấp sẵn 100.000 Lực Thiên Mệnh cho thẻ thử nghiệm
-  state.totalThienMenh = 100000;
+  // Điểm Thiên Mệnh khởi đầu là 0 (chỉ nhận khi Đạo Anh độ kiếp)
+  state.totalThienMenh = 0;
 
   // Tiêu biến ngay lập tức + cờ hiện nút Thăng Cung
   state.hasUsedKimDanTrialV2 = true;
@@ -2328,6 +2621,18 @@ export function thangCungKimDan() {
 }
 
 /**
+ * Chuyển đổi con đường tu luyện Ngưng Khí ('the' | 'phap')
+ */
+export function setNgungKhiActivePath(path) {
+  const state = getCultivationState();
+  if (['the', 'phap'].includes(path)) {
+    state.ngungKhiActivePath = path;
+    saveCultivationState(state);
+  }
+  return state;
+}
+
+/**
  * Đột phá Ngưng Khí lên Trúc Cơ
  */
 export function breakthroughToTrucCo() {
@@ -2335,6 +2640,10 @@ export function breakthroughToTrucCo() {
   if (state.realm !== 'ngung_khi' || !state.readyBreakthroughTrucCo) {
     throw new Error('Chưa đạt Ngưng Khí Đại Viên Mãn để trúc cơ.');
   }
+
+  const theLvl = state.ngungKhiTheLevel || state.ngungKhiLevel || 1;
+  const phapLvl = state.ngungKhiPhapLevel || state.ngungKhiLevel || 1;
+  const isSongTu = theLvl >= 10 && phapLvl >= 10;
 
   state.realm = 'truc_co';
   state.expCurrentRealm = 0;
@@ -2344,19 +2653,60 @@ export function breakthroughToTrucCo() {
   state.failed121st = false;
   state.attemptExp121 = 0;
 
-  state.logs.unshift({
-    text: 'Trúc Cơ thành công! Tẩy kinh phạt tủy, mở ra Pháp Khiếu đầu tiên, bắt đầu tích tụ Mệnh Hỏa (Chiến lực tính bằng Hỏa).',
-    time: Date.now(),
-  });
+  if (isSongTu) {
+    state.hasSongTuBonus = true;
+    state.logs.unshift({
+      text: '👑 THỂ PHÁP SONG TU ĐẠI THÀNH! Đột phá Trúc Cơ với nền tảng Vô Thượng Cực Cảnh! Kích hoạt hiệu ứng "Thể Pháp Song Tuyệt": Giảm 15% Tu Vi tiêu hao khi mở 120 Pháp Khiếu và +20% Tốc độ tu luyện vĩnh viễn!',
+      time: Date.now(),
+    });
+  } else {
+    state.logs.unshift({
+      text: `Trúc Cơ thành công! Nền móng (${theLvl >= 10 ? 'Luyện Thể Hải Sơn Quyết' : 'Pháp Tu Hóa Hải Kinh'}) vững chắc, tẩy kinh phạt tủy, mở ra Pháp Khiếu đầu tiên.`,
+      time: Date.now(),
+    });
+  }
 
   saveCultivationState(state);
   return state;
 }
 
 /**
+ * Xung kích khai mở Pháp Khiếu tiếp theo ở Trúc Cơ Kỳ
+ */
+export function unlockNextPhapKhieu() {
+  const state = getCultivationState();
+  if (state.realm !== 'truc_co' || state.phapKhieu >= 120) {
+    throw new Error('Chưa thể khai mở pháp khiếu tiếp theo.');
+  }
+  const next = (state.phapKhieu || 0) + 1;
+  const cost = getExpForPhapKhieuIndex(next);
+  const neededCumulative = TRUC_CO_KHIEU_THRESHOLDS[next] || 0;
+  if (state.expCurrentRealm < neededCumulative) {
+    const currentProg = Math.max(0, state.expCurrentRealm - (TRUC_CO_KHIEU_THRESHOLDS[state.phapKhieu] || 0));
+    throw new Error(`Linh lực chưa đầy (${currentProg}/${cost} EXP) để xung kích Pháp Khiếu #${next}. Hãy đọc truyện hoặc tĩnh tọa tụ khí thêm!`);
+  }
+  state.phapKhieu = next;
+  const newSelfHoa = Math.floor(next / 30);
+  if (newSelfHoa > (state.selfMenhHoa || 0)) {
+    state.selfMenhHoa = newSelfHoa;
+    state.logs.unshift({
+      text: `🔥 THẮP SÁNG ${newSelfHoa} HỎA TỰ THÂN! Pháp khiếu đã khai mở ${next}/120 khiếu (+1 Hỏa chiến lực)!`,
+      time: Date.now()
+    });
+  } else {
+    state.logs.unshift({
+      text: `⚡ Khai mở thành công Pháp Khiếu #${next}!`,
+      time: Date.now()
+    });
+  }
+  saveCultivationState(state);
+  return state;
+}
+
+/**
  * Xung kích mở Pháp Khiếu thứ 121
- * - Tỉ lệ thành công: 50%
- * - Thất bại: Vĩnh viễn không mở được Pháp Khiếu 121 nữa!
+ * - Tỉ lệ thành công: 60%
+ * - Thất bại: Căn cơ đóng kín vĩnh viễn (không thể mở 121 nữa)
  */
 export function attemptUnlock121st() {
   const state = getCultivationState();
@@ -2374,25 +2724,27 @@ export function attemptUnlock121st() {
   }
 
   const roll = Math.random();
-  const isSuccess = roll < 0.5; // 50% thành công / 50% thất bại
+  const isSuccess = roll < 0.60; // 60% thành công
 
   if (isSuccess) {
     state.has121st = true;
+    state.failed121st = false;
     state.phapKhieu = 121;
+    state.selfMenhHoa = 5;
     state.logs.unshift({
-      text: '✨ KỲ TÍCH VẠN CỔ! Xung kích thành công mở ra Pháp Khiếu thứ 121 bí mật, ngưng tụ Mệnh Hỏa thứ 5 (+1 Hỏa chiến lực), đạt Trúc Cơ Cực Cảnh!',
+      text: '✨ KỲ TÍCH VẠN CỔ! Xung kích thành công mở ra Pháp Khiếu thứ 121 bí mật (Tỉ lệ 60%), ngưng tụ Mệnh Hỏa thứ 5 (+1 Hỏa chiến lực), đạt Trúc Cơ Cực Cảnh!',
       time: Date.now(),
     });
     saveCultivationState(state);
-    return { state, isSuccess: true, message: '✨ Kỳ tích vạn cổ! Đã mở thành công Pháp Khiếu thứ 121 đạt 5 Mệnh Hỏa Cực Cảnh!' };
+    return { state, isSuccess: true, message: '✨ Kỳ tích vạn cổ! Đã mở thành công Pháp Khiếu thứ 121 (60%) đạt 5 Mệnh Hỏa Cực Cảnh!' };
   } else {
-    state.failed121st = true;
+    state.failed121st = true; // Thất bại: Đóng vĩnh viễn
     state.logs.unshift({
       text: '⚠️ XUNG KÍCH THẤT BẠI! Pháp khiếu 121 tan biến trong hư vô, căn cơ đóng kín, vĩnh viễn không thể khai mở Khiếu 121 nữa!',
       time: Date.now(),
     });
     saveCultivationState(state);
-    return { state, isSuccess: false, message: '⚠️ Xung kích thất bại (50%)! Căn cơ pháp khiếu đã đóng kín, vĩnh viễn không thể mở Pháp Khiếu 121 nữa.' };
+    return { state, isSuccess: false, message: '⚠️ Xung kích thất bại (60%)! Căn cơ pháp khiếu đã đóng kín, vĩnh viễn không thể mở Pháp Khiếu 121 nữa.' };
   }
 }
 
@@ -2441,7 +2793,7 @@ export const TRIBULATION_NAMES = {
 /**
  * NẠP TU VI THAI NGHÉN ĐẠO ANH (10.000 Tu Vi)
  */
-export function injectExpToDaoAnh(palaceIndex, expAmount = 10000) {
+export function injectExpToThaiNghen(palaceIndex, expAmount = 10000) {
   const state = getCultivationState();
   const lampCount = (state.absorbedLamps || []).length;
   const selfRealized = state.realizedThienCung || 0;
@@ -2489,6 +2841,38 @@ export function injectExpToDaoAnh(palaceIndex, expAmount = 10000) {
 }
 
 /**
+ * Helper: Xác định Phẩm Cấp của Đạo Anh dựa theo Mệnh Đăng hoặc Vật Trấn Áp nguồn gốc
+ */
+export function getDaoAnhTierKey(da, state) {
+  if (!da) return 'than_pham';
+  if (da.tier) return da.tier;
+  if (da.fromLamp && da.lampId) {
+    const lamp = LIFE_LAMPS.find(l => l.id === da.lampId);
+    if (lamp?.tier) return lamp.tier;
+  }
+  if (da.artifactId) {
+    const art = SUPPRESSING_ARTIFACTS.find(a => a.id === da.artifactId);
+    if (art?.tier) return art.tier;
+  }
+  if (state?.palaceAnchors) {
+    const anchor = state.palaceAnchors[da.palaceIndex] || state.palaceAnchors[da.palaceIndex - (state.absorbedLamps?.length || 0)];
+    if (anchor?.tier) return anchor.tier;
+  }
+  return 'than_pham';
+}
+
+/**
+ * Helper: Tính toán Lực Thiên Mệnh nhận được khi Đạo Anh vượt kiếp thành công
+ */
+export function calculateDaoAnhTribulationReward(da, targetKiep, state) {
+  const tierKey = getDaoAnhTierKey(da, state);
+  const baseTM = TIER_BASE_THIEN_MENH_REWARDS[tierKey] || 5000;
+  const kiepMultipliers = [1.0, 1.5, 2.0, 3.0, 5.0];
+  const mult = kiepMultipliers[Math.min(4, Math.max(0, (targetKiep || 1) - 1))] || 1.0;
+  return Math.round(baseTM * mult);
+}
+
+/**
  * Chuyển hóa 1 Thiên Cung đã Hóa Thực thành Đạo Anh
  */
 export function manifestDaoAnh(palaceIndex) {
@@ -2506,62 +2890,104 @@ export function manifestDaoAnh(palaceIndex) {
     throw new Error(`Chưa đủ điều kiện! Cần Hóa Thực toàn bộ ${state.maxThienCung}/${state.maxThienCung} Thiên Cung thành Cung Thật trước khi bắt đầu Hóa Đạo Anh.`);
   }
 
-  if (!state.daoAnhs) state.daoAnhs = [];
-  const existing = state.daoAnhs.find(d => d.palaceIndex === palaceIndex);
-  if (existing) {
-    throw new Error('Thiên Cung này đã chuyển hóa thành Đạo Anh.');
-  }
-
   // Điều kiện 2: Kiểm tra tiến độ Thai Nghén Đạo Anh (10.000 Tu Vi)
-  if (!state.daoAnhProgress) state.daoAnhProgress = {};
-  const currentProgress = state.daoAnhProgress[palaceIndex] || 0;
-
-  if (currentProgress < EXP_PER_DAO_ANH && !state.isKimDanTrialV2) {
-    throw new Error(`Cần tích lũy đủ ${EXP_PER_DAO_ANH.toLocaleString()} Tu Vi linh lực thai nghén (Hiện có: ${currentProgress.toLocaleString()}/${EXP_PER_DAO_ANH.toLocaleString()} Tu Vi). Hãy đọc thêm chương để tích lũy!`);
+  const totalThaiNghenExp = state.daoAnhExp || state.currentThienCungExp || 0;
+  if (totalThaiNghenExp < EXP_PER_DAO_ANH && !state.isKimDanTrialV2) {
+    throw new Error(`Cần tích lũy đủ ${EXP_PER_DAO_ANH.toLocaleString()} Tu Vi linh lực thai nghén (Hiện có: ${totalThaiNghenExp.toLocaleString()}/${EXP_PER_DAO_ANH.toLocaleString()} Tu Vi). Hãy đọc thêm chương để tích lũy!`);
   }
+
+  if (!state.daoAnhs) state.daoAnhs = [];
 
   const absorbed = state.absorbedLamps || [];
-  const isLampPalace = palaceIndex < lampCount;
 
-  let lampObj = null;
-  let elementAttr = 'Ngũ Hành Thần Thể';
-  let daoAnhTitle = '';
+  const buildDaoAnhObj = (idx) => {
+    const isLampPalace = idx < lampCount;
+    let lampObj = null;
+    let elementAttr = 'Ngũ Hành Thần Thể';
+    let daoAnhTitle = '';
+    let tier = 'than_pham';
+    let lampId = null;
+    let artifactId = null;
+    let palaceName = '';
 
-  if (isLampPalace) {
-    const lampId = absorbed[palaceIndex];
-    lampObj = LIFE_LAMPS.find(l => l.id === lampId);
-    let shortName = lampObj ? (lampObj.shortName || lampObj.name) : `Đăng ${palaceIndex + 1}`;
-    shortName = shortName.replace(/Mệnh Đăng|Thần Đăng|Đăng|Cung/g, '').trim();
-    daoAnhTitle = `Đạo Anh [${shortName}]`;
-    elementAttr = lampObj ? `${shortName} Thần Thể` : 'Chân Đăng Thần Thể';
-  } else {
-    const selfNum = palaceIndex - lampCount + 1;
-    const anchor = state.palaceAnchors?.[palaceIndex - lampCount] || state.palaceAnchors?.[palaceIndex];
-    let derivedName = anchor ? (anchor.palaceName || getPalaceNameFromArtifact(anchor, palaceIndex - lampCount, state.palaceAnchors)) : `Tự Thân ${selfNum}`;
-    derivedName = derivedName.replace(/Mệnh Đăng|Thần Đăng|Đăng|Cung/g, '').trim();
-    daoAnhTitle = `Đạo Anh [${derivedName}]`;
-    elementAttr = anchor ? `${anchor.shortName || anchor.name} Thần Thể` : 'Thiên Địa Thần Thể';
-  }
+    if (isLampPalace) {
+      lampId = absorbed[idx];
+      lampObj = LIFE_LAMPS.find(l => l.id === lampId);
+      tier = lampObj ? lampObj.tier : 'ha_pham';
+      palaceName = lampObj ? getLampPalaceName(lampObj) : `Chân Cung #${idx + 1}`;
+      daoAnhTitle = formatDaoAnhTitle(palaceName);
+      let shortName = lampObj ? (lampObj.shortName || lampObj.name) : `Đăng ${idx + 1}`;
+      shortName = shortName.replace(/Mệnh Đăng|Thần Đăng|Đăng|Cung/g, '').trim();
+      elementAttr = `${shortName} Thần Thể`;
+    } else {
+      const selfLocalIdx = (maxThienCung - 1) - idx;
+      const anchor = state.palaceAnchors?.[selfLocalIdx] || state.palaceAnchors?.[idx - lampCount] || state.palaceAnchors?.[idx];
+      const artObj = anchor ? ((SUPPRESSING_ARTIFACTS || []).find(a => a.id === anchor.id) || anchor) : null;
+      artifactId = anchor?.id || null;
+      tier = anchor?.tier || artObj?.tier || 'than_pham';
+      
+      if (anchor) {
+        const aId = anchor.id || artObj?.id;
+        const aName = anchor.name || artObj?.name || '';
+        const pName = anchor.palaceName || '';
+        if (aId === 'luan_hoi_ban' || aName.includes('Luân Hồi') || pName.includes('Luân Hồi')) {
+          palaceName = 'Lục Đạo Luân Hồi Cung';
+        } else if (aId && typeof getPalaceNameForArtifact === 'function') {
+          palaceName = getPalaceNameForArtifact(artObj || anchor) || anchor.palaceName || `${artObj?.shortName || artObj?.name} Cung`;
+        } else {
+          palaceName = anchor.palaceName || `${artObj?.shortName || artObj?.name || 'Bảo Vật'} Cung`;
+        }
+      } else {
+        palaceName = `Thiên Cung Tự Thân #${selfLocalIdx >= 0 ? selfLocalIdx + 1 : idx + 1}`;
+      }
+      daoAnhTitle = formatDaoAnhTitle(palaceName);
+      elementAttr = anchor ? `${anchor.shortName || anchor.name} Thần Thể` : 'Thiên Địa Thần Thể';
+    }
 
-  const newDaoAnh = {
-    id: `da_${palaceIndex}_${Date.now()}`,
-    palaceIndex,
-    name: daoAnhTitle,
-    element: elementAttr,
-    fromLamp: isLampPalace,
-    currentKiep: 0, // Khởi tạo ở 0 Kiếp (Giả Anh sơ khai - chưa qua Lôi Kiếp)
-    currentThienMenh: 0,
-    maxThienMenh: KIEP_THIEN_MENH_REQUIREMENTS[0] || 3000,
+    return {
+      id: `da_${idx}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      palaceIndex: idx,
+      palaceName: palaceName,
+      name: daoAnhTitle,
+      element: elementAttr,
+      fromLamp: isLampPalace,
+      lampId,
+      artifactId,
+      tier,
+      currentKiep: 0, // Khởi tạo ở 0 Kiếp (Giả Anh sơ khai)
+      currentExp: 0, // Linh Lực / Tu Vi tích lũy
+      maxExp: KIEP_EXP_REQUIREMENTS[0] || 5000,
+      currentThienMenh: 0, // Tương thích ngược
+      maxThienMenh: KIEP_EXP_REQUIREMENTS[0] || 5000,
+    };
   };
 
-  state.daoAnhs.push(newDaoAnh);
+  if (palaceIndex !== undefined && palaceIndex !== null) {
+    const existing = state.daoAnhs.find(d => d.palaceIndex === palaceIndex);
+    if (existing) {
+      throw new Error('Thiên Cung này đã chuyển hóa thành Đạo Anh.');
+    }
+    state.daoAnhs.push(buildDaoAnhObj(palaceIndex));
+  } else {
+    // Khai sinh ĐỒNG LOẠT toàn bộ Đạo Anh cho tất cả Thiên Cung Thật
+    state.daoAnhs = [];
+    for (let i = 0; i < totalRealized; i++) {
+      state.daoAnhs.push(buildDaoAnhObj(i));
+    }
+  }
 
   // Khi mới ngưng tụ Đạo Anh (chưa độ Kiếp nào), luôn là cảnh giới Giả Anh
   const hasPassedKiep1 = state.daoAnhs.some(d => (d.currentKiep || 0) >= 1);
   state.realm = hasPassedKiep1 ? 'nguyen_anh' : 'gia_anh';
+  state.isThienMenhUnlocked = true;
+  state.daoAnhExp = 0;
+  state.currentThienCungExp = 0;
+
+  // Tự động chuyển đổi toàn bộ Tiên Tinh thành Thiên Mệnh (1 Tiên Tinh = 2 Thiên Mệnh)
+  convertToThienMenhIfInAnhRealm(state);
 
   state.logs.unshift({
-    text: `👑 KHAI SINH ĐẠO ANH THÀNH CÔNG! Đã thai nghén ${newDaoAnh.name} (${elementAttr}, 0 Kiếp)! Đạt cảnh giới Giả Anh.`,
+    text: `👑 KHAI SINH ĐẠO ANH THÀNH CÔNG! Đồng loạt ${state.daoAnhs.length} Tôn Đạo Anh Thần Thể giáng thế tương ứng ${totalRealized} Thiên Cung Thật! Chính thức bước vào cảnh giới Giả Anh.`,
     time: Date.now(),
   });
 
@@ -2570,32 +2996,46 @@ export function manifestDaoAnh(palaceIndex) {
 }
 
 /**
- * Nạp Lực Thiên Mệnh vào Đạo Anh
+ * Nạp Linh Lực (Tu Vi / EXP) vào Đạo Anh
  */
-export function injectThienMenhToDaoAnh(daoAnhId, amount) {
-  const state = getCultivationState();
-  if ((state.totalThienMenh || 0) < amount) {
-    throw new Error('Lực Thiên Mệnh không đủ để nạp.');
+export function injectExpToDaoAnh(daoAnhId, amount = 1000) {
+  if (typeof daoAnhId === 'number') {
+    return injectExpToThaiNghen(daoAnhId, amount);
   }
-
-  const da = (state.daoAnhs || []).find(d => d.id === daoAnhId);
+  const state = getCultivationState();
+  const da = (state.daoAnhs || []).find(d => d.id === daoAnhId || d.palaceIndex === daoAnhId);
   if (!da) throw new Error('Không tìm thấy Đạo Anh.');
   if (da.currentKiep >= 5) throw new Error('Đạo Anh đã đạt Kiếp 5 Đại Viên Mãn.');
 
-  const needed = da.maxThienMenh - da.currentThienMenh;
-  const actualInject = Math.min(amount, needed);
+  if (!da.maxExp) da.maxExp = KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
+  const curExp = da.currentExp !== undefined ? da.currentExp : (da.currentThienMenh || 0);
+  const needed = da.maxExp - curExp;
+  if (needed <= 0) throw new Error('Đạo Anh này đã nạp đầy 100% Linh Lực!');
 
-  da.currentThienMenh += actualInject;
-  state.totalThienMenh -= actualInject;
+  const availableExp = state.totalExp || 0;
+  if (availableExp <= 0 && !state.isKimDanTrialV2) {
+    throw new Error('Chưa có đủ Tu Vi linh lực! Hãy đọc thêm chương sách để tích lũy.');
+  }
+
+  const actualInject = state.isKimDanTrialV2 ? Math.min(amount, needed) : Math.min(amount, Math.min(needed, availableExp));
+  if (!state.isKimDanTrialV2) {
+    state.totalExp -= actualInject;
+  }
+
+  da.currentExp = curExp + actualInject;
+  da.currentThienMenh = da.currentExp; // Đồng bộ tương thích ngược
 
   state.logs.unshift({
-    text: `Đã nạp +${actualInject.toLocaleString()} Thiên Mệnh vào ${da.name} (${da.currentThienMenh}/${da.maxThienMenh}).`,
+    text: `Đã nạp +${actualInject.toLocaleString()} Tu Vi linh lực vào ${da.name} (${da.currentExp}/${da.maxExp}).`,
     time: Date.now(),
   });
 
   saveCultivationState(state);
   return state;
 }
+
+// Alias tương thích ngược
+export const injectThienMenhToDaoAnh = injectExpToDaoAnh;
 
 /**
  * Độ Kiếp cho 1 Đạo Anh
@@ -2606,24 +3046,37 @@ export function attemptTribulationSingle(daoAnhId) {
   if (!da) throw new Error('Không tìm thấy Đạo Anh.');
   if (da.currentKiep >= 5) throw new Error('Đạo Anh này đã đạt Kiếp 5 Đại Viên Mãn.');
 
-  const targetKiep = da.currentKiep;
+  if (!da.maxExp) da.maxExp = KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
+  const curExp = da.currentExp !== undefined ? da.currentExp : (da.currentThienMenh || 0);
+
+  const targetKiep = (da.currentKiep || 0) + 1;
   const tribulationName = TRIBULATION_NAMES[targetKiep] || `Thiên Kiếp ${targetKiep}`;
 
-  const percent = Math.floor((da.currentThienMenh / da.maxThienMenh) * 100);
-  if (percent < 70) {
-    throw new Error(`Đạo Anh mới đạt ${percent}% Thiên Mệnh. Cần tối thiểu 70% Thiên Mệnh để nghênh tiếp ${tribulationName}.`);
+  const percent = Math.floor((curExp / da.maxExp) * 100);
+  if (percent < 80) {
+    throw new Error(`Đạo Anh mới đạt ${percent}% Linh Lực. Cần tối thiểu 80% Linh Lực để nghênh tiếp ${tribulationName}.`);
   }
 
-  const successChance = Math.min(100, 60 + (percent - 70));
+  // Tỉ lệ thành công: 80% Linh Lực = 80% thành công, 100% Linh Lực = 100% thành công
+  const successChance = Math.min(100, 80 + (percent - 80));
   const roll = Math.random() * 100;
   const isSuccess = roll <= successChance;
 
   let message = '';
+  let earnedTM = 0;
   if (isSuccess) {
     da.currentKiep += 1;
+    da.currentExp = 0;
     da.currentThienMenh = 0;
-    da.maxThienMenh = KIEP_THIEN_MENH_REQUIREMENTS[Math.min(4, da.currentKiep)];
-    message = `⚡ ĐỘ KIẾP THÀNH CÔNG! ${formatDaoAnhTitle(da.name)} đã vượt qua [${tribulationName}], thăng hoa lên Kiếp thứ ${da.currentKiep} (+1 Anh chiến lực)!`;
+    da.maxExp = KIEP_EXP_REQUIREMENTS[Math.min(4, da.currentKiep)];
+    da.maxThienMenh = da.maxExp;
+
+    // Tính phần thưởng Thiên Mệnh nhận được theo Phẩm Cấp
+    earnedTM = calculateDaoAnhTribulationReward(da, da.currentKiep, state);
+    state.totalThienMenh = (state.totalThienMenh || 0) + earnedTM;
+
+    const tierInfo = LAMP_TIERS[getDaoAnhTierKey(da, state)] || LAMP_TIERS.than_pham;
+    message = `⚡ ĐỘ KIẾP THÀNH CÔNG! ${formatDaoAnhTitle(da.name)} [${tierInfo.name}] đã vượt qua [${tribulationName}], thăng hoa lên Kiếp thứ ${da.currentKiep} (+1 Anh chiến lực) và thu hoạch +${earnedTM.toLocaleString()} Thiên Mệnh!`;
     state.logs.unshift({ text: message, time: Date.now() });
 
     if (state.daoAnhs.some(d => d.currentKiep >= 1)) {
@@ -2631,21 +3084,23 @@ export function attemptTribulationSingle(daoAnhId) {
     }
   } else {
     if (da.fromLamp) {
-      da.currentThienMenh = Math.round(da.maxThienMenh * 0.5);
-      message = `⚡ ĐỘ KIẾP THẤT BẠI! Nhờ có Chân Hỏa Mệnh Đăng bảo vệ, ${da.name} không bị thương hại nặng, chỉ lui về 50% Thiên Mệnh!`;
+      da.currentExp = Math.round(da.maxExp * 0.5);
+      da.currentThienMenh = da.currentExp;
+      message = `⚡ ĐỘ KIẾP THẤT BẠI! Nhờ có Chân Hỏa Mệnh Đăng bảo vệ, ${da.name} không bị thương hại nặng, chỉ lui về 50% Linh Lực!`;
     } else {
+      da.currentExp = 0;
       da.currentThienMenh = 0;
-      message = `⚡ ĐỘ KIẾP THẤT BẠI! Thiên lôi đánh tan thần niệm, ${da.name} bị tiêu hao toàn bộ Thiên Mệnh tích lũy!`;
+      message = `⚡ ĐỘ KIẾP THẤT BẠI! Thiên lôi đánh tan linh lực, ${da.name} bị tiêu hao toàn bộ Linh Lực tích lũy!`;
     }
     state.logs.unshift({ text: message, time: Date.now() });
   }
 
   saveCultivationState(state);
-  return { state, isSuccess, successChance, tribulationName, daoAnhName: da.name, element: da.element, message };
+  return { state, isSuccess, successChance, tribulationName, daoAnhName: da.name, element: da.element, earnedTM, message };
 }
 
 /**
- * Vạn Kiếp Tề Phi: Toàn bộ Đạo Anh cùng vượt kiếp
+ * Vạn Kiếp Tề Phi / Vạn Kiếp Tề Thăng: Toàn bộ Đạo Anh cùng vượt kiếp
  */
 export function attemptTribulationAll() {
   const state = getCultivationState();
@@ -2653,25 +3108,36 @@ export function attemptTribulationAll() {
     throw new Error('Chưa có Đạo Anh nào.');
   }
 
-  const eligibleDaoAnhs = state.daoAnhs.filter(
-    da => da.currentKiep < 5 && Math.floor((da.currentThienMenh / da.maxThienMenh) * 100) >= 70
-  );
-
-  if (eligibleDaoAnhs.length === 0) {
-    throw new Error('Không có Đạo Anh nào đạt từ 70% Thiên Mệnh trở lên để độ kiếp.');
+  const activeDaoAnhs = state.daoAnhs.filter(da => (da.currentKiep || 0) < 5);
+  if (activeDaoAnhs.length === 0) {
+    throw new Error('Toàn bộ Đạo Anh đã đạt Kiếp 5 Đại Viên Mãn!');
   }
 
-  // 1. Kiểm tra tất cả Đạo Anh đủ điều kiện có CÙNG SỐ KIẾP hay không
-  const firstKiep = eligibleDaoAnhs[0].currentKiep;
-  const isSameKiep = eligibleDaoAnhs.every(da => da.currentKiep === firstKiep);
+  // 1. KIỂM TRA ĐIỀU KIỆN CÙNG CẤP BẬC (CÙNG SỐ KIẾP)
+  const firstKiep = activeDaoAnhs[0].currentKiep || 0;
+  const isSameKiep = activeDaoAnhs.every(da => (da.currentKiep || 0) === firstKiep);
   if (!isSameKiep) {
-    throw new Error('Vạn Kiếp Tề Thăng yêu cầu tất cả Đạo Anh tham gia phải CÙNG NẤC KIẾP (VD: Tất cả cùng ở 0 Kiếp, hoặc tất cả cùng ở 1 Kiếp)!');
+    throw new Error('Vạn Kiếp Tề Thăng yêu cầu TOÀN BỘ Đạo Anh phải CÙNG CẤP BẬC KIẾP (Ví dụ: Tất cả cùng ở 0 Kiếp, hoặc tất cả cùng ở 1 Kiếp). Hãy độ kiếp lẻ cho các Đạo Anh cấp thấp để đồng bộ số kiếp trước!');
   }
 
-  // 2. Kiểm tra tỉ lệ thành công từng Đạo Anh (70% TM = 60% tỉ lệ thành công)
-  const rollResults = eligibleDaoAnhs.map(da => {
-    const percent = Math.floor((da.currentThienMenh / da.maxThienMenh) * 100);
-    const successChance = Math.min(100, 60 + (percent - 70));
+  // 2. KIỂM TRA TẤT CẢ ĐẠO ANH ĐÃ ĐẠT ĐỦ LINH LỰC TỐI THIỂU 80% CHƯA
+  const notReady = activeDaoAnhs.filter(da => {
+    if (!da.maxExp) da.maxExp = KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
+    const curExp = da.currentExp !== undefined ? da.currentExp : (da.currentThienMenh || 0);
+    const percent = Math.floor((curExp / da.maxExp) * 100);
+    return percent < 80;
+  });
+
+  if (notReady.length > 0) {
+    const notReadyNames = notReady.map(d => formatDaoAnhTitle(d.name)).slice(0, 3).join(', ');
+    throw new Error(`Chưa thể Vạn Kiếp Tề Thăng! Còn ${notReady.length} Đạo Anh chưa đạt tối thiểu 80% Linh Lực (${notReadyNames}...). Hãy nạp thêm Linh Lực!`);
+  }
+
+  // 3. TÍNH TỈ LỆ THÀNH CÔNG TỪNG ĐẠO ANH (80% Linh Lực = 80% tỉ lệ thành công)
+  const rollResults = activeDaoAnhs.map(da => {
+    const curExp = da.currentExp !== undefined ? da.currentExp : (da.currentThienMenh || 0);
+    const percent = Math.floor((curExp / da.maxExp) * 100);
+    const successChance = Math.min(100, 80 + (percent - 80));
     const passed = Math.random() * 100 <= successChance;
     return { da, percent, successChance, passed };
   });
@@ -2679,31 +3145,43 @@ export function attemptTribulationAll() {
   const allPassed = rollResults.every(r => r.passed);
 
   let resultMsg = '';
+  let totalEarnedTM = 0;
   if (allPassed) {
-    eligibleDaoAnhs.forEach(da => {
-      da.currentKiep += 1;
+    let baseTotalTM = 0;
+    activeDaoAnhs.forEach(da => {
+      da.currentKiep = (da.currentKiep || 0) + 1;
+      da.currentExp = 0;
       da.currentThienMenh = 0;
-      da.maxThienMenh = KIEP_THIEN_MENH_REQUIREMENTS[Math.min(4, da.currentKiep)];
+      da.maxExp = KIEP_EXP_REQUIREMENTS[Math.min(4, da.currentKiep)];
+      da.maxThienMenh = da.maxExp;
+      baseTotalTM += calculateDaoAnhTribulationReward(da, da.currentKiep, state);
     });
 
-    if (state.daoAnhs.some(d => d.currentKiep >= 1)) {
+    if (state.daoAnhs.some(d => (d.currentKiep || 0) >= 1)) {
       state.realm = 'nguyen_anh';
     }
 
-    resultMsg = `⚡ VẠN KIẾP TỀ THĂNG THÀNH CÔNG! Đồng loạt ${eligibleDaoAnhs.length} Đạo Anh đã thăng hoa lên Kiếp thứ ${firstKiep + 1}!`;
+    // ÁP DỤNG +50% BONUS CỘNG HƯỞNG ĐẠI TRẬN
+    const bonusTM = Math.round(baseTotalTM * 0.5);
+    totalEarnedTM = baseTotalTM + bonusTM;
+    state.totalThienMenh = (state.totalThienMenh || 0) + totalEarnedTM;
+
+    resultMsg = `⚡ VẠN KIẾP TỀ THĂNG ĐẠI THÀNH CÔNG! Đồng loạt ${activeDaoAnhs.length} Đạo Anh thăng hoa lên Kiếp thứ ${firstKiep + 1}! Kích hoạt cộng hưởng nhận +${totalEarnedTM.toLocaleString()} Thiên Mệnh (Gồm +${bonusTM.toLocaleString()} TM Bonus +50%)!`;
     state.logs.unshift({ text: resultMsg, time: Date.now() });
   } else {
-    // Nếu chỉ có 1 Đạo Anh thất bại ➔ TOÀN BỘ CÙNG THẤT BẠI!
-    eligibleDaoAnhs.forEach(da => {
+    // Thất bại
+    activeDaoAnhs.forEach(da => {
       if (da.fromLamp) {
-        da.currentThienMenh = Math.round(da.maxThienMenh * 0.5);
+        da.currentExp = Math.round(da.maxExp * 0.5);
+        da.currentThienMenh = da.currentExp;
       } else {
+        da.currentExp = 0;
         da.currentThienMenh = 0;
       }
     });
 
     const failedNames = rollResults.filter(r => !r.passed).map(r => formatDaoAnhTitle(r.da.name)).join(', ');
-    resultMsg = `⚡ VẠN KIẾP TỀ THĂNG THẤT BẠI! Do [${failedNames}] bị thiên lôi đánh lui, toàn bộ ${eligibleDaoAnhs.length} Đạo Anh đều không thể lên kiếp!`;
+    resultMsg = `⚡ VẠN KIẾP TỀ THĂNG THẤT BẠI! Do [${failedNames}] bị thiên lôi đánh lui, toàn bộ ${activeDaoAnhs.length} Đạo Anh đều không thể lên kiếp!`;
     state.logs.unshift({ text: resultMsg, time: Date.now() });
   }
 
@@ -2711,36 +3189,40 @@ export function attemptTribulationAll() {
   return {
     state,
     isSuccess: allPassed,
-    totalCount: eligibleDaoAnhs.length,
-    successCount: allPassed ? eligibleDaoAnhs.length : 0,
-    failCount: allPassed ? 0 : eligibleDaoAnhs.length,
+    totalCount: activeDaoAnhs.length,
+    totalEarnedTM,
     message: resultMsg,
   };
 }
 
 /**
- * NẠP ĐẦY TẤT CẢ THIÊN MỆNH (100%) CHO TOÀN BỘ ĐẠO ANH
+ * NẠP ĐẦY TẤT CẢ LINH LỰC (100%) CHO TOÀN BỘ ĐẠO ANH
  */
-export function fillAllDaoAnhThienMenh() {
+export function fillAllDaoAnhExp() {
   const state = getCultivationState();
   if (!state.daoAnhs || state.daoAnhs.length === 0) {
-    throw new Error('Chưa có Đạo Anh nào để nạp Thiên Mệnh.');
+    throw new Error('Chưa có Đạo Anh nào để nạp Linh Lực.');
   }
 
   let filledCount = 0;
   state.daoAnhs.forEach(da => {
     if (da.currentKiep < 5) {
-      da.currentThienMenh = da.maxThienMenh;
+      da.maxExp = KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
+      da.currentExp = da.maxExp;
+      da.currentThienMenh = da.maxExp;
       filledCount++;
     }
   });
 
-  const msg = `⚡ THẦN UY TẤT THẮNG! Đã nạp đầy 100% Thiên Mệnh cho ${filledCount} Đạo Anh! Sẵn sàng nghênh tiếp Lôi Kiếp!`;
+  const msg = `⚡ ĐẠI TRẬN BỒI DƯỠNG! Đã nạp đầy 100% Linh Lực cho ${filledCount} Đạo Anh! Sẵn sàng nghênh tiếp Lôi Kiếp!`;
   state.logs.unshift({ text: msg, time: Date.now() });
 
   saveCultivationState(state);
   return { state, filledCount, message: msg };
 }
+
+// Alias tương thích ngược
+export const fillAllDaoAnhThienMenh = fillAllDaoAnhExp;
 
 /**
  * Format tên cảnh giới hiển thị súc tích:

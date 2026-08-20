@@ -1,14 +1,13 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useCultivation } from '../../hooks/useCultivation';
-import CultivationModal from '../cultivation/CultivationModal';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useCultivationContext } from '../../context/CultivationContext';
 import styles from './Header.module.css';
 
 export default function Header() {
   const location = useLocation();
+  const navigate = useNavigate();
   const isHome = location.pathname === '/';
-  const { displayName, cultivation } = useCultivation();
-  const [modalOpen, setModalOpen] = useState(false);
+  const { displayName, cultivation } = useCultivationContext();
 
   return (
     <>
@@ -21,24 +20,24 @@ export default function Header() {
 
           <div className={styles.headerRight}>
             {/* Cultivation Pill Button */}
-            <button
+            <Link
+              to="/cultivation"
               className={styles.cultivationBadge}
-              onClick={() => setModalOpen(true)}
               title="Mở Bảng Tu Vi"
               aria-label="Bảng Tu Vi"
             >
               <span className={styles.badgeIcon}>
-                {cultivation.realm === 'ngung_khi' && '⚡'}
+                {cultivation.realm === 'ngung_khi' && '💭'}
                 {cultivation.realm === 'truc_co' && '🔥'}
-                {cultivation.realm === 'kim_dan' && '🏛️'}
+                {cultivation.realm === 'kim_dan' && '🪐'}
               </span>
               <span className={styles.badgeText}>{displayName}</span>
-            </button>
+            </Link>
 
             {!isHome && (
               <nav className={styles.nav}>
                 <Link to="/" className={`btn-ghost ${styles.navBtn}`}>
-                  ← Thư viện
+                  📖 Thư viện
                 </Link>
               </nav>
             )}
@@ -47,9 +46,6 @@ export default function Header() {
         {/* Neon divider line */}
         <div className={styles.neonLine} />
       </header>
-
-      {/* Cultivation Center Modal */}
-      <CultivationModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </>
   );
 }

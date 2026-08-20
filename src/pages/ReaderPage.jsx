@@ -229,7 +229,7 @@ export default function ReaderPage() {
                 className={styles.topBtn}
                 onClick={() => {
                   clearUnreadDrops();
-                  setCultivationOpen(true);
+                  navigate('/cultivation');
                 }}
                 title="Xem Bảng Tu Vi"
                 aria-label="Tu Vi"
@@ -322,7 +322,7 @@ export default function ReaderPage() {
                 className="btn-gold"
                 onClick={() => {
                   setDroppedLamp(null);
-                  setCultivationOpen(true);
+                  navigate('/cultivation');
                 }}
               >
                 🏮 Xem Trong Bảng Tu Vi

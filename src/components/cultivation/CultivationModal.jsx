@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import BottomSheet from '../ui/BottomSheet';
 import { useCultivation } from '../../hooks/useCultivation';
+import { calculateDaoAnhTribulationReward, getDaoAnhTierKey, KIEP_EXP_REQUIREMENTS } from '../../lib/cultivation';
 import RealmPreviewVisualizer from './RealmPreviewVisualizer';
 import BreakthroughModal from './BreakthroughModal';
 import TribulationModal from './TribulationModal';
@@ -167,18 +168,20 @@ export default function CultivationModal({ isOpen, onClose }) {
 
           <h2 className={styles.realmTitle}>{displayName}</h2>
 
-          {/* REALM-SPECIFIC ANIMATED VISUALIZER */}
-          <RealmPreviewVisualizer
-            cultivation={{
-              ...cultivation,
-              targetPalaceExp: constants.getPalaceCost ? constants.getPalaceCost((cultivation.realizedThienCung || 0) + 1) : 2000,
-            }}
-            onSetAnchorModalPalace={(sIdx) => setAnchorModalPalace(sIdx)}
-            onThangCung={() => triggerAction(thangCung)}
-            onManifestDaoAnh={(palaceIdx) => triggerAction(() => manifestDaoAnh(palaceIdx))}
-            onInjectExpToDaoAnh={(palaceIdx, amount) => triggerAction(() => injectExpToDaoAnh(palaceIdx, amount))}
-            onInjectThienMenh={(id, amount) => triggerAction(() => injectThienMenh(id, amount))}
-          />
+          {/* REALM-SPECIFIC ANIMATED VISUALIZER (FULL-BLEED SEAMLESS) */}
+          <div className={styles.realmVisualizerWrapper}>
+            <RealmPreviewVisualizer
+              cultivation={{
+                ...cultivation,
+                targetPalaceExp: constants.getPalaceCost ? constants.getPalaceCost((cultivation.realizedThienCung || 0) + 1) : 2000,
+              }}
+              onSetAnchorModalPalace={(sIdx) => setAnchorModalPalace(sIdx)}
+              onThangCung={() => triggerAction(thangCung)}
+              onManifestDaoAnh={(palaceIdx) => triggerAction(() => manifestDaoAnh(palaceIdx))}
+              onInjectExpToDaoAnh={(palaceIdx, amount) => triggerAction(() => injectExpToDaoAnh(palaceIdx, amount))}
+              onInjectThienMenh={(id, amount) => triggerAction(() => injectThienMenh(id, amount))}
+            />
+          </div>
 
           <div className={styles.statsRow}>
             <div className={styles.statBox}>
@@ -1137,7 +1140,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                 <div>
                   <h3 className={styles.cardHeader}>⚡ CỬU THIÊN ĐỘ KIẾP ĐÀI</h3>
                   <p className={styles.subtext}>
-                    Nghênh tiếp Lôi Kiếp để lột xác Đạo Anh qua <strong>5 Kiếp Luân Hồi</strong>. Đạt từ <strong>70% Thiên Mệnh</strong> trở lên để đủ điều kiện Độ Kiếp!
+                    Tích lũy <strong>Linh Lực (Tu Vi)</strong> khi đọc truyện để nuôi dưỡng Đạo Anh. Đạt từ <strong>80% Linh Lực</strong> trở lên để Nghênh Tiếp Thiên Kiếp, độ kiếp thành công sẽ <strong>thu hoạch Lực Thiên Mệnh</strong> tương ứng phẩm cấp Đạo Anh!
                   </p>
                 </div>
               </div>
@@ -1146,17 +1149,17 @@ export default function CultivationModal({ isOpen, onClose }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
                 <button
                   className="btn-gold"
-                  style={{ width: '100%', padding: '10px 14px', fontSize: 12.5, fontWeight: 800, background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
+                  style={{ width: '100%', padding: '10px 14px', fontSize: 12.5, fontWeight: 800, background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}
                   onClick={() => triggerAction(fillAllDaoAnhThienMenh)}
                 >
-                  ⚡ NẠP ĐẦY 100% THIÊN MỆNH
+                  ⚡ NẠP ĐẦY 100% LINH LỰC TOÀN BỘ
                 </button>
                 <button
                   className={`btn-gold ${styles.massTribulationBtn}`}
                   style={{ width: '100%', padding: '10px 14px', fontSize: 12.5, fontWeight: 700 }}
                   onClick={handleAllTribulation}
                 >
-                  👑 VẠN KIẾP TỀ THĂNG
+                  👑 VẠN KIẾP TỀ THĂNG (+50% BONUS THIÊN MỆNH)
                 </button>
               </div>
             </div>
@@ -1168,17 +1171,22 @@ export default function CultivationModal({ isOpen, onClose }) {
               </div>
             ) : (
               <div className={styles.daoAnhCardsGrid}>
-                {cultivation.daoAnhs.map(da => {
+                {(cultivation?.daoAnhs || []).map(da => {
                   const daTheme = getDaoAnhTheme(da, cultivation);
-                  const percent = Math.min(100, Math.floor((da.currentThienMenh / da.maxThienMenh) * 100));
-                  const isEligible = percent >= 70;
-                  const successChance = Math.min(100, 60 + (percent - 70));
+                  const curExp = da.currentExp !== undefined ? da.currentExp : (da.currentThienMenh || 0);
+                  const maxExp = da.maxExp || KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
+                  const percent = Math.min(100, Math.floor((curExp / maxExp) * 100));
+                  const isEligible = percent >= 80;
+                  const successChance = Math.min(100, 80 + (percent - 80));
+                  const tierKey = getDaoAnhTierKey(da, cultivation);
+                  const tierInfo = LAMP_TIERS[tierKey] || LAMP_TIERS.than_pham;
+                  const rewardTM = calculateDaoAnhTribulationReward(da, (da.currentKiep || 0) + 1, cultivation);
 
                   return (
                     <div
                       key={da.id}
                       className={`${styles.daoAnhCard} ${da.currentKiep >= 5 ? styles.daoAnhMax : ''}`}
-                      style={{ borderColor: daTheme.color, boxShadow: `0 0 14px ${daTheme.glow}`, background: daTheme.bg }}
+                      style={{ borderColor: isEligible ? '#c084fc' : daTheme.color, boxShadow: `0 0 14px ${daTheme.glow}`, background: daTheme.bg }}
                     >
                       <div className={styles.daoAnhTop}>
                         <span className={styles.daoAnhIcon} style={{ textShadow: `0 0 10px ${daTheme.color}` }}>
@@ -1189,8 +1197,8 @@ export default function CultivationModal({ isOpen, onClose }) {
                             {formatDaoAnhTitle(da.name)}
                           </h4>
                           <span className={styles.daoAnhBadge} style={{ color: daTheme.color }}>
-                            {da.element || 'Thần Thể'} · Kiếp {da.currentKiep}/5 ({da.currentKiep} Anh)
-                            {daTheme.isLamp && ' · 🏮 Chân Hỏa Bảo Vệ'}
+                            [{tierInfo.name}] · {da.element || 'Thần Thể'} · Kiếp {da.currentKiep}/5 ({da.currentKiep} Anh)
+                            {daTheme.isLamp && ' · 🏮 Chân Hỏa'}
                           </span>
                         </div>
                       </div>
@@ -1211,22 +1219,28 @@ export default function CultivationModal({ isOpen, onClose }) {
 
                       {da.currentKiep < 5 ? (
                         <>
-                          {/* Progress Bar Thiên Mệnh */}
+                          {/* Progress Bar Linh Lực (Tu Vi) */}
                           <div className={styles.progressContainer} style={{ marginTop: 8 }}>
                             <div className={styles.progressInfo}>
-                              <span>Tiến độ nạp Thiên Mệnh:</span>
-                              <strong style={{ color: daTheme.color }}>{da.currentThienMenh.toLocaleString()}/{da.maxThienMenh.toLocaleString()} TM ({percent}%)</strong>
+                              <span>Linh Lực tích lũy (Tu Vi):</span>
+                              <strong style={{ color: isEligible ? '#f0abfc' : daTheme.color }}>
+                                {curExp.toLocaleString()}/{maxExp.toLocaleString()} ({percent}%)
+                              </strong>
                             </div>
                             <div className={styles.progressBarBg}>
                               <div
                                 className={styles.progressBarFillCyan}
-                                style={{ width: `${percent}%`, background: percent >= 70 ? 'linear-gradient(90deg, #38bdf8, #ffcc00)' : 'linear-gradient(90deg, #0284c7, #38bdf8)' }}
+                                style={{ width: `${percent}%`, background: isEligible ? 'linear-gradient(90deg, #a855f7, #ff3fd5)' : 'linear-gradient(90deg, #0284c7, #38bdf8)' }}
                               />
                             </div>
                           </div>
 
+                          <div style={{ fontSize: 11, color: '#fde047', marginTop: 4, fontWeight: 700 }}>
+                            🎁 Thưởng vượt kiếp: +{rewardTM.toLocaleString()} Thiên Mệnh
+                          </div>
+
                           {/* Single Clean Action Button for Độ Kiếp */}
-                          <div className={styles.daoAnhActions} style={{ marginTop: 10 }}>
+                          <div className={styles.daoAnhActions} style={{ marginTop: 8 }}>
                             <button
                               className={isEligible ? 'btn-gold' : 'btn-ghost'}
                               style={{ width: '100%', fontSize: 11.5, padding: '8px 12px', fontWeight: 700 }}
@@ -1234,8 +1248,8 @@ export default function CultivationModal({ isOpen, onClose }) {
                               disabled={!isEligible}
                             >
                               {isEligible 
-                                ? `⚡ NGHÊNH TIẾP THIÊN KIẾP (Thành công: ${successChance}%)` 
-                                : `🔒 CẦN TÍCH LŨY ≥ 70% THIÊN MỆNH ĐỂ ĐỘ KIẾP (Hiện: ${percent}%)`}
+                                ? `⚡ NGHÊNH TIẾP THIÊN KIẾP (Thành công: ${successChance}% ➔ +${rewardTM.toLocaleString()} TM)` 
+                                : `🔒 CẦN TÍCH LŨY ≥ 80% LINH LỰC ĐỂ ĐỘ KIẾP (Hiện: ${percent}%)`}
                             </button>
                           </div>
                         </>
@@ -1300,7 +1314,7 @@ export default function CultivationModal({ isOpen, onClose }) {
            ======================================================== */}
         {activeTab === 'logs' && (
           <div className={styles.logsSection}>
-            {cultivation.logs.map((log, idx) => (
+            {(cultivation?.logs || []).map((log, idx) => (
               <div key={idx} className={styles.logItem}>
                 <span className={styles.logTime}>{new Date(log.time).toLocaleTimeString('vi-VN')}</span>
                 <span className={styles.logText}>{log.text}</span>

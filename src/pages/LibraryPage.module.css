@@ -58,7 +58,7 @@
 }
 
 .appTitle {
-  font-family: var(--font-serif);
+  font-family: 'Noto Serif', serif;
   font-size: clamp(32px, 7.5vw, 54px);
   font-weight: 800;
   letter-spacing: 0.18em;
@@ -72,7 +72,7 @@
 }
 
 .appSubtitle {
-  font-family: var(--font-sans);
+  font-family: 'Noto Serif', serif;
   font-size: 13px;
   font-weight: 600;
   color: var(--accent-cyan-bright);
@@ -189,7 +189,7 @@
 }
 
 .emptyIcon {
-  font-family: 'Noto Serif SC', var(--font-serif);
+  font-family: 'Noto Serif', serif;
   font-size: 48px;
   color: var(--accent-gold);
   opacity: 0.25;
@@ -198,7 +198,7 @@
 }
 
 .emptyTitle {
-  font-family: var(--font-serif);
+  font-family: 'Noto Serif', serif;
   font-size: 20px;
   color: var(--text-secondary);
   margin-bottom: 10px;
@@ -249,7 +249,7 @@
 }
 
 .confirmTitle {
-  font-family: var(--font-serif);
+  font-family: 'Noto Serif', serif;
   font-size: 18px;
   color: #ff6b6b;
   margin-bottom: 12px;
