@@ -34,8 +34,9 @@ export default function ReaderPage() {
   const scrollRef = useRef(null);
   const lastScrollY = useRef(0);
 
-    // Load novel + chapters list
+      // Load novel + chapters list
   useEffect(() => {
+    let isMounted = true;
     (async () => {
       try {
         let [n, chs] = await Promise.all([getNovel(activeNovelId), getChapters(activeNovelId)]);
@@ -47,16 +48,20 @@ export default function ReaderPage() {
           n = sampleNovel;
           chs = sampleChapters;
         }
-        setNovel(n);
-        setChapters(chs || []);
+        if (isMounted) {
+          setNovel(n);
+          setChapters(chs || []);
+        }
       } catch (e) {
         console.error('Reader load novel error:', e);
       }
     })();
+    return () => { isMounted = false; };
   }, [activeNovelId]);
 
   // Load current chapter
   useEffect(() => {
+    let isMounted = true;
     (async () => {
       setLoading(true);
       try {
@@ -65,13 +70,18 @@ export default function ReaderPage() {
           const { sampleChapters } = await import('../lib/sampleData');
           ch = sampleChapters.find(c => c.id === chapterId) || sampleChapters.find(c => c.novelId === activeNovelId) || sampleChapters[0];
         }
-        setChapter(ch);
+        if (isMounted) {
+          setChapter(ch);
+        }
       } catch (e) {
         console.error('Reader load chapter error:', e);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     })();
+    return () => { isMounted = false; };
   }, [chapterId, activeNovelId]);
 
   // Khôi phục vị trí đọc chính xác (ví dụ 56%) khi vào lại chương

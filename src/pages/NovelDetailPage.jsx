@@ -421,24 +421,33 @@ export default function NovelDetailPage() {
 
 function ChapterRow({ chapter, novelId, isExtra, isLastRead, isHighlighted, onDelete }) {
   const navigate = useNavigate();
+  const handleOpen = () => {
+    navigate(`/novel/${novelId}/read/${chapter.id}`);
+  };
+
   return (
     <div
       id={`chapter-item-${chapter.id}`}
       className={`${styles.chapterRow} ${isExtra ? styles.chapterExtra : ''} ${isLastRead ? styles.chapterLastRead : ''} ${isHighlighted ? styles.chapterJumpHighlighted : ''}`}
+      onClick={handleOpen}
+      style={{ cursor: 'pointer', userSelect: 'none' }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleOpen(); }}
     >
-      <button
-        className={styles.chapterBtn}
-        onClick={() => navigate(`/novel/${activeNovelId}/read/${chapter.id}`)}
-      >
+      <div className={styles.chapterBtn} style={{ display: 'flex', alignItems: 'center', flex: 1, pointerEvents: 'none' }}>
         <span className={styles.chapterTitle}>{chapter.title}</span>
         {isLastRead && <span className="badge badge-gold" style={{ marginLeft: 6 }}>✦ Đang đọc</span>}
         {isExtra && <span className="badge badge-extra" style={{ marginLeft: 6 }}>Ngoại truyện</span>}
-      </button>
-      <div className={styles.chapterActions}>
+      </div>
+      <div className={styles.chapterActions} onClick={(e) => e.stopPropagation()}>
         <button
           className="btn-icon"
           title="Sửa chương"
-          onClick={() => navigate(`/novel/${activeNovelId}/edit-chapter/${chapter.id}`)}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/novel/${novelId}/edit-chapter/${chapter.id}`);
+          }}
           style={{ fontSize: 13 }}
         >
           ✏️
@@ -446,7 +455,10 @@ function ChapterRow({ chapter, novelId, isExtra, isLastRead, isHighlighted, onDe
         <button
           className="btn-icon"
           title="Xóa chương"
-          onClick={onDelete}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
           style={{ fontSize: 13, color: '#ff6b6b' }}
         >
           🗑
