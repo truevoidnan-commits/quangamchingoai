@@ -19,6 +19,17 @@ export default function CultivationWorkspace() {
   const navigate = useNavigate();
   const [mobileTab, setMobileTab] = useState('visualizer'); // 'visualizer' | 'actions' | 'realm'
 
+  const handleSmartBack = () => {
+    const lastReadingUrl = sessionStorage.getItem('last_reading_url');
+    const fromReader = sessionStorage.getItem('from_reader');
+    if (fromReader && lastReadingUrl) {
+      sessionStorage.removeItem('from_reader');
+      navigate(lastReadingUrl, { replace: true });
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
+
   const currentRealm = cultivation?.realm || 'truc_co';
   const activeView = activeRealmView || currentRealm;
 
