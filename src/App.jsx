@@ -1,17 +1,19 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/layout/Header';
-import LibraryPage from './pages/LibraryPage';
-import NovelDetailPage from './pages/NovelDetailPage';
-import ReaderPage from './pages/ReaderPage';
-import AddNovelPage from './pages/AddNovelPage';
-import EditNovelPage from './pages/EditNovelPage';
-import AddChapterPage from './pages/AddChapterPage';
-import SearchPage from './pages/SearchPage';
-import CultivationWorkspace from './pages/CultivationWorkspace';
-import SanctumPage from './pages/SanctumPage';
 import { CultivationProvider } from './context/CultivationContext';
 import './styles/cultivation-theme.css';
+
+// Lazy load all pages for instant page reload and ultra-fast initial load
+const CultivationWorkspace = lazy(() => import('./pages/CultivationWorkspace'));
+const SanctumPage = lazy(() => import('./pages/SanctumPage'));
+const LibraryPage = lazy(() => import('./pages/LibraryPage'));
+const NovelDetailPage = lazy(() => import('./pages/NovelDetailPage'));
+const ReaderPage = lazy(() => import('./pages/ReaderPage'));
+const AddNovelPage = lazy(() => import('./pages/AddNovelPage'));
+const EditNovelPage = lazy(() => import('./pages/EditNovelPage'));
+const AddChapterPage = lazy(() => import('./pages/AddChapterPage'));
+const SearchPage = lazy(() => import('./pages/SearchPage'));
 
 function ScrollRestorer() {
   const { pathname } = useLocation();
@@ -19,6 +21,33 @@ function ScrollRestorer() {
     window.scrollTo(0, 0);
   }, [pathname]);
   return null;
+}
+
+function PageFallback() {
+  return (
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#040710',
+      color: '#22c3f0',
+      fontFamily: "'Noto Serif', serif",
+      fontSize: 14,
+      gap: 12
+    }}>
+      <div style={{
+        width: 24,
+        height: 24,
+        border: '2px solid rgba(34, 195, 240, 0.2)',
+        borderTopColor: '#22c3f0',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite'
+      }} />
+      <span>Đang mở Tiên Phủ...</span>
+    </div>
+  );
 }
 
 class ErrorBoundary extends React.Component {
@@ -41,9 +70,6 @@ class ErrorBoundary extends React.Component {
           <pre style={{ background: '#1c0f0f', padding: 20, borderRadius: 8, overflowX: 'auto', color: '#ffd1d1' }}>
             {this.state.error?.toString()}
           </pre>
-          <pre style={{ marginTop: 10, color: '#aaa', fontSize: 12 }}>
-            {this.state.info?.componentStack}
-          </pre>
           <button 
             onClick={() => { localStorage.clear(); window.location.reload(); }}
             style={{ marginTop: 20, padding: '10px 20px', background: '#e24b4a', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
@@ -58,42 +84,27 @@ class ErrorBoundary extends React.Component {
 }
 
 export default function App() {
-  const location = useLocation();
-  const isReader = location.pathname.includes('/read/');
-  const isCultivation = location.pathname === '/cultivation' || location.pathname === '/sanctum';
-
   return (
     <ErrorBoundary>
       <CultivationProvider>
         <ScrollRestorer />
-        {/* Don't show global header on reader page, cultivation page, or sanctum page */}
-        {(!isReader && !isCultivation) && <Header />}
-        <Routes>
-          <Route path="/" element={<LibraryPage />} />
-          <Route path="/novel/:novelId" element={<NovelDetailPage />} />
-          <Route path="/novel/:novelId/read/:chapterId" element={<ReaderPage />} />
-          <Route path="/add-novel" element={<AddNovelPage />} />
-          <Route path="/novel/:novelId/edit" element={<EditNovelPage />} />
-          <Route path="/novel/:novelId/add-chapter" element={<AddChapterPage />} />
-          <Route path="/novel/:novelId/edit-chapter/:chapterId" element={<AddChapterPage />} />
-          <Route path="/search" element={<SearchPage />} />
-          <Route path="/cultivation" element={<CultivationWorkspace />} />
-          <Route path="/sanctum" element={<SanctumPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Header />
+        <main className="main-content">
+          <Suspense fallback={<PageFallback />}>
+            <Routes>
+              <Route path="/" element={<LibraryPage />} />
+              <Route path="/novel/:id" element={<NovelDetailPage />} />
+              <Route path="/novel/:id/chapter/:chapterId" element={<ReaderPage />} />
+              <Route path="/add-novel" element={<AddNovelPage />} />
+              <Route path="/edit-novel/:id" element={<EditNovelPage />} />
+              <Route path="/novel/:id/add-chapter" element={<AddChapterPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/cultivation" element={<CultivationWorkspace />} />
+              <Route path="/sanctum" element={<SanctumPage />} />
+            </Routes>
+          </Suspense>
+        </main>
       </CultivationProvider>
     </ErrorBoundary>
-  );
-}
-
-function NotFound() {
-  return (
-    <div style={{ textAlign: 'center', padding: '100px 20px' }}>
-      <h1 style={{ fontFamily: 'var(--font-serif)', color: 'var(--accent-gold)', fontSize: 56, marginBottom: 16 }}>
-        404
-      </h1>
-      <h2 style={{ color: 'var(--text-secondary)', marginBottom: 12 }}>Không tìm thấy trang</h2>
-      <a href="/" className="btn-ghost" style={{ display: 'inline-flex' }}>← Về trang chủ</a>
-    </div>
   );
 }

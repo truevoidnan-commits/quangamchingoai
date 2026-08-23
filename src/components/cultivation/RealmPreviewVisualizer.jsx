@@ -592,7 +592,7 @@ export function StandardLotusAltar({ altar, flameColor = '#fbbf24', isFilled = f
                 x2={tipX} y2={tipY}
                 stroke="#fbbf24" strokeWidth="0.75" opacity="0.8"
               />
-              <circle cx={tipX} cy={tipY} r="1.6" fill="#fbbf24" filter="url(#laserGlow)" />
+              <circle cx={tipX} cy={tipY} r="1.6" fill="#fbbf24" /* no-filter */ />
             </g>
           );
         })}
@@ -3726,9 +3726,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               }}
             >
               {/* Vành Tinh Đồ Ngoại Vi (Outer Astrolabe Rings R=378 & Inner Border R=192) */}
-              <circle cx={cx} cy={cy} r="378" fill="none" stroke="rgba(56, 189, 248, 0.95)" strokeWidth="2.2" filter="url(#laserGlow)" />
+              <circle cx={cx} cy={cy} r="378" fill="none" stroke="rgba(56, 189, 248, 0.95)" strokeWidth="2.2" />
               <circle cx={cx} cy={cy} r="368" fill="none" stroke="rgba(56, 189, 248, 0.55)" strokeWidth="1.2" strokeDasharray="4 2" />
-              <circle cx={cx} cy={cy} r="192" fill="none" stroke="rgba(56, 189, 248, 0.85)" strokeWidth="2.0" filter="url(#laserGlow)" />
+              <circle cx={cx} cy={cy} r="192" fill="none" stroke="rgba(56, 189, 248, 0.85)" strokeWidth="2.0" />
 
               {/* 6 VẠCH PHÂN CHIA 6 TINH TỌA ĐỒNG NHẤT 100% (192 -> 378) */}
               {[0, 60, 120, 180, 240, 300].map((deg) => (
@@ -3739,9 +3739,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     y1={cy} 
                     x2={cx + 378} 
                     y2={cy} 
-                    stroke="rgba(56, 189, 248, 0.45)" 
-                    strokeWidth="5.0" 
-                    filter="url(#starBurstGlow)" 
+                    stroke="rgba(56, 189, 248, 0.35)" 
+                    strokeWidth="4.0" 
                   />
                   {/* Lớp 2: Tia laser xanh lam ngọc sắc nét */}
                   <line 
@@ -3750,8 +3749,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     x2={cx + 378} 
                     y2={cy} 
                     stroke="#38bdf8" 
-                    strokeWidth="2.8" 
-                    filter="url(#laserGlow)" 
+                    strokeWidth="2.4" 
                   />
                   {/* Lớp 3: Lõi năng lượng trắng sáng */}
                   <line 
@@ -3763,9 +3761,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     strokeWidth="1.2" 
                   />
                   {/* 3 Chốt Định Vị Ngọc Vàng Kim */}
-                  <circle cx={cx + 192} cy={cy} r="4.5" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.3" filter="url(#laserGlow)" />
-                  <circle cx={cx + 285} cy={cy} r="3.6" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.2" filter="url(#laserGlow)" />
-                  <circle cx={cx + 378} cy={cy} r="5.5" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.5" filter="url(#laserGlow)" />
+                  <circle cx={cx + 192} cy={cy} r="4.5" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.3" />
+                  <circle cx={cx + 285} cy={cy} r="3.6" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.2" />
+                  <circle cx={cx + 378} cy={cy} r="5.5" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.5" />
                 </g>
               ))}
 
@@ -3782,7 +3780,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                         stroke={edge.isUnlocked ? c.color : 'rgba(56, 189, 248, 0.45)'} 
                         strokeWidth={edge.isUnlocked ? "2.0" : "1.1"} 
                         strokeDasharray={edge.isUnlocked ? undefined : "3 3"}
-                        filter={edge.isUnlocked ? "url(#laserGlow)" : undefined}
+                        /* clean vector edge */
                         opacity={edge.isUnlocked ? 0.95 : 0.5}
                       />
                     ))}
@@ -3824,7 +3822,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                     {/* Vòng tuyển chọn */}
                     {isSelected && (
-                      <circle r="17" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeDasharray="4 3" filter="url(#starBurstGlow)" />
+                      <circle r="17" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeDasharray="4 3" opacity="0.9" />
                     )}
 
                     {/* ĐỐM SAO PHÁT QUANG TO RÕ, TRÒN TRỊA & LUNG LINH ĐA TẦNG */}

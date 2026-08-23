@@ -1028,3 +1028,27 @@
     min-height: 100% !important;
   }
 }
+
+
+/* HARDWARE ACCELERATED 60 FPS ROTATION */
+@keyframes celestialRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes celestialCounterRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+.smooth-celestial-spin {
+  transform-origin: 500px 500px !important;
+  will-change: transform !important;
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
