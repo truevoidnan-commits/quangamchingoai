@@ -92,14 +92,20 @@ function MainLayout() {
       {!hideHeader && <Header />}
       <main className="main-content" style={{ padding: hideHeader ? 0 : undefined, margin: hideHeader ? 0 : undefined }}>
         <Suspense fallback={<PageFallback />}>
-          <Routes>
+                    <Routes>
             <Route path="/" element={<LibraryPage />} />
             <Route path="/novel/:id" element={<NovelDetailPage />} />
+            <Route path="/novel/:novelId" element={<NovelDetailPage />} />
+            <Route path="/novel/:id/read/:chapterId" element={<ReaderPage />} />
             <Route path="/novel/:id/chapter/:chapterId" element={<ReaderPage />} />
+            <Route path="/novel/:novelId/read/:chapterId" element={<ReaderPage />} />
             <Route path="/novel/:novelId/chapter/:chapterId" element={<ReaderPage />} />
             <Route path="/add-novel" element={<AddNovelPage />} />
             <Route path="/edit-novel/:id" element={<EditNovelPage />} />
+            <Route path="/novel/:id/edit" element={<EditNovelPage />} />
             <Route path="/novel/:id/add-chapter" element={<AddChapterPage />} />
+            <Route path="/novel/:novelId/add-chapter" element={<AddChapterPage />} />
+            <Route path="/novel/:novelId/edit-chapter/:chapterId" element={<AddChapterPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/cultivation" element={<CultivationWorkspace />} />
             <Route path="/sanctum" element={<SanctumPage />} />

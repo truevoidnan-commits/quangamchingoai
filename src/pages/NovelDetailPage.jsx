@@ -127,7 +127,7 @@ export default function NovelDetailPage() {
     : chapters[0];
 
   const handleRead = () => {
-    if (resumeChapter) navigate(`/novel/${novelId}/read/${resumeChapter.id}`);
+    if (resumeChapter) navigate(`/novel/${activeNovelId}/read/${resumeChapter.id}`);
   };
 
   const handleDeleteChapter = async () => {
@@ -203,14 +203,14 @@ export default function NovelDetailPage() {
                 </button>
                 <button
                   className="btn-ghost"
-                  onClick={() => navigate(`/novel/${novelId}/add-chapter`)}
+                  onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}
                   id="btn-add-chapter-detail"
                 >
                   + Thêm chương
                 </button>
                 <button
                   className="btn-ghost"
-                  onClick={() => navigate(`/novel/${novelId}/edit`)}
+                  onClick={() => navigate(`/novel/${activeNovelId}/edit`)}
                 >
                   ✏️ Sửa truyện
                 </button>
@@ -321,7 +321,7 @@ export default function NovelDetailPage() {
               <div
                 key={result.id}
                 className={styles.searchResultCard}
-                onClick={() => navigate(`/novel/${novelId}/read/${result.id}?q=${encodeURIComponent(searchQuery)}`)}
+                onClick={() => navigate(`/novel/${activeNovelId}/read/${result.id}?q=${encodeURIComponent(searchQuery)}`)}
                 role="button"
                 tabIndex={0}
               >
@@ -355,7 +355,7 @@ export default function NovelDetailPage() {
             {chapters.length === 0 && (
               <div className={styles.emptyChapters}>
                 <p>Chưa có chương nào.</p>
-                <button className="btn-primary" onClick={() => navigate(`/novel/${novelId}/add-chapter`)}>
+                <button className="btn-primary" onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}>
                   + Thêm chương đầu tiên
                 </button>
               </div>
@@ -366,7 +366,7 @@ export default function NovelDetailPage() {
               <ChapterRow
                 key={ch.id}
                 chapter={ch}
-                novelId={novelId}
+                novelId={activeNovelId}
                 isLastRead={progress?.chapterId === ch.id}
                 isHighlighted={highlightedChapterId === ch.id}
                 onDelete={() => setDeleteChapter(ch)}
@@ -385,7 +385,7 @@ export default function NovelDetailPage() {
                   <ChapterRow
                     key={ch.id}
                     chapter={ch}
-                    novelId={novelId}
+                    novelId={activeNovelId}
                     isExtra
                     isLastRead={progress?.chapterId === ch.id}
                     isHighlighted={highlightedChapterId === ch.id}
@@ -428,7 +428,7 @@ function ChapterRow({ chapter, novelId, isExtra, isLastRead, isHighlighted, onDe
     >
       <button
         className={styles.chapterBtn}
-        onClick={() => navigate(`/novel/${novelId}/read/${chapter.id}`)}
+        onClick={() => navigate(`/novel/${activeNovelId}/read/${chapter.id}`)}
       >
         <span className={styles.chapterTitle}>{chapter.title}</span>
         {isLastRead && <span className="badge badge-gold" style={{ marginLeft: 6 }}>✦ Đang đọc</span>}
@@ -438,7 +438,7 @@ function ChapterRow({ chapter, novelId, isExtra, isLastRead, isHighlighted, onDe
         <button
           className="btn-icon"
           title="Sửa chương"
-          onClick={() => navigate(`/novel/${novelId}/edit-chapter/${chapter.id}`)}
+          onClick={() => navigate(`/novel/${activeNovelId}/edit-chapter/${chapter.id}`)}
           style={{ fontSize: 13 }}
         >
           ✏️
