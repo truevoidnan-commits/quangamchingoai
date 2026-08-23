@@ -754,24 +754,28 @@
 
 @media (max-width: 768px) {
   .lotus-altar-tl {
-    top: 44px !important;
-    left: 10px !important;
-    transform: scale(0.50) !important;
+    top: 18px !important;
+    left: 8px !important;
+    transform: scale(0.66) !important;
+    transform-origin: top left !important;
   }
   .lotus-altar-tr {
-    top: 44px !important;
-    right: 10px !important;
-    transform: scale(0.50) !important;
+    top: 18px !important;
+    right: 8px !important;
+    transform: scale(0.66) !important;
+    transform-origin: top right !important;
   }
   .lotus-altar-bl {
-    bottom: 38px !important;
-    left: 10px !important;
-    transform: scale(0.50) !important;
+    bottom: 18px !important;
+    left: 8px !important;
+    transform: scale(0.66) !important;
+    transform-origin: bottom left !important;
   }
   .lotus-altar-br {
-    bottom: 38px !important;
-    right: 10px !important;
-    transform: scale(0.50) !important;
+    bottom: 18px !important;
+    right: 8px !important;
+    transform: scale(0.66) !important;
+    transform-origin: bottom right !important;
   }
 }
 
@@ -1051,14 +1055,14 @@
 
 .smooth-celestial-spin-cw {
   transform-origin: 500px 500px !important;
-  transform-box: fill-box;
+  transform-box: view-box !important;
   animation: celestialRotate 120s linear infinite !important;
   will-change: transform;
 }
 
 .smooth-celestial-spin-ccw {
   transform-origin: 500px 500px !important;
-  transform-box: fill-box;
+  transform-box: view-box !important;
   animation: celestialCounterRotate 90s linear infinite !important;
   will-change: transform;
 }
