@@ -34,27 +34,45 @@ export default function ReaderPage() {
   const scrollRef = useRef(null);
   const lastScrollY = useRef(0);
 
-  // Load novel + chapters list
+    // Load novel + chapters list
   useEffect(() => {
     (async () => {
-      const [n, chs] = await Promise.all([getNovel(activeNovelId), getChapters(activeNovelId)]);
-      setNovel(n);
-      setChapters(chs || []);
+      try {
+        let [n, chs] = await Promise.all([getNovel(activeNovelId), getChapters(activeNovelId)]);
+        if (!n || !chs || chs.length === 0) {
+          const { sampleNovel, sampleChapters } = await import('../lib/sampleData');
+          const { saveNovel, saveChaptersBulk } = await import('../lib/db');
+          await saveNovel(sampleNovel);
+          await saveChaptersBulk(sampleChapters);
+          n = sampleNovel;
+          chs = sampleChapters;
+        }
+        setNovel(n);
+        setChapters(chs || []);
+      } catch (e) {
+        console.error('Reader load novel error:', e);
+      }
     })();
-  }, [novelId]);
+  }, [activeNovelId]);
 
   // Load current chapter
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const ch = await getChapter(chapterId);
+        let ch = await getChapter(chapterId);
+        if (!ch) {
+          const { sampleChapters } = await import('../lib/sampleData');
+          ch = sampleChapters.find(c => c.id === chapterId) || sampleChapters.find(c => c.novelId === activeNovelId) || sampleChapters[0];
+        }
         setChapter(ch);
+      } catch (e) {
+        console.error('Reader load chapter error:', e);
       } finally {
         setLoading(false);
       }
     })();
-  }, [chapterId]);
+  }, [chapterId, activeNovelId]);
 
   // Khôi phục vị trí đọc chính xác (ví dụ 56%) khi vào lại chương
   useEffect(() => {
@@ -62,7 +80,7 @@ export default function ReaderPage() {
 
     let restored = false;
     const tryRestore = () => {
-      const savedRaw = localStorage.getItem(`scroll_pos_${novelId}_${chapter.id}`);
+      const savedRaw = localStorage.getItem(`scroll_pos_${activeNovelId}_${chapter.id}`);
       if (savedRaw) {
         try {
           const { percent } = JSON.parse(savedRaw);
@@ -89,7 +107,7 @@ export default function ReaderPage() {
       clearTimeout(timer1);
       clearTimeout(timer2);
     };
-  }, [chapter?.id, loading, novelId]);
+  }, [chapter?.id, loading, activeNovelId]);
 
   // Chu kỳ ngộ đạo 60s lặp lại liên tục (cứ 60s tăng tu vi âm thầm & bắt đầu vòng mới)
   const [cycleSeconds, setCycleSeconds] = useState(0);
@@ -98,9 +116,9 @@ export default function ReaderPage() {
   useEffect(() => {
     setCycleSeconds(0);
     if (chapter) {
-      saveReadingProgress(novelId, { chapterId: chapter.id, scrollTop: window.scrollY });
+      saveReadingProgress(activeNovelId, { chapterId: chapter.id, scrollTop: window.scrollY });
     }
-  }, [chapter?.id, novelId]);
+  }, [chapter?.id, activeNovelId]);
 
   // Bộ đếm ngộ đạo thực tế (mỗi giây tăng 1s, đủ 60s tự động cộng tu vi và rơi cơ duyên)
   useEffect(() => {
@@ -110,7 +128,7 @@ export default function ReaderPage() {
       setCycleSeconds(prev => {
         if (prev + 1 >= 60) {
           try {
-            const res = gainReadingExp(novelId, chapter.id, 2000);
+            const res = gainReadingExp(activeNovelId, chapter.id, 2000);
             if (res) {
               if (res.breakthrough) {
                 setBreakthroughToast(res.breakthrough);
@@ -147,7 +165,7 @@ export default function ReaderPage() {
       if (maxScroll > 0) {
         const percent = Math.max(0, Math.min(1, scrollY / maxScroll));
         localStorage.setItem(`scroll_pos_${novelId}_${chapter.id}`, JSON.stringify({ percent, scrollY, time: Date.now() }));
-        saveReadingProgress(novelId, { chapterId: chapter.id, scrollTop: scrollY, percent });
+        saveReadingProgress(activeNovelId, { chapterId: chapter.id, scrollTop: scrollY, percent });
       }
     };
 
@@ -174,7 +192,7 @@ export default function ReaderPage() {
       if (throttleTimer) clearTimeout(throttleTimer);
       saveCurrentPosition();
     };
-  }, [chapter?.id, loading, novelId]);
+  }, [chapter?.id, loading, activeNovelId]);
 
   // Navigate to adjacent chapters
   const currentIndex = chapters.findIndex(c => c.id === chapterId);
@@ -184,7 +202,7 @@ export default function ReaderPage() {
   const goToChapter = useCallback((ch) => {
     if (ch) {
       const queryStr = searchKeyword ? `?q=${encodeURIComponent(searchKeyword)}` : '';
-      navigate(`/novel/${novelId}/read/${ch.id}${queryStr}`);
+      navigate(`/novel/${activeNovelId}/read/${ch.id}${queryStr}`);
     }
   }, [navigate, novelId, searchKeyword]);
 
@@ -213,7 +231,7 @@ export default function ReaderPage() {
         <div className={styles.topBarInner}>
           <button
             className={styles.topBtn}
-            onClick={() => navigate(`/novel/${novelId}`)}
+            onClick={() => navigate(`/novel/${activeNovelId}`)}
             aria-label="Quay lại"
           >
             ←
@@ -249,7 +267,7 @@ export default function ReaderPage() {
             </div>
             <button
               className={styles.topBtn}
-              onClick={() => navigate(`/novel/${novelId}/add-chapter`)}
+              onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}
               title="Thêm chương"
               aria-label="Thêm chương"
             >
@@ -372,7 +390,7 @@ export default function ReaderPage() {
         {!loading && !chapter && (
           <div className={styles.notFound}>
             <p>Không tìm thấy nội dung chương này.</p>
-            <button className="btn-ghost" onClick={() => navigate(`/novel/${novelId}`)}>
+            <button className="btn-ghost" onClick={() => navigate(`/novel/${activeNovelId}`)}>
               ← Quay lại
             </button>
           </div>
@@ -419,7 +437,7 @@ export default function ReaderPage() {
         onClose={() => setTocOpen(false)}
         chapters={chapters}
         currentChapterId={chapterId}
-        onSelectChapter={(ch) => navigate(`/novel/${novelId}/read/${ch.id}`)}
+        onSelectChapter={(ch) => navigate(`/novel/${activeNovelId}/read/${ch.id}`)}
       />
 
       {/* Reading settings */}
