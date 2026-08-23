@@ -6,7 +6,8 @@ import Footer from '../components/layout/Footer';
 import styles from './NovelDetailPage.module.css';
 
 export default function NovelDetailPage() {
-  const { novelId } = useParams();
+  const { id, novelId } = useParams();
+  const activeNovelId = novelId || id;
   const navigate = useNavigate();
   const [novel, setNovel] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -27,7 +28,15 @@ export default function NovelDetailPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [n, chs] = await Promise.all([getNovel(novelId), getChapters(novelId)]);
+        let [n, chs] = await Promise.all([getNovel(activeNovelId), getChapters(activeNovelId)]);
+        if (!n) {
+          const { sampleNovel, sampleChapters } = await import('../lib/sampleData');
+          const { saveNovel, saveChaptersBulk } = await import('../lib/db');
+          await saveNovel(sampleNovel);
+          await saveChaptersBulk(sampleChapters);
+          n = sampleNovel;
+          chs = sampleChapters;
+        }
         setNovel(n);
         setChapters(chs || []);
       } catch (err) {
@@ -49,7 +58,7 @@ export default function NovelDetailPage() {
 
     setIsSearching(true);
     const timer = setTimeout(async () => {
-      const results = await searchChapters(novelId, searchQuery);
+      const results = await searchChapters(activeNovelId, searchQuery);
       startTransition(() => {
         setSearchResults(results);
         setIsSearching(false);
@@ -62,7 +71,7 @@ export default function NovelDetailPage() {
   // Tự động cuộn đến chương đang đọc dở khi vào trang thông tin truyện
   useEffect(() => {
     if (!loading && chapters.length > 0) {
-      const prog = getReadingProgress(novelId);
+      const prog = getReadingProgress(activeNovelId);
       if (prog?.chapterId) {
         const timer = setTimeout(() => {
           const el = document.getElementById(`chapter-item-${prog.chapterId}`);

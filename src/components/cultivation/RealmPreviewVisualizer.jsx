@@ -3566,7 +3566,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               color: is121Unlocked ? 'var(--color-cuc-canh, #ff3fd5)' : '#bae6fd',
               textShadow: '0 0 8px rgba(56, 189, 248, 0.6)'
             }}>
-              {is121Unlocked ? '✦ CỰC CẢNH 121: HỖN ĐỘN KHAI HOA' : '✦ CỰC CẢNH 121: TỬ VI THIÊN ĐỈNH'}
+              {is121Unlocked ? '✦ CỰC CẢNH 121' : '✦ CỰC CẢNH'}
             </span>
           </div>
 
@@ -6966,6 +6966,216 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           </div>
         </div>
       )}
-    </div>
-  );
+  
+      {/* ========================================================
+          MODAL CHỌN & KHẢM NẠP MỆNH ĐĂNG TRÊN LIÊN ĐÀI TRÚC CƠ
+         ======================================================== */}
+      {lampModalOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16
+          }}
+          onClick={() => setLampModalOpen(false)}
+        >
+          <div 
+            style={{
+              background: 'linear-gradient(180deg, #0f172a 0%, #020617 100%)',
+              border: '1.5px solid var(--color-kim)',
+              borderRadius: 16,
+              maxWidth: 460,
+              width: '100%',
+              maxHeight: '82vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 0 35px rgba(251, 191, 36, 0.35)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: '14px 18px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(255, 204, 0, 0.05)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 20 }}>🏮</span>
+                <h3 style={{ margin: 0, fontSize: 15, color: 'var(--color-kim)', fontWeight: 800 }}>
+                  {selectedSlot === 4 ? 'KHẢM NẠP MỆNH ĐĂNG CỰC CẢNH' : `KHẢM NẠP MỆNH ĐĂNG (VỊ TRÍ #${(selectedSlot ?? 0) + 1})`}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setLampModalOpen(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  color: '#fff',
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Filter Tier Tabs */}
+            <div style={{
+              display: 'flex',
+              gap: 6,
+              padding: '10px 14px',
+              overflowX: 'auto',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+              background: 'rgba(10, 16, 26, 0.6)'
+            }}>
+              {['all', 'ha_pham', 'trung_pham', 'thuong_pham', 'cuc_pham', 'tien_pham', 'than_pham'].map(tier => (
+                <button
+                  key={tier}
+                  onClick={() => setLampFilterTier(tier)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 12,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    border: lampFilterTier === tier ? '1.2px solid var(--color-kim)' : '1px solid rgba(255,255,255,0.1)',
+                    background: lampFilterTier === tier ? 'rgba(251, 191, 36, 0.2)' : 'rgba(255,255,255,0.03)',
+                    color: lampFilterTier === tier ? 'var(--color-kim)' : 'var(--text-sub)'
+                  }}
+                >
+                  {tier === 'all' ? 'Tất cả' : (LAMP_TIERS[tier]?.name || tier)}
+                </button>
+              ))}
+            </div>
+
+            {/* Lamp List */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Option to unequip if slot is filled */}
+              {selectedSlot !== null && absorbedLamps[selectedSlot] && (
+                <div style={{
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <span style={{ fontSize: 12, color: '#fca5a5' }}>
+                    Đang khảm: <strong>{LIFE_LAMPS.find(l => l.id === absorbedLamps[selectedSlot])?.name || absorbedLamps[selectedSlot]}</strong>
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (absorbLamp) absorbLamp(absorbedLamps[selectedSlot]);
+                      setLampModalOpen(false);
+                    }}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: 6,
+                      background: '#ef4444',
+                      color: '#fff',
+                      border: 'none',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Tháo Ra
+                  </button>
+                </div>
+              )}
+
+              {LIFE_LAMPS
+                .filter(lamp => lampFilterTier === 'all' || lamp.tier === lampFilterTier)
+                .map(lamp => {
+                  const isEquippedInThisSlot = selectedSlot !== null && absorbedLamps[selectedSlot] === lamp.id;
+                  const isEquippedElsewhere = absorbedLamps.includes(lamp.id) && !isEquippedInThisSlot;
+                  const tierInfo = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
+
+                  return (
+                    <div
+                      key={lamp.id}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        background: isEquippedInThisSlot ? 'rgba(251, 191, 36, 0.12)' : 'rgba(255, 255, 255, 0.04)',
+                        border: isEquippedInThisSlot ? '1.5px solid var(--color-kim)' : '1px solid rgba(255, 255, 255, 0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 10
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                        <ArtifactIcon item={lamp} isLamp={true} size={38} />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: tierInfo.color || '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {lamp.name}
+                          </div>
+                          <div style={{ fontSize: 10.5, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {tierInfo.name} · {lamp.quote || 'Mệnh Đăng Cổ Hoàng'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ flexShrink: 0 }}>
+                        {isEquippedInThisSlot ? (
+                          <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-kim)', padding: '4px 8px', borderRadius: 6, background: 'rgba(251,191,36,0.15)' }}>
+                            Đang Khảm
+                          </span>
+                        ) : isEquippedElsewhere ? (
+                          <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
+                            Đã khảm
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              if (absorbLamp) absorbLamp(lamp.id);
+                              try { playStarChime(659); } catch(e) {}
+                              setLampModalOpen(false);
+                            }}
+                            style={{
+                              padding: '5px 12px',
+                              borderRadius: 8,
+                              background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
+                              color: '#000',
+                              border: 'none',
+                              fontSize: 11.5,
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              boxShadow: '0 0 10px rgba(251, 191, 36, 0.3)'
+                            }}
+                          >
+                            Khảm Nạp
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
+      )}
+
+  </div>
+);
 }
