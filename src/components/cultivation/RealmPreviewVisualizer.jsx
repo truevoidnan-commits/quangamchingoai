@@ -3515,7 +3515,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           {/* 121 CỰC CẢNH THIÊN ĐỈNH (HEADER BADGE TRUNG TÂM — THÔNG THOÁNG KHÔNG CHẠM LỬA) */}
           <div style={{
             position: 'absolute',
-            top: 10,
+            top: 18,
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 20,

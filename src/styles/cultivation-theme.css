@@ -754,24 +754,24 @@
 
 @media (max-width: 768px) {
   .lotus-altar-tl {
-    top: 8px !important;
-    left: 8px !important;
-    transform: scale(0.62) !important;
+    top: 32px !important;
+    left: 10px !important;
+    transform: scale(0.55) !important;
   }
   .lotus-altar-tr {
-    top: 8px !important;
-    right: 8px !important;
-    transform: scale(0.62) !important;
+    top: 32px !important;
+    right: 10px !important;
+    transform: scale(0.55) !important;
   }
   .lotus-altar-bl {
-    bottom: 8px !important;
-    left: 8px !important;
-    transform: scale(0.62) !important;
+    bottom: 28px !important;
+    left: 10px !important;
+    transform: scale(0.55) !important;
   }
   .lotus-altar-br {
-    bottom: 8px !important;
-    right: 8px !important;
-    transform: scale(0.62) !important;
+    bottom: 28px !important;
+    right: 10px !important;
+    transform: scale(0.55) !important;
   }
 }
 
