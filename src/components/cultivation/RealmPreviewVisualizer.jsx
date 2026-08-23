@@ -3248,41 +3248,41 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               )}
 
               {/* ========================================================
-                  DỊ TƯỢNG 1: THẦN THÚ HUYẾT HỔ HOÀNG KIM CHÂN HỎA (HÌNH ẢNH THỰC TÁCH NỀN)
+                  DỊ TƯỢNG 1: THẦN THÚ HUYẾT HỔ HOÀNG KIM CHÂN HỎA (HÌNH ẢNH THỰC TÁCH NỀN TO LỚN UY DŨNG)
                  ======================================================== */}
               {viewMode === 'the' && hasTiger && (
                 <g
                   transform="translate(0, -25)"
                   style={{ animation: 'nkTigerMajestic 3.4s ease-in-out infinite' }}
                 >
-                  {/* Aura Bão Lửa Khí Huyết Chân Hỏa */}
-                  <circle cx="0" cy="0" r="145" fill="rgba(239, 68, 68, 0.18)" filter="url(#nkGlowRed)" />
-                  <circle cx="0" cy="0" r="125" fill="none" stroke="#f59e0b" strokeWidth="2.2" strokeDasharray="8 6" opacity="0.85" filter="url(#nkGlowGold)" />
+                  {/* Aura Bão Lửa Khí Huyết Chân Hỏa To Lớn */}
+                  <circle cx="0" cy="0" r="190" fill="rgba(239, 68, 68, 0.18)" filter="url(#nkGlowRed)" />
+                  <circle cx="0" cy="0" r="165" fill="none" stroke="#f59e0b" strokeWidth="2.4" strokeDasharray="10 8" opacity="0.85" filter="url(#nkGlowGold)" />
 
-                  {/* Vết cào Huyết Long Trảo (Energy Claws) */}
+                  {/* Vết cào Huyết Long Trảo (Energy Claws) To Lớn */}
                   <g style={{ animation: 'nkTigerClawSlash 1.8s ease-in-out infinite' }}>
-                    <path d="M -115,-75 L -60,-25 M -100,-85 L -50,-35 M -125,-60 L -75,-10" stroke="#fef08a" strokeWidth="3.4" strokeLinecap="round" opacity="0.9" filter="url(#nkGlowGold)" />
-                    <path d="M 115,-75 L 60,-25 M 100,-85 L 50,-35 M 125,-60 L 75,-10" stroke="#fef08a" strokeWidth="3.4" strokeLinecap="round" opacity="0.9" filter="url(#nkGlowGold)" />
+                    <path d="M -160,-105 L -90,-35 M -140,-120 L -75,-50 M -175,-85 L -110,-15" stroke="#fef08a" strokeWidth="4.2" strokeLinecap="round" opacity="0.9" filter="url(#nkGlowGold)" />
+                    <path d="M 160,-105 L 90,-35 M 140,-120 L 75,-50 M 175,-85 L 110,-15" stroke="#fef08a" strokeWidth="4.2" strokeLinecap="round" opacity="0.9" filter="url(#nkGlowGold)" />
                   </g>
 
-                  {/* HÌNH ẢNH HUYẾT HỔ CHÂN HỎA TÁCH NỀN (320px x 150px) */}
+                  {/* HÌNH ẢNH HUYẾT HỔ CHÂN HỎA TÁCH NỀN TO LỚN (450px x 210px) */}
                   <image
                     href={getAssetUrl('images/huyet_ho_god.png')}
-                    x="-160"
-                    y="-85"
-                    width="320"
-                    height="150"
+                    x="-225"
+                    y="-115"
+                    width="450"
+                    height="210"
                     preserveAspectRatio="xMidYMid meet"
                     style={{
-                      filter: 'drop-shadow(0 0 16px rgba(251, 191, 36, 0.85)) drop-shadow(0 0 28px rgba(239, 68, 68, 0.75))',
+                      filter: 'drop-shadow(0 0 22px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 40px rgba(239, 68, 68, 0.8))',
                       pointerEvents: 'none'
                     }}
                   />
 
                   {/* Bảng Nhãn Thần Thú Huyết Hổ */}
-                  <g transform="translate(0, 106)">
-                    <rect x="-110" y="-14" width="220" height="28" rx="14" fill="rgba(69, 10, 10, 0.95)" stroke="#f59e0b" strokeWidth="1.8" filter="url(#nkGlowGold)" />
-                    <text y="5" textAnchor="middle" fontSize="12" fontWeight="900" fill="#fef08a" letterSpacing="1">
+                  <g transform="translate(0, 116)">
+                    <rect x="-115" y="-14" width="230" height="28" rx="14" fill="rgba(69, 10, 10, 0.95)" stroke="#f59e0b" strokeWidth="1.8" filter="url(#nkGlowGold)" />
+                    <text y="5" textAnchor="middle" fontSize="12.5" fontWeight="900" fill="#fef08a" letterSpacing="1">
                       🐯 {theLvl >= 10 ? '👑 THẦN THÚ HUYẾT HỔ' : '🐯 HUYẾT HỔ HÓA HÌNH'}
                     </text>
                   </g>
