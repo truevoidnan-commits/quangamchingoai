@@ -13,7 +13,8 @@ import ScrollToTop from '../components/ui/ScrollToTop';
 import styles from './ReaderPage.module.css';
 
 export default function ReaderPage() {
-  const { novelId, chapterId } = useParams();
+  const { id, novelId, chapterId } = useParams();
+  const activeNovelId = novelId || id;
   const [searchParams, setSearchParams] = useSearchParams();
   const searchKeyword = searchParams.get('q') || '';
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ export default function ReaderPage() {
   // Load novel + chapters list
   useEffect(() => {
     (async () => {
-      const [n, chs] = await Promise.all([getNovel(novelId), getChapters(novelId)]);
+      const [n, chs] = await Promise.all([getNovel(activeNovelId), getChapters(activeNovelId)]);
       setNovel(n);
       setChapters(chs || []);
     })();

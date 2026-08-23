@@ -2,8 +2,22 @@
 export function getAssetUrl(p) {
   if (!p) return '';
   if (p.startsWith('http://') || p.startsWith('https://') || p.startsWith('data:')) return p;
-  const base = import.meta.env.BASE_URL || './';
   const cleanPath = p.startsWith('/') ? p.slice(1) : p;
+  
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin;
+    let path = window.location.pathname;
+    if (path.includes('.')) {
+      path = path.substring(0, path.lastIndexOf('/') + 1);
+    }
+    if (!path.endsWith('/')) {
+      path = path + '/';
+    }
+    path = path.replace(/\/(cultivation|sanctum|novel|add-novel|edit-novel|search)\/?$/, '/');
+    return `${origin}${path}${cleanPath}`;
+  }
+  
+  const base = import.meta.env.BASE_URL || './';
   return base.endsWith('/') ? `${base}${cleanPath}` : `${base}/${cleanPath}`;
 }
 
@@ -502,7 +516,7 @@ export function ChaosLotusThrone({ isFilled, lampObj, ArtifactIcon, idx = 'chaos
         boxShadow: isFilled 
           ? '0 0 20px rgba(253, 224, 71, 0.95), inset 0 0 10px rgba(255, 255, 255, 0.4)' 
           : '0 0 12px rgba(253, 224, 71, 0.4)',
-        background: isFilled ? 'transparent' : 'rgba(0, 0, 0, 0.45)',
+        background: 'transparent',
         border: isFilled ? '1.5px solid rgba(253, 224, 71, 0.8)' : '1.5px dashed rgba(253, 224, 71, 0.5)'
       }}>
         {isFilled ? (
@@ -3523,24 +3537,27 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           {/* 121 CỰC CẢNH THIÊN ĐỈNH (HEADER BADGE TRUNG TÂM — THÔNG THOÁNG KHÔNG CHẠM LỬA) */}
           <div style={{
             position: 'absolute',
-            top: 24,
+            top: 8,
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 20,
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
-            padding: '4px 14px',
-            borderRadius: 20,
+            gap: 4,
+            padding: '2px 8px',
+            borderRadius: 14,
             background: is121Unlocked 
               ? 'linear-gradient(90deg, rgba(255, 63, 213, 0.3), rgba(168, 85, 247, 0.4))'
               : 'rgba(8, 18, 36, 0.88)',
             border: `1px solid ${is121Unlocked ? 'var(--color-cuc-canh, #ff3fd5)' : 'rgba(56, 189, 248, 0.45)'}`,
             backdropFilter: 'blur(12px)',
-            boxShadow: is121Unlocked ? '0 0 20px rgba(255, 63, 213, 0.5)' : '0 0 14px rgba(0, 0, 0, 0.5)',
+            boxShadow: is121Unlocked ? '0 0 12px rgba(255, 63, 213, 0.5)' : '0 0 8px rgba(0, 0, 0, 0.5)',
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
-            maxWidth: '92%', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 'clamp(9.5px, 2.6vw, 11.5px)'
+            maxWidth: '46%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            fontSize: 10
           }}>
             <span style={{ 
               fontSize: 11.5, 
@@ -4073,7 +4090,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 y={cy - 88}
                 width={176}
                 height={176}
-                style={{ overflow: 'visible', pointerEvents: 'auto', cursor: 'pointer' }}
+                style={{ overflow: 'visible', pointerEvents: 'auto', cursor: 'pointer', background: 'transparent' }}
                 onClick={() => { setSelectedSlot(4); setLampModalOpen(true); }}
               >
                 <ChaosLotusThrone

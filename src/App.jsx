@@ -83,27 +83,39 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+function MainLayout() {
+  const location = useLocation();
+  const hideHeader = location.pathname.startsWith('/cultivation') || location.pathname.startsWith('/sanctum');
+
+  return (
+    <>
+      {!hideHeader && <Header />}
+      <main className="main-content" style={{ padding: hideHeader ? 0 : undefined, margin: hideHeader ? 0 : undefined }}>
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            <Route path="/" element={<LibraryPage />} />
+            <Route path="/novel/:id" element={<NovelDetailPage />} />
+            <Route path="/novel/:id/chapter/:chapterId" element={<ReaderPage />} />
+            <Route path="/novel/:novelId/chapter/:chapterId" element={<ReaderPage />} />
+            <Route path="/add-novel" element={<AddNovelPage />} />
+            <Route path="/edit-novel/:id" element={<EditNovelPage />} />
+            <Route path="/novel/:id/add-chapter" element={<AddChapterPage />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/cultivation" element={<CultivationWorkspace />} />
+            <Route path="/sanctum" element={<SanctumPage />} />
+          </Routes>
+        </Suspense>
+      </main>
+    </>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
       <CultivationProvider>
         <ScrollRestorer />
-        <Header />
-        <main className="main-content">
-          <Suspense fallback={<PageFallback />}>
-            <Routes>
-              <Route path="/" element={<LibraryPage />} />
-              <Route path="/novel/:id" element={<NovelDetailPage />} />
-              <Route path="/novel/:id/chapter/:chapterId" element={<ReaderPage />} />
-              <Route path="/add-novel" element={<AddNovelPage />} />
-              <Route path="/edit-novel/:id" element={<EditNovelPage />} />
-              <Route path="/novel/:id/add-chapter" element={<AddChapterPage />} />
-              <Route path="/search" element={<SearchPage />} />
-              <Route path="/cultivation" element={<CultivationWorkspace />} />
-              <Route path="/sanctum" element={<SanctumPage />} />
-            </Routes>
-          </Suspense>
-        </main>
+        <MainLayout />
       </CultivationProvider>
     </ErrorBoundary>
   );
