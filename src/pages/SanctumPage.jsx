@@ -91,92 +91,50 @@ export default function SanctumPage() {
     }}>
       
       {/* 1. TOP NAVIGATION HEADER */}
-      <div style={{
-        height: 70,
-        padding: '0 32px',
-        borderBottom: '1px solid rgba(255, 204, 0, 0.25)',
-        background: 'rgba(16, 25, 39, 0.9)',
-        backdropFilter: 'blur(16px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50
-      }}>
-        {/* Left: Back Button & Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+      <div className="sanctum-header-wrapper">
+        <div className="sanctum-header-left">
           <button
             onClick={() => navigate('/cultivation')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 8,
-              background: 'rgba(34, 195, 240, 0.1)',
-              border: '1px solid rgba(34, 195, 240, 0.3)',
-              color: 'var(--accent-cyan-bright, #22c3f0)',
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              transition: 'all 0.2s ease'
-            }}
+            className="sanctum-back-btn"
           >
             <span>←</span>
-            <span>QUAY LẠI TU LUYỆN</span>
+            <span className="sanctum-back-text">QUAY LẠI</span>
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 24 }}>🏛️</span>
-            <div>
-              <h1 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--color-kim)', letterSpacing: 0.5 }}>
-                TÀNG BẢO ĐIỆN · TIÊN GIA BẢO KHỐ
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <span style={{ fontSize: 20 }}>🏛️</span>
+            <div style={{ minWidth: 0 }}>
+              <h1 className="sanctum-header-title">
+                TÀNG BẢO ĐIỆN
               </h1>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                Đại sảnh trưng bày Mệnh Đăng, Bảo Vật Trấn Cung & Túi Trữ Vật
+              <span className="sanctum-header-sub">
+                Mệnh Đăng, Bảo Vật & Túi Đồ
               </span>
             </div>
           </div>
         </div>
 
         {/* Right: Quick HUD Stats */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.4)',
-            border: '1px solid rgba(255, 204, 0, 0.3)',
-            borderRadius: 10,
-            padding: '6px 16px',
-            display: 'flex',
-            gap: 16,
-            alignItems: 'center'
-          }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700 }}>TU VI</div>
-              <div style={{ fontSize: 13, color: 'var(--color-kim)', fontWeight: 800 }}>{exp.toLocaleString()} EXP</div>
-            </div>
-            <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)' }} />
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700 }}>CHIẾN LỰC</div>
-              <div style={{ fontSize: 13, color: 'var(--accent-cyan-bright, #22c3f0)', fontWeight: 800 }}>{calculatedCombatPower}</div>
-            </div>
-            <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)' }} />
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700 }}>TIÊN TINH</div>
-              <div style={{ fontSize: 13, color: 'var(--color-kim)', fontWeight: 800 }}>{(cultivation?.tienTinh || 0).toLocaleString()} TT</div>
-            </div>
+        <div className="sanctum-header-stats">
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 8.5, color: 'var(--text-muted)', fontWeight: 700 }}>TU VI</div>
+            <div style={{ fontSize: 11.5, color: 'var(--color-kim)', fontWeight: 800 }}>{exp.toLocaleString()}</div>
+          </div>
+          <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 8.5, color: 'var(--text-muted)', fontWeight: 700 }}>CHIẾN LỰC</div>
+            <div style={{ fontSize: 11.5, color: 'var(--accent-cyan-bright, #22c3f0)', fontWeight: 800 }}>{calculatedCombatPower}</div>
+          </div>
+          <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 8.5, color: 'var(--text-muted)', fontWeight: 700 }}>TIÊN TINH</div>
+            <div style={{ fontSize: 11.5, color: 'var(--color-kim)', fontWeight: 800 }}>{(cultivation?.tienTinh || 0).toLocaleString()}</div>
           </div>
         </div>
       </div>
 
       {/* 2. TAB SWITCHER BAR */}
-      <div style={{
-        padding: '16px 32px 0 32px',
-        display: 'flex',
-        gap: 16,
-        background: 'rgba(16, 25, 39, 0.6)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
-      }}>
+      <div className="sanctum-tabs-container">
         <button
           onClick={() => setActiveTab('lamps')}
           style={{
@@ -251,23 +209,14 @@ export default function SanctumPage() {
       </div>
 
       {/* 3. MAIN TAB CONTENT AREA */}
-      <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto' }}>
+      <div className="sanctum-content-area">
 
         {/* TAB 1: TẾ ĐÀN 72 MỆNH ĐĂNG */}
         {activeTab === 'lamps' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             
             {/* Đài Sen Bát Quái Bản Mệnh */}
-            <div style={{
-              padding: '18px 24px',
-              borderRadius: 14,
-              background: 'radial-gradient(circle at 50% 50%, rgba(255, 204, 0, 0.08) 0%, rgba(16, 25, 39, 0.9) 100%)',
-              border: '1.5px solid rgba(255, 204, 0, 0.35)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
-            }}>
+            <div className="sanctum-altar-box">
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <SvgLotusLamp size={26} />

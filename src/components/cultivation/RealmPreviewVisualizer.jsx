@@ -2820,7 +2820,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 gap: 6
               }}
             >
-              <span>⚔️ Hải Sơn Quyết (Luyện Thể)</span>
+              <span className="ngung-khi-btn-text">⚔️ Hải Sơn (Thể)</span>
               {(cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'the' && (
                 <span style={{
                   fontSize: 9.5,
@@ -2865,7 +2865,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 gap: 6
               }}
             >
-              <span>🌊 Hóa Hải Kinh (Pháp Tu)</span>
+              <span className="ngung-khi-btn-text">🌊 Hóa Hải (Pháp)</span>
               {(cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'phap' && (
                 <span style={{
                   fontSize: 9.5,
@@ -2887,7 +2887,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           <svg
             width="100%"
             height="100%"
-            viewBox="0 0 920 640"
+            viewBox={isMobile ? "130 10 660 620" : "0 0 920 640"}
             preserveAspectRatio="xMidYMid meet"
             style={{ width: '100%', height: '100%', minHeight: '620px', overflow: 'hidden' }}
             onClick={() => {
@@ -3493,7 +3493,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           borderRadius: 0,
           border: 'none',
           backgroundColor: '#020617',
-          backgroundImage: "radial-gradient(circle at 50% 50%, rgba(2, 6, 23, 0.2) 0%, rgba(2, 6, 23, 0.8) 100%), url(' + getAssetUrl('assets/images/truc_co_bg.jpg') + ')",
+          backgroundImage: `radial-gradient(circle at 50% 50%, rgba(2, 6, 23, 0.3) 0%, rgba(2, 6, 23, 0.9) 100%), url('${getAssetUrl('images/truc_co_galaxy_bg.jpg')}')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
@@ -3541,7 +3541,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               color: is121Unlocked ? 'var(--color-cuc-canh, #ff3fd5)' : '#bae6fd',
               textShadow: '0 0 8px rgba(56, 189, 248, 0.6)'
             }}>
-              {is121Unlocked ? '✦ CỰC CẢNH 121: HỖN ĐỘN KHAI HOA · NGŨ ĐĂNG QUY TÂM DIỆT VẠN PHÁP' : '✦ CỰC CẢNH 121: TỬ VI THIÊN ĐỈNH (PHONG ẤN)'}
+              {is121Unlocked ? '✦ CỰC CẢNH 121: HỖN ĐỘN KHAI HOA' : '✦ CỰC CẢNH 121: TỬ VI THIÊN ĐỈNH'}
             </span>
           </div>
 
@@ -4445,7 +4445,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               </div>
 
               <svg
-                viewBox="0 0 1280 870"
+                viewBox={isMobile ? "120 20 1040 830" : "0 0 1280 870"}
                 preserveAspectRatio="xMidYMid meet"
                 style={{
                   position: 'absolute',

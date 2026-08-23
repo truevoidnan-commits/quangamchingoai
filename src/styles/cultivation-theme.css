@@ -791,3 +791,170 @@
     display: none;
   }
 }
+
+
+/* ========================================================
+   SANCTUM (TÀNG BẢO ĐIỆN) RESPONSIVE STYLES
+   ======================================================== */
+.sanctum-header-wrapper {
+  height: 60px;
+  padding: 0 20px;
+  border-bottom: 1px solid rgba(255, 204, 0, 0.25);
+  background: rgba(16, 25, 39, 0.95);
+  backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.sanctum-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sanctum-back-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(34, 195, 240, 0.12);
+  border: 1px solid rgba(34, 195, 240, 0.35);
+  color: var(--accent-cyan-bright, #22c3f0);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sanctum-header-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-kim);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sanctum-header-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  display: block;
+  white-space: nowrap;
+}
+
+.sanctum-header-stats {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  border-radius: 8px;
+  padding: 4px 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sanctum-tabs-container {
+  padding: 10px 16px 0 16px;
+  display: flex;
+  gap: 8px;
+  background: rgba(16, 25, 39, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sanctum-tabs-container button {
+  padding: 8px 14px !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+}
+
+.sanctum-altar-box {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 204, 0, 0.08) 0%, rgba(16, 25, 39, 0.9) 100%);
+  border: 1.5px solid rgba(255, 204, 0, 0.35);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  flex-wrap: wrap;
+}
+
+.sanctum-content-area {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .sanctum-header-wrapper {
+    height: 52px;
+    padding: 0 10px;
+  }
+  .sanctum-back-text {
+    display: none;
+  }
+  .sanctum-header-sub {
+    display: none;
+  }
+  .sanctum-header-stats {
+    padding: 2px 6px;
+    gap: 6px;
+  }
+  .sanctum-altar-box {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .sanctum-content-area {
+    padding: 10px;
+  }
+}
+
+/* ========================================================
+   NGƯNG KHÍ BOTTOM SUMMARY & CONTROLS RESPONSIVE
+   ======================================================== */
+.ngung-khi-bottom-summary {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  background: rgba(8, 14, 26, 0.94);
+  border: 1.2px solid rgba(34, 195, 240, 0.45);
+  border-radius: 14px;
+  padding: 6px 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+  max-width: 96%;
+  width: max-content;
+}
+
+@media (max-width: 768px) {
+  .ngung-khi-bottom-summary {
+    bottom: 6px;
+    padding: 4px 8px;
+    gap: 4px;
+    font-size: 10px;
+  }
+  .ngung-khi-btn-text {
+    font-size: 11px;
+  }
+}
