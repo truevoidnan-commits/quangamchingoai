@@ -25,7 +25,7 @@ export default function CultivationWorkspace() {
   return (
     <div className={`cultivation-workspace ${isFocusMode ? 'focus-mode' : ''} mobile-tab-${mobileTab}`}>
       
-      {/* Mobile Top Navigation Tabs (visible only on screens <= 1024px) */}
+      {/* Mobile Top Navigation Tabs */}
       <div className="cultivation-mobile-tabs">
         <button
           className={`mobile-tab-btn ${mobileTab === 'visualizer' ? 'active' : ''}`}
@@ -133,58 +133,64 @@ export default function CultivationWorkspace() {
       <div className={`cultivation-col-center ${mobileTab === 'visualizer' ? 'mobile-show' : ''}`}>
         {/* Workspace Top Header */}
         <div className="cultivation-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Mobile quick back */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexShrink: 1 }}>
             <span 
               className="mobile-back-icon"
               onClick={() => navigate('/')}
-              style={{ cursor: 'pointer', fontSize: 18, color: 'var(--accent-cyan)' }}
+              style={{ cursor: 'pointer', fontSize: 16, color: 'var(--accent-cyan)', padding: '4px 6px', flexShrink: 0 }}
               title="Quay lại Thư Viện"
             >
               ←
             </span>
-            <h1 style={{ margin: 0, fontSize: 'clamp(13px, 3.8vw, 19px)' }}>
-              <span>
+            <h1 style={{ margin: 0, fontSize: 'clamp(12px, 3.5vw, 18px)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span className="desktop-header-title">
                 {activeView === 'ngung_khi' && '💭 KHÍ HẢI NGƯNG KHÍ'}
                 {activeView === 'truc_co' && '🔥 TRÚC CƠ TINH ĐỒ'}
                 {activeView === 'kim_dan' && '🏛️ THIÊN CUNG KIM ĐAN'}
                 {(activeView === 'nguyen_anh' || activeView === 'gia_anh') && '👑 ĐẠO ANH THẦN THỂ'}
               </span>
+              <span className="mobile-header-title">
+                {activeView === 'ngung_khi' && '💭 NGƯNG KHÍ'}
+                {activeView === 'truc_co' && '🔥 TRÚC CƠ'}
+                {activeView === 'kim_dan' && '🏛️ KIM ĐAN'}
+                {(activeView === 'nguyen_anh' || activeView === 'gia_anh') && '👑 NGUYÊN ANH'}
+              </span>
             </h1>
           </div>
 
           {/* Top Right Header Elements */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             <button
               onClick={() => navigate('/sanctum')}
               className="cultivation-header-sanctum-btn"
               style={{
-                padding: '4px 10px',
+                padding: '4px 8px',
                 borderRadius: 20,
                 background: 'linear-gradient(135deg, rgba(255, 204, 0, 0.16) 0%, rgba(34, 195, 240, 0.12) 100%)',
-                border: '1.5px solid var(--color-kim)',
+                border: '1.2px solid var(--color-kim)',
                 color: 'var(--color-kim)',
-                fontSize: 11,
+                fontSize: 10.5,
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4,
-                boxShadow: '0 0 10px rgba(255, 204, 0, 0.2)',
-                transition: 'all 0.2s ease'
+                gap: 3,
+                boxShadow: '0 0 8px rgba(255, 204, 0, 0.2)',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
               }}
               title="Mở Tàng Bảo Điện trưng bày toàn cảnh 72 Mệnh Đăng & 13 Thiên Cung"
             >
-              <span>🏛️ TÀNG BẢO ĐIỆN</span>
+              <span>🏛️ Điện</span>
             </button>
 
             <span style={{
               fontFamily: "'Noto Serif', serif",
-              fontSize: 11,
+              fontSize: 10.5,
               fontWeight: 800,
               color: 'var(--color-kim)',
               background: 'rgba(255, 204, 0, 0.1)',
-              padding: '4px 8px',
+              padding: '3px 8px',
               borderRadius: 20,
               border: '1px solid rgba(255, 204, 0, 0.3)',
               whiteSpace: 'nowrap'
@@ -212,8 +218,6 @@ export default function CultivationWorkspace() {
           <RealmPreviewVisualizer
             cultivation={{ ...cultivation, realm: activeView }}
           />
-
-
         </div>
       </div>
 

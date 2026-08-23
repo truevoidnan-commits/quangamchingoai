@@ -129,7 +129,7 @@ export function GradeLotusAltar({ config, isFilled, lampObj, ArtifactIcon, idx }
   const innerAngles = [22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 170 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, width: '100%', maxWidth: 140 }}>
       {/* KEYFRAME ANIMATION NGỌN LỬA CHÁY BỐC LÊN TỰ NHIÊN (THERMAL SHIMMER & RISING GLOW) */}
       <style>{`
         @keyframes flameBurn-${idx} {
@@ -3532,7 +3532,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             boxShadow: is121Unlocked ? '0 0 20px rgba(255, 63, 213, 0.5)' : '0 0 14px rgba(0, 0, 0, 0.5)',
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
-            maxWidth: 'calc(100% - 300px)'
+            maxWidth: '92%', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 'clamp(9.5px, 2.6vw, 11.5px)'
           }}>
             <span style={{ 
               fontSize: 11.5, 
@@ -4400,6 +4400,10 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               minHeight: '100%',
               flex: 1,
               background: 'radial-gradient(circle at 50% 50%, rgba(12, 18, 36, 0.98) 0%, rgba(4, 7, 16, 1) 100%)',
+              backgroundImage: `radial-gradient(circle at 50% 50%, rgba(4, 7, 16, 0.25) 0%, rgba(4, 7, 16, 0.85) 100%), url('${getAssetUrl('images/bg_god_cosmic_eye.jpg')}')`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
               border: '1.5px solid rgba(251, 191, 36, 0.35)',
               borderRadius: 0,
               boxShadow: '0 0 45px rgba(0, 0, 0, 0.9), inset 0 0 35px rgba(251, 191, 36, 0.15)',

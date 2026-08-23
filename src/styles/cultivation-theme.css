@@ -774,3 +774,20 @@
     transform: scale(0.62) !important;
   }
 }
+
+
+.mobile-header-title {
+  display: none;
+}
+.desktop-header-title {
+  display: inline;
+}
+
+@media (max-width: 768px) {
+  .mobile-header-title {
+    display: inline;
+  }
+  .desktop-header-title {
+    display: none;
+  }
+}
