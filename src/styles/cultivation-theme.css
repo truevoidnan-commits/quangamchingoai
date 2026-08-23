@@ -754,24 +754,24 @@
 
 @media (max-width: 768px) {
   .lotus-altar-tl {
-    top: 32px !important;
+    top: 44px !important;
     left: 10px !important;
-    transform: scale(0.55) !important;
+    transform: scale(0.50) !important;
   }
   .lotus-altar-tr {
-    top: 32px !important;
+    top: 44px !important;
     right: 10px !important;
-    transform: scale(0.55) !important;
+    transform: scale(0.50) !important;
   }
   .lotus-altar-bl {
-    bottom: 28px !important;
+    bottom: 38px !important;
     left: 10px !important;
-    transform: scale(0.55) !important;
+    transform: scale(0.50) !important;
   }
   .lotus-altar-br {
-    bottom: 28px !important;
+    bottom: 38px !important;
     right: 10px !important;
-    transform: scale(0.55) !important;
+    transform: scale(0.50) !important;
   }
 }
 
@@ -957,4 +957,33 @@
   .ngung-khi-btn-text {
     font-size: 11px;
   }
+}
+
+
+/* ========================================================
+   ENFORCE 100% SQUARE CORNERS & FULL-SCREEN CANVAS
+   ======================================================== */
+.cultivation-workspace,
+.cultivation-col-center,
+.cultivation-canvas-container,
+.cultivation-header,
+.sanctum-header-wrapper {
+  border-radius: 0 !important;
+}
+
+.cultivation-canvas-container {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* GPU Hardware Acceleration for Smooth 60 FPS Rotation */
+.smooth-celestial-spin {
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
 }

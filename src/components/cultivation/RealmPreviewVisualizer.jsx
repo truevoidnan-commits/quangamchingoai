@@ -3515,7 +3515,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           {/* 121 CỰC CẢNH THIÊN ĐỈNH (HEADER BADGE TRUNG TÂM — THÔNG THOÁNG KHÔNG CHẠM LỬA) */}
           <div style={{
             position: 'absolute',
-            top: 18,
+            top: 24,
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 20,
@@ -3642,21 +3642,17 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             style={{ width: '100%', height: '100%', maxHeight: '92vh', zIndex: 5 }}
           >
             <defs>
-              <filter id="laserGlow" filterUnits="userSpaceOnUse" x="-1000" y="-1000" width="3000" height="3000">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur1" />
-                <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur2" />
+              <filter id="laserGlow" filterUnits="userSpaceOnUse" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="blur1" />
                 <feMerge>
-                  <feMergeNode in="blur2" />
                   <feMergeNode in="blur1" />
                   <feMergeNode in="SourceGraphic" />
                 </feMerge>
               </filter>
 
-              <filter id="starBurstGlow" filterUnits="userSpaceOnUse" x="-1000" y="-1000" width="3000" height="3000">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur1" />
-                <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur2" />
+              <filter id="starBurstGlow" filterUnits="userSpaceOnUse" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="2.0" result="blur1" />
                 <feMerge>
-                  <feMergeNode in="blur2" />
                   <feMergeNode in="blur1" />
                   <feMergeNode in="SourceGraphic" />
                 </feMerge>
@@ -3721,13 +3717,12 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               }
             `}</style>
 
-            {/* A. VÒNG LỤC ĐẠI TINH TỌA 120 KHIẾU (CELESTIAL STAR CHART & 6 SECTORS) - CO GỌN R=378 GIẢI PHÓNG KHÔNG GIAN */}
+            {/* A. VÒNG LỤC ĐẠI TINH TỌA 120 KHIẾU */}
             <g 
+              className="smooth-celestial-spin"
               style={{ 
                 animation: isRotating ? 'celestialRotate 360s linear infinite' : 'none', 
-                transformOrigin: `${cx}px ${cy}px`,
-                willChange: 'transform',
-                transform: 'translate3d(0, 0, 0)'
+                transformOrigin: `${cx}px ${cy}px`
               }}
             >
               {/* Vành Tinh Đồ Ngoại Vi (Outer Astrolabe Rings R=378 & Inner Border R=192) */}
