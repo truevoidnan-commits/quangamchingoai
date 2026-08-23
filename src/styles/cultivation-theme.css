@@ -1001,11 +1001,8 @@
 }
 
 
-/* ENFORCE 100% FULL-SCREEN & ZERO BORDER RADIUS */
-.cultivation-workspace,
-.cultivation-workspace *,
-.cultivation-canvas-container,
-.cultivation-canvas-container * {
+/* ENFORCE SQUARE CANVAS FRAME ONLY — PRESERVE INNER ROUNDED ELEMENTS */
+.cultivation-canvas-container {
   border-radius: 0 !important;
 }
 
