@@ -2543,6 +2543,14 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
   const currentRealm = cultivation?.realm || 'truc_co';
   const activeViewRealm = propCultivation?.realm || activeRealmView || currentRealm;
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [hoveredStar, setHoveredStar] = useState(null);
   const [hoveredPalace, setHoveredPalace] = useState(null);
   const [pulseClickEffect, setPulseClickEffect] = useState(false);
