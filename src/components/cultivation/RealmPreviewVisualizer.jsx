@@ -3719,9 +3719,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
             {/* A. VÒNG LỤC ĐẠI TINH TỌA 120 KHIẾU */}
             <g 
-              className="smooth-celestial-spin"
+              className={isRotating ? "smooth-celestial-spin-cw" : undefined}
               style={{ 
-                animation: isRotating ? 'celestialRotate 360s linear infinite' : 'none', 
                 transformOrigin: `${cx}px ${cy}px`
               }}
             >

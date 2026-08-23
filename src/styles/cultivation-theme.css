@@ -1032,20 +1032,35 @@
 
 /* HARDWARE ACCELERATED 60 FPS ROTATION */
 @keyframes celestialRotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes celestialCounterRotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-360deg);
+  }
 }
 
-.smooth-celestial-spin {
+.smooth-celestial-spin-cw {
   transform-origin: 500px 500px !important;
-  will-change: transform !important;
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
+  transform-box: fill-box;
+  animation: celestialRotate 120s linear infinite !important;
+  will-change: transform;
+}
+
+.smooth-celestial-spin-ccw {
+  transform-origin: 500px 500px !important;
+  transform-box: fill-box;
+  animation: celestialCounterRotate 90s linear infinite !important;
+  will-change: transform;
 }
 
 @keyframes spin {
