@@ -3248,107 +3248,40 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               )}
 
               {/* ========================================================
-                  DỊ TƯỢNG 1: THẦN THÚ HUYẾT HỔ TOÀN THÂN (CHỈ HIỂN THỊ KHI TẦNG 7+)
+                  DỊ TƯỢNG 1: THẦN THÚ HUYẾT HỔ HOÀNG KIM CHÂN HỎA (HÌNH ẢNH THỰC TÁCH NỀN)
                  ======================================================== */}
               {viewMode === 'the' && hasTiger && (
                 <g
-                  transform="translate(0, -30)"
+                  transform="translate(0, -25)"
                   style={{ animation: 'nkTigerMajestic 3.4s ease-in-out infinite' }}
                 >
-                  {/* Aura Bão Lửa Khí Huyết */}
-                  <circle cx="0" cy="0" r="140" fill="rgba(239, 68, 68, 0.16)" filter="url(#nkGlowRed)" />
-                  <circle cx="0" cy="0" r="118" fill="none" stroke="#ef4444" strokeWidth="2.2" strokeDasharray="8 6" opacity="0.75" />
+                  {/* Aura Bão Lửa Khí Huyết Chân Hỏa */}
+                  <circle cx="0" cy="0" r="145" fill="rgba(239, 68, 68, 0.18)" filter="url(#nkGlowRed)" />
+                  <circle cx="0" cy="0" r="125" fill="none" stroke="#f59e0b" strokeWidth="2.2" strokeDasharray="8 6" opacity="0.85" filter="url(#nkGlowGold)" />
 
                   {/* Vết cào Huyết Long Trảo (Energy Claws) */}
                   <g style={{ animation: 'nkTigerClawSlash 1.8s ease-in-out infinite' }}>
-                    <path d="M -110,-75 L -55,-25 M -95,-85 L -45,-35 M -120,-60 L -70,-10" stroke="#fca5a5" strokeWidth="3.2" strokeLinecap="round" opacity="0.9" />
-                    <path d="M 110,-75 L 55,-25 M 95,-85 L 45,-35 M 120,-60 L 70,-10" stroke="#fca5a5" strokeWidth="3.2" strokeLinecap="round" opacity="0.9" />
+                    <path d="M -115,-75 L -60,-25 M -100,-85 L -50,-35 M -125,-60 L -75,-10" stroke="#fef08a" strokeWidth="3.4" strokeLinecap="round" opacity="0.9" filter="url(#nkGlowGold)" />
+                    <path d="M 115,-75 L 60,-25 M 100,-85 L 50,-35 M 125,-60 L 75,-10" stroke="#fef08a" strokeWidth="3.4" strokeLinecap="round" opacity="0.9" filter="url(#nkGlowGold)" />
                   </g>
 
-                  {/* Thân Hổ Uy Mãnh Cơ Bắp */}
-                  <path
-                    d="M -70,-15 C -95,20 -70,65 -20,70 C 40,75 85,45 75,-10 C 65,-45 20,-50 -20,-45 C -55,-40 -65,-30 -70,-15 Z"
-                    fill="url(#tigerBodyGrad)"
-                    stroke="#fca5a5"
-                    strokeWidth="2.6"
-                    filter="url(#nkGlowRed)"
+                  {/* HÌNH ẢNH HUYẾT HỔ CHÂN HỎA TÁCH NỀN (320px x 150px) */}
+                  <image
+                    href={getAssetUrl('images/huyet_ho_god.png')}
+                    x="-160"
+                    y="-85"
+                    width="320"
+                    height="150"
+                    preserveAspectRatio="xMidYMid meet"
+                    style={{
+                      filter: 'drop-shadow(0 0 16px rgba(251, 191, 36, 0.85)) drop-shadow(0 0 28px rgba(239, 68, 68, 0.75))',
+                      pointerEvents: 'none'
+                    }}
                   />
-
-                  {/* Đuôi Hổ Rực Lửa Cuộn Sóng */}
-                  <path
-                    d="M 65,30 C 110,60 135,15 110,-10 C 95,-25 80,-5 72,15"
-                    fill="url(#tigerBodyGrad)"
-                    stroke="#fde047"
-                    strokeWidth="2.6"
-                  />
-                  <polygon points="110,-10 128,-18 118,2" fill="#fde047" filter="url(#nkGlowGold)" />
-
-                  {/* Chân Móng Vuốt Hổ Vồ Mồi */}
-                  <path d="M -60,45 L -78,82 L -58,82" stroke="#fca5a5" strokeWidth="3.6" strokeLinecap="round" />
-                  <path d="M -25,58 L -32,92 L -12,92" stroke="#fca5a5" strokeWidth="3.6" strokeLinecap="round" />
-                  <path d="M 25,58 L 32,92 L 52,92" stroke="#fca5a5" strokeWidth="3.6" strokeLinecap="round" />
-                  <path d="M 60,45 L 78,82 L 98,82" stroke="#fca5a5" strokeWidth="3.6" strokeLinecap="round" />
-
-                  {/* ĐẦU HỔ GÓC CẠNH HÙNG DŨNG BÁ KHÍ */}
-                  <g transform="translate(0, -22)">
-                    {/* Bờm Hổ Gai Nhọn Tỏa Rực 2 Bên */}
-                    <path
-                      d="M -52,-28 L -68,-15 L -54,0 L -72,18 L -48,30 L -62,46 L -35,42 L 0,60 L 35,42 L 62,46 L 48,30 L 72,18 L 54,0 L 68,-15 L 52,-28 L 36,-50 L 0,-42 L -36,-50 Z"
-                      fill="url(#tigerBodyGrad)"
-                      stroke="#f87171"
-                      strokeWidth="2.8"
-                      filter="url(#nkGlowRed)"
-                    />
-
-                    {/* Tai Hổ Cương Mãnh Nhọn Hoắt */}
-                    <polygon points="-46,-28 -62,-65 -28,-46" fill="#7f1d1d" stroke="#fde047" strokeWidth="2.2" />
-                    <polygon points="46,-28 62,-65 28,-46" fill="#7f1d1d" stroke="#fde047" strokeWidth="2.2" />
-
-                    {/* Vầng Trán Hổ & Khung Mặt */}
-                    <path d="M -30,-40 L 0,-34 L 30,-40 L 38,-15 L 0,8 L -38,-15 Z" fill="#991b1b" stroke="#fca5a5" strokeWidth="1.8" />
-
-                    {/* Chữ "VƯƠNG" (王) Hoàng Kim Phát Quang Đại Bá Khí */}
-                    <g transform="translate(0, -24)">
-                      <path d="M -16,-10 L 16,-10 M -12,-3 L 12,-3 M -18,5 L 18,5 M 0,-10 L 0,5" stroke="#fde047" strokeWidth="3.2" strokeLinecap="round" filter="url(#nkGlowGold)" />
-                      <circle cx="0" cy="-2.5" r="2.2" fill="#fff" />
-                    </g>
-
-                    {/* Vằn Hổ Sát Khí 2 Bên Má */}
-                    <path d="M -40,-8 L -20,-2 M -44,8 L -24,10 M 40,-8 L 20,-2 M 44,8 L 24,10" stroke="#fde047" strokeWidth="2.8" strokeLinecap="round" />
-
-                    {/* MẮT HỔ XẾCH SẮC BÉN HÙNG THẦN */}
-                    <polygon points="-28,-14 -12,-10 -22,-4" fill="#fde047" filter="url(#nkGlowGold)" stroke="#b45309" strokeWidth="1" />
-                    <polygon points="28,-14 12,-10 22,-4" fill="#fde047" filter="url(#nkGlowGold)" stroke="#b45309" strokeWidth="1" />
-                    {/* Đồng Tử Sát Phạt */}
-                    <ellipse cx="-19" cy="-9" rx="2.5" ry="4" fill="#450a0a" />
-                    <ellipse cx="19" cy="-9" rx="2.5" ry="4" fill="#450a0a" />
-                    <circle cx="-18" cy="-10" r="1.2" fill="#ffffff" />
-                    <circle cx="20" cy="-10" r="1.2" fill="#ffffff" />
-
-                    {/* Mũi Hổ Gầm */}
-                    <polygon points="-8,4 8,4 0,14" fill="#450a0a" stroke="#fca5a5" strokeWidth="1.2" />
-
-                    {/* HÀM HỔ MỞ RỘNG GẦM THÉT SẤM SÉT */}
-                    <path d="M -24,16 Q 0,10 24,16 Q 28,42 0,46 Q -28,42 -24,16 Z" fill="#280507" stroke="#ef4444" strokeWidth="2.2" />
-                    {/* Răng Nanh Cực Đại Dữ Dằn */}
-                    <polygon points="-18,17 -13,35 -8,17" fill="#ffffff" stroke="#fca5a5" strokeWidth="1" />
-                    <polygon points="18,17 13,35 8,17" fill="#ffffff" stroke="#fca5a5" strokeWidth="1" />
-                    <polygon points="-12,42 -8,30 -4,42" fill="#ffffff" />
-                    <polygon points="12,42 8,30 4,42" fill="#ffffff" />
-                    <polygon points="-4,43 0,32 4,43" fill="#ffffff" />
-
-                    {/* Khí Huyết Chân Hỏa Trong Miệng */}
-                    <circle cx="0" cy="28" r="7" fill="#ef4444" filter="url(#nkGlowRed)" />
-                    <circle cx="0" cy="28" r="3" fill="#ffffff" />
-
-                    {/* Sóng Âm Gầm Vang Sấm Sét */}
-                    <path d="M -34,44 Q 0,62 34,44" fill="none" stroke="#f87171" strokeWidth="2.8" strokeLinecap="round" opacity="0.9" />
-                    <path d="M -48,56 Q 0,80 48,56" fill="none" stroke="#fde047" strokeWidth="2.2" strokeLinecap="round" opacity="0.75" />
-                  </g>
 
                   {/* Bảng Nhãn Thần Thú Huyết Hổ */}
                   <g transform="translate(0, 106)">
-                    <rect x="-105" y="-14" width="210" height="28" rx="14" fill="rgba(69, 10, 10, 0.95)" stroke="#ef4444" strokeWidth="1.8" filter="url(#nkGlowRed)" />
+                    <rect x="-110" y="-14" width="220" height="28" rx="14" fill="rgba(69, 10, 10, 0.95)" stroke="#f59e0b" strokeWidth="1.8" filter="url(#nkGlowGold)" />
                     <text y="5" textAnchor="middle" fontSize="12" fontWeight="900" fill="#fef08a" letterSpacing="1">
                       🐯 {theLvl >= 10 ? '👑 THẦN THÚ HUYẾT HỔ' : '🐯 HUYẾT HỔ HÓA HÌNH'}
                     </text>
