@@ -4431,7 +4431,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               <svg
                 viewBox="0 0 1280 870"
-                preserveAspectRatio="xMidYMid slice"
+                preserveAspectRatio="xMidYMid meet"
                 style={{
                   position: 'absolute',
                   inset: 0,
@@ -6165,7 +6165,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             }}>
               <svg
                 viewBox="0 0 1280 870"
-                preserveAspectRatio="xMidYMid slice"
+                preserveAspectRatio="xMidYMid meet"
                 style={{
                   position: 'absolute',
                   inset: 0,
