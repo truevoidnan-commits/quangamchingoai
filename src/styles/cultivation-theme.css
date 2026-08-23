@@ -995,3 +995,36 @@
   backface-visibility: hidden;
   perspective: 1000px;
 }
+
+
+/* ENFORCE 100% FULL-SCREEN & ZERO BORDER RADIUS */
+.cultivation-workspace,
+.cultivation-workspace *,
+.cultivation-canvas-container,
+.cultivation-canvas-container * {
+  border-radius: 0 !important;
+}
+
+.cultivation-canvas-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  flex: 1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+@media (max-width: 1024px) {
+  .cultivation-col-center.mobile-show {
+    height: calc(100dvh - 46px) !important;
+    height: calc(100vh - 46px) !important;
+  }
+
+  .cultivation-canvas-container {
+    height: calc(100% - 52px) !important;
+    min-height: 100% !important;
+  }
+}

@@ -2759,7 +2759,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
   };
 
   return (
-    <div className={(activeViewRealm === 'kim_dan' || activeViewRealm === 'nguyen_anh' || activeViewRealm === 'gia_anh') ? styles.visualizerWrapperKimDanFull : styles.visualizerWrapper}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100%', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', margin: 0, padding: 0, border: 'none', borderRadius: 0, overflow: 'hidden' }}>
       {/* ========================================================
           STAGE 1: NGƯNG KHÍ KHÍ HẢI — HẢI SƠN QUYẾT & HÓA HẢI KINH
          ======================================================== */}
@@ -3639,7 +3639,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           <svg 
             viewBox="0 0 1000 1000" 
             preserveAspectRatio="xMidYMid meet" 
-            style={{ width: '100%', height: '100%', maxHeight: '92vh', zIndex: 5 }}
+            style={{ width: '100%', height: '100%', maxHeight: '100%', zIndex: 5 }}
           >
             <defs>
               <filter id="laserGlow" filterUnits="userSpaceOnUse" x="-20%" y="-20%" width="140%" height="140%">
