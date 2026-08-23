@@ -85,7 +85,11 @@ class ErrorBoundary extends React.Component {
 
 function MainLayout() {
   const location = useLocation();
-  const hideHeader = location.pathname.startsWith('/cultivation') || location.pathname.startsWith('/sanctum');
+  const hideHeader = 
+    location.pathname.startsWith('/cultivation') || 
+    location.pathname.startsWith('/sanctum') ||
+    location.pathname.includes('/read/') ||
+    location.pathname.includes('/chapter/');
 
   return (
     <>
