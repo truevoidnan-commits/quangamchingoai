@@ -94,7 +94,7 @@ export default function SanctumPage() {
       <div className="sanctum-header-wrapper">
         <div className="sanctum-header-left">
           <button
-            onClick={() => navigate('/cultivation')}
+            onClick={() => navigate('/cultivation', { replace: true })}
             className="sanctum-back-btn"
           >
             <span>←</span>

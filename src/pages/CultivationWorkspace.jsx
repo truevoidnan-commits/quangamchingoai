@@ -51,7 +51,7 @@ export default function CultivationWorkspace() {
       <div className={`cultivation-col-left ${mobileTab === 'realm' ? 'mobile-show' : ''}`}>
         {/* Navigation Back to Library */}
         <div 
-          onClick={() => { if (window.history.length > 1) { navigate(-1); } else { navigate('/'); } }}
+          onClick={handleSmartBack}
           style={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -136,7 +136,7 @@ export default function CultivationWorkspace() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexShrink: 1 }}>
             <span 
               className="mobile-back-icon"
-              onClick={() => { if (window.history.length > 1) { navigate(-1); } else { navigate('/'); } }}
+              onClick={handleSmartBack}
               style={{ cursor: 'pointer', fontSize: 16, color: 'var(--accent-cyan)', padding: '4px 6px', flexShrink: 0 }}
               title="Quay lại Thư Viện"
             >

@@ -257,6 +257,8 @@ export default function ReaderPage() {
               <button
                 className={styles.topBtn}
                 onClick={() => {
+                  sessionStorage.setItem('from_reader', '1');
+                  sessionStorage.setItem('last_reading_url', window.location.hash ? window.location.hash.slice(1) : (window.location.pathname + window.location.search));
                   clearUnreadDrops();
                   navigate('/cultivation');
                 }}
@@ -350,6 +352,8 @@ export default function ReaderPage() {
               <button
                 className="btn-gold"
                 onClick={() => {
+                  sessionStorage.setItem('from_reader', '1');
+                  sessionStorage.setItem('last_reading_url', window.location.hash ? window.location.hash.slice(1) : (window.location.pathname + window.location.search));
                   setDroppedLamp(null);
                   navigate('/cultivation');
                 }}
