@@ -213,15 +213,7 @@ export default function CultivationWorkspace() {
             cultivation={{ ...cultivation, realm: activeView }}
           />
 
-          {/* Floating Mobile Quick Switcher Bar */}
-          <div className="mobile-floating-switch">
-            <button
-              onClick={() => setMobileTab('actions')}
-              className="mobile-floating-btn"
-            >
-              <span>⚡ Mở Bảng Nạp Linh & Khảm Bảo Vật ➔</span>
-            </button>
-          </div>
+
         </div>
       </div>
 

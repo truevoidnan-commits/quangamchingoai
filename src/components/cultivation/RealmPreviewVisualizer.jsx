@@ -1,3 +1,12 @@
+
+export function getAssetUrl(p) {
+  if (!p) return '';
+  if (p.startsWith('http://') || p.startsWith('https://') || p.startsWith('data:')) return p;
+  const base = import.meta.env.BASE_URL || './';
+  const cleanPath = p.startsWith('/') ? p.slice(1) : p;
+  return base.endsWith('/') ? `${base}${cleanPath}` : `${base}/${cleanPath}`;
+}
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useCultivationContext } from '../../context/CultivationContext';
 import { 
@@ -3484,7 +3493,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           borderRadius: 0,
           border: 'none',
           backgroundColor: '#020617',
-          backgroundImage: "radial-gradient(circle at 50% 50%, rgba(2, 6, 23, 0.2) 0%, rgba(2, 6, 23, 0.8) 100%), url('/assets/images/truc_co_bg.jpg')",
+          backgroundImage: "radial-gradient(circle at 50% 50%, rgba(2, 6, 23, 0.2) 0%, rgba(2, 6, 23, 0.8) 100%), url(' + getAssetUrl('assets/images/truc_co_bg.jpg') + ')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
@@ -3570,7 +3579,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           {/* TỨ ĐẠI LIÊN ĐÀI 12 PHẨM CỐ ĐỊNH Ở 4 GÓC MÀN HÌNH (HTML ABSOLUTE CORNERS) */}
           {/* Góc Tây Bắc - Tạo Hóa Thanh Liên */}
           <div 
-            style={{ position: 'absolute', top: 38, left: 20, zIndex: 15, cursor: 'pointer' }}
+            className="lotus-altar-tl"
             onClick={() => { setSelectedSlot(0); setLampModalOpen(true); }}
           >
             <LotusAltarSlot
@@ -3582,9 +3591,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             />
           </div>
 
-          {/* Góc Đông Bắc - Diệt Thế Hắc Liên (CÂN ĐỐI RA GÓC HOÀN TOÀN) */}
+          {/* Góc Đông Bắc - Diệt Thế Hắc Liên */}
           <div 
-            style={{ position: 'absolute', top: 38, right: 20, zIndex: 15, cursor: 'pointer' }}
+            className="lotus-altar-tr"
             onClick={() => { setSelectedSlot(1); setLampModalOpen(true); }}
           >
             <LotusAltarSlot
@@ -3598,7 +3607,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
           {/* Góc Tây Nam - Công Đức Kim Liên */}
           <div 
-            style={{ position: 'absolute', bottom: 22, left: 20, zIndex: 15, cursor: 'pointer' }}
+            className="lotus-altar-bl"
             onClick={() => { setSelectedSlot(2); setLampModalOpen(true); }}
           >
             <LotusAltarSlot
@@ -3612,7 +3621,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
           {/* Góc Đông Nam - Nghiệp Hỏa Hồng Liên */}
           <div 
-            style={{ position: 'absolute', bottom: 22, right: 20, zIndex: 15, cursor: 'pointer' }}
+            className="lotus-altar-br"
             onClick={() => { setSelectedSlot(3); setLampModalOpen(true); }}
           >
             <LotusAltarSlot
@@ -3716,7 +3725,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             <g 
               style={{ 
                 animation: isRotating ? 'celestialRotate 360s linear infinite' : 'none', 
-                transformOrigin: `${cx}px ${cy}px` 
+                transformOrigin: `${cx}px ${cy}px`,
+                willChange: 'transform',
+                transform: 'translate3d(0, 0, 0)'
               }}
             >
               {/* Vành Tinh Đồ Ngoại Vi (Outer Astrolabe Rings R=378 & Inner Border R=192) */}
@@ -4548,7 +4559,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 <g>
                   {/* Bức tranh Thần Nhãn Tinh Vân xé toạc không gian hiển thị chuẩn tỉ lệ */}
                   <image
-                    href="/images/bg_god_cosmic_eye.jpg"
+                    href={getAssetUrl('images/bg_god_cosmic_eye.jpg')}
                     x="0"
                     y="0"
                     width="1280"
@@ -5019,38 +5030,38 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                     // MAPPING ẢNH GEN AI
                     const lampGenMap = {
-                      'cuu_chuyen_luan_hoi': '/icons/than_pham/lamp_cuu_chuyen_luan_hoi.jpg',
-                      'hon_don_so_khai': '/icons/than_pham/lamp_hon_don_so_khai.jpg',
-                      'hong_mong_bat_diet': '/icons/than_pham/lamp_hong_mong_bat_diet.jpg',
-                      'khoi_nguyen_thoi_khong': '/icons/than_pham/lamp_khoi_nguyen_thoi_khong.jpg',
-                      'sang_the_ban_nguyen': '/icons/than_pham/lamp_sang_the_ban_nguyen.jpg',
-                      'tan_tien_phe_than': '/icons/than_pham/lamp_tan_tien_phe_than.jpg',
-                      'thai_co_than_long': '/icons/than_pham/lamp_thai_co_than_long.jpg',
-                      'thien_dao_trung_phat': '/icons/than_pham/lamp_thien_dao_trung_phat.jpg',
-                      'thuong_thuong_loi_kiep': '/icons/than_pham/lamp_thuong_thuong_loi_kiep.jpg',
-                      'toi_cao_thien_menh': '/icons/than_pham/lamp_toi_cao_thien_menh.jpg',
-                      'tuc_menh_nhan_qua': '/icons/than_pham/lamp_tuc_menh_nhan_qua.jpg',
-                      'van_gioi_quy_nhat': '/icons/than_pham/lamp_van_gioi_quy_nhat.jpg',
-                      'van_menh_hu_vo': '/icons/than_pham/lamp_van_menh_hu_vo.jpg',
+                      'cuu_chuyen_luan_hoi': getAssetUrl('icons/than_pham/lamp_cuu_chuyen_luan_hoi.jpg'),
+                      'hon_don_so_khai': getAssetUrl('icons/than_pham/lamp_hon_don_so_khai.jpg'),
+                      'hong_mong_bat_diet': getAssetUrl('icons/than_pham/lamp_hong_mong_bat_diet.jpg'),
+                      'khoi_nguyen_thoi_khong': getAssetUrl('icons/than_pham/lamp_khoi_nguyen_thoi_khong.jpg'),
+                      'sang_the_ban_nguyen': getAssetUrl('icons/than_pham/lamp_sang_the_ban_nguyen.jpg'),
+                      'tan_tien_phe_than': getAssetUrl('icons/than_pham/lamp_tan_tien_phe_than.jpg'),
+                      'thai_co_than_long': getAssetUrl('icons/than_pham/lamp_thai_co_than_long.jpg'),
+                      'thien_dao_trung_phat': getAssetUrl('icons/than_pham/lamp_thien_dao_trung_phat.jpg'),
+                      'thuong_thuong_loi_kiep': getAssetUrl('icons/than_pham/lamp_thuong_thuong_loi_kiep.jpg'),
+                      'toi_cao_thien_menh': getAssetUrl('icons/than_pham/lamp_toi_cao_thien_menh.jpg'),
+                      'tuc_menh_nhan_qua': getAssetUrl('icons/than_pham/lamp_tuc_menh_nhan_qua.jpg'),
+                      'van_gioi_quy_nhat': getAssetUrl('icons/than_pham/lamp_van_gioi_quy_nhat.jpg'),
+                      'van_menh_hu_vo': getAssetUrl('icons/than_pham/lamp_van_menh_hu_vo.jpg'),
                     };
 
                     const artGenMap = {
-                      'hong_mong_khi': '/icons/than_pham/hong_mong_tu_khi.jpg',
-                      'van_menh_chau': '/icons/than_pham/van_menh_chau.jpg',
-                      'hon_don_so_khai': '/icons/than_pham/hon_don_so_khai.jpg',
-                      'ngoc_diep': '/icons/than_pham/ngoc_diep.jpg',
-                      'bat_hu_dinh': '/icons/than_pham/bat_hu_dinh.jpg',
-                      'thien_dao_an': '/icons/than_pham/so_tam_quyet.jpg',
-                      'hu_vo_ban_nguyen': '/icons/than_pham/hu_vo_tich_diet.jpg',
-                      'khoi_nguyen_moc': '/icons/than_pham/the_gioi_moc.jpg',
-                      'luan_hoi_ban': '/icons/than_pham/luan_hoi_chan_kinh.jpg',
-                      'tuc_menh_toa': '/icons/than_pham/tuc_menh_toa.jpg',
-                      'thuong_thuong_kiem': '/icons/than_pham/phat_thien_kiem.jpg',
-                      'dai_la_chuong': '/icons/than_pham/thien_cuong_chuong.jpg',
-                      'thoi_khong_chau': '/icons/than_pham/thoi_khong_chau.jpg',
-                      'van_co_long_to': '/icons/than_pham/van_co_long_to.jpg',
-                      'sang_the_quang': '/icons/than_pham/sang_the_quang.jpg',
-                      'dai_dao_tieu_dao': '/icons/than_pham/tieu_dao_thien.jpg',
+                      'hong_mong_khi': getAssetUrl('icons/than_pham/hong_mong_tu_khi.jpg'),
+                      'van_menh_chau': getAssetUrl('icons/than_pham/van_menh_chau.jpg'),
+                      'hon_don_so_khai': getAssetUrl('icons/than_pham/hon_don_so_khai.jpg'),
+                      'ngoc_diep': getAssetUrl('icons/than_pham/ngoc_diep.jpg'),
+                      'bat_hu_dinh': getAssetUrl('icons/than_pham/bat_hu_dinh.jpg'),
+                      'thien_dao_an': getAssetUrl('icons/than_pham/so_tam_quyet.jpg'),
+                      'hu_vo_ban_nguyen': getAssetUrl('icons/than_pham/hu_vo_tich_diet.jpg'),
+                      'khoi_nguyen_moc': getAssetUrl('icons/than_pham/the_gioi_moc.jpg'),
+                      'luan_hoi_ban': getAssetUrl('icons/than_pham/luan_hoi_chan_kinh.jpg'),
+                      'tuc_menh_toa': getAssetUrl('icons/than_pham/tuc_menh_toa.jpg'),
+                      'thuong_thuong_kiem': getAssetUrl('icons/than_pham/phat_thien_kiem.jpg'),
+                      'dai_la_chuong': getAssetUrl('icons/than_pham/thien_cuong_chuong.jpg'),
+                      'thoi_khong_chau': getAssetUrl('icons/than_pham/thoi_khong_chau.jpg'),
+                      'van_co_long_to': getAssetUrl('icons/than_pham/van_co_long_to.jpg'),
+                      'sang_the_quang': getAssetUrl('icons/than_pham/sang_the_quang.jpg'),
+                      'dai_dao_tieu_dao': getAssetUrl('icons/than_pham/tieu_dao_thien.jpg'),
                     };
 
                     const itemObj = isLampPalace ? lobj : artifactObj;
@@ -5690,38 +5701,38 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
         // MAPPING ẢNH GEN AI CHO MỆNH ĐĂNG & VẬT TRẤN ÁP
         const lampGenMap = {
-          'cuu_chuyen_luan_hoi': '/icons/than_pham/lamp_cuu_chuyen_luan_hoi.jpg',
-          'hon_don_so_khai': '/icons/than_pham/lamp_hon_don_so_khai.jpg',
-          'hong_mong_bat_diet': '/icons/than_pham/lamp_hong_mong_bat_diet.jpg',
-          'khoi_nguyen_thoi_khong': '/icons/than_pham/lamp_khoi_nguyen_thoi_khong.jpg',
-          'sang_the_ban_nguyen': '/icons/than_pham/lamp_sang_the_ban_nguyen.jpg',
-          'tan_tien_phe_than': '/icons/than_pham/lamp_tan_tien_phe_than.jpg',
-          'thai_co_than_long': '/icons/than_pham/lamp_thai_co_than_long.jpg',
-          'thien_dao_trung_phat': '/icons/than_pham/lamp_thien_dao_trung_phat.jpg',
-          'thuong_thuong_loi_kiep': '/icons/than_pham/lamp_thuong_thuong_loi_kiep.jpg',
-          'toi_cao_thien_menh': '/icons/than_pham/lamp_toi_cao_thien_menh.jpg',
-          'tuc_menh_nhan_qua': '/icons/than_pham/lamp_tuc_menh_nhan_qua.jpg',
-          'van_gioi_quy_nhat': '/icons/than_pham/lamp_van_gioi_quy_nhat.jpg',
-          'van_menh_hu_vo': '/icons/than_pham/lamp_van_menh_hu_vo.jpg',
+          'cuu_chuyen_luan_hoi': getAssetUrl('icons/than_pham/lamp_cuu_chuyen_luan_hoi.jpg'),
+          'hon_don_so_khai': getAssetUrl('icons/than_pham/lamp_hon_don_so_khai.jpg'),
+          'hong_mong_bat_diet': getAssetUrl('icons/than_pham/lamp_hong_mong_bat_diet.jpg'),
+          'khoi_nguyen_thoi_khong': getAssetUrl('icons/than_pham/lamp_khoi_nguyen_thoi_khong.jpg'),
+          'sang_the_ban_nguyen': getAssetUrl('icons/than_pham/lamp_sang_the_ban_nguyen.jpg'),
+          'tan_tien_phe_than': getAssetUrl('icons/than_pham/lamp_tan_tien_phe_than.jpg'),
+          'thai_co_than_long': getAssetUrl('icons/than_pham/lamp_thai_co_than_long.jpg'),
+          'thien_dao_trung_phat': getAssetUrl('icons/than_pham/lamp_thien_dao_trung_phat.jpg'),
+          'thuong_thuong_loi_kiep': getAssetUrl('icons/than_pham/lamp_thuong_thuong_loi_kiep.jpg'),
+          'toi_cao_thien_menh': getAssetUrl('icons/than_pham/lamp_toi_cao_thien_menh.jpg'),
+          'tuc_menh_nhan_qua': getAssetUrl('icons/than_pham/lamp_tuc_menh_nhan_qua.jpg'),
+          'van_gioi_quy_nhat': getAssetUrl('icons/than_pham/lamp_van_gioi_quy_nhat.jpg'),
+          'van_menh_hu_vo': getAssetUrl('icons/than_pham/lamp_van_menh_hu_vo.jpg'),
         };
 
         const artGenMap = {
-          'hong_mong_khi': '/icons/than_pham/hong_mong_tu_khi.jpg',
-          'van_menh_chau': '/icons/than_pham/van_menh_chau.jpg',
-          'hon_don_so_khai': '/icons/than_pham/hon_don_so_khai.jpg',
-          'ngoc_diep': '/icons/than_pham/ngoc_diep.jpg',
-          'bat_hu_dinh': '/icons/than_pham/bat_hu_dinh.jpg',
-          'thien_dao_an': '/icons/than_pham/so_tam_quyet.jpg',
-          'hu_vo_ban_nguyen': '/icons/than_pham/hu_vo_tich_diet.jpg',
-          'khoi_nguyen_moc': '/icons/than_pham/the_gioi_moc.jpg',
-          'luan_hoi_ban': '/icons/than_pham/luan_hoi_chan_kinh.jpg',
-          'tuc_menh_toa': '/icons/than_pham/tuc_menh_toa.jpg',
-          'thuong_thuong_kiem': '/icons/than_pham/phat_thien_kiem.jpg',
-          'dai_la_chuong': '/icons/than_pham/thien_cuong_chuong.jpg',
-          'thoi_khong_chau': '/icons/than_pham/thoi_khong_chau.jpg',
-          'van_co_long_to': '/icons/than_pham/van_co_long_to.jpg',
-          'sang_the_quang': '/icons/than_pham/sang_the_quang.jpg',
-          'dai_dao_tieu_dao': '/icons/than_pham/tieu_dao_thien.jpg',
+          'hong_mong_khi': getAssetUrl('icons/than_pham/hong_mong_tu_khi.jpg'),
+          'van_menh_chau': getAssetUrl('icons/than_pham/van_menh_chau.jpg'),
+          'hon_don_so_khai': getAssetUrl('icons/than_pham/hon_don_so_khai.jpg'),
+          'ngoc_diep': getAssetUrl('icons/than_pham/ngoc_diep.jpg'),
+          'bat_hu_dinh': getAssetUrl('icons/than_pham/bat_hu_dinh.jpg'),
+          'thien_dao_an': getAssetUrl('icons/than_pham/so_tam_quyet.jpg'),
+          'hu_vo_ban_nguyen': getAssetUrl('icons/than_pham/hu_vo_tich_diet.jpg'),
+          'khoi_nguyen_moc': getAssetUrl('icons/than_pham/the_gioi_moc.jpg'),
+          'luan_hoi_ban': getAssetUrl('icons/than_pham/luan_hoi_chan_kinh.jpg'),
+          'tuc_menh_toa': getAssetUrl('icons/than_pham/tuc_menh_toa.jpg'),
+          'thuong_thuong_kiem': getAssetUrl('icons/than_pham/phat_thien_kiem.jpg'),
+          'dai_la_chuong': getAssetUrl('icons/than_pham/thien_cuong_chuong.jpg'),
+          'thoi_khong_chau': getAssetUrl('icons/than_pham/thoi_khong_chau.jpg'),
+          'van_co_long_to': getAssetUrl('icons/than_pham/van_co_long_to.jpg'),
+          'sang_the_quang': getAssetUrl('icons/than_pham/sang_the_quang.jpg'),
+          'dai_dao_tieu_dao': getAssetUrl('icons/than_pham/tieu_dao_thien.jpg'),
         };
 
         const getTierConfig = (tier) => {
