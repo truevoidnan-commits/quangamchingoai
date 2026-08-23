@@ -7103,9 +7103,28 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </div>
               )}
 
-              {LIFE_LAMPS
-                .filter(lamp => lampFilterTier === 'all' || lamp.tier === lampFilterTier)
-                .map(lamp => {
+              {(() => {
+                const ownedLampIds = Array.from(new Set([...(cultivation?.absorbedLamps || []), ...(cultivation?.inventoryLamps || [])]));
+                const ownedList = LIFE_LAMPS.filter(l => ownedLampIds.includes(l.id));
+                const filteredList = ownedList.filter(lamp => lampFilterTier === 'all' || lamp.tier === lampFilterTier);
+
+                if (filteredList.length === 0) {
+                  return (
+                    <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: 36, marginBottom: 8 }}>🏮</div>
+                      <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--color-kim)', marginBottom: 6 }}>
+                        {ownedList.length === 0 
+                          ? 'Chưa sở hữu Mệnh Đăng nào' 
+                          : `Không có Mệnh Đăng phẩm ${LAMP_TIERS[lampFilterTier]?.name || lampFilterTier} trong Túi Đồ`}
+                      </div>
+                      <p style={{ fontSize: 11.5, margin: '0', lineHeight: 1.6, color: 'var(--text-sub)' }}>
+                        Đạo hữu hãy tích lũy tu vi khi đọc truyện để rơi cơ duyên hoặc vào <strong>Tàng Bảo Điện</strong> để sở hữu Mệnh Đăng.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return filteredList.map(lamp => {
                   const isEquippedInThisSlot = selectedSlot !== null && absorbedLamps[selectedSlot] === lamp.id;
                   const isEquippedElsewhere = absorbedLamps.includes(lamp.id) && !isEquippedInThisSlot;
                   const tierInfo = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
@@ -7170,7 +7189,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                       </div>
                     </div>
                   );
-                })}
+                });
+              })()}
             </div>
           </div>
         </div>
