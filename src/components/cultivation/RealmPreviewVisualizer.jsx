@@ -2767,7 +2767,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         <div style={{
           width: '100%',
           height: '100%',
-          minHeight: 680,
+          minHeight: '100%',
           flex: 1,
           position: 'relative',
           display: 'flex',
@@ -3483,7 +3483,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         <div style={{
           width: '100%',
           height: '100%',
-          minHeight: 680,
+          minHeight: '100%',
           flex: 1,
           position: 'relative',
           display: 'flex',
@@ -4399,9 +4399,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
-              border: '1.5px solid rgba(251, 191, 36, 0.35)',
+              border: 'none',
               borderRadius: 0,
-              boxShadow: '0 0 45px rgba(0, 0, 0, 0.9), inset 0 0 35px rgba(251, 191, 36, 0.15)',
+              boxShadow: 'none',
               overflow: 'hidden',
               margin: 0,
               padding: 0
@@ -6170,7 +6170,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               minHeight: '100%',
               flex: 1,
               background: 'radial-gradient(circle at 50% 50%, #0a0e24 0%, #02040a 100%)',
-              border: '1.5px solid rgba(251, 191, 36, 0.35)',
+              border: 'none',
+              borderRadius: 0,
               overflow: 'hidden'
             }}>
               <svg
