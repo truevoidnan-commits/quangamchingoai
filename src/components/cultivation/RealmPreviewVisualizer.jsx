@@ -2938,6 +2938,40 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           }
         }
 
+        
+        @keyframes ink-wave-dye {
+          0%, 36% {
+            clip-path: polygon(0% 0%, 0% 0%, -15% 100%, 0% 100%);
+          }
+          48% {
+            clip-path: polygon(0% 0%, 120% 0%, 105% 100%, 0% 100%);
+          }
+          50%, 86% {
+            clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+          }
+          98% {
+            clip-path: polygon(120% 0%, 120% 0%, 105% 100%, 105% 100%);
+          }
+          100% {
+            clip-path: polygon(0% 0%, 0% 0%, -15% 100%, 0% 100%);
+          }
+        }
+
+        @keyframes ink-wave-border {
+          0%, 36% {
+            border-color: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.35), inset 0 0 8px rgba(255, 255, 255, 0.15);
+          }
+          48%, 86% {
+            border-color: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 0 26px rgba(255, 255, 255, 0.7), inset 0 0 10px rgba(255, 255, 255, 0.35);
+          }
+          98%, 100% {
+            border-color: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.35), inset 0 0 8px rgba(255, 255, 255, 0.15);
+          }
+        }
+
         @keyframes taicuc-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes taicuc-spin-rev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
         @keyframes halo-pulse {
