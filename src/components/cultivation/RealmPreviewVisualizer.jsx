@@ -3807,9 +3807,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           };
 
           const canvasWidth = isMobile ? 720 : 1280;
-          const canvasHeight = isMobile ? 1280 : 870;
+          const canvasHeight = isMobile ? 1060 : 870;
           const centerCanvasX = isMobile ? 360 : 646;
-          const centerCanvasY = isMobile ? 640 : 444;
+          const centerCanvasY = isMobile ? 530 : 444;
           const totalPalaces = maxThienCung;
 
           const palaceCoordinates = (() => {
@@ -3830,19 +3830,19 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             ];
 
             const mobile13Positions = [
-              { id: 'van_menh_hu_vo',      x: 360, y: 115, isTop: true, scale: 1.15, nw: 180 },
-              { id: 'dai_dao_tieu_dao',    x: 150, y: 245, scale: 1.05, nw: 165 },
-              { id: 'to_long_than_cung',   x: 220, y: 420, scale: 1.05, nw: 160 },
-              { id: 'hu_vo_ban_nguyen',    x: 570, y: 245, scale: 1.05, nw: 165 },
-              { id: 'tuc_menh_nhan_qua',   x: 500, y: 420, scale: 1.05, nw: 160 },
-              { id: 'phat_thien_kiem',     x: 130, y: 640, scale: 1.08, nw: 165 },
-              { id: 'hong_mong_bat_diet',  x: 590, y: 640, scale: 1.08, nw: 165 },
-              { id: 'luan_hoi_ban',        x: 220, y: 860, scale: 1.05, nw: 160 },
-              { id: 'ngoc_diep',           x: 500, y: 860, scale: 1.05, nw: 160 },
-              { id: 'hon_don_so_khai',    x: 150, y: 1035, scale: 1.05, nw: 165 },
-              { id: 'khoi_nguyen_thoi_khong', x: 570, y: 1035, scale: 1.05, nw: 165 },
-              { id: 'sang_the_quang',      x: 240, y: 1195, scale: 1.05, nw: 165 },
-              { id: 'cuu_chuyen_luan_hoi', x: 480, y: 1195, scale: 1.05, nw: 165 },
+              { id: 'van_menh_hu_vo',      x: 360, y: 100, isTop: true, scale: 1.32, nw: 185 },
+              { id: 'dai_dao_tieu_dao',    x: 135, y: 215, scale: 1.22, nw: 175 },
+              { id: 'to_long_than_cung',   x: 235, y: 355, scale: 1.22, nw: 175 },
+              { id: 'hu_vo_ban_nguyen',    x: 585, y: 215, scale: 1.22, nw: 175 },
+              { id: 'tuc_menh_nhan_qua',   x: 485, y: 355, scale: 1.22, nw: 175 },
+              { id: 'phat_thien_kiem',     x: 120, y: 530, scale: 1.25, nw: 175 },
+              { id: 'hong_mong_bat_diet',  x: 600, y: 530, scale: 1.25, nw: 175 },
+              { id: 'luan_hoi_ban',        x: 235, y: 705, scale: 1.22, nw: 175 },
+              { id: 'ngoc_diep',           x: 485, y: 705, scale: 1.22, nw: 175 },
+              { id: 'hon_don_so_khai',    x: 135, y: 845, scale: 1.22, nw: 175 },
+              { id: 'khoi_nguyen_thoi_khong', x: 585, y: 845, scale: 1.22, nw: 175 },
+              { id: 'sang_the_quang',      x: 235, y: 975, scale: 1.25, nw: 175 },
+              { id: 'cuu_chuyen_luan_hoi', x: 485, y: 975, scale: 1.25, nw: 175 },
             ];
 
             const standardList = isMobile ? mobile13Positions : desktop13Positions;
@@ -3900,7 +3900,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               padding: 0
             }}>
               <svg
-                viewBox={isMobile ? "0 0 720 1280" : "0 0 1280 870"}
+                viewBox={isMobile ? "0 0 720 1060" : "0 0 1280 870"}
                 preserveAspectRatio="xMidYMid meet"
                 style={{
                   position: 'absolute',
@@ -4548,8 +4548,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     const clipId = `orbClip3D-${i}`;
                     const highlight = isRealized ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.12)';
 
-                    // Bảng tên chiều rộng tương ứng từng vành
-                    const nw = pos.nameWidth || 172;
+                    // Bảng tên chiều rộng tương ứng từng vành, tự động ôm vừa vặn
+                    const nw = Math.max(pos.nameWidth || 175, palaceName.length * 8.8 + 32);
                     const halfNw = nw / 2;
 
                     return (
@@ -4932,10 +4932,10 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             {/* Nền bảng biển ngạch gỗ mun / ngọc huyền vũ đen nhung viền phẩm cấp */}
                             <rect
                               x={-halfNw}
-                              y="-12"
+                              y="-13"
                               width={nw}
-                              height="24"
-                              rx="3"
+                              height="26"
+                              rx="3.5"
                               fill="rgba(6, 10, 18, 0.94)"
                               stroke={isRealized ? cfg.border : "rgba(100, 116, 139, 0.6)"}
                               strokeWidth={isRealized ? "1.3" : "0.9"}
@@ -4945,10 +4945,10 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             {/* Viền chỉ vàng / hào quang phẩm cấp bên trong */}
                             <rect
                               x={-halfNw + 3}
-                              y="-9"
+                              y="-10"
                               width={nw - 6}
-                              height="18"
-                              rx="2"
+                              height="20"
+                              rx="2.5"
                               fill="none"
                               stroke={cfg.primary}
                               strokeWidth="0.8"
@@ -4958,18 +4958,18 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             {/* 4 Góc Phù Điêu Hoa Văn Cổ Thạch / Mạ Vàng */}
                             {isRealized && (
                               <g stroke={cfg.border} strokeWidth="1.1" fill="none">
-                                <path d={`M ${-halfNw + 6} -12 L ${-halfNw + 1} -12 L ${-halfNw + 1} -7`} />
-                                <path d={`M ${halfNw - 6} -12 L ${halfNw - 1} -12 L ${halfNw - 1} -7`} />
-                                <path d={`M ${-halfNw + 6} 12 L ${-halfNw + 1} 12 L ${-halfNw + 1} 7`} />
-                                <path d={`M ${halfNw - 6} 12 L ${halfNw - 1} 12 L ${halfNw - 1} 7`} />
+                                <path d={`M ${-halfNw + 6} -13 L ${-halfNw + 1} -13 L ${-halfNw + 1} -8`} />
+                                <path d={`M ${halfNw - 6} -13 L ${halfNw - 1} -13 L ${halfNw - 1} -8`} />
+                                <path d={`M ${-halfNw + 6} 13 L ${-halfNw + 1} 13 L ${-halfNw + 1} 8`} />
+                                <path d={`M ${halfNw - 6} 13 L ${halfNw - 1} 13 L ${halfNw - 1} 8`} />
                               </g>
                             )}
 
-                            {/* Đính Linh Thạch / Hạt Ngọc Phẩm Cấp 2 đầu */}
+                            {/* Đính Linh Thạch / Hạt Ngọc Phẩm Cấp ở 2 TAI MÂY BÊN NGOÀI KHUNG (Không bao giờ bị chữ đè) */}
                             {isRealized && (
                               <g>
-                                <circle cx={-halfNw + 8} cy="0" r="1.8" fill={cfg.starGlow} />
-                                <circle cx={halfNw - 8} cy="0" r="1.8" fill={cfg.starGlow} />
+                                <circle cx={-halfNw - 3.5} cy="0" r="2.2" fill={cfg.starGlow} stroke={cfg.border} strokeWidth="0.6" />
+                                <circle cx={halfNw + 3.5} cy="0" r="2.2" fill={cfg.starGlow} stroke={cfg.border} strokeWidth="0.6" />
                               </g>
                             )}
 
@@ -4979,10 +4979,10 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                               y="0.8"
                               textAnchor="middle"
                               dominantBaseline="central"
-                              fontSize={palaceName.length > 22 ? "10.8" : (palaceName.length > 18 ? "11.6" : "12.5")}
+                              fontSize={palaceName.length > 22 ? "11" : (palaceName.length > 18 ? "11.8" : "12.6")}
                               fontWeight="900"
                               fill={isRealized ? (cfg.nameColor || "#fde047") : "#94a3b8"}
-                              letterSpacing="0.4"
+                              letterSpacing="0.3"
                               style={{
                                 fontFamily: 'var(--font-serif)',
                                 filter: isRealized 
