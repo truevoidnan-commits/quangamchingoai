@@ -3494,7 +3494,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             </g>
           </svg>
 
-          {/* 3. THANH THÔNG SỐ CẢNH GIỚI NGƯNG KHÍ — HIỂN THỊ ĐỘC QUYỀN HƯỚNG ĐANG CHỌN (GỌN GÀNG, ĐẶT CAO TRÁNH BỊ THANH ĐIỀU HƯỚNG CHE) */}
+          {/* 3. THANH THÔNG SỐ CẢNH GIỚI NGƯNG KHÍ — HIỂN THỊ ĐỘC QUYỀN HƯỚNG ĐANG CHỌN (GỌN GÀNG, KHÔNG BỊ TRÀN VIỀN) */}
           <div style={{
             position: 'absolute',
             bottom: isMobile ? '80px' : '22px',
@@ -3504,54 +3504,56 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 10,
-            padding: '7px 18px',
+            padding: isMobile ? '5px 12px' : '7px 18px',
             borderRadius: 24,
-            background: 'rgba(8, 14, 24, 0.94)',
+            background: 'rgba(8, 14, 24, 0.95)',
             border: viewMode === 'the' ? '1.2px solid rgba(239, 68, 68, 0.5)' : '1.2px solid rgba(56, 189, 248, 0.5)',
             backdropFilter: 'blur(12px)',
             boxShadow: viewMode === 'the' 
               ? '0 6px 20px rgba(0, 0, 0, 0.7), 0 0 14px rgba(239, 68, 68, 0.25)' 
               : '0 6px 20px rgba(0, 0, 0, 0.7), 0 0 14px rgba(56, 189, 248, 0.25)',
-            maxWidth: '92%',
-            whiteSpace: 'nowrap'
+            maxWidth: 'calc(100% - 24px)',
+            width: 'max-content',
+            boxSizing: 'border-box'
           }}>
             {viewMode === 'the' ? (
               /* Chỉ hiển thị thông tin Hải Sơn khi đang chọn hướng Thể */
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
-                fontSize: 12.5,
+                justifyContent: 'center',
+                gap: isMobile ? 6 : 8,
+                fontSize: isMobile ? 11.5 : 12.5,
                 fontWeight: 800,
                 color: '#f87171'
               }}>
-                <span style={{ fontSize: 13 }}>⚔️ Hải Sơn (Thể):</span>
-                <span style={{ color: '#fca5a5', fontWeight: 900 }}>Tầng {theLvl}/10</span>
-                <span style={{ fontSize: 11, color: '#cbd5e1' }}>({theExp.toLocaleString()} / 4,500 EXP)</span>
+                <span style={{ fontSize: isMobile ? 11.5 : 13, whiteSpace: 'nowrap' }}>⚔️ Hải Sơn:</span>
+                <span style={{ color: '#fca5a5', fontWeight: 900, whiteSpace: 'nowrap' }}>Tầng {theLvl}/10</span>
+                <span style={{ fontSize: isMobile ? 10 : 11, color: '#cbd5e1', whiteSpace: 'nowrap' }}>({theExp.toLocaleString()}/4.500)</span>
                 {(cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'the' && (
                   <span style={{
-                    fontSize: 9.5,
+                    fontSize: 9,
                     color: '#fef08a',
                     fontWeight: 900,
                     background: 'rgba(239, 68, 68, 0.25)',
-                    padding: '2px 8px',
-                    borderRadius: 10,
-                    border: '1px solid rgba(254, 240, 138, 0.5)'
+                    padding: '2px 6px',
+                    borderRadius: 8,
+                    border: '1px solid rgba(254, 240, 138, 0.5)',
+                    whiteSpace: 'nowrap'
                   }}>
-                    ⚡ Đang nạp tu vi
+                    ⚡ Đang nạp
                   </span>
                 )}
                 {theLvl >= 10 && phapLvl >= 10 && (
                   <span style={{
-                    fontSize: 9.5,
+                    fontSize: 9,
                     fontWeight: 900,
                     color: '#fde047',
                     background: 'rgba(245, 158, 11, 0.2)',
-                    padding: '2px 8px',
-                    borderRadius: 10,
+                    padding: '2px 6px',
+                    borderRadius: 8,
                     border: '1px solid rgba(253, 224, 71, 0.5)',
-                    marginLeft: 2
+                    whiteSpace: 'nowrap'
                   }}>
                     👑 Viên Mãn
                   </span>
@@ -3562,37 +3564,39 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
-                fontSize: 12.5,
+                justifyContent: 'center',
+                gap: isMobile ? 6 : 8,
+                fontSize: isMobile ? 11.5 : 12.5,
                 fontWeight: 800,
                 color: '#38bdf8'
               }}>
-                <span style={{ fontSize: 13 }}>🌊 Hóa Hải (Pháp):</span>
-                <span style={{ color: '#7dd3fc', fontWeight: 900 }}>Tầng {phapLvl}/10</span>
-                <span style={{ fontSize: 11, color: '#cbd5e1' }}>({phapExp.toLocaleString()} / 4,500 EXP)</span>
+                <span style={{ fontSize: isMobile ? 11.5 : 13, whiteSpace: 'nowrap' }}>🌊 Hóa Hải:</span>
+                <span style={{ color: '#7dd3fc', fontWeight: 900, whiteSpace: 'nowrap' }}>Tầng {phapLvl}/10</span>
+                <span style={{ fontSize: isMobile ? 10 : 11, color: '#cbd5e1', whiteSpace: 'nowrap' }}>({phapExp.toLocaleString()}/4.500)</span>
                 {(cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'phap' && (
                   <span style={{
-                    fontSize: 9.5,
+                    fontSize: 9,
                     color: '#bae6fd',
                     fontWeight: 900,
                     background: 'rgba(6, 182, 212, 0.25)',
-                    padding: '2px 8px',
-                    borderRadius: 10,
-                    border: '1px solid rgba(186, 230, 253, 0.5)'
+                    padding: '2px 6px',
+                    borderRadius: 8,
+                    border: '1px solid rgba(186, 230, 253, 0.5)',
+                    whiteSpace: 'nowrap'
                   }}>
-                    ⚡ Đang nạp tu vi
+                    ⚡ Đang nạp
                   </span>
                 )}
                 {theLvl >= 10 && phapLvl >= 10 && (
                   <span style={{
-                    fontSize: 9.5,
+                    fontSize: 9,
                     fontWeight: 900,
                     color: '#fde047',
                     background: 'rgba(245, 158, 11, 0.2)',
-                    padding: '2px 8px',
-                    borderRadius: 10,
+                    padding: '2px 6px',
+                    borderRadius: 8,
                     border: '1px solid rgba(253, 224, 71, 0.5)',
-                    marginLeft: 2
+                    whiteSpace: 'nowrap'
                   }}>
                     👑 Viên Mãn
                   </span>
