@@ -3451,7 +3451,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                  ======================================================== */}
               {viewMode === 'phap' && hasWhale && (
                 <g
-                  transform="translate(0, -15)"
+                  transform="translate(0, -22)"
                   style={{
                     animation: 'nkWhaleMajestic 5.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite',
                     transformOrigin: '0px 0px',
@@ -3459,15 +3459,15 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   }}
                 >
                   {/* Quầng Linh Hải Xanh Thẳm Quanh Cự Kình (Dùng Radial Gradient GPU-accelerated) */}
-                  <ellipse cx="0" cy="0" rx="200" ry="140" fill="url(#whaleAuraGlow)" />
+                  <ellipse cx="0" cy="0" rx="220" ry="120" fill="url(#whaleAuraGlow)" />
 
-                  {/* HÌNH ẢNH THÁI CỔ LONG KÌNH CẤM HẢI TÁCH NỀN TO LỚN (440px x 322px) */}
+                  {/* HÌNH ẢNH THÁI CỔ LONG KÌNH CẤM HẢI TÁCH NỀN TO LỚN (470px x 206px) */}
                   <image
                     href={getAssetUrl('images/long_kinh_god.png')}
-                    x="-220"
-                    y="-165"
-                    width="440"
-                    height="322"
+                    x="-235"
+                    y="-103"
+                    width="470"
+                    height="206"
                     preserveAspectRatio="xMidYMid meet"
                     style={{
                       filter: 'drop-shadow(0 0 16px rgba(56, 189, 248, 0.9)) drop-shadow(0 0 32px rgba(6, 182, 212, 0.6))',
@@ -3477,15 +3477,15 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   />
 
                   {/* Bọt nước linh hải phát quang trôi nổi quanh thân */}
-                  <circle cx="-135" cy="50" r="4.5" fill="#a5f3fc" opacity="0.8" />
-                  <circle cx="-150" cy="70" r="3" fill="#ffffff" opacity="0.9" />
-                  <circle cx="140" cy="-60" r="3.5" fill="#38bdf8" opacity="0.75" />
-                  <circle cx="160" cy="-40" r="2.5" fill="#ffffff" opacity="0.85" />
+                  <circle cx="-165" cy="20" r="4.5" fill="#a5f3fc" opacity="0.8" />
+                  <circle cx="-185" cy="40" r="3" fill="#ffffff" opacity="0.9" />
+                  <circle cx="160" cy="-30" r="3.5" fill="#38bdf8" opacity="0.75" />
+                  <circle cx="180" cy="-10" r="2.5" fill="#ffffff" opacity="0.85" />
 
                   {/* Bảng Nhãn Thần Thú Long Kình */}
-                  <g transform="translate(0, 126)">
-                    <rect x="-105" y="-14" width="210" height="28" rx="14" fill="rgba(8, 47, 73, 0.95)" stroke="#06b6d4" strokeWidth="1.8" filter="url(#nkGlowCyan)" />
-                    <text y="5" textAnchor="middle" fontSize="12" fontWeight="900" fill="#a5f3fc" letterSpacing="1">
+                  <g transform="translate(0, 116)">
+                    <rect x="-115" y="-14" width="230" height="28" rx="14" fill="rgba(8, 47, 73, 0.95)" stroke="#06b6d4" strokeWidth="1.8" filter="url(#nkGlowCyan)" />
+                    <text y="5" textAnchor="middle" fontSize="12.5" fontWeight="900" fill="#a5f3fc" letterSpacing="1">
                       🐋 {phapLvl >= 10 ? '👑 THÁI CỔ LONG KÌNH' : '🐋 CẤM HẢI LONG KÌNH'}
                     </text>
                   </g>
