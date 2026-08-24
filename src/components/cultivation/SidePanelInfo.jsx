@@ -69,7 +69,35 @@ export default function SidePanelInfo() {
   const realizedThienCung = cultivation?.realizedThienCung || 0;
   const palaceAnchors = cultivation?.palaceAnchors || {};
 
-  // Lục Đại Tinh Tọa (6 Chòm Sao Trúc Cơ)
+  // Chế độ Tinh Đồ: 'luc_dai' (6 Chòm sao gốc) hoặc 'tu_tuong' (Tứ Tượng Thần Thú)
+  const [constelMode, setConstelMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('truc_co_visual_mode');
+      if (saved) return saved;
+      return window.location.port === '3000' ? 'tu_tuong' : 'luc_dai';
+    }
+    return 'luc_dai';
+  });
+
+  const isTuTuong = constelMode === 'tu_tuong';
+
+  useEffect(() => {
+    const handleModeChange = (e) => {
+      if (e.detail && (e.detail === 'tu_tuong' || e.detail === 'luc_dai')) {
+        setConstelMode(e.detail);
+      }
+    };
+    window.addEventListener('truc_co_mode_change', handleModeChange);
+    return () => window.removeEventListener('truc_co_mode_change', handleModeChange);
+  }, []);
+
+  // Tứ Tượng Thần Thú (4 Chòm Thần Thú Trúc Cơ - 30 Khiếu Mỗi Thú)
+  const thanhLongCount = Math.min(30, Math.max(0, openedCount));
+  const chuTuocCount = Math.min(30, Math.max(0, openedCount - 30));
+  const bachHoCount = Math.min(30, Math.max(0, openedCount - 60));
+  const huyenVuCount = Math.min(30, Math.max(0, openedCount - 90));
+
+  // Lục Đại Tinh Tọa Gốc (6 Chòm Sao Trúc Cơ)
   const kimNguuCount = Math.min(28, Math.max(0, openedCount));
   const boCapCount = Math.min(22, Math.max(0, openedCount - 28));
   const nhanMaCount = Math.min(21, Math.max(0, openedCount - 50));
@@ -841,6 +869,42 @@ export default function SidePanelInfo() {
             </span>
           </button>
 
+          {/* NÚT CHUYỂN ĐỔI CHẾ ĐỘ TINH ĐỒ (LỤC ĐẠI TINH TỌA <-> TỨ TƯỢNG THẦN THÚ) */}
+          <button
+            onClick={() => {
+              const next = isTuTuong ? 'luc_dai' : 'tu_tuong';
+              setConstelMode(next);
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('truc_co_visual_mode', next);
+                window.dispatchEvent(new CustomEvent('truc_co_mode_change', { detail: next }));
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '10px 16px',
+              borderRadius: 8,
+              background: isTuTuong ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(56, 189, 248, 0.18))' : 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${isTuTuong ? '#22c55e' : 'rgba(56, 189, 248, 0.4)'}`,
+              color: isTuTuong ? '#4ade80' : '#7dd3fc',
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: isTuTuong ? '0 0 14px rgba(34, 197, 94, 0.25)' : 'none',
+              transition: 'all 0.25s ease'
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>{isTuTuong ? '🐉' : '🌌'}</span>
+              <span>CHẾ ĐỘ: {isTuTuong ? 'TỨ TƯỢNG THẦN THÚ' : 'LỤC ĐẠI TINH TỌA'}</span>
+            </span>
+            <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.12)', color: '#fff' }}>
+              [Bấm để đổi]
+            </span>
+          </button>
+
           {/* Khối Lục Đại Tinh Tọa */}
           <div style={{
             padding: '14px 16px',
@@ -853,14 +917,20 @@ export default function SidePanelInfo() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', letterSpacing: 0.8, textTransform: 'uppercase' }}>
-                🌌 LỤC ĐẠI TINH TỌA (120 KHIẾU)
+                {isTuTuong ? '🌌 TỨ TƯỢNG THẦN THÚ (120 KHIẾU)' : '🌌 LỤC ĐẠI TINH TỌA (120 KHIẾU)'}
               </span>
               <span style={{ fontSize: 11.5, color: 'var(--color-kim)', fontWeight: 800 }}>
                 {openedCount}/120
               </span>
             </div>
 
-            {[
+            {(isTuTuong ? [
+              { id: 'all', name: 'Toàn Bộ Tinh Đồ', count: openedCount, total: 120, color: 'var(--accent-cyan-bright, #22c3f0)' },
+              { id: 'thanh_long', name: 'Đông Phương Thanh Long', count: thanhLongCount, total: 30, color: '#22c55e' },
+              { id: 'chu_tuoc', name: 'Nam Phương Chu Tước', count: chuTuocCount, total: 30, color: '#f97316' },
+              { id: 'bach_ho', name: 'Tây Phương Bạch Hổ', count: bachHoCount, total: 30, color: '#f8fafc' },
+              { id: 'huyen_vu', name: 'Bắc Phương Huyền Vũ', count: huyenVuCount, total: 30, color: '#38bdf8' }
+            ] : [
               { id: 'all', name: 'Toàn Bộ Tinh Đồ', count: openedCount, total: 120, color: 'var(--accent-cyan-bright, #22c3f0)' },
               { id: 'kim_nguu', name: 'Kim Ngưu (Taurus)', count: kimNguuCount, total: 28, color: '#fbbf24' },
               { id: 'bo_cap', name: 'Bọ Cạp (Scorpio)', count: boCapCount, total: 22, color: '#f87171' },
@@ -868,7 +938,7 @@ export default function SidePanelInfo() {
               { id: 'su_tu', name: 'Sư Tử (Leo)', count: suTuCount, total: 20, color: '#facc15' },
               { id: 'bach_duong', name: 'Bạch Dương (Aries)', count: bachDuongCount, total: 15, color: '#4ade80' },
               { id: 'thien_binh', name: 'Thiên Bình (Libra)', count: thienBinhCount, total: 14, color: '#38bdf8' }
-            ].map(constel => {
+            ]).map(constel => {
               const isAct = activeMeridian === constel.id;
               const isCompleted = constel.count === constel.total;
 

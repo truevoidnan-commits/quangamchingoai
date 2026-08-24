@@ -1,8 +1,8 @@
-﻿/**
+/**
  * TỨ TƯỢNG THẦN THÚ TINH ĐỒ (120 PHÁP KHIẾU TRÚC CƠ)
- * Chuẩn nguyên tác Tiên Hiệp Phương Đông
- * Mỗi Thần Thú sở hữu đúng 30 Pháp Khiếu giải phẫu (Tổng = 120 Khiếu)
- * Cứ hoàn thành 30 Khiếu của 1 Thần Thú = Mở 1 Mệnh Hỏa Tự Thân
+ * Phân bổ Đều Đặn (Balanced 5 khiếu/đoạn thân) — Tuyệt đối KHÔNG dồn cục ở đầu
+ * Bán kính nghiêm ngặt (R > 200 SVG) — 100% KHÔNG BAO GIỜ lấn vào vòng 12 Con Giáp
+ * Mặt & Mắt của 4 Thần Thú hoàn toàn sạch bóng, giữ trọn thần thái uy nghiêm tuyệt đỉnh!
  */
 
 export const FOUR_DIVINE_BEASTS = [
@@ -12,155 +12,581 @@ export const FOUR_DIVINE_BEASTS = [
     westernName: "Azure Dragon",
     element: "Mộc",
     color: "#22c55e",
-    sectorAngle: 0,
-    image: "/assets/images/thanh_long_constellation.jpg",
+    sectorAngle: 225,
     startIdx: 1,
     count: 30,
     origin: { x: 500, y: 500 },
     starsRel: [
-      { dx: 180, dy: -240, name: "Long Nhãn", isMajor: true },
-      { dx: 210, dy: -290, name: "Long Giác Tả", isMajor: false },
-      { dx: 240, dy: -260, name: "Long Giác Hữu", isMajor: false },
-      { dx: 150, dy: -215, name: "Long Tu", isMajor: false },
-      { dx: 200, dy: -230, name: "Long Ngạc", isMajor: false },
-      { dx: 140, dy: -235, name: "Long Khẩu", isMajor: false },
-      { dx: 170, dy: -270, name: "Nghịch Lân", isMajor: false },
-      { dx: 140, dy: -290, name: "Long Tâm", isMajor: true },
-      { dx: 110, dy: -310, name: "Long Cảnh Thượng", isMajor: false },
-      { dx: 80, dy: -330, name: "Long Cảnh Hạ", isMajor: false },
-      { dx: 45, dy: -350, name: "Long Tích Nhất", isMajor: false },
-      { dx: 0, dy: -355, name: "Long Tích Nhị", isMajor: true },
-      { dx: -45, dy: -350, name: "Long Tích Tam", isMajor: false },
-      { dx: -80, dy: -330, name: "Long Tích Tứ", isMajor: false },
-      { dx: -110, dy: -310, name: "Long Tích Ngũ", isMajor: false },
-      { dx: -135, dy: -285, name: "Long Phúc Nhất", isMajor: false },
-      { dx: -160, dy: -270, name: "Long Phúc Nhị", isMajor: false },
-      { dx: -185, dy: -265, name: "Long Phúc Tam", isMajor: false },
-      { dx: -210, dy: -270, name: "Long Phúc Tứ", isMajor: false },
-      { dx: -235, dy: -285, name: "Long Phúc Ngũ", isMajor: false },
-      { dx: 120, dy: -250, name: "Tả Tiền Trảo Khớp", isMajor: false },
-      { dx: 95, dy: -225, name: "Tả Tiền Trảo Tiêu", isMajor: false },
-      { dx: 70, dy: -270, name: "Hữu Tiền Trảo Khớp", isMajor: false },
-      { dx: 50, dy: -245, name: "Hữu Tiền Trảo Tiêu", isMajor: false },
-      { dx: -150, dy: -240, name: "Tả Hậu Trảo Khớp", isMajor: false },
-      { dx: -170, dy: -215, name: "Tả Hậu Trảo Tiêu", isMajor: false },
-      { dx: -190, dy: -235, name: "Hữu Hậu Trảo Khớp", isMajor: false },
-      { dx: -215, dy: -215, name: "Hữu Hậu Trảo Tiêu", isMajor: false },
-      { dx: -255, dy: -305, name: "Long Vĩ Căn", isMajor: false },
-      { dx: -270, dy: -335, name: "Long Vĩ Tiêu", isMajor: true }
-    ],
-    edges: [
-      [0, 4], [0, 5], [0, 3], [4, 5], [1, 2], [1, 4], [3, 5], [5, 6],
-      [6, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [12, 13],
-      [13, 14], [14, 15], [15, 16], [16, 17], [17, 18], [18, 19],
-      [19, 28], [28, 29],
-      [7, 20], [20, 21], [9, 22], [22, 23],
-      [16, 24], [24, 25], [18, 26], [26, 27]
-    ]
+  {
+    "dx": -238.2,
+    "dy": -21.1,
+    "name": "Khiếu #1",
+    "isMajor": true
+  },
+  {
+    "dx": -268.4,
+    "dy": -27.1,
+    "name": "Khiếu #2",
+    "isMajor": false
+  },
+  {
+    "dx": -310.6,
+    "dy": -54.3,
+    "name": "Khiếu #3",
+    "isMajor": false
+  },
+  {
+    "dx": -211.1,
+    "dy": -40.7,
+    "name": "Khiếu #4",
+    "isMajor": false
+  },
+  {
+    "dx": -286.5,
+    "dy": -75.4,
+    "name": "Khiếu #5",
+    "isMajor": false
+  },
+  {
+    "dx": -233.7,
+    "dy": -96.5,
+    "name": "Khiếu #6",
+    "isMajor": true
+  },
+  {
+    "dx": -254.8,
+    "dy": -108.6,
+    "name": "Khiếu #7",
+    "isMajor": false
+  },
+  {
+    "dx": -268.4,
+    "dy": -126.7,
+    "name": "Khiếu #8",
+    "isMajor": false
+  },
+  {
+    "dx": -294,
+    "dy": -150.8,
+    "name": "Khiếu #9",
+    "isMajor": false
+  },
+  {
+    "dx": -275.9,
+    "dy": -153.8,
+    "name": "Khiếu #10",
+    "isMajor": false
+  },
+  {
+    "dx": -256.3,
+    "dy": -159.8,
+    "name": "Khiếu #11",
+    "isMajor": true
+  },
+  {
+    "dx": -271.4,
+    "dy": -174.9,
+    "name": "Khiếu #12",
+    "isMajor": false
+  },
+  {
+    "dx": -262.4,
+    "dy": -191.5,
+    "name": "Khiếu #13",
+    "isMajor": false
+  },
+  {
+    "dx": -230.7,
+    "dy": -206.6,
+    "name": "Khiếu #14",
+    "isMajor": false
+  },
+  {
+    "dx": -197.5,
+    "dy": -177.9,
+    "name": "Khiếu #15",
+    "isMajor": false
+  },
+  {
+    "dx": -200.5,
+    "dy": -202,
+    "name": "Khiếu #16",
+    "isMajor": true
+  },
+  {
+    "dx": -159.8,
+    "dy": -182.4,
+    "name": "Khiếu #17",
+    "isMajor": false
+  },
+  {
+    "dx": -165.9,
+    "dy": -218.6,
+    "name": "Khiếu #18",
+    "isMajor": false
+  },
+  {
+    "dx": -171.9,
+    "dy": -236.7,
+    "name": "Khiếu #19",
+    "isMajor": false
+  },
+  {
+    "dx": -165.9,
+    "dy": -260.8,
+    "name": "Khiếu #20",
+    "isMajor": false
+  },
+  {
+    "dx": -150.8,
+    "dy": -277.4,
+    "name": "Khiếu #21",
+    "isMajor": true
+  },
+  {
+    "dx": -134.2,
+    "dy": -286.5,
+    "name": "Khiếu #22",
+    "isMajor": false
+  },
+  {
+    "dx": -93.5,
+    "dy": -239.7,
+    "name": "Khiếu #23",
+    "isMajor": false
+  },
+  {
+    "dx": -99.5,
+    "dy": -268.4,
+    "name": "Khiếu #24",
+    "isMajor": false
+  },
+  {
+    "dx": -99.5,
+    "dy": -300.1,
+    "name": "Khiếu #25",
+    "isMajor": false
+  },
+  {
+    "dx": -70.9,
+    "dy": -229.2,
+    "name": "Khiếu #26",
+    "isMajor": true
+  },
+  {
+    "dx": -58.8,
+    "dy": -194.5,
+    "name": "Khiếu #27",
+    "isMajor": false
+  },
+  {
+    "dx": -72.4,
+    "dy": -245.8,
+    "name": "Khiếu #28",
+    "isMajor": false
+  },
+  {
+    "dx": -78.4,
+    "dy": -291,
+    "name": "Khiếu #29",
+    "isMajor": false
+  },
+  {
+    "dx": -31.7,
+    "dy": -206.6,
+    "name": "Khiếu #30",
+    "isMajor": false
+  }
+],
+    edges: []
   },
   {
     id: "chu_tuoc",
     name: "Nam Phương Chu Tước",
     westernName: "Vermilion Bird",
     element: "Hỏa",
-    color: "#f97316",
-    sectorAngle: 90,
-    image: "/assets/images/chu_tuoc_constellation.jpg",
+    color: "#ef4444",
+    sectorAngle: 315,
     startIdx: 31,
     count: 30,
     origin: { x: 500, y: 500 },
     starsRel: [
-      { dx: 240, dy: -180, name: "Tước Nhãn", isMajor: true },
-      { dx: 265, dy: -230, name: "Phượng Quan Nhất", isMajor: false },
-      { dx: 295, dy: -205, name: "Phượng Quan Nhị", isMajor: false },
-      { dx: 215, dy: -155, name: "Phượng Chuốt", isMajor: false },
-      { dx: 250, dy: -145, name: "Phượng Hầu", isMajor: false },
-      { dx: 275, dy: -115, name: "Phượng Cảnh", isMajor: false },
-      { dx: 290, dy: -45, name: "Chu Tước Tâm", isMajor: true },
-      { dx: 260, dy: -10, name: "Phượng Hung", isMajor: false },
-      { dx: 275, dy: 35, name: "Phượng Phúc", isMajor: false },
-      { dx: 290, dy: 85, name: "Phượng Yêu", isMajor: false },
-      { dx: 315, dy: -90, name: "Tả Dực Khớp", isMajor: false },
-      { dx: 345, dy: -135, name: "Tả Dực Cốt", isMajor: false },
-      { dx: 360, dy: -185, name: "Tả Dực Tiêu", isMajor: true },
-      { dx: 330, dy: -50, name: "Tả Dực Vũ 1", isMajor: false },
-      { dx: 350, dy: -15, name: "Tả Dực Vũ 2", isMajor: false },
-      { dx: 340, dy: 20, name: "Tả Dực Vũ 3", isMajor: false },
-      { dx: 235, dy: -90, name: "Hữu Dực Khớp", isMajor: false },
-      { dx: 210, dy: -130, name: "Hữu Dực Cốt", isMajor: false },
-      { dx: 200, dy: -175, name: "Hữu Dực Tiêu", isMajor: false },
-      { dx: 220, dy: -50, name: "Hữu Dực Vũ 1", isMajor: false },
-      { dx: 215, dy: 0, name: "Hữu Dực Vũ 2", isMajor: false },
-      { dx: 245, dy: 80, name: "Hữu Túc", isMajor: false },
-      { dx: 265, dy: 100, name: "Tả Túc", isMajor: false },
-      { dx: 285, dy: 135, name: "Phượng Vĩ Căn", isMajor: false },
-      { dx: 320, dy: 175, name: "Hỏa Vĩ Nhất", isMajor: false },
-      { dx: 345, dy: 220, name: "Hỏa Vĩ Nhị", isMajor: true },
-      { dx: 290, dy: 210, name: "Hỏa Vĩ Tam", isMajor: false },
-      { dx: 265, dy: 245, name: "Hỏa Vĩ Tứ", isMajor: false },
-      { dx: 235, dy: 215, name: "Hỏa Vĩ Ngũ", isMajor: false },
-      { dx: 205, dy: 255, name: "Hỏa Vĩ Lục", isMajor: true }
-    ],
-    edges: [
-      [0, 1], [1, 2], [0, 3], [3, 4], [0, 4], [4, 5], [5, 6],
-      [6, 7], [7, 8], [8, 9], [9, 23],
-      [6, 10], [10, 11], [11, 12], [10, 13], [13, 14], [14, 15],
-      [6, 16], [16, 17], [17, 18], [16, 19], [19, 20],
-      [8, 21], [8, 22],
-      [23, 24], [24, 25], [23, 26], [26, 27], [23, 28], [28, 29]
-    ]
+  {
+    "dx": 57.3,
+    "dy": -315.1,
+    "name": "Khiếu #1",
+    "isMajor": true
+  },
+  {
+    "dx": 54.3,
+    "dy": -289.5,
+    "name": "Khiếu #2",
+    "isMajor": false
+  },
+  {
+    "dx": 70.9,
+    "dy": -289.5,
+    "name": "Khiếu #3",
+    "isMajor": false
+  },
+  {
+    "dx": 79.9,
+    "dy": -265.4,
+    "name": "Khiếu #4",
+    "isMajor": false
+  },
+  {
+    "dx": 87.5,
+    "dy": -286.5,
+    "name": "Khiếu #5",
+    "isMajor": false
+  },
+  {
+    "dx": 95,
+    "dy": -247.3,
+    "name": "Khiếu #6",
+    "isMajor": true
+  },
+  {
+    "dx": 125.1,
+    "dy": -280.5,
+    "name": "Khiếu #7",
+    "isMajor": false
+  },
+  {
+    "dx": 140.2,
+    "dy": -256.3,
+    "name": "Khiếu #8",
+    "isMajor": false
+  },
+  {
+    "dx": 105.5,
+    "dy": -179.4,
+    "name": "Khiếu #9",
+    "isMajor": false
+  },
+  {
+    "dx": 135.7,
+    "dy": -223.2,
+    "name": "Khiếu #10",
+    "isMajor": false
+  },
+  {
+    "dx": 150.8,
+    "dy": -215.6,
+    "name": "Khiếu #11",
+    "isMajor": true
+  },
+  {
+    "dx": 191.5,
+    "dy": -250.3,
+    "name": "Khiếu #12",
+    "isMajor": false
+  },
+  {
+    "dx": 226.2,
+    "dy": -268.4,
+    "name": "Khiếu #13",
+    "isMajor": false
+  },
+  {
+    "dx": 137.2,
+    "dy": -149.3,
+    "name": "Khiếu #14",
+    "isMajor": false
+  },
+  {
+    "dx": 239.7,
+    "dy": -248.8,
+    "name": "Khiếu #15",
+    "isMajor": false
+  },
+  {
+    "dx": 182.4,
+    "dy": -182.4,
+    "name": "Khiếu #16",
+    "isMajor": true
+  },
+  {
+    "dx": 236.7,
+    "dy": -221.6,
+    "name": "Khiếu #17",
+    "isMajor": false
+  },
+  {
+    "dx": 156.8,
+    "dy": -131.2,
+    "name": "Khiếu #18",
+    "isMajor": false
+  },
+  {
+    "dx": 269.9,
+    "dy": -168.9,
+    "name": "Khiếu #19",
+    "isMajor": false
+  },
+  {
+    "dx": 199,
+    "dy": -123.6,
+    "name": "Khiếu #20",
+    "isMajor": false
+  },
+  {
+    "dx": 283.5,
+    "dy": -158.3,
+    "name": "Khiếu #21",
+    "isMajor": true
+  },
+  {
+    "dx": 265.4,
+    "dy": -125.1,
+    "name": "Khiếu #22",
+    "isMajor": false
+  },
+  {
+    "dx": 310.6,
+    "dy": -134.2,
+    "name": "Khiếu #23",
+    "isMajor": false
+  },
+  {
+    "dx": 229.2,
+    "dy": -96.5,
+    "name": "Khiếu #24",
+    "isMajor": false
+  },
+  {
+    "dx": 254.8,
+    "dy": -87.5,
+    "name": "Khiếu #25",
+    "isMajor": false
+  },
+  {
+    "dx": 291,
+    "dy": -92,
+    "name": "Khiếu #26",
+    "isMajor": true
+  },
+  {
+    "dx": 318.1,
+    "dy": -78.4,
+    "name": "Khiếu #27",
+    "isMajor": false
+  },
+  {
+    "dx": 233.7,
+    "dy": -48.2,
+    "name": "Khiếu #28",
+    "isMajor": false
+  },
+  {
+    "dx": 208.1,
+    "dy": -25.6,
+    "name": "Khiếu #29",
+    "isMajor": false
+  },
+  {
+    "dx": 304.6,
+    "dy": -34.7,
+    "name": "Khiếu #30",
+    "isMajor": false
+  }
+],
+    edges: []
   },
   {
     id: "bach_ho",
     name: "Tây Phương Bạch Hổ",
     westernName: "White Tiger",
     element: "Kim",
-    color: "#f8fafc",
-    sectorAngle: 180,
-    image: "/assets/images/bach_ho_constellation.jpg",
+    color: "#fbbf24",
+    sectorAngle: 45,
     startIdx: 61,
     count: 30,
     origin: { x: 500, y: 500 },
     starsRel: [
-      { dx: 210, dy: 230, name: "Hổ Nhãn", isMajor: true },
-      { dx: 240, dy: 215, name: "Vương Tự Thượng", isMajor: false },
-      { dx: 265, dy: 240, name: "Vương Tự Trung", isMajor: false },
-      { dx: 175, dy: 235, name: "Hổ Nha", isMajor: false },
-      { dx: 190, dy: 260, name: "Hổ Khẩu", isMajor: false },
-      { dx: 250, dy: 265, name: "Hổ Nhĩ", isMajor: false },
-      { dx: 200, dy: 285, name: "Hổ Cảnh", isMajor: false },
-      { dx: 160, dy: 300, name: "Hổ Hung", isMajor: true },
-      { dx: 180, dy: 330, name: "Tiền Chi Tả 1", isMajor: false },
-      { dx: 210, dy: 355, name: "Tiền Chi Tả 2", isMajor: false },
-      { dx: 140, dy: 335, name: "Tiền Chi Hữu 1", isMajor: false },
-      { dx: 160, dy: 360, name: "Tiền Chi Hữu 2", isMajor: false },
-      { dx: 110, dy: 310, name: "Hổ Phế", isMajor: false },
-      { dx: 65, dy: 330, name: "Hổ Tích 1", isMajor: false },
-      { dx: 0, dy: 345, name: "Hổ Tích 2", isMajor: true },
-      { dx: -65, dy: 330, name: "Hổ Tích 3", isMajor: false },
-      { dx: -110, dy: 310, name: "Hổ Tích 4", isMajor: false },
-      { dx: -150, dy: 290, name: "Hổ Khố", isMajor: false },
-      { dx: -135, dy: 325, name: "Hậu Chi Tả 1", isMajor: false },
-      { dx: -155, dy: 355, name: "Hậu Chi Tả 2", isMajor: false },
-      { dx: -175, dy: 320, name: "Hậu Chi Hữu 1", isMajor: false },
-      { dx: -195, dy: 350, name: "Hậu Chi Hữu 2", isMajor: false },
-      { dx: 50, dy: 275, name: "Hổ Phúc 1", isMajor: false },
-      { dx: -30, dy: 270, name: "Hổ Phúc 2", isMajor: false },
-      { dx: -100, dy: 260, name: "Hổ Phúc 3", isMajor: false },
-      { dx: -190, dy: 275, name: "Hổ Vĩ Căn", isMajor: false },
-      { dx: -220, dy: 255, name: "Hổ Vĩ Khúc 1", isMajor: false },
-      { dx: -245, dy: 230, name: "Hổ Vĩ Khúc 2", isMajor: false },
-      { dx: -250, dy: 195, name: "Hổ Vĩ Khúc 3", isMajor: false },
-      { dx: -225, dy: 175, name: "Hổ Vĩ Tiêu", isMajor: true }
-    ],
-    edges: [
-      [0, 1], [1, 2], [0, 3], [3, 4], [0, 4], [1, 5], [5, 6], [4, 6],
-      [6, 7], [7, 12], [12, 13], [13, 14], [14, 15], [15, 16], [16, 17], [17, 25],
-      [7, 22], [22, 23], [23, 24], [24, 17],
-      [7, 8], [8, 9], [7, 10], [10, 11],
-      [17, 18], [18, 19], [17, 20], [20, 21],
-      [25, 26], [26, 27], [27, 28], [28, 29]
-    ]
+  {
+    "dx": 324.2,
+    "dy": 33.2,
+    "name": "Khiếu #1",
+    "isMajor": true
+  },
+  {
+    "dx": 315.1,
+    "dy": 48.2,
+    "name": "Khiếu #2",
+    "isMajor": false
+  },
+  {
+    "dx": 297,
+    "dy": 55.8,
+    "name": "Khiếu #3",
+    "isMajor": false
+  },
+  {
+    "dx": 322.7,
+    "dy": 63.3,
+    "name": "Khiếu #4",
+    "isMajor": false
+  },
+  {
+    "dx": 268.4,
+    "dy": 66.3,
+    "name": "Khiếu #5",
+    "isMajor": false
+  },
+  {
+    "dx": 245.8,
+    "dy": 96.5,
+    "name": "Khiếu #6",
+    "isMajor": true
+  },
+  {
+    "dx": 211.1,
+    "dy": 96.5,
+    "name": "Khiếu #7",
+    "isMajor": false
+  },
+  {
+    "dx": 253.3,
+    "dy": 125.1,
+    "name": "Khiếu #8",
+    "isMajor": false
+  },
+  {
+    "dx": 292.5,
+    "dy": 147.8,
+    "name": "Khiếu #9",
+    "isMajor": false
+  },
+  {
+    "dx": 260.8,
+    "dy": 140.2,
+    "name": "Khiếu #10",
+    "isMajor": false
+  },
+  {
+    "dx": 253.3,
+    "dy": 173.4,
+    "name": "Khiếu #11",
+    "isMajor": true
+  },
+  {
+    "dx": 227.7,
+    "dy": 164.4,
+    "name": "Khiếu #12",
+    "isMajor": false
+  },
+  {
+    "dx": 211.1,
+    "dy": 158.3,
+    "name": "Khiếu #13",
+    "isMajor": false
+  },
+  {
+    "dx": 173.4,
+    "dy": 165.9,
+    "name": "Khiếu #14",
+    "isMajor": false
+  },
+  {
+    "dx": 159.8,
+    "dy": 155.3,
+    "name": "Khiếu #15",
+    "isMajor": false
+  },
+  {
+    "dx": 152.3,
+    "dy": 171.9,
+    "name": "Khiếu #16",
+    "isMajor": true
+  },
+  {
+    "dx": 190,
+    "dy": 218.6,
+    "name": "Khiếu #17",
+    "isMajor": false
+  },
+  {
+    "dx": 126.7,
+    "dy": 164.4,
+    "name": "Khiếu #18",
+    "isMajor": false
+  },
+  {
+    "dx": 174.9,
+    "dy": 232.2,
+    "name": "Khiếu #19",
+    "isMajor": false
+  },
+  {
+    "dx": 131.2,
+    "dy": 202,
+    "name": "Khiếu #20",
+    "isMajor": false
+  },
+  {
+    "dx": 123.6,
+    "dy": 239.7,
+    "name": "Khiếu #21",
+    "isMajor": true
+  },
+  {
+    "dx": 111.6,
+    "dy": 220.1,
+    "name": "Khiếu #22",
+    "isMajor": false
+  },
+  {
+    "dx": 85.9,
+    "dy": 184,
+    "name": "Khiếu #23",
+    "isMajor": false
+  },
+  {
+    "dx": 113.1,
+    "dy": 254.8,
+    "name": "Khiếu #24",
+    "isMajor": false
+  },
+  {
+    "dx": 87.5,
+    "dy": 235.2,
+    "name": "Khiếu #25",
+    "isMajor": false
+  },
+  {
+    "dx": 69.4,
+    "dy": 230.7,
+    "name": "Khiếu #26",
+    "isMajor": true
+  },
+  {
+    "dx": 72.4,
+    "dy": 271.4,
+    "name": "Khiếu #27",
+    "isMajor": false
+  },
+  {
+    "dx": 75.4,
+    "dy": 288,
+    "name": "Khiếu #28",
+    "isMajor": false
+  },
+  {
+    "dx": 54.3,
+    "dy": 238.2,
+    "name": "Khiếu #29",
+    "isMajor": false
+  },
+  {
+    "dx": 40.7,
+    "dy": 321.2,
+    "name": "Khiếu #30",
+    "isMajor": false
+  }
+],
+    edges: []
   },
   {
     id: "huyen_vu",
@@ -168,49 +594,193 @@ export const FOUR_DIVINE_BEASTS = [
     westernName: "Black Tortoise",
     element: "Thủy",
     color: "#38bdf8",
-    sectorAngle: 270,
-    image: "/assets/images/huyen_vu_constellation.jpg",
+    sectorAngle: 135,
     startIdx: 91,
     count: 30,
     origin: { x: 500, y: 500 },
     starsRel: [
-      { dx: -245, dy: -180, name: "Quy Nhãn", isMajor: true },
-      { dx: -265, dy: -205, name: "Quy Đỉnh", isMajor: false },
-      { dx: -220, dy: -160, name: "Quy Vị", isMajor: false },
-      { dx: -260, dy: -140, name: "Quy Cảnh 1", isMajor: false },
-      { dx: -275, dy: -90, name: "Quy Cảnh 2", isMajor: false },
-      { dx: -285, dy: -45, name: "Giáp Đỉnh", isMajor: true },
-      { dx: -260, dy: 0, name: "Giáp Trung 1", isMajor: false },
-      { dx: -300, dy: 0, name: "Giáp Trung 2", isMajor: false },
-      { dx: -285, dy: 45, name: "Giáp Hậu", isMajor: false },
-      { dx: -330, dy: 0, name: "Giáp Tả", isMajor: false },
-      { dx: -230, dy: 0, name: "Giáp Hữu", isMajor: false },
-      { dx: -335, dy: -80, name: "Tiền Trảo Tả", isMajor: false },
-      { dx: -225, dy: -80, name: "Tiền Trảo Hữu", isMajor: false },
-      { dx: -335, dy: 85, name: "Hậu Trảo Tả", isMajor: false },
-      { dx: -225, dy: 85, name: "Hậu Trảo Hữu", isMajor: false },
-      { dx: -285, dy: 90, name: "Quy Vĩ", isMajor: false },
-      { dx: -195, dy: -230, name: "Xà Nhãn", isMajor: true },
-      { dx: -175, dy: -260, name: "Xà Đỉnh", isMajor: false },
-      { dx: -215, dy: -250, name: "Xà Thiềm", isMajor: false },
-      { dx: -160, dy: -200, name: "Xà Cảnh", isMajor: false },
-      { dx: -150, dy: -145, name: "Xà Thân 1", isMajor: false },
-      { dx: -170, dy: -90, name: "Xà Thân 2", isMajor: false },
-      { dx: -205, dy: -45, name: "Xà Thân 3", isMajor: false },
-      { dx: -180, dy: 25, name: "Xà Thân 4", isMajor: false },
-      { dx: -210, dy: 85, name: "Xà Thân 5", isMajor: false },
-      { dx: -255, dy: 125, name: "Xà Thân 6", isMajor: false },
-      { dx: -305, dy: 145, name: "Xà Thân 7", isMajor: false },
-      { dx: -345, dy: 110, name: "Xà Thân 8", isMajor: false },
-      { dx: -360, dy: 60, name: "Xà Vĩ 1", isMajor: false },
-      { dx: -345, dy: 20, name: "Xà Vĩ Tiêu", isMajor: true }
-    ],
-    edges: [
-      [0, 1], [0, 2], [1, 3], [3, 4], [4, 5],
-      [5, 6], [5, 7], [6, 10], [7, 9], [6, 8], [7, 8], [9, 10], [8, 15],
-      [4, 11], [4, 12], [8, 13], [8, 14],
-      [16, 17], [16, 18], [17, 19], [19, 20], [20, 21], [21, 22], [22, 23], [23, 24], [24, 25], [25, 26], [26, 27], [27, 28], [28, 29]
-    ]
+  {
+    "dx": -19.6,
+    "dy": 217.1,
+    "name": "Khiếu #1",
+    "isMajor": true
+  },
+  {
+    "dx": -37.7,
+    "dy": 275.9,
+    "name": "Khiếu #2",
+    "isMajor": false
+  },
+  {
+    "dx": -63.3,
+    "dy": 275.9,
+    "name": "Khiếu #3",
+    "isMajor": false
+  },
+  {
+    "dx": -75.4,
+    "dy": 292.5,
+    "name": "Khiếu #4",
+    "isMajor": false
+  },
+  {
+    "dx": -76.9,
+    "dy": 250.3,
+    "name": "Khiếu #5",
+    "isMajor": false
+  },
+  {
+    "dx": -98,
+    "dy": 229.2,
+    "name": "Khiếu #6",
+    "isMajor": true
+  },
+  {
+    "dx": -95,
+    "dy": 212.6,
+    "name": "Khiếu #7",
+    "isMajor": false
+  },
+  {
+    "dx": -113.1,
+    "dy": 217.1,
+    "name": "Khiếu #8",
+    "isMajor": false
+  },
+  {
+    "dx": -111.6,
+    "dy": 193,
+    "name": "Khiếu #9",
+    "isMajor": false
+  },
+  {
+    "dx": -156.8,
+    "dy": 262.4,
+    "name": "Khiếu #10",
+    "isMajor": false
+  },
+  {
+    "dx": -165.9,
+    "dy": 230.7,
+    "name": "Khiếu #11",
+    "isMajor": true
+  },
+  {
+    "dx": -182.4,
+    "dy": 238.2,
+    "name": "Khiếu #12",
+    "isMajor": false
+  },
+  {
+    "dx": -134.2,
+    "dy": 156.8,
+    "name": "Khiếu #13",
+    "isMajor": false
+  },
+  {
+    "dx": -185.5,
+    "dy": 196,
+    "name": "Khiếu #14",
+    "isMajor": false
+  },
+  {
+    "dx": -217.1,
+    "dy": 218.6,
+    "name": "Khiếu #15",
+    "isMajor": false
+  },
+  {
+    "dx": -235.2,
+    "dy": 220.1,
+    "name": "Khiếu #16",
+    "isMajor": true
+  },
+  {
+    "dx": -168.9,
+    "dy": 155.3,
+    "name": "Khiếu #17",
+    "isMajor": false
+  },
+  {
+    "dx": -224.7,
+    "dy": 202,
+    "name": "Khiếu #18",
+    "isMajor": false
+  },
+  {
+    "dx": -224.7,
+    "dy": 171.9,
+    "name": "Khiếu #19",
+    "isMajor": false
+  },
+  {
+    "dx": -211.1,
+    "dy": 161.3,
+    "name": "Khiếu #20",
+    "isMajor": false
+  },
+  {
+    "dx": -275.9,
+    "dy": 155.3,
+    "name": "Khiếu #21",
+    "isMajor": true
+  },
+  {
+    "dx": -253.3,
+    "dy": 128.2,
+    "name": "Khiếu #22",
+    "isMajor": false
+  },
+  {
+    "dx": -297,
+    "dy": 135.7,
+    "name": "Khiếu #23",
+    "isMajor": false
+  },
+  {
+    "dx": -247.3,
+    "dy": 102.5,
+    "name": "Khiếu #24",
+    "isMajor": false
+  },
+  {
+    "dx": -285,
+    "dy": 95,
+    "name": "Khiếu #25",
+    "isMajor": false
+  },
+  {
+    "dx": -278.9,
+    "dy": 76.9,
+    "name": "Khiếu #26",
+    "isMajor": true
+  },
+  {
+    "dx": -262.4,
+    "dy": 64.8,
+    "name": "Khiếu #27",
+    "isMajor": false
+  },
+  {
+    "dx": -289.5,
+    "dy": 58.8,
+    "name": "Khiếu #28",
+    "isMajor": false
+  },
+  {
+    "dx": -282,
+    "dy": 42.2,
+    "name": "Khiếu #29",
+    "isMajor": false
+  },
+  {
+    "dx": -263.9,
+    "dy": 25.6,
+    "name": "Khiếu #30",
+    "isMajor": false
+  }
+],
+    edges: []
   }
 ];
 

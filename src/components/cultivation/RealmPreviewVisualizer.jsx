@@ -1321,7 +1321,10 @@ export const BESPOKE_GALLERY_ITEMS = [
 
 
 
-export { FOUR_DIVINE_BEASTS, SIX_CONSTELLATIONS } from '../../data/divineBeasts';
+import { FOUR_DIVINE_BEASTS } from '../../data/divineBeasts';
+import { SIX_CONSTELLATIONS as ORIGINAL_SIX_CONSTELLATIONS } from '../../data/originalSixConstellations';
+export { FOUR_DIVINE_BEASTS, ORIGINAL_SIX_CONSTELLATIONS };
+export const SIX_CONSTELLATIONS = FOUR_DIVINE_BEASTS;
 
 export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: propCultivation }) {
   const { 
@@ -1377,6 +1380,38 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
   const [hoveredDaoAnh, setHoveredDaoAnh] = useState(null);
   const [thunderStrikeActive, setThunderStrikeActive] = useState(null);
   const [isBreakthroughAnim, setIsBreakthroughAnim] = useState(false);
+
+  // Chế độ Tinh Đồ: 'luc_dai' (6 Chòm sao gốc) hoặc 'tu_tuong' (Tứ Tượng Thần Thú)
+  // Mặc định ở cổng 5173 là 'luc_dai' (an toàn 100%), ở cổng 3000 hoặc khi bấm nút là 'tu_tuong'
+  const [constelMode, setConstelMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('truc_co_visual_mode');
+      if (saved) return saved;
+      return window.location.port === '3000' ? 'tu_tuong' : 'luc_dai';
+    }
+    return 'luc_dai';
+  });
+
+  const isTuTuong = constelMode === 'tu_tuong';
+
+  const toggleConstelMode = () => {
+    const next = constelMode === 'tu_tuong' ? 'luc_dai' : 'tu_tuong';
+    setConstelMode(next);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('truc_co_visual_mode', next);
+      window.dispatchEvent(new CustomEvent('truc_co_mode_change', { detail: next }));
+    }
+  };
+
+  useEffect(() => {
+    const handleModeChange = (e) => {
+      if (e.detail && (e.detail === 'tu_tuong' || e.detail === 'luc_dai')) {
+        setConstelMode(e.detail);
+      }
+    };
+    window.addEventListener('truc_co_mode_change', handleModeChange);
+    return () => window.removeEventListener('truc_co_mode_change', handleModeChange);
+  }, []);
 
   const [viewMode, setViewMode] = useState(cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the');
 
@@ -1476,9 +1511,11 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
   const { stars, constellationList } = useMemo(() => {
     const starList = [];
     const constList = [];
-    const starScale = 0.89; // Thu gọn 11% để tạo khoảng trống cực kỳ rộng rãi cho 4 đài sen
 
-    SIX_CONSTELLATIONS.forEach((c) => {
+    const dataset = isTuTuong ? FOUR_DIVINE_BEASTS : ORIGINAL_SIX_CONSTELLATIONS;
+    const starScale = isTuTuong ? 1.0 : 0.89;
+
+    dataset.forEach((c) => {
       const ox = c.origin.x;
       const oy = c.origin.y;
 
@@ -1529,7 +1566,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
     });
 
     return { stars: starList, constellationList: constList };
-  }, [openedCount]);
+  }, [openedCount, isTuTuong]);
 
   const playStarChime = (freq = 440) => {
     try {
@@ -2438,6 +2475,42 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             </svg>
           </div>
           
+          {/* Nút Chuyển Đổi Chế Độ Xem Trên Canvas */}
+          <div style={{
+            position: 'absolute',
+            top: 10,
+            right: 14,
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8
+          }}>
+            <button
+              onClick={toggleConstelMode}
+              title="Chuyển đổi giữa Lục Đại Tinh Tọa gốc và Thử nghiệm Tứ Tượng Thần Thú"
+              style={{
+                padding: '6px 14px',
+                borderRadius: 20,
+                background: isTuTuong ? 'rgba(34, 197, 94, 0.25)' : 'rgba(56, 189, 248, 0.25)',
+                border: `1.5px solid ${isTuTuong ? '#22c55e' : '#38bdf8'}`,
+                color: isTuTuong ? '#4ade80' : '#38bdf8',
+                fontSize: 11.5,
+                fontWeight: 800,
+                cursor: 'pointer',
+                backdropFilter: 'blur(12px)',
+                boxShadow: isTuTuong ? '0 0 12px rgba(34, 197, 94, 0.4)' : '0 0 12px rgba(56, 189, 248, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                pointerEvents: 'auto',
+                transition: 'all 0.25s ease'
+              }}
+            >
+              <span>{isTuTuong ? '🐉 Tứ Tượng Thần Thú' : '🌌 Lục Đại Tinh Tọa'}</span>
+              <span style={{ fontSize: 10, opacity: 0.85, background: 'rgba(255,255,255,0.15)', padding: '1px 5px', borderRadius: 4 }}>ĐỔI</span>
+            </button>
+          </div>
+
           {/* 121 CỰC CẢNH THIÊN ĐỈNH (HEADER BADGE TRUNG TÂM — CÂN ĐỐI SINH TỬ ĐẲNG CẤP TIÊN GIA) */}
           <div style={{
             position: 'absolute',
@@ -2624,9 +2697,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               <filter id="zenithGlow" filterUnits="userSpaceOnUse" x="-1000" y="-1000" width="3000" height="3000">
                 <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur1" />
-                <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur2" />
                 <feMerge>
-                  <feMergeNode in="blur2" />
                   <feMergeNode in="blur1" />
                   <feMergeNode in="SourceGraphic" />
                 </feMerge>
@@ -2677,13 +2748,111 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               }}
             >
               {/* Vành Tinh Đồ Ngoại Vi (Outer Astrolabe Rings R=378 & Inner Border R=192) */}
-              <circle cx={cx} cy={cy} r="378" fill="none" stroke="rgba(56, 189, 248, 0.95)" strokeWidth="2.2" />
-              <circle cx={cx} cy={cy} r="368" fill="none" stroke="rgba(56, 189, 248, 0.55)" strokeWidth="1.2" strokeDasharray="4 2" />
-              <circle cx={cx} cy={cy} r="192" fill="none" stroke="rgba(56, 189, 248, 0.85)" strokeWidth="2.0" />
+              {/* VÀNH NGOÀI HOA VĂN CỔ KÍNH TRANG TRỌNG (ANCIENT DAOIST BRONZE-GOLD CELESTIAL RIM) */}
+              <g id="ancientDaoistGoldRim">
+                {/* 1. Viền ngoài cùng đồng cổ dát vàng */}
+                <circle cx={cx} cy={cy} r="396" fill="none" stroke="#78350f" strokeWidth="2.0" opacity="0.85" />
+                <circle cx={cx} cy={cy} r="394" fill="none" stroke="#d97706" strokeWidth="1.2" opacity="0.9" />
 
-              {/* 6 VẠCH PHÂN CHIA 6 TINH TỌA ĐỒNG NHẤT 100% (192 -> 378) */}
-              {[0, 60, 120, 180, 240, 300].map((deg) => (
-                <g key={`hex-sector-divider-${deg}`} transform={`rotate(${deg}, ${cx}, ${cy})`}>
+                {/* 2. Vành Chuỗi Bách Ngọc Tinh Châu (72 Hạt Ngọc Vàng Kim Dọc Chu Vi) */}
+                {Array.from({ length: 72 }).map((_, i) => {
+                  const deg = (i * 360) / 72;
+                  const rad = (deg * Math.PI) / 180;
+                  const bx = cx + 390 * Math.cos(rad);
+                  const by = cy + 390 * Math.sin(rad);
+                  return (
+                    <circle 
+                      key={`pearl-${i}`} 
+                      cx={bx} 
+                      cy={by} 
+                      r={i % 6 === 0 ? "2.2" : "1.2"} 
+                      fill={i % 6 === 0 ? "#fef08a" : "#f59e0b"} 
+                      stroke="#451a03" 
+                      strokeWidth="0.5" 
+                      opacity="0.85" 
+                    />
+                  );
+                })}
+
+                {/* 3. Vành Hoa Văn Vân Mây Cổ / Hồi Văn Sóng Nước (36 Đốt Cổ Điển R=384..388) */}
+                {Array.from({ length: 36 }).map((_, i) => {
+                  const deg = (i * 360) / 36;
+                  return (
+                    <g key={`yunwen-${i}`} transform={`rotate(${deg}, ${cx}, ${cy})`}>
+                      {/* Họa tiết mây uốn lượn cổ */}
+                      <path 
+                        d={`M ${cx + 380} ${cy - 8} Q ${cx + 386} ${cy} ${cx + 380} ${cy + 8} Q ${cx + 375} ${cy + 4} ${cx + 377} ${cy} Q ${cx + 382} ${cy - 4} ${cx + 380} ${cy - 8}`} 
+                        fill="none" 
+                        stroke="#fbbf24" 
+                        strokeWidth="1.0" 
+                        opacity="0.75" 
+                      />
+                      {/* Hạt khắc hoa văn hồi */}
+                      <line 
+                        x1={cx + 378} 
+                        y1={cy} 
+                        x2={cx + 384} 
+                        y2={cy} 
+                        stroke="#fef08a" 
+                        strokeWidth="1.2" 
+                        opacity="0.9" 
+                      />
+                    </g>
+                  );
+                })}
+
+                {/* 4. Viền vàng kim rực rỡ tiếp giáp Tứ Tượng */}
+                <circle cx={cx} cy={cy} r="378" fill="none" stroke="#fbbf24" strokeWidth="2.2" opacity="0.95" />
+                <circle cx={cx} cy={cy} r="375" fill="none" stroke="#fef08a" strokeWidth="0.8" strokeDasharray="3 3" opacity="0.7" />
+
+                {/* 5. Vành trong tiếp giáp Bát Quái (R=192 & R=188) */}
+                <circle cx={cx} cy={cy} r="192" fill="none" stroke="#fbbf24" strokeWidth="1.8" opacity="0.9" />
+                <circle cx={cx} cy={cy} r="188" fill="none" stroke="#d97706" strokeWidth="1.0" strokeDasharray="4 2" opacity="0.7" />
+
+                {/* 6. Bốn Phù Điêu Bảo Ngọc Khảm Nạm 4 Phương (Đông - Tây - Nam - Bắc) */}
+                {[0, 90, 180, 270].map((deg) => (
+                  <g key={`guardian-gem-${deg}`} transform={`rotate(${deg}, ${cx}, ${cy})`}>
+                    <path 
+                      d={`M ${cx + 374} ${cy - 12} L ${cx + 398} ${cy - 6} L ${cx + 402} ${cy} L ${cx + 398} ${cy + 6} L ${cx + 374} ${cy + 12} Q ${cx + 380} ${cy} ${cx + 374} ${cy - 12} Z`} 
+                      fill="rgba(120, 53, 15, 0.85)" 
+                      stroke="#fbbf24" 
+                      strokeWidth="1.4" 
+                    />
+                    <circle cx={cx + 388} cy={cy} r="3.8" fill="#fef08a" stroke="#d97706" strokeWidth="1.2" />
+                    <circle cx={cx + 388} cy={cy} r="1.6" fill="#ffffff" />
+                  </g>
+                ))}
+              </g>
+
+                            {/* BẢN NỀN TỨ TƯỢNG THẦN THÚ CLIPPED CHÍNH XÁC (CẮT BỎ 100% NỀN CARO / HIỂN THỊ TRỌN VẸN 4 THẦN THÚ) */}
+              {isTuTuong && (
+                <g id="tuTuongClippedWheel">
+                  <defs>
+                    <clipPath id="annularRingClip">
+                      <path 
+                        d="M 500 122 A 378 378 0 1 0 500 878 A 378 378 0 1 0 500 122 M 500 308 A 192 192 0 1 1 500 692 A 192 192 0 1 1 500 308 Z" 
+                        fillRule="evenodd" 
+                      />
+                    </clipPath>
+                  </defs>
+
+                  {/* Vành Khuyên 4 Thần Thú Vẽ Sẵn Sắc Nét — Đã Cắt Bỏ Hoàn Toàn Nền Ngoài & Trong */}
+                  <g clipPath="url(#annularRingClip)">
+                    <image
+                      href={getAssetUrl('/assets/images/tu_tuong_wheel_flow.jpg')}
+                      x={cx - 386}
+                      y={cy - 386}
+                      width={386 * 2}
+                      height={386 * 2}
+                      preserveAspectRatio="xMidYMid meet"
+                      style={{ pointerEvents: 'none' }}
+                    />
+                  </g>
+                </g>
+              )}
+                            {/* VẠCH PHÂN CHIA TINH TỌA (Lục Đại 6 Cung hoặc Tứ Tượng 4 Cung) */}
+              {!isTuTuong && [0, 60, 120, 180, 240, 300].map((deg) => (
+                <g key={`quad-sector-divider-${deg}`} transform={`rotate(${deg}, ${cx}, ${cy})`}>
                   {/* Lớp 1: Hào quang tỏa rộng quanh tia laser */}
                   <line 
                     x1={cx + 192} 
@@ -2773,32 +2942,33 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                       <circle r="17" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeDasharray="4 3" opacity="0.9" />
                     )}
 
-                    {/* ĐỐM SAO PHÁT QUANG TO RÕ, TRÒN TRỊA & LUNG LINH ĐA TẦNG */}
+                    {/* ĐỐM SAO PHÁP KHIẾU TO RÕ, PHÁT SÁNG RỰC RỠ ĐA TẦNG */}
                     {star.isUnlocked ? (
                       <>
                         {/* Tầng 1: Quầng hào quang rộng tỏa sáng */}
-                        <circle r="15" fill={star.color} opacity="0.28" />
+                        <circle r="14" fill={star.color} opacity="0.45" />
                         {/* Tầng 2: Hào quang trung phát sáng đậm */}
-                        <circle r="9.5" fill={star.color} opacity="0.55" />
-                        {/* Tầng 3: Quả cầu ngọc sao to rõ rực rỡ sắc màu */}
-                        <circle r="6.8" fill={star.color} opacity={opacity} />
-                        {/* Tầng 4: Lõi sáng ngọc trắng tròn xoe tạo khối 3D rực sáng */}
-                        <circle r="3.4" fill="#ffffff" />
+                        <circle r="8.5" fill={star.color} opacity="0.75" />
+                        {/* Tầng 3: Quả cầu ngọc sao to rõ rực sáng */}
+                        <circle r="5.5" fill={star.color} stroke="#ffffff" strokeWidth="1.2" opacity="1" />
+                        {/* Tầng 4: Lõi sáng ngọc trắng 3D tinh anh rực rỡ */}
+                        <circle r="2.6" fill="#ffffff" />
                       </>
                     ) : isNext ? (
                       <>
-                        <circle r="11" fill={star.color} opacity="0.35" />
-                        <circle r="5.8" fill={star.color} stroke="#ffffff" strokeWidth="1.4" opacity={opacity} />
-                        <circle r="2.6" fill="#ffffff" />
+                        {/* Xung động hào quang cho sao kế tiếp */}
+                        <circle r="16" fill={star.color} opacity="0.4" style={{ animation: 'pulseCore 1.2s ease-in-out infinite alternate' }} />
+                        <circle r="9.5" fill={star.color} opacity="0.7" />
+                        <circle r="5.2" fill={star.color} stroke="#ffffff" strokeWidth="1.4" opacity="1" />
+                        <circle r="2.4" fill="#ffffff" />
                       </>
                     ) : (
-                      <circle 
-                        r="4.2" 
-                        fill="rgba(56, 189, 248, 0.45)" 
-                        stroke="rgba(255, 255, 255, 0.7)" 
-                        strokeWidth="1.0" 
-                        opacity={opacity} 
-                      />
+                      /* Điểm sao chưa mở: Đốm sáng rõ nét, phát quang ngọc ngà trên thân thần thú */
+                      <>
+                        <circle r="6.5" fill={star.color} opacity="0.32" />
+                        <circle r="4.2" fill={star.color} stroke="#ffffff" strokeWidth="0.9" opacity="0.88" />
+                        <circle r="1.8" fill="#ffffff" opacity="0.9" />
+                      </>
                     )}
                   </g>
                 );
