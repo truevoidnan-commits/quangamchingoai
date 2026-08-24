@@ -2939,21 +2939,57 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         }
 
         
-        @keyframes ink-wave-dye {
+        @keyframes dye-sweep-cycle {
           0%, 36% {
-            clip-path: polygon(0% 0%, 0% 0%, -15% 100%, 0% 100%);
+            clip-path: inset(0 100% 0 0 round 22px);
+            -webkit-clip-path: inset(0 100% 0 0 round 22px);
           }
-          48% {
-            clip-path: polygon(0% 0%, 120% 0%, 105% 100%, 0% 100%);
+          49% {
+            clip-path: inset(0 0% 0 0 round 22px);
+            -webkit-clip-path: inset(0 0% 0 0 round 22px);
           }
           50%, 86% {
-            clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+            clip-path: inset(0 0% 0 0 round 22px);
+            -webkit-clip-path: inset(0 0% 0 0 round 22px);
           }
           98% {
-            clip-path: polygon(120% 0%, 120% 0%, 105% 100%, 105% 100%);
+            clip-path: inset(0 0 0 100% round 22px);
+            -webkit-clip-path: inset(0 0 0 100% round 22px);
           }
           100% {
-            clip-path: polygon(0% 0%, 0% 0%, -15% 100%, 0% 100%);
+            clip-path: inset(0 100% 0 0 round 22px);
+            -webkit-clip-path: inset(0 100% 0 0 round 22px);
+          }
+        }
+
+        @keyframes sweep-laser-line {
+          0%, 35% {
+            left: 0%;
+            opacity: 0;
+          }
+          37% {
+            left: 0%;
+            opacity: 0.95;
+          }
+          49% {
+            left: 100%;
+            opacity: 0.95;
+          }
+          50%, 85% {
+            left: 100%;
+            opacity: 0;
+          }
+          87% {
+            left: 0%;
+            opacity: 0.95;
+          }
+          98% {
+            left: 100%;
+            opacity: 0.95;
+          }
+          99%, 100% {
+            left: 100%;
+            opacity: 0;
           }
         }
 
@@ -2962,6 +2998,15 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             border-color: rgba(255, 255, 255, 0.85);
             box-shadow: 0 0 20px rgba(255, 255, 255, 0.35), inset 0 0 8px rgba(255, 255, 255, 0.15);
           }
+          49%, 86% {
+            border-color: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 0 26px rgba(255, 255, 255, 0.7), inset 0 0 10px rgba(255, 255, 255, 0.35);
+          }
+          98%, 100% {
+            border-color: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.35), inset 0 0 8px rgba(255, 255, 255, 0.15);
+          }
+        }
           48%, 86% {
             border-color: rgba(255, 255, 255, 0.95);
             box-shadow: 0 0 26px rgba(255, 255, 255, 0.7), inset 0 0 10px rgba(255, 255, 255, 0.35);
