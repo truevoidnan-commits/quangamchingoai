@@ -40,6 +40,7 @@ export default function SanctumPage() {
     buyLamp,
     anchorPalace, 
     sellArtifact,
+    sellMultipleItems,
     buyArtifact,
     gainReadingExp 
   } = useCultivationContext();
@@ -48,6 +49,8 @@ export default function SanctumPage() {
   const [activeTab, setActiveTab] = useState('lamps'); // 'lamps' | 'artifacts' | 'inventory'
   const [lampFilterTier, setLampFilterTier] = useState('owned'); // 'owned' | 'ha_pham' | ...
   const [artifactFilterTier, setArtifactFilterTier] = useState('owned'); // 'owned' | 'ha_pham' | ...
+  const [selectedLamps, setSelectedLamps] = useState([]);
+  const [selectedArtifacts, setSelectedArtifacts] = useState([]);
 
   const currentRealm = cultivation?.realm || 'truc_co';
   const exp = cultivation?.totalExp || cultivation?.expCurrentRealm || 0;
@@ -58,8 +61,12 @@ export default function SanctumPage() {
   const palaceAnchors = cultivation?.palaceAnchors || {};
   const inventoryArtifacts = cultivation?.inventoryArtifacts || [];
   const anchoredIds = Object.values(palaceAnchors).map(a => a?.id || a).filter(Boolean);
+  const unanchoredArtifacts = inventoryArtifacts.filter(id => !anchoredIds.includes(id));
 
   const TIER_ORDER = ['owned', 'ha_pham', 'trung_pham', 'thuong_pham', 'cuc_pham', 'tien_pham', 'than_pham'];
+
+  // Helper kiểm tra vật phẩm quý hiếm cần hỏi lại xác nhận
+  const shouldConfirm = (tier) => tier === 'tien_pham' || tier === 'than_pham';
 
   // Danh sách Mệnh Đăng sở hữu vs Danh sách hiển thị theo bộ lọc
   const ownedLampIds = Array.from(new Set([...absorbedLamps, ...inventoryLamps]));
@@ -77,6 +84,113 @@ export default function SanctumPage() {
 
   // Chiến lực thực tế đồng bộ 100% với hệ thống
   const calculatedCombatPower = getCombatPowerDisplay(cultivation);
+
+  // Xử lý bán lẻ Mệnh Đăng (Hạ-Cực bán ngay, Tiên-Thần hỏi lại)
+  const handleSellSingleLamp = (lamp) => {
+    const tierInfo = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
+    const priceTT = tierInfo.tienTinh || Math.floor(tierInfo.priceExp / 5);
+    if (shouldConfirm(lamp.tier)) {
+      if (!window.confirm(`⚠️ CẢNH BÁO MỆNH ĐĂNG CAO CẤP!\n\nĐạo hữu có CHẮC CHẮN muốn bán [${tierInfo.name}] ${lamp.name} để nhận +${priceTT.toLocaleString()} Tiên Tinh không?`)) {
+        return;
+      }
+    }
+    try {
+      sellLamp(lamp.id);
+      setSelectedLamps(prev => prev.filter(id => id !== lamp.id));
+    } catch (e) {
+      alert(e.message || 'Không thể bán.');
+    }
+  };
+
+  // Xử lý bán lẻ Bảo Vật (Hạ-Cực bán ngay, Tiên-Thần hỏi lại)
+  const handleSellSingleArtifact = (art) => {
+    const tierInfo = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
+    const priceTT = tierInfo.tienTinh || Math.floor(tierInfo.priceExp / 5);
+    if (shouldConfirm(art.tier)) {
+      if (!window.confirm(`⚠️ CẢNH BÁO BẢO VẬT CAO CẤP!\n\nĐạo hữu có CHẮC CHẮN muốn bán [${tierInfo.name}] ${art.name} để nhận +${priceTT.toLocaleString()} Tiên Tinh không?`)) {
+        return;
+      }
+    }
+    try {
+      sellArtifact(art.id);
+      setSelectedArtifacts(prev => prev.filter(id => id !== art.id));
+    } catch (e) {
+      alert(e.message || 'Không thể bán.');
+    }
+  };
+
+  // Toggle chọn đèn / bảo vật
+  const toggleSelectLamp = (lampId) => {
+    setSelectedLamps(prev => 
+      prev.includes(lampId) ? prev.filter(id => id !== lampId) : [...prev, lampId]
+    );
+  };
+
+  const toggleSelectArtifact = (artId) => {
+    setSelectedArtifacts(prev => 
+      prev.includes(artId) ? prev.filter(id => id !== artId) : [...prev, artId]
+    );
+  };
+
+  // Chọn nhanh phẩm Hạ -> Cực (Loại trừ Tiên/Thần)
+  const selectNormalLamps = () => {
+    const normalInBag = inventoryLamps.filter(id => {
+      const l = LIFE_LAMPS.find(item => item.id === id);
+      return l && !shouldConfirm(l.tier);
+    });
+    setSelectedLamps(normalInBag);
+  };
+
+  const selectNormalArtifacts = () => {
+    const normalInBag = unanchoredArtifacts.filter(id => {
+      const a = SUPPRESSING_ARTIFACTS.find(item => item.id === id);
+      return a && !shouldConfirm(a.tier);
+    });
+    setSelectedArtifacts(normalInBag);
+  };
+
+  // Tính tổng Tiên Tinh và kiểm tra vật phẩm hiếm khi bán hàng loạt
+  const selectedLampsList = selectedLamps.map(id => LIFE_LAMPS.find(l => l.id === id)).filter(Boolean);
+  const selectedArtsList = selectedArtifacts.map(id => SUPPRESSING_ARTIFACTS.find(a => a.id === id)).filter(Boolean);
+  const allSelectedItems = [...selectedLampsList, ...selectedArtsList];
+  const totalSelectedCount = allSelectedItems.length;
+
+  let totalSelectedTT = 0;
+  const rareSelectedItems = [];
+  allSelectedItems.forEach(item => {
+    const t = LAMP_TIERS[item.tier] || LAMP_TIERS.ha_pham;
+    totalSelectedTT += (t.tienTinh || Math.floor(t.priceExp / 5));
+    if (shouldConfirm(item.tier)) {
+      rareSelectedItems.push({ name: item.name, tierName: t.name });
+    }
+  });
+
+  // Bán hàng loạt các mục đã chọn
+  const handleBatchSell = () => {
+    if (totalSelectedCount === 0) return;
+
+    if (rareSelectedItems.length > 0) {
+      const rareListStr = rareSelectedItems.map(r => `• [${r.tierName}] ${r.name}`).join('\n');
+      const confirmMsg = `⚠️ CẢNH BÁO BẢO VẬT CAO CẤP!\n\nTrong danh sách ${totalSelectedCount} vật phẩm bạn chọn, CÓ CHỨA ${rareSelectedItems.length} vật phẩm quý hiếm [Tiên Phẩm / Thần Phẩm]:\n\n${rareListStr}\n\nĐạo hữu có CHẮC CHẮN muốn bán tất cả để nhận +${totalSelectedTT.toLocaleString()} Tiên Tinh không?`;
+      if (!window.confirm(confirmMsg)) {
+        return;
+      }
+    }
+    // Nếu chỉ có Hạ, Trung, Thượng, Cực -> Bán ngay không hỏi lại
+
+    try {
+      if (sellMultipleItems) {
+        sellMultipleItems({ lampIds: selectedLamps, artifactIds: selectedArtifacts });
+      } else {
+        selectedLamps.forEach(id => sellLamp(id));
+        selectedArtifacts.forEach(id => sellArtifact(id));
+      }
+      setSelectedLamps([]);
+      setSelectedArtifacts([]);
+    } catch (err) {
+      alert(err.message || 'Lỗi khi bán hàng loạt.');
+    }
+  };
 
   return (
     <div style={{
@@ -203,7 +317,7 @@ export default function SanctumPage() {
         >
           <span>🎒 TÚI TRỮ VẬT SỞ HỮU</span>
           <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: 'rgba(0,0,0,0.5)', color: '#fff' }}>
-            {absorbedLamps.length + Object.keys(palaceAnchors).length + inventoryArtifacts.length}
+            {inventoryLamps.length + unanchoredArtifacts.length}
           </span>
         </button>
       </div>
@@ -309,6 +423,78 @@ export default function SanctumPage() {
               })}
             </div>
 
+            {/* Thanh công cụ Chọn nhiều bán hàng loạt Mệnh Đăng (khi ở tab Đã sở hữu) */}
+            {lampFilterTier === 'owned' && inventoryLamps.length > 0 && (
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                padding: '10px 16px',
+                background: 'rgba(255, 204, 0, 0.06)',
+                border: '1px solid rgba(255, 204, 0, 0.25)',
+                borderRadius: 12
+              }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--color-kim)' }}>
+                    ⚡ Chọn Nhiều Bán (Túi: {inventoryLamps.length} Đèn):
+                  </span>
+                  <button
+                    onClick={selectNormalLamps}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 8,
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      background: 'rgba(16, 185, 129, 0.2)',
+                      color: '#10b981',
+                      border: '1px solid rgba(16, 185, 129, 0.4)',
+                      cursor: 'pointer'
+                    }}
+                    title="Chọn tất cả Mệnh Đăng phẩm Hạ, Trung, Thượng, Cực trong túi để bán nhanh không cần hỏi lại"
+                  >
+                    ⚡ Chọn tất cả phẩm Hạ → Cực ({inventoryLamps.filter(id => {
+                      const l = LIFE_LAMPS.find(item => item.id === id);
+                      return l && !shouldConfirm(l.tier);
+                    }).length})
+                  </button>
+                  <button
+                    onClick={() => setSelectedLamps([...inventoryLamps])}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 8,
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      color: '#fff',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Chọn tất cả ({inventoryLamps.length})
+                  </button>
+                  {selectedLamps.length > 0 && (
+                    <button
+                      onClick={() => setSelectedLamps([])}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: 8,
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        color: '#f87171',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Bỏ chọn ({selectedLamps.length})
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Lamp Showcase Grid */}
             {displayedLamps.length === 0 ? (
               <div style={{ padding: 40, borderRadius: 14, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', textAlign: 'center', fontSize: 13 }}>
@@ -322,14 +508,14 @@ export default function SanctumPage() {
                   const isOwned = isAbsorbed || isOwnedInBag;
                   const tierInfo = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
                   const priceTT = tierInfo.tienTinh || Math.floor((tierInfo.priceExp || 100) / 10);
-                  const canAbsorb = absorbedLamps.length < maxLamps && !isAbsorbed && isOwnedInBag;
+                  const isSelected = selectedLamps.includes(lamp.id);
 
                   return (
                     <div 
                       key={lamp.id}
                       style={{
-                        background: 'rgba(16, 25, 39, 0.85)',
-                        border: `1.5px solid ${isAbsorbed ? 'var(--color-kim)' : isOwned ? tierInfo.border : 'rgba(255, 255, 255, 0.1)'}`,
+                        background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 25, 39, 0.85)',
+                        border: `1.5px solid ${isAbsorbed ? 'var(--color-kim)' : isSelected ? '#ef4444' : isOwned ? tierInfo.border : 'rgba(255, 255, 255, 0.1)'}`,
                         borderRadius: 14,
                         padding: 16,
                         display: 'flex',
@@ -337,10 +523,11 @@ export default function SanctumPage() {
                         justifyContent: 'space-between',
                         gap: 10,
                         opacity: isOwned ? 1 : 0.75,
-                        boxShadow: isAbsorbed ? '0 0 16px rgba(255, 204, 0, 0.25)' : 'none'
+                        boxShadow: isAbsorbed ? '0 0 16px rgba(255, 204, 0, 0.25)' : isSelected ? '0 0 14px rgba(239, 68, 68, 0.25)' : 'none',
+                        position: 'relative'
                       }}
                     >
-                      <div style={{ display: 'flex', gap: 14 }}>
+                      <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
                         <div style={{ width: 52, height: 52, background: tierInfo.bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <ArtifactIcon item={lamp} isLamp={true} size={48} />
                         </div>
@@ -348,6 +535,34 @@ export default function SanctumPage() {
                           <div style={{ color: tierInfo.color, fontWeight: 800, fontSize: 14 }}>{lamp.name}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tierInfo.name} · {lamp.shortName}</div>
                         </div>
+
+                        {/* Checkbox chọn nhiều bán khi ở trong túi */}
+                        {isOwnedInBag && (
+                          <div 
+                            onClick={(e) => { e.stopPropagation(); toggleSelectLamp(lamp.id); }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              cursor: 'pointer',
+                              padding: '4px 8px',
+                              borderRadius: 6,
+                              background: isSelected ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                              border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.15)'}`
+                            }}
+                            title="Chọn Mệnh Đăng này để bán"
+                          >
+                            <input 
+                              type="checkbox" 
+                              checked={isSelected} 
+                              onChange={() => {}} 
+                              style={{ cursor: 'pointer', accentColor: '#ef4444' }} 
+                            />
+                            <span style={{ fontSize: 11, color: isSelected ? '#f87171' : 'var(--text-muted)', fontWeight: 600 }}>
+                              {isSelected ? 'Đã chọn' : 'Chọn'}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div style={{ fontSize: 12, color: 'var(--text-sub)', fontStyle: 'italic', lineHeight: 1.5 }}>
@@ -387,15 +602,7 @@ export default function SanctumPage() {
 
                               {sellLamp && (
                                 <button
-                                  onClick={() => {
-                                    if (window.confirm(`Bạn có chắc muốn bán [${lamp.name}] lấy Tiên Tinh không?`)) {
-                                      try {
-                                        sellLamp(lamp.id);
-                                      } catch (e) {
-                                        alert(e.message || 'Không thể bán.');
-                                      }
-                                    }
-                                  }}
+                                  onClick={() => handleSellSingleLamp(lamp)}
                                   style={{
                                     padding: '6px 12px',
                                     borderRadius: 6,
@@ -406,9 +613,9 @@ export default function SanctumPage() {
                                     border: '1px solid rgba(239, 68, 68, 0.3)',
                                     cursor: 'pointer'
                                   }}
-                                  title="Phân giải Mệnh Đăng lấy Tiên Tinh"
+                                  title={shouldConfirm(lamp.tier) ? 'Bán Mệnh Đăng (Hỏi xác nhận)' : 'Bán Mệnh Đăng (Bán ngay)'}
                                 >
-                                  Bán
+                                  Bán (+{priceTT.toLocaleString()} TT)
                                 </button>
                               )}
                             </>
@@ -491,6 +698,78 @@ export default function SanctumPage() {
               })}
             </div>
 
+            {/* Thanh công cụ Chọn nhiều bán hàng loạt Bảo Vật Trấn Áp (khi ở tab Đã sở hữu) */}
+            {artifactFilterTier === 'owned' && unanchoredArtifacts.length > 0 && (
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                padding: '10px 16px',
+                background: 'rgba(34, 195, 240, 0.06)',
+                border: '1px solid rgba(34, 195, 240, 0.25)',
+                borderRadius: 12
+              }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent-cyan-bright, #22c3f0)' }}>
+                    ⚡ Chọn Nhiều Bán (Túi: {unanchoredArtifacts.length} Bảo Vật):
+                  </span>
+                  <button
+                    onClick={selectNormalArtifacts}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 8,
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      background: 'rgba(16, 185, 129, 0.2)',
+                      color: '#10b981',
+                      border: '1px solid rgba(16, 185, 129, 0.4)',
+                      cursor: 'pointer'
+                    }}
+                    title="Chọn tất cả Bảo Vật phẩm Hạ, Trung, Thượng, Cực trong túi để bán nhanh không cần hỏi lại"
+                  >
+                    ⚡ Chọn tất cả phẩm Hạ → Cực ({unanchoredArtifacts.filter(id => {
+                      const a = SUPPRESSING_ARTIFACTS.find(item => item.id === id);
+                      return a && !shouldConfirm(a.tier);
+                    }).length})
+                  </button>
+                  <button
+                    onClick={() => setSelectedArtifacts([...unanchoredArtifacts])}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 8,
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      color: '#fff',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Chọn tất cả ({unanchoredArtifacts.length})
+                  </button>
+                  {selectedArtifacts.length > 0 && (
+                    <button
+                      onClick={() => setSelectedArtifacts([])}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: 8,
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        color: '#f87171',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Bỏ chọn ({selectedArtifacts.length})
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Artifact Showcase Grid */}
             {displayedArtifacts.length === 0 ? (
               <div style={{ padding: 40, borderRadius: 14, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', textAlign: 'center', fontSize: 13 }}>
@@ -503,13 +782,15 @@ export default function SanctumPage() {
                   const isOwnedInBag = inventoryArtifacts.includes(art.id) && !isAnchored;
                   const isOwned = isAnchored || isOwnedInBag;
                   const tierInfo = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
+                  const priceTT = tierInfo.tienTinh || Math.floor((tierInfo.priceExp || 100) / 10);
+                  const isSelected = selectedArtifacts.includes(art.id);
 
                   return (
                     <div 
                       key={art.id}
                       style={{
-                        background: 'rgba(16, 25, 39, 0.85)',
-                        border: `1.5px solid ${isAnchored ? 'var(--color-kim)' : isOwnedInBag ? 'var(--accent-cyan-bright, #22c3f0)' : tierInfo.border}`,
+                        background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 25, 39, 0.85)',
+                        border: `1.5px solid ${isAnchored ? 'var(--color-kim)' : isSelected ? '#ef4444' : isOwnedInBag ? 'var(--accent-cyan-bright, #22c3f0)' : tierInfo.border}`,
                         borderRadius: 14,
                         padding: 16,
                         display: 'flex',
@@ -517,15 +798,44 @@ export default function SanctumPage() {
                         justifyContent: 'space-between',
                         gap: 10,
                         opacity: isOwned ? 1 : 0.75,
-                        boxShadow: isAnchored ? '0 0 16px rgba(255, 204, 0, 0.25)' : 'none'
+                        boxShadow: isAnchored ? '0 0 16px rgba(255, 204, 0, 0.25)' : isSelected ? '0 0 14px rgba(239, 68, 68, 0.25)' : 'none',
+                        position: 'relative'
                       }}
                     >
-                      <div style={{ display: 'flex', gap: 14 }}>
+                      <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
                         <ArtifactIcon item={art} size={52} />
                         <div style={{ flex: 1 }}>
                           <div style={{ color: tierInfo.color, fontWeight: 800, fontSize: 14 }}>{art.name}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tierInfo.name} · {art.type || 'Trấn Áp'}</div>
                         </div>
+
+                        {/* Checkbox chọn nhiều bán khi ở trong túi */}
+                        {isOwnedInBag && (
+                          <div 
+                            onClick={(e) => { e.stopPropagation(); toggleSelectArtifact(art.id); }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              cursor: 'pointer',
+                              padding: '4px 8px',
+                              borderRadius: 6,
+                              background: isSelected ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                              border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.15)'}`
+                            }}
+                            title="Chọn Bảo Vật này để bán"
+                          >
+                            <input 
+                              type="checkbox" 
+                              checked={isSelected} 
+                              onChange={() => {}} 
+                              style={{ cursor: 'pointer', accentColor: '#ef4444' }} 
+                            />
+                            <span style={{ fontSize: 11, color: isSelected ? '#f87171' : 'var(--text-muted)', fontWeight: 600 }}>
+                              {isSelected ? 'Đã chọn' : 'Chọn'}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div style={{ fontSize: 12, color: 'var(--text-sub)', lineHeight: 1.5 }}>
@@ -542,15 +852,7 @@ export default function SanctumPage() {
                               <span style={{ fontSize: 11.5, color: 'var(--accent-cyan-bright, #22c3f0)', fontWeight: 700 }}>✓ TRONG TÚI</span>
                               {sellArtifact && (
                                 <button
-                                  onClick={() => {
-                                    if (window.confirm(`Bạn có chắc muốn bán [${art.name}] lấy Tiên Tinh không?`)) {
-                                      try {
-                                        sellArtifact(art.id);
-                                      } catch (e) {
-                                        alert(e.message || 'Không thể bán.');
-                                      }
-                                    }
-                                  }}
+                                  onClick={() => handleSellSingleArtifact(art)}
                                   style={{
                                     padding: '6px 12px',
                                     borderRadius: 6,
@@ -561,9 +863,9 @@ export default function SanctumPage() {
                                     border: '1px solid rgba(239, 68, 68, 0.3)',
                                     cursor: 'pointer'
                                   }}
-                                  title="Phân giải Bảo Vật lấy Tiên Tinh"
+                                  title={shouldConfirm(art.tier) ? 'Bán Bảo Vật (Hỏi xác nhận)' : 'Bán Bảo Vật (Bán ngay)'}
                                 >
-                                  Bán
+                                  Bán (+{priceTT.toLocaleString()} TT)
                                 </button>
                               )}
                             </>
@@ -618,91 +920,234 @@ export default function SanctumPage() {
         {activeTab === 'inventory' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             
-            {/* Phân Mục 1: Mệnh Đăng Bản Mệnh */}
-            <div>
-              <h3 style={{ color: 'var(--color-kim)', fontSize: 15, fontWeight: 800, marginBottom: 12 }}>
-                🏮 MỆNH ĐĂNG ĐÃ HẤP THỤ ({absorbedLamps.length}/{maxLamps})
-              </h3>
-              {absorbedLamps.length === 0 ? (
-                <div style={{ padding: 20, borderRadius: 10, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
-                  Chưa hấp thụ Mệnh Đăng nào.
+            {/* Phân Mục 1: Mệnh Đăng Trong Túi Trữ Vật Sẵn Sàng */}
+            {inventoryLamps.length > 0 && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                  <h3 style={{ color: 'var(--color-kim)', fontSize: 15, fontWeight: 800, margin: 0 }}>
+                    🏮 MỆNH ĐĂNG SẴN SÀNG TRONG TÚI ({inventoryLamps.length})
+                  </h3>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <button
+                      onClick={selectNormalLamps}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        background: 'rgba(16, 185, 129, 0.15)',
+                        color: '#10b981',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⚡ Chọn Hạ → Cực
+                    </button>
+                    <button
+                      onClick={() => setSelectedLamps([...inventoryLamps])}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        color: '#fff',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Chọn tất cả
+                    </button>
+                  </div>
                 </div>
-              ) : (
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                  {absorbedLamps.map((lampId, idx) => {
+                  {inventoryLamps.map(lampId => {
                     const lobj = LIFE_LAMPS.find(l => l.id === lampId);
-                    const tierInfo = lobj ? LAMP_TIERS[lobj.tier] : LAMP_TIERS.ha_pham;
-                    return (
-                      <div key={lampId} style={{ padding: 14, borderRadius: 10, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255, 204, 0, 0.4)', display: 'flex', gap: 12, alignItems: 'center' }}>
-                        <div style={{ width: 46, height: 46, borderRadius: 8, background: tierInfo?.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <ArtifactIcon item={lobj} isLamp={true} size={42} />
-                        </div>
-                        <div>
-                          <div style={{ color: tierInfo?.color || '#ffcc00', fontWeight: 700, fontSize: 13 }}>{lobj?.name || lampId}</div>
-                          <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{lobj ? getLampPalaceName(lobj) : `Chân Cung #${idx + 1}`} ({tierInfo?.name})</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                    if (!lobj) return null;
+                    const tierInfo = LAMP_TIERS[lobj.tier] || LAMP_TIERS.ha_pham;
+                    const priceTT = tierInfo.tienTinh || Math.floor((tierInfo.priceExp || 100) / 10);
+                    const isSelected = selectedLamps.includes(lampId);
 
-            {/* Phân Mục 2: Bảo Vật Đã Khảm Nạm */}
-            <div>
-              <h3 style={{ color: 'var(--accent-cyan-bright, #22c3f0)', fontSize: 15, fontWeight: 800, marginBottom: 12 }}>
-                🛡️ BẢO VẬT ĐÃ KHẢM NẠM TRẤN CUNG ({Object.keys(palaceAnchors).length}/7 CUNG TỰ THÂN)
-              </h3>
-              {Object.keys(palaceAnchors).length === 0 ? (
-                <div style={{ padding: 20, borderRadius: 10, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
-                  Chưa có Cung Tự Thân nào được khảm nạm Bảo Vật Trấn Áp.
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                  {Object.entries(palaceAnchors).map(([pIdx, anchor]) => {
-                    const artObj = SUPPRESSING_ARTIFACTS.find(a => a.id === anchor.id) || anchor;
-                    const tierInfo = LAMP_TIERS[artObj.tier] || LAMP_TIERS.ha_pham;
                     return (
-                      <div key={pIdx} style={{ padding: 14, borderRadius: 10, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(34, 195, 240, 0.4)', display: 'flex', gap: 12, alignItems: 'center' }}>
-                        <ArtifactIcon item={artObj} size={46} />
-                        <div>
-                          <div style={{ color: tierInfo?.color || '#38bdf8', fontWeight: 700, fontSize: 13 }}>{artObj?.name || anchor.id}</div>
-                          <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>Cung Tự Thân #{parseInt(pIdx) + 1} ({tierInfo?.name})</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Phân Mục 3: Bảo Vật Trong Túi Trữ Vật Sẵn Sàng */}
-            <div>
-              <h3 style={{ color: 'var(--color-cuc-canh, #ff3fd5)', fontSize: 15, fontWeight: 800, marginBottom: 12 }}>
-                🎒 BẢO VẬT TRONG TÚI TRỮ VẬT (SẴN SÀNG KHẢM NẠM: {inventoryArtifacts.filter(id => !anchoredIds.includes(id)).length})
-              </h3>
-              {inventoryArtifacts.filter(id => !anchoredIds.includes(id)).length === 0 ? (
-                <div style={{ padding: 20, borderRadius: 10, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
-                  Túi trữ vật chưa có thêm bảo vật nào. Hãy đọc thêm chương truyện để nhặt bảo vật!
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                  {inventoryArtifacts
-                    .filter(id => !anchoredIds.includes(id))
-                    .map(artId => {
-                      const artObj = SUPPRESSING_ARTIFACTS.find(a => a.id === artId);
-                      if (!artObj) return null;
-                      const tierInfo = LAMP_TIERS[artObj.tier] || LAMP_TIERS.ha_pham;
-                      return (
-                        <div key={artId} style={{ padding: 14, borderRadius: 10, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255, 63, 213, 0.4)', display: 'flex', gap: 12, alignItems: 'center' }}>
-                          <ArtifactIcon item={artObj} size={46} />
+                      <div 
+                        key={lampId} 
+                        style={{ 
+                          padding: 14, 
+                          borderRadius: 10, 
+                          background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'rgba(0,0,0,0.4)', 
+                          border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 204, 0, 0.3)'}`, 
+                          display: 'flex', 
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: 10
+                        }}
+                      >
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                          <div style={{ width: 44, height: 44, borderRadius: 8, background: tierInfo?.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <ArtifactIcon item={lobj} isLamp={true} size={40} />
+                          </div>
                           <div>
-                            <div style={{ color: tierInfo?.color || '#ff3fd5', fontWeight: 700, fontSize: 13 }}>{artObj.name}</div>
-                            <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{tierInfo?.name} · {artObj.type}</div>
+                            <div style={{ color: tierInfo?.color || '#ffcc00', fontWeight: 700, fontSize: 13 }}>{lobj.name}</div>
+                            <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{tierInfo.name} · +{priceTT.toLocaleString()} TT</div>
                           </div>
                         </div>
-                      );
-                    })}
+
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <div 
+                            onClick={() => toggleSelectLamp(lampId)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              cursor: 'pointer',
+                              padding: '4px 6px',
+                              borderRadius: 4,
+                              background: isSelected ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                              border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.15)'}`
+                            }}
+                          >
+                            <input type="checkbox" checked={isSelected} onChange={() => {}} style={{ cursor: 'pointer', accentColor: '#ef4444' }} />
+                          </div>
+
+                          {sellLamp && (
+                            <button
+                              onClick={() => handleSellSingleLamp(lobj)}
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: 6,
+                                fontSize: 11,
+                                fontWeight: 600,
+                                background: 'rgba(239, 68, 68, 0.15)',
+                                color: '#f87171',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Bán
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Phân Mục 2: Vật Trấn Áp Sẵn Sàng Trong Túi */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                <h3 style={{ color: 'var(--accent-cyan-bright, #22c3f0)', fontSize: 15, fontWeight: 800, margin: 0 }}>
+                  🛡️ VẬT TRẤN ÁP SẴN SÀNG ({unanchoredArtifacts.length})
+                </h3>
+                {unanchoredArtifacts.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <button
+                      onClick={selectNormalArtifacts}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        background: 'rgba(16, 185, 129, 0.15)',
+                        color: '#10b981',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⚡ Chọn Hạ → Cực
+                    </button>
+                    <button
+                      onClick={() => setSelectedArtifacts([...unanchoredArtifacts])}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        color: '#fff',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Chọn tất cả
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {unanchoredArtifacts.length === 0 ? (
+                <div style={{ padding: 30, borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
+                  Túi trữ vật chưa có vật trấn áp nào sẵn sàng. Hãy đọc thêm chương truyện để nhặt hoặc đổi bằng Tiên Tinh!
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                  {unanchoredArtifacts.map(artId => {
+                    const artObj = SUPPRESSING_ARTIFACTS.find(a => a.id === artId);
+                    if (!artObj) return null;
+                    const tierInfo = LAMP_TIERS[artObj.tier] || LAMP_TIERS.ha_pham;
+                    const priceTT = tierInfo.tienTinh || Math.floor((tierInfo.priceExp || 100) / 10);
+                    const isSelected = selectedArtifacts.includes(artId);
+
+                    return (
+                      <div 
+                        key={artId} 
+                        style={{ 
+                          padding: 14, 
+                          borderRadius: 10, 
+                          background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'rgba(0,0,0,0.4)', 
+                          border: `1px solid ${isSelected ? '#ef4444' : 'rgba(34, 195, 240, 0.35)'}`, 
+                          display: 'flex', 
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: 10
+                        }}
+                      >
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                          <ArtifactIcon item={artObj} size={46} />
+                          <div>
+                            <div style={{ color: tierInfo?.color || '#38bdf8', fontWeight: 700, fontSize: 13 }}>{artObj.name}</div>
+                            <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{tierInfo?.name} · +{priceTT.toLocaleString()} TT</div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <div 
+                            onClick={() => toggleSelectArtifact(artId)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              cursor: 'pointer',
+                              padding: '4px 6px',
+                              borderRadius: 4,
+                              background: isSelected ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                              border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.15)'}`
+                            }}
+                          >
+                            <input type="checkbox" checked={isSelected} onChange={() => {}} style={{ cursor: 'pointer', accentColor: '#ef4444' }} />
+                          </div>
+
+                          {sellArtifact && (
+                            <button
+                              onClick={() => handleSellSingleArtifact(artObj)}
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: 6,
+                                fontSize: 11,
+                                fontWeight: 600,
+                                background: 'rgba(239, 68, 68, 0.15)',
+                                color: '#f87171',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Bán
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -711,6 +1156,81 @@ export default function SanctumPage() {
         )}
 
       </div>
+
+      {/* FLOATING ACTION BAR FOR BATCH SELL */}
+      {totalSelectedCount > 0 && (
+        <div style={{
+          position: 'fixed',
+          bottom: 24,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 999,
+          background: 'linear-gradient(135deg, rgba(20, 29, 45, 0.98) 0%, rgba(10, 16, 26, 0.99) 100%)',
+          border: '1.5px solid var(--color-kim)',
+          boxShadow: '0 12px 36px rgba(0, 0, 0, 0.85), 0 0 24px rgba(255, 204, 0, 0.35)',
+          borderRadius: 16,
+          padding: '12px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 20,
+          backdropFilter: 'blur(12px)',
+          maxWidth: '94vw',
+          animation: 'slideUp 0.25s ease'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: '#fff' }}>
+              Đã chọn: <span style={{ color: 'var(--color-kim)' }}>{totalSelectedCount}</span> vật phẩm
+              {selectedLamps.length > 0 && ` (${selectedLamps.length} Đèn)`}
+              {selectedArtifacts.length > 0 && ` (${selectedArtifacts.length} Bảo Vật)`}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--color-kim)', fontWeight: 700 }}>
+              Thu hồi: +{totalSelectedTT.toLocaleString()} Tiên Tinh
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button
+              onClick={handleBatchSell}
+              style={{
+                padding: '10px 22px',
+                borderRadius: 10,
+                fontSize: 13,
+                fontWeight: 800,
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              💰 BÁN {totalSelectedCount} MỤC (+{totalSelectedTT.toLocaleString()} TT)
+            </button>
+
+            <button
+              onClick={() => {
+                setSelectedLamps([]);
+                setSelectedArtifacts([]);
+              }}
+              style={{
+                padding: '10px 16px',
+                borderRadius: 10,
+                fontSize: 12,
+                fontWeight: 600,
+                background: 'rgba(255, 255, 255, 0.08)',
+                color: 'var(--text-sub)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ✕ Bỏ chọn
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -859,13 +859,15 @@ export default function CultivationModal({ isOpen, onClose }) {
                                 flex: 1,
                               }}
                               onClick={() => {
-                                if (
-                                  confirm(
-                                    `XÁC NHẬN BÁN MỆNH ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Nhận lại: +${totalCostTienTinh.toLocaleString()} Tiên Tinh (Tỉ lệ 1:5)\n\nĐạo hữu có muốn bán chiếc đèn này để tích lũy Tiên Tinh?`
-                                  )
-                                ) {
-                                  triggerAction(() => sellLamp(lamp.id), `Đã bán thành công ${lamp.name}! Nhận +${totalCostTienTinh.toLocaleString()} Tiên Tinh.`);
+                                const isRare = lamp.tier === 'tien_pham' || lamp.tier === 'than_pham';
+                                if (isRare) {
+                                  if (
+                                    !confirm(
+                                      `⚠️ XÁC NHẬN BÁN MỆNH ĐĂNG CAO CẤP:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Nhận lại: +${totalCostTienTinh.toLocaleString()} Tiên Tinh\n\nĐạo hữu có chắc chắn muốn bán chiếc đèn quý hiếm này?`
+                                    )
+                                  ) return;
                                 }
+                                triggerAction(() => sellLamp(lamp.id), `Đã bán thành công ${lamp.name}! Nhận +${totalCostTienTinh.toLocaleString()} Tiên Tinh.`);
                               }}
                             >
                               💰 Bán (+{totalCostTienTinh.toLocaleString()} TT)
@@ -1084,9 +1086,13 @@ export default function CultivationModal({ isOpen, onClose }) {
                                   flex: 1,
                                 }}
                                 onClick={() => {
-                                  if (confirm(`BÁN VẬT TRẤN ÁP:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name}\n• Nhận lại: +${costTienTinh.toLocaleString()} Tiên Tinh\n\nBạn có muốn bán vật phẩm này?`)) {
-                                    triggerAction(() => sellArtifact(art.id), `Đã bán ${art.name}, nhận +${costTienTinh.toLocaleString()} Tiên Tinh!`);
+                                  const isRare = art.tier === 'tien_pham' || art.tier === 'than_pham';
+                                  if (isRare) {
+                                    if (!confirm(`⚠️ XÁC NHẬN BÁN BẢO VẬT CAO CẤP:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name}\n• Nhận lại: +${costTienTinh.toLocaleString()} Tiên Tinh\n\nBạn có chắc chắn muốn bán vật phẩm quý hiếm này?`)) {
+                                      return;
+                                    }
                                   }
+                                  triggerAction(() => sellArtifact(art.id), `Đã bán ${art.name}, nhận +${costTienTinh.toLocaleString()} Tiên Tinh!`);
                                 }}
                               >
                                 💰 Bán (+{costTienTinh.toLocaleString()} TT)
@@ -1295,7 +1301,7 @@ export default function CultivationModal({ isOpen, onClose }) {
             <div className={styles.ruleCard}>
               <h4>4. Hệ Thống 72 Mệnh Đăng & 96 Vật Trấn Áp</h4>
               <p>• <strong>Phân Cấp Phẩm</strong>: <strong>Hạ Phẩm</strong> (Trắng) · <strong>Trung Phẩm</strong> (Xanh Lá) · <strong>Thượng Phẩm</strong> (Xanh Lam) · <strong>Cực Phẩm</strong> (Tím) · <strong>Tiên Phẩm</strong> (Kim Sắc) · <strong>Thần Phẩm</strong> (Đỏ Thần Thánh).</p>
-              <p>• <strong>Tỉ lệ rơi</strong>: Cơ duyên nhặt được Mệnh Đăng (~7.5%) và Vật Trấn Áp (~12%) khi ngộ đạo 60s.</p>
+              <p>• <strong>Tỉ lệ rơi</strong>: Cơ duyên nhặt được Mệnh Đăng (~15%) và Vật Trấn Áp (~20%) khi ngộ đạo 60s.</p>
               <p>• <strong>Tỉ Lệ Tiên Tinh</strong>: 1 Tu Vi = 5 Tiên Tinh. Có thể bán đèn / trấn vật không dùng để tích lũy Tiên Tinh mua bảo vật cấp cao!</p>
             </div>
 

@@ -15,6 +15,7 @@ import {
   buyArtifactWithTienTinhAndExp,
   sellArtifactForPoints,
   buyArtifactWithPointsAndExp,
+  sellMultipleItems,
   breakthroughToTrucCo,
   setNgungKhiActivePath,
   breakthroughToKimDan,
@@ -107,6 +108,12 @@ export function useCultivation() {
 
   const handleSellArtifact = useCallback((artifactId) => {
     const res = sellArtifactForPoints(artifactId);
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
+  const handleSellMultipleItems = useCallback(({ lampIds = [], artifactIds = [] }) => {
+    const res = sellMultipleItems({ lampIds, artifactIds });
     setCultivation({ ...res.state });
     return res;
   }, []);
@@ -278,6 +285,7 @@ export function useCultivation() {
     sellLamp: handleSellLamp,
     anchorPalace: handleAnchorPalace,
     sellArtifact: handleSellArtifact,
+    sellMultipleItems: handleSellMultipleItems,
     buyArtifact: handleBuyArtifact,
     activateKimDanTrialV2: handleActivateKimDanTrialV2,
     endKimDanTrialV2: handleEndKimDanTrialV2,

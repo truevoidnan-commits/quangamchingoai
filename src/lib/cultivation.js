@@ -149,13 +149,22 @@ export const DANG_DIEM_RATIO = TIEN_TINH_RATIO; // alias tương thích ngược
 
 // 6 Phẩm cấp độ hiếm của Mệnh Đăng kèm giá Tu Vi (priceExp) và Tiên Tinh (1 Tiên Tinh = 5 Tu Vi)
 export const LAMP_TIERS = {
-  ha_pham: { id: 'ha_pham', name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.12)', border: 'rgba(226, 232, 240, 0.4)', weight: 0.45, priceExp: 500, priceTM: 50, tienTinh: 100, dangDiem: 100 },
-  trung_pham: { id: 'trung_pham', name: 'Trung Phẩm', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.4)', weight: 0.28, priceExp: 1200, priceTM: 120, tienTinh: 240, dangDiem: 240 },
-  thuong_pham: { id: 'thuong_pham', name: 'Thượng Phẩm', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.4)', weight: 0.15, priceExp: 2500, priceTM: 250, tienTinh: 500, dangDiem: 500 },
-  cuc_pham: { id: 'cuc_pham', name: 'Cực Phẩm', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.12)', border: 'rgba(168, 85, 247, 0.4)', weight: 0.08, priceExp: 5000, priceTM: 500, tienTinh: 1000, dangDiem: 1000 },
-  tien_pham: { id: 'tien_pham', name: 'Tiên Phẩm', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.6)', weight: 0.032, priceExp: 10000, priceTM: 1000, tienTinh: 2000, dangDiem: 2000 },
-  than_pham: { id: 'than_pham', name: 'Thần Phẩm', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.18)', border: 'rgba(239, 68, 68, 0.7)', weight: 0.008, priceExp: 25000, priceTM: 2500, tienTinh: 5000, dangDiem: 5000 },
+  ha_pham: { id: 'ha_pham', name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.12)', border: 'rgba(226, 232, 240, 0.4)', weight: 0.45, priceExp: 1000, priceTM: 100, tienTinh: 200, dangDiem: 200 },
+  trung_pham: { id: 'trung_pham', name: 'Trung Phẩm', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.4)', weight: 0.28, priceExp: 2500, priceTM: 250, tienTinh: 500, dangDiem: 500 },
+  thuong_pham: { id: 'thuong_pham', name: 'Thượng Phẩm', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.4)', weight: 0.15, priceExp: 5000, priceTM: 500, tienTinh: 1000, dangDiem: 1000 },
+  cuc_pham: { id: 'cuc_pham', name: 'Cực Phẩm', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.12)', border: 'rgba(168, 85, 247, 0.4)', weight: 0.08, priceExp: 10000, priceTM: 1000, tienTinh: 2000, dangDiem: 2000 },
+  tien_pham: { id: 'tien_pham', name: 'Tiên Phẩm', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.6)', weight: 0.032, priceExp: 20000, priceTM: 2000, tienTinh: 4000, dangDiem: 4000 },
+  than_pham: { id: 'than_pham', name: 'Thần Phẩm', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.18)', border: 'rgba(239, 68, 68, 0.7)', weight: 0.008, priceExp: 50000, priceTM: 5000, tienTinh: 10000, dangDiem: 10000 },
 };
+
+/**
+ * Kiểm tra xem phẩm cấp có cần hỏi lại xác nhận khi bán không
+ * - Hạ, Trung, Thượng, Cực: KHÔNG hỏi lại (false)
+ * - Tiên, Thần: HỎI LẠI cho chắc chắn (true)
+ */
+export function shouldConfirmSell(tier) {
+  return tier === 'tien_pham' || tier === 'than_pham';
+}
 
 // Danh sách 72 Mệnh Đăng Thần Thoại (12 Đèn / Cấp Phẩm)
 export const LIFE_LAMPS = [
@@ -1565,7 +1574,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   // ĐẾN CHÍNH THỨC NGUYÊN ANH: Mệnh Đăng và Vật Trấn Áp sẽ KHÔNG RƠI NỮA! (Giả Anh vẫn rơi bình thường)
   const isNguyenAnh = state.realm === 'nguyen_anh';
 
-  // TỈ LỆ RƠI MỆNH ĐĂNG THEO 6 CẤP BẬC HIẾM (~20% mỗi chu kỳ 60s) - Vẫn rơi ở Giả Anh, chỉ ngừng khi lên Nguyên Anh
+  // TỈ LỆ RƠI MỆNH ĐĂNG THEO 6 CẤP BẬC HIẾM (~15% mỗi chu kỳ 60s) - Vẫn rơi ở Giả Anh, chỉ ngừng khi lên Nguyên Anh
   if (!isNguyenAnh) {
     const allOwnedLamps = [...(state.inventoryLamps || []), ...(state.absorbedLamps || [])];
     if (allOwnedLamps.length < LIFE_LAMPS.length) {
@@ -1573,7 +1582,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
 
       if (unownedLamps.length > 0) {
         const dropRoll = Math.random();
-        if (dropRoll < 0.20) {
+        if (dropRoll < 0.15) {
           const tierRoll = Math.random();
           let selectedTier = 'ha_pham';
           if (tierRoll < 0.45) selectedTier = 'ha_pham';
@@ -1600,10 +1609,10 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     }
   }
 
-  // 25% tỉ lệ nhặt được Vật Trấn Áp Thiên Cung - Vẫn rơi ở Giả Anh, chỉ ngừng khi lên Nguyên Anh
+  // 20% tỉ lệ nhặt được Vật Trấn Áp Thiên Cung - Vẫn rơi ở Giả Anh, chỉ ngừng khi lên Nguyên Anh
   if (!isNguyenAnh) {
     const artifactRoll = Math.random();
-    if (artifactRoll < 0.25) {
+    if (artifactRoll < 0.20) {
       const tierRoll = Math.random();
       let selectedTier = 'ha_pham';
       if (tierRoll < 0.45) selectedTier = 'ha_pham';
@@ -2422,6 +2431,80 @@ export function buyArtifactWithTienTinhAndExp(artifactId) {
 }
 
 export const buyArtifactWithPointsAndExp = buyArtifactWithTienTinhAndExp;
+
+/**
+ * BÁN NHIỀU MỆNH ĐĂNG VÀ VẬT TRẤN ÁP TRONG TÚI TRỮ VẬT CÙNG LÚC
+ * @param {Object} params
+ * @param {string[]} params.lampIds - Danh sách id Mệnh Đăng muốn bán (chỉ áp dụng cho đồ trong túi, không bán đèn đã hấp thụ)
+ * @param {string[]} params.artifactIds - Danh sách id Vật Trấn Áp muốn bán (chỉ áp dụng cho đồ trong túi, không bán vật đã khảm nạm)
+ */
+export function sellMultipleItems({ lampIds = [], artifactIds = [] }) {
+  const state = getCultivationState();
+  let totalGainedTienTinh = 0;
+  const soldLamps = [];
+  const soldArtifacts = [];
+
+  // 1. Xử lý bán Mệnh Đăng
+  if (lampIds && lampIds.length > 0) {
+    let currentLamps = [...(state.inventoryLamps || [])];
+    for (const lampId of lampIds) {
+      const idx = currentLamps.indexOf(lampId);
+      if (idx !== -1) {
+        const lamp = LIFE_LAMPS.find(l => l.id === lampId);
+        if (lamp) {
+          const tier = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
+          const gained = tier.tienTinh || tier.dangDiem || Math.floor(tier.priceExp / TIEN_TINH_RATIO);
+          totalGainedTienTinh += gained;
+          currentLamps.splice(idx, 1);
+          soldLamps.push(lamp);
+        }
+      }
+    }
+    state.inventoryLamps = currentLamps;
+  }
+
+  // 2. Xử lý bán Vật Trấn Áp
+  if (artifactIds && artifactIds.length > 0) {
+    let currentArtifacts = [...(state.inventoryArtifacts || [])];
+    for (const artifactId of artifactIds) {
+      const idx = currentArtifacts.indexOf(artifactId);
+      if (idx !== -1) {
+        const art = SUPPRESSING_ARTIFACTS.find(a => a.id === artifactId);
+        if (art) {
+          const tier = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
+          const gained = tier.tienTinh || tier.dangDiem || (tier.priceExp * TIEN_TINH_RATIO);
+          totalGainedTienTinh += gained;
+          currentArtifacts.splice(idx, 1);
+          soldArtifacts.push(art);
+        }
+      }
+    }
+    state.inventoryArtifacts = currentArtifacts;
+  }
+
+  const totalCount = soldLamps.length + soldArtifacts.length;
+  if (totalCount === 0) {
+    throw new Error('Không có vật phẩm hợp lệ nào trong Túi Trữ Vật để bán.');
+  }
+
+  state.tienTinh = (state.tienTinh || 0) + totalGainedTienTinh;
+  state.dangDiem = state.tienTinh;
+
+  state.logs.unshift({
+    text: `💰 Đã phân giải bán ${totalCount} vật phẩm (thu hồi +${totalGainedTienTinh.toLocaleString()} Tiên Tinh, hiện có: ${state.tienTinh.toLocaleString()} TT).`,
+    time: Date.now(),
+  });
+
+  saveCultivationState(state);
+  return {
+    state,
+    totalGainedTienTinh,
+    soldCount: totalCount,
+    soldLamps,
+    soldArtifacts,
+    message: `Đã bán thành công ${totalCount} vật phẩm, nhận +${totalGainedTienTinh.toLocaleString()} Tiên Tinh!`,
+  };
+}
 
 /**
  * THẺ TRẢI NGHIỆM KIM ĐAN V2 (Tiêu biến ngay lập tức sau khi dùng)
