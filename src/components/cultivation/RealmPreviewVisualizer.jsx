@@ -4979,9 +4979,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                               y="0.8"
                               textAnchor="middle"
                               dominantBaseline="central"
-                              textLength={nw - 30}
-                              lengthAdjust="spacingAndGlyphs"
-                              fontSize={nw < 200 ? "11.5" : "12.8"}
+                              fontSize={palaceName.length > 22 ? "10.8" : (palaceName.length > 18 ? "11.6" : "12.5")}
                               fontWeight="900"
                               fill={isRealized ? (cfg.nameColor || "#fde047") : "#94a3b8"}
                               letterSpacing="0.4"
