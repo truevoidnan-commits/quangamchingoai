@@ -2926,15 +2926,18 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           setIsBreakthroughAnim(true);
           playStarChime(880);
           setTimeout(() => {
-            attempt121Breakthrough();
+            const res = attempt121Breakthrough();
             setIsBreakthroughAnim(false);
+            if (res && res.message) {
+              alert(res.message);
+            }
           }, 2000);
         } catch (err) {
           setIsBreakthroughAnim(false);
           alert(err.message || 'Chưa đủ điều kiện khai mở Cực Cảnh 121.');
         }
       } else {
-        alert(`Cần đả thông đủ 120 Pháp Khiếu để xung kích Cực Cảnh 121 (Hiện tại: ${openedCount}/120).`);
+        alert(`Cần đả thông đủ 120 Pháp Khiếu để xung kích Cực Cảnh Sinh Tử (Hiện tại: ${openedCount}/120).`);
       }
     }
   };
@@ -3812,26 +3815,26 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             padding: '2px 8px',
             borderRadius: 14,
             background: is121Unlocked 
-              ? 'linear-gradient(90deg, rgba(255, 63, 213, 0.3), rgba(168, 85, 247, 0.4))'
+              ? 'linear-gradient(90deg, rgba(3, 7, 18, 0.96) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(255, 255, 255, 0.25) 100%)'
               : 'rgba(8, 18, 36, 0.88)',
-            border: `1px solid ${is121Unlocked ? 'var(--color-cuc-canh, #ff3fd5)' : 'rgba(56, 189, 248, 0.45)'}`,
+            border: `1px solid ${is121Unlocked ? 'rgba(255, 255, 255, 0.9)' : 'rgba(56, 189, 248, 0.45)'}`,
             backdropFilter: 'blur(12px)',
-            boxShadow: is121Unlocked ? '0 0 12px rgba(255, 63, 213, 0.5)' : '0 0 8px rgba(0, 0, 0, 0.5)',
+            boxShadow: is121Unlocked ? '0 0 16px rgba(255, 255, 255, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.9)' : '0 0 8px rgba(0, 0, 0, 0.5)',
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
-            maxWidth: '46%',
+            maxWidth: '54%',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             fontSize: 10
           }}>
             <span style={{ 
               fontSize: 11.5, 
-              fontWeight: 800, 
-              letterSpacing: 0.6,
-              color: is121Unlocked ? 'var(--color-cuc-canh, #ff3fd5)' : '#bae6fd',
-              textShadow: '0 0 8px rgba(56, 189, 248, 0.6)'
+              fontWeight: 900, 
+              letterSpacing: 0.8,
+              color: is121Unlocked ? '#ffffff' : '#bae6fd',
+              textShadow: is121Unlocked ? '0 0 8px rgba(255, 255, 255, 0.95), 0 0 16px rgba(0, 0, 0, 1)' : '0 0 8px rgba(56, 189, 248, 0.6)'
             }}>
-              {is121Unlocked ? '✦ CỰC CẢNH 121' : '✦ CỰC CẢNH'}
+              {is121Unlocked ? '✦ CỰC CẢNH SINH TỬ' : '✦ CỰC CẢNH'}
             </span>
           </div>
 

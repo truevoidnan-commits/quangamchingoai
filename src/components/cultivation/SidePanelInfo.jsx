@@ -751,20 +751,20 @@ export default function SidePanelInfo() {
                         }
                       }
                     } catch (e) {
-                      alert(e.message || 'Chưa thể xung kích Cực Cảnh 121!');
+                      alert(e.message || 'Chưa thể xung kích Cực Cảnh Sinh Tử!');
                     }
                   }}
                   style={{
                     flex: 1.5,
                     padding: '10px 14px',
                     borderRadius: 8,
-                    background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)',
-                    border: '1px solid #d8b4fe',
-                    color: '#fff',
+                    background: 'linear-gradient(135deg, #020617 0%, #1e293b 50%, #334155 100%)',
+                    border: '1.5px solid #ffffff',
+                    color: '#ffffff',
                     fontSize: 12,
-                    fontWeight: 800,
+                    fontWeight: 900,
                     cursor: 'pointer',
-                    boxShadow: '0 0 16px rgba(168, 85, 247, 0.4)',
+                    boxShadow: '0 0 16px rgba(255, 255, 255, 0.4), inset 0 0 10px rgba(0, 0, 0, 0.8)',
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
@@ -772,8 +772,8 @@ export default function SidePanelInfo() {
                     gap: 6
                   }}
                 >
-                  <span>🔮</span>
-                  <span>XUNG KÍCH 121</span>
+                  <span>⚡</span>
+                  <span>XUNG KÍCH CỰC CẢNH SINH TỬ</span>
                 </button>
               )
             )}

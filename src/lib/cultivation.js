@@ -2822,20 +2822,22 @@ export function attemptUnlock121st() {
     state.failed121st = false;
     state.phapKhieu = 121;
     state.selfMenhHoa = 5;
+    const successMsg = '⚡ NGHỊCH THIÊN KHAI KHIẾU · CỰC CẢNH SINH TỬ!\n\n"Tìm đường sống trong cõi chết, đắc đạo giữa lằn ranh sinh tử. Đập nát gông cùm thiên đạo, ngộ ra Pháp Khiếu thứ 121 cấm kỵ vạn cổ!"\n\n✦ Đan Điền hóa sinh 36 Phẩm Hỗn Độn Thanh Liên.\n✦ Ngưng tụ Mệnh Hỏa tự thân thứ 5 (+1 Hỏa Chiến Lực, đạt Ngũ Hỏa Cực Cảnh)!';
     state.logs.unshift({
-      text: '✨ KỲ TÍCH VẠN CỔ! Xung kích thành công mở ra Pháp Khiếu thứ 121 bí mật (Tỉ lệ 60%), ngưng tụ Mệnh Hỏa thứ 5 (+1 Hỏa chiến lực), đạt Trúc Cơ Cực Cảnh!',
+      text: successMsg,
       time: Date.now(),
     });
     saveCultivationState(state);
-    return { state, isSuccess: true, message: '✨ Kỳ tích vạn cổ! Đã mở thành công Pháp Khiếu thứ 121 (60%) đạt 5 Mệnh Hỏa Cực Cảnh!' };
+    return { state, isSuccess: true, message: successMsg };
   } else {
     state.failed121st = true; // Thất bại: Đóng vĩnh viễn
+    const failMsg = '⚠️ CỰC CẢNH SINH TỬ · THẤT BẠI!\n\n"Lằn ranh sinh tử mỏng manh như sợi tóc. Pháp khiếu 121 tan biến trong hư vô, căn cơ đóng kín, vĩnh viễn không thể khai mở Khiếu 121 nữa!"';
     state.logs.unshift({
-      text: '⚠️ XUNG KÍCH THẤT BẠI! Pháp khiếu 121 tan biến trong hư vô, căn cơ đóng kín, vĩnh viễn không thể khai mở Khiếu 121 nữa!',
+      text: failMsg,
       time: Date.now(),
     });
     saveCultivationState(state);
-    return { state, isSuccess: false, message: '⚠️ Xung kích thất bại (60%)! Căn cơ pháp khiếu đã đóng kín, vĩnh viễn không thể mở Pháp Khiếu 121 nữa.' };
+    return { state, isSuccess: false, message: failMsg };
   }
 }
 
