@@ -2475,101 +2475,85 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             </svg>
           </div>
           
-          {/* Nút Chuyển Đổi Chế Độ Xem Trên Canvas */}
+          {/* TRUNG TÂM PHÙ ĐIÊU TIÊN GIA: CỰC CẢNH SINH TỬ & CHUYỂN ĐỔI TINH ĐỒ (CANH GIỮA 100%, KHÔNG ĐÈ LÊN TỨ ĐẠI LIÊN ĐÀI) */}
           <div style={{
             position: 'absolute',
-            top: 10,
-            right: 14,
-            zIndex: 100,
+            top: 8,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 35,
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            gap: 8
+            gap: 5,
+            pointerEvents: 'auto',
+            userSelect: 'none'
           }}>
+            {/* 1. KIM BẢNG PHÙ ĐIÊU: CỰC CẢNH SINH TỬ */}
+            <div style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              padding: '5px 20px',
+              borderRadius: '6px',
+              background: is121Unlocked 
+                ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(49, 25, 78, 0.96) 50%, rgba(15, 23, 42, 0.96) 100%)'
+                : 'linear-gradient(135deg, rgba(8, 18, 36, 0.96) 0%, rgba(16, 38, 74, 0.94) 50%, rgba(8, 18, 36, 0.96) 100%)',
+              border: is121Unlocked 
+                ? '1.6px solid #fbbf24' 
+                : '1.4px solid rgba(251, 191, 36, 0.75)',
+              boxShadow: is121Unlocked 
+                ? '0 0 20px rgba(251, 191, 36, 0.45), inset 0 0 12px rgba(251, 191, 36, 0.25), 0 6px 16px rgba(0,0,0,0.9)' 
+                : '0 0 14px rgba(56, 189, 248, 0.3), inset 0 0 10px rgba(251, 191, 36, 0.2), 0 6px 14px rgba(0,0,0,0.8)',
+              backdropFilter: 'blur(16px)',
+              whiteSpace: 'nowrap'
+            }}>
+              {/* Cánh hoa văn cổ bên trái dát vàng */}
+              <span style={{ fontSize: 11, color: '#fbbf24', textShadow: '0 0 6px rgba(251,191,36,0.8)', lineHeight: 1 }}>❖</span>
+
+              <span style={{ 
+                fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
+                fontSize: 12.5, 
+                fontWeight: 900, 
+                letterSpacing: 2.2,
+                color: is121Unlocked ? '#fef08a' : '#bae6fd',
+                textShadow: is121Unlocked 
+                  ? '0 0 14px rgba(251, 191, 36, 0.95), 0 2px 6px rgba(0,0,0,0.95)' 
+                  : '0 0 10px rgba(56, 189, 248, 0.8)'
+              }}>
+                {is121Unlocked ? '✦ CỰC CẢNH SINH TỬ ✦' : '✦ CỰC CẢNH TRÚC CƠ ✦'}
+              </span>
+
+              {/* Cánh hoa văn cổ bên phải dát vàng */}
+              <span style={{ fontSize: 11, color: '#fbbf24', textShadow: '0 0 6px rgba(251,191,36,0.8)', lineHeight: 1 }}>❖</span>
+            </div>
+
+            {/* 2. NÚT CHUYỂN ĐỔI CHẾ ĐỘ TINH ĐỒ (TÍCH HỢP GỌN GÀNG TRỤC GIỮA) */}
             <button
               onClick={toggleConstelMode}
-              title="Chuyển đổi giữa Lục Đại Tinh Tọa gốc và Thử nghiệm Tứ Tượng Thần Thú"
+              title="Chuyển đổi giữa Tứ Tượng Thần Thú và Lục Đại Tinh Tọa"
               style={{
-                padding: '6px 14px',
-                borderRadius: 20,
+                padding: '3px 12px',
+                borderRadius: '14px',
                 background: isTuTuong ? 'rgba(34, 197, 94, 0.25)' : 'rgba(56, 189, 248, 0.25)',
-                border: `1.5px solid ${isTuTuong ? '#22c55e' : '#38bdf8'}`,
-                color: isTuTuong ? '#4ade80' : '#38bdf8',
-                fontSize: 11.5,
-                fontWeight: 800,
+                border: `1.2px solid ${isTuTuong ? '#22c55e' : '#38bdf8'}`,
+                color: isTuTuong ? '#86efac' : '#7dd3fc',
+                fontSize: 10.5,
+                fontWeight: 700,
                 cursor: 'pointer',
-                backdropFilter: 'blur(12px)',
-                boxShadow: isTuTuong ? '0 0 12px rgba(34, 197, 94, 0.4)' : '0 0 12px rgba(56, 189, 248, 0.4)',
+                backdropFilter: 'blur(10px)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
-                pointerEvents: 'auto',
-                transition: 'all 0.25s ease'
+                gap: 5,
+                boxShadow: isTuTuong ? '0 0 10px rgba(34, 197, 94, 0.35)' : '0 0 10px rgba(56, 189, 248, 0.35)',
+                transition: 'all 0.2s ease'
               }}
             >
               <span>{isTuTuong ? '🐉 Tứ Tượng Thần Thú' : '🌌 Lục Đại Tinh Tọa'}</span>
-              <span style={{ fontSize: 10, opacity: 0.85, background: 'rgba(255,255,255,0.15)', padding: '1px 5px', borderRadius: 4 }}>ĐỔI</span>
+              <span style={{ fontSize: 9.5, opacity: 0.85, background: 'rgba(255,255,255,0.15)', padding: '1px 5px', borderRadius: 4 }}>ĐỔI</span>
             </button>
-          </div>
-
-          {/* 121 CỰC CẢNH THIÊN ĐỈNH (HEADER BADGE TRUNG TÂM — CÂN ĐỐI SINH TỬ ĐẲNG CẤP TIÊN GIA) */}
-          <div style={{
-            position: 'absolute',
-            top: 10,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 20,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '3px 14px',
-            borderRadius: 20,
-            background: is121Unlocked 
-              ? 'linear-gradient(135deg, rgba(2, 6, 23, 0.96) 0%, rgba(15, 23, 42, 0.92) 50%, rgba(30, 41, 59, 0.96) 100%)'
-              : 'rgba(8, 18, 36, 0.92)',
-            border: is121Unlocked 
-              ? '1.5px solid rgba(255, 255, 255, 0.85)' 
-              : '1.2px solid rgba(56, 189, 248, 0.55)',
-            backdropFilter: 'blur(16px)',
-            boxShadow: is121Unlocked 
-              ? '0 0 20px rgba(255, 255, 255, 0.35), inset 0 0 12px rgba(255, 255, 255, 0.12), 0 4px 14px rgba(0, 0, 0, 0.85)' 
-              : '0 0 12px rgba(56, 189, 248, 0.25), 0 4px 10px rgba(0, 0, 0, 0.6)',
-            pointerEvents: 'none',
-            whiteSpace: 'nowrap',
-            maxWidth: '65%',
-            overflow: 'hidden'
-          }}>
-            {/* Điểm xuyết Sinh (Dương Bạch) */}
-            <span style={{ 
-              fontSize: 11, 
-              color: is121Unlocked ? '#ffffff' : '#38bdf8', 
-              textShadow: is121Unlocked ? '0 0 8px #ffffff' : '0 0 8px #38bdf8',
-              lineHeight: 1
-            }}>
-              ✦
-            </span>
-
-            <span style={{ 
-              fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
-              fontSize: 12, 
-              fontWeight: 900, 
-              letterSpacing: 1.6,
-              color: is121Unlocked ? '#ffffff' : '#bae6fd',
-              textShadow: is121Unlocked 
-                ? '0 0 10px rgba(255, 255, 255, 0.95), 0 2px 6px rgba(0, 0, 0, 0.95)' 
-                : '0 0 8px rgba(56, 189, 248, 0.65)'
-            }}>
-              {is121Unlocked ? 'CỰC CẢNH SINH TỬ' : 'CỰC CẢNH'}
-            </span>
-
-            {/* Điểm xuyết Tử (Âm Bạc) Cân Đối */}
-            <span style={{ 
-              fontSize: 11, 
-              color: is121Unlocked ? '#ffffff' : '#38bdf8', 
-              textShadow: is121Unlocked ? '0 0 8px #ffffff' : '0 0 8px #38bdf8',
-              lineHeight: 1
-            }}>
-              ✦
-            </span>
           </div>
 
           {/* FLOATING HOVER TOOLTIP */}
