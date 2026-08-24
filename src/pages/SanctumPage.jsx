@@ -32,6 +32,59 @@ function SvgLotusLamp({ size = 26 }) {
   );
 }
 
+// Nút chọn / bỏ chọn vật phẩm (thiết kế chuẩn chống lệch viền, chống vỡ layout trên Safari / Mobile)
+function SelectCheckButton({ isSelected, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        cursor: 'pointer',
+        padding: '4px 8px',
+        borderRadius: 7,
+        background: isSelected ? 'rgba(239, 68, 68, 0.22)' : 'rgba(255, 255, 255, 0.06)',
+        border: `1.5px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.2)'}`,
+        flexShrink: 0,
+        outline: 'none',
+        lineHeight: 1,
+        transition: 'all 0.15s ease'
+      }}
+      title={isSelected ? 'Bỏ chọn' : 'Chọn để bán'}
+    >
+      <span style={{
+        width: 13,
+        height: 13,
+        borderRadius: 3,
+        border: `1.5px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.5)'}`,
+        background: isSelected ? '#ef4444' : 'transparent',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 9.5,
+        color: '#fff',
+        fontWeight: 900,
+        flexShrink: 0
+      }}>
+        {isSelected ? '✓' : ''}
+      </span>
+      <span style={{
+        fontSize: 11,
+        color: isSelected ? '#f87171' : 'var(--text-muted)',
+        fontWeight: 700,
+        whiteSpace: 'nowrap'
+      }}>
+        {isSelected ? 'Đã chọn' : 'Chọn'}
+      </span>
+    </button>
+  );
+}
+
 export default function SanctumPage() {
   const { 
     cultivation, 
@@ -193,6 +246,29 @@ export default function SanctumPage() {
     }
   };
 
+  // Chuyển Tab/Bộ lọc và xóa lựa chọn để thanh bán không bị tồn đọng
+  const handleSwitchTab = (tab) => {
+    setActiveTab(tab);
+    setSelectedLamps([]);
+    setSelectedArtifacts([]);
+  };
+
+  const handleSwitchLampFilter = (tier) => {
+    setLampFilterTier(tier);
+    setSelectedLamps([]);
+  };
+
+  const handleSwitchArtifactFilter = (tier) => {
+    setArtifactFilterTier(tier);
+    setSelectedArtifacts([]);
+  };
+
+  const handleSwitchInventorySubTab = (subTab) => {
+    setInventorySubTab(subTab);
+    setSelectedLamps([]);
+    setSelectedArtifacts([]);
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -251,7 +327,7 @@ export default function SanctumPage() {
       {/* 2. TAB SWITCHER BAR */}
       <div className="sanctum-tabs-container">
         <button
-          onClick={() => setActiveTab('lamps')}
+          onClick={() => handleSwitchTab('lamps')}
           style={{
             padding: '12px 24px',
             borderRadius: '10px 10px 0 0',
@@ -274,7 +350,7 @@ export default function SanctumPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab('artifacts')}
+          onClick={() => handleSwitchTab('artifacts')}
           style={{
             padding: '12px 24px',
             borderRadius: '10px 10px 0 0',
@@ -297,7 +373,7 @@ export default function SanctumPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab('inventory')}
+          onClick={() => handleSwitchTab('inventory')}
           style={{
             padding: '12px 24px',
             borderRadius: '10px 10px 0 0',
@@ -405,7 +481,7 @@ export default function SanctumPage() {
                 return (
                   <button
                     key={tKey}
-                    onClick={() => setLampFilterTier(tKey)}
+                    onClick={() => handleSwitchLampFilter(tKey)}
                     style={{
                       padding: '6px 18px',
                       borderRadius: 20,
@@ -528,41 +604,21 @@ export default function SanctumPage() {
                         position: 'relative'
                       }}
                     >
-                      <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                        <div style={{ width: 52, height: 52, background: tierInfo.bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <ArtifactIcon item={lamp} isLamp={true} size={48} />
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
+                        <div style={{ width: 50, height: 50, background: tierInfo.bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <ArtifactIcon item={lamp} isLamp={true} size={46} />
                         </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ color: tierInfo.color, fontWeight: 800, fontSize: 14 }}>{lamp.name}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ color: tierInfo.color, fontWeight: 800, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lamp.name}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tierInfo.name} · {lamp.shortName}</div>
                         </div>
 
                         {/* Checkbox chọn nhiều bán khi ở trong túi */}
                         {isOwnedInBag && (
-                          <div 
-                            onClick={(e) => { e.stopPropagation(); toggleSelectLamp(lamp.id); }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 5,
-                              cursor: 'pointer',
-                              padding: '4px 8px',
-                              borderRadius: 6,
-                              background: isSelected ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.06)',
-                              border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.15)'}`
-                            }}
-                            title="Chọn Mệnh Đăng này để bán"
-                          >
-                            <input 
-                              type="checkbox" 
-                              checked={isSelected} 
-                              onChange={() => {}} 
-                              style={{ cursor: 'pointer', accentColor: '#ef4444' }} 
-                            />
-                            <span style={{ fontSize: 11, color: isSelected ? '#f87171' : 'var(--text-muted)', fontWeight: 600 }}>
-                              {isSelected ? 'Đã chọn' : 'Chọn'}
-                            </span>
-                          </div>
+                          <SelectCheckButton 
+                            isSelected={isSelected} 
+                            onClick={() => toggleSelectLamp(lamp.id)} 
+                          />
                         )}
                       </div>
 
@@ -680,7 +736,7 @@ export default function SanctumPage() {
                 return (
                   <button
                     key={tKey}
-                    onClick={() => setArtifactFilterTier(tKey)}
+                    onClick={() => handleSwitchArtifactFilter(tKey)}
                     style={{
                       padding: '6px 18px',
                       borderRadius: 20,
@@ -803,39 +859,19 @@ export default function SanctumPage() {
                         position: 'relative'
                       }}
                     >
-                      <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                        <ArtifactIcon item={art} size={52} />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ color: tierInfo.color, fontWeight: 800, fontSize: 14 }}>{art.name}</div>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
+                        <ArtifactIcon item={art} size={50} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ color: tierInfo.color, fontWeight: 800, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{art.name}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tierInfo.name} · {art.type || 'Trấn Áp'}</div>
                         </div>
 
                         {/* Checkbox chọn nhiều bán khi ở trong túi */}
                         {isOwnedInBag && (
-                          <div 
-                            onClick={(e) => { e.stopPropagation(); toggleSelectArtifact(art.id); }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 5,
-                              cursor: 'pointer',
-                              padding: '4px 8px',
-                              borderRadius: 6,
-                              background: isSelected ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.06)',
-                              border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.15)'}`
-                            }}
-                            title="Chọn Bảo Vật này để bán"
-                          >
-                            <input 
-                              type="checkbox" 
-                              checked={isSelected} 
-                              onChange={() => {}} 
-                              style={{ cursor: 'pointer', accentColor: '#ef4444' }} 
-                            />
-                            <span style={{ fontSize: 11, color: isSelected ? '#f87171' : 'var(--text-muted)', fontWeight: 600 }}>
-                              {isSelected ? 'Đã chọn' : 'Chọn'}
-                            </span>
-                          </div>
+                          <SelectCheckButton 
+                            isSelected={isSelected} 
+                            onClick={() => toggleSelectArtifact(art.id)} 
+                          />
                         )}
                       </div>
 
@@ -933,7 +969,7 @@ export default function SanctumPage() {
               flexWrap: 'wrap'
             }}>
               <button
-                onClick={() => setInventorySubTab('lamps')}
+                onClick={() => handleSwitchInventorySubTab('lamps')}
                 style={{
                   padding: '8px 20px',
                   borderRadius: 8,
@@ -964,7 +1000,7 @@ export default function SanctumPage() {
               </button>
 
               <button
-                onClick={() => setInventorySubTab('artifacts')}
+                onClick={() => handleSwitchInventorySubTab('artifacts')}
                 style={{
                   padding: '8px 20px',
                   borderRadius: 8,
@@ -1082,31 +1118,21 @@ export default function SanctumPage() {
                             gap: 10
                           }}
                         >
-                          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                            <div style={{ width: 44, height: 44, borderRadius: 8, background: tierInfo?.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
+                            <div style={{ width: 44, height: 44, borderRadius: 8, background: tierInfo?.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               <ArtifactIcon item={lobj} isLamp={true} size={40} />
                             </div>
-                            <div>
-                              <div style={{ color: tierInfo?.color || '#ffcc00', fontWeight: 700, fontSize: 13 }}>{lobj.name}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ color: tierInfo?.color || '#ffcc00', fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lobj.name}</div>
                               <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{tierInfo.name} · +{priceTT.toLocaleString()} TT</div>
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                            <div 
-                              onClick={() => toggleSelectLamp(lampId)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                cursor: 'pointer',
-                                padding: '4px 6px',
-                                borderRadius: 4,
-                                background: isSelected ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.06)',
-                                border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.15)'}`
-                              }}
-                            >
-                              <input type="checkbox" checked={isSelected} onChange={() => {}} style={{ cursor: 'pointer', accentColor: '#ef4444' }} />
-                            </div>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                            <SelectCheckButton 
+                              isSelected={isSelected} 
+                              onClick={() => toggleSelectLamp(lampId)} 
+                            />
 
                             {sellLamp && (
                               <button
@@ -1221,29 +1247,19 @@ export default function SanctumPage() {
                             gap: 10
                           }}
                         >
-                          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
                             <ArtifactIcon item={artObj} size={46} />
-                            <div>
-                              <div style={{ color: tierInfo?.color || '#38bdf8', fontWeight: 700, fontSize: 13 }}>{artObj.name}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ color: tierInfo?.color || '#38bdf8', fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{artObj.name}</div>
                               <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{tierInfo?.name} · +{priceTT.toLocaleString()} TT</div>
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                            <div 
-                              onClick={() => toggleSelectArtifact(artId)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                cursor: 'pointer',
-                                padding: '4px 6px',
-                                borderRadius: 4,
-                                background: isSelected ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.06)',
-                                border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.15)'}`
-                              }}
-                            >
-                              <input type="checkbox" checked={isSelected} onChange={() => {}} style={{ cursor: 'pointer', accentColor: '#ef4444' }} />
-                            </div>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                            <SelectCheckButton 
+                              isSelected={isSelected} 
+                              onClick={() => toggleSelectArtifact(artId)} 
+                            />
 
                             {sellArtifact && (
                               <button
@@ -1276,55 +1292,55 @@ export default function SanctumPage() {
 
       </div>
 
-      {/* FLOATING ACTION BAR FOR BATCH SELL */}
+      {/* FLOATING ACTION BAR FOR BATCH SELL (SLIM & RESPONSIVE) */}
       {totalSelectedCount > 0 && (
         <div style={{
           position: 'fixed',
-          bottom: 24,
+          bottom: 16,
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 999,
           background: 'linear-gradient(135deg, rgba(20, 29, 45, 0.98) 0%, rgba(10, 16, 26, 0.99) 100%)',
           border: '1.5px solid var(--color-kim)',
-          boxShadow: '0 12px 36px rgba(0, 0, 0, 0.85), 0 0 24px rgba(255, 204, 0, 0.35)',
-          borderRadius: 16,
-          padding: '12px 24px',
+          boxShadow: '0 8px 28px rgba(0, 0, 0, 0.85), 0 0 16px rgba(255, 204, 0, 0.3)',
+          borderRadius: 14,
+          padding: '8px 14px',
           display: 'flex',
           alignItems: 'center',
-          gap: 20,
+          justifyContent: 'space-between',
+          gap: 12,
           backdropFilter: 'blur(12px)',
-          maxWidth: '94vw',
-          animation: 'slideUp 0.25s ease'
+          width: 'calc(100% - 24px)',
+          maxWidth: 460,
+          boxSizing: 'border-box',
+          animation: 'slideUp 0.2s ease'
         }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 13.5, fontWeight: 800, color: '#fff' }}>
-              Đã chọn: <span style={{ color: 'var(--color-kim)' }}>{totalSelectedCount}</span> vật phẩm
-              {selectedLamps.length > 0 && ` (${selectedLamps.length} Đèn)`}
-              {selectedArtifacts.length > 0 && ` (${selectedArtifacts.length} Bảo Vật)`}
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Đã chọn: <span style={{ color: 'var(--color-kim)' }}>{totalSelectedCount}</span> mục
             </div>
-            <div style={{ fontSize: 12, color: 'var(--color-kim)', fontWeight: 700 }}>
-              Thu hồi: +{totalSelectedTT.toLocaleString()} Tiên Tinh
+            <div style={{ fontSize: 11.5, color: 'var(--color-kim)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+              +{totalSelectedTT.toLocaleString()} Tiên Tinh
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
             <button
               onClick={handleBatchSell}
               style={{
-                padding: '10px 22px',
-                borderRadius: 10,
-                fontSize: 13,
+                padding: '7px 14px',
+                borderRadius: 8,
+                fontSize: 12,
                 fontWeight: 800,
                 background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                 color: '#fff',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
-                transition: 'all 0.2s ease',
+                boxShadow: '0 3px 10px rgba(239, 68, 68, 0.4)',
                 whiteSpace: 'nowrap'
               }}
             >
-              💰 BÁN {totalSelectedCount} MỤC (+{totalSelectedTT.toLocaleString()} TT)
+              💰 Bán ({totalSelectedCount})
             </button>
 
             <button
@@ -1333,9 +1349,9 @@ export default function SanctumPage() {
                 setSelectedArtifacts([]);
               }}
               style={{
-                padding: '10px 16px',
-                borderRadius: 10,
-                fontSize: 12,
+                padding: '7px 10px',
+                borderRadius: 8,
+                fontSize: 11.5,
                 fontWeight: 600,
                 background: 'rgba(255, 255, 255, 0.08)',
                 color: 'var(--text-sub)',
@@ -1344,7 +1360,7 @@ export default function SanctumPage() {
                 whiteSpace: 'nowrap'
               }}
             >
-              ✕ Bỏ chọn
+              ✕ Bỏ
             </button>
           </div>
         </div>
