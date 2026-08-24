@@ -3807,9 +3807,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           };
 
           const canvasWidth = isMobile ? 720 : 1280;
-          const canvasHeight = isMobile ? 1060 : 870;
+          const canvasHeight = isMobile ? 1160 : 870;
           const centerCanvasX = isMobile ? 360 : 646;
-          const centerCanvasY = isMobile ? 530 : 444;
+          const centerCanvasY = isMobile ? 570 : 444;
           const totalPalaces = maxThienCung;
 
           const palaceCoordinates = (() => {
@@ -3830,19 +3830,19 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             ];
 
             const mobile13Positions = [
-              { id: 'van_menh_hu_vo',      x: 360, y: 100, isTop: true, scale: 1.32, nw: 185 },
-              { id: 'dai_dao_tieu_dao',    x: 135, y: 215, scale: 1.22, nw: 175 },
-              { id: 'to_long_than_cung',   x: 235, y: 355, scale: 1.22, nw: 175 },
-              { id: 'hu_vo_ban_nguyen',    x: 585, y: 215, scale: 1.22, nw: 175 },
-              { id: 'tuc_menh_nhan_qua',   x: 485, y: 355, scale: 1.22, nw: 175 },
-              { id: 'phat_thien_kiem',     x: 120, y: 530, scale: 1.25, nw: 175 },
-              { id: 'hong_mong_bat_diet',  x: 600, y: 530, scale: 1.25, nw: 175 },
-              { id: 'luan_hoi_ban',        x: 235, y: 705, scale: 1.22, nw: 175 },
-              { id: 'ngoc_diep',           x: 485, y: 705, scale: 1.22, nw: 175 },
-              { id: 'hon_don_so_khai',    x: 135, y: 845, scale: 1.22, nw: 175 },
-              { id: 'khoi_nguyen_thoi_khong', x: 585, y: 845, scale: 1.22, nw: 175 },
-              { id: 'sang_the_quang',      x: 235, y: 975, scale: 1.25, nw: 175 },
-              { id: 'cuu_chuyen_luan_hoi', x: 485, y: 975, scale: 1.25, nw: 175 },
+              { id: 'van_menh_hu_vo',      x: 360, y: 95, isTop: true, scale: 1.20, nw: 180 },
+              { id: 'dai_dao_tieu_dao',    x: 175, y: 235, scale: 1.12, nw: 165 },
+              { id: 'to_long_than_cung',   x: 175, y: 390, scale: 1.12, nw: 165 },
+              { id: 'hu_vo_ban_nguyen',    x: 545, y: 235, scale: 1.12, nw: 165 },
+              { id: 'tuc_menh_nhan_qua',   x: 545, y: 390, scale: 1.12, nw: 165 },
+              { id: 'phat_thien_kiem',     x: 155, y: 570, scale: 1.14, nw: 165 },
+              { id: 'hong_mong_bat_diet',  x: 565, y: 570, scale: 1.14, nw: 165 },
+              { id: 'luan_hoi_ban',        x: 175, y: 750, scale: 1.12, nw: 165 },
+              { id: 'ngoc_diep',           x: 545, y: 750, scale: 1.12, nw: 165 },
+              { id: 'hon_don_so_khai',    x: 175, y: 905, scale: 1.12, nw: 165 },
+              { id: 'khoi_nguyen_thoi_khong', x: 545, y: 905, scale: 1.12, nw: 165 },
+              { id: 'sang_the_quang',      x: 235, y: 1055, scale: 1.12, nw: 165 },
+              { id: 'cuu_chuyen_luan_hoi', x: 485, y: 1055, scale: 1.12, nw: 165 },
             ];
 
             const standardList = isMobile ? mobile13Positions : desktop13Positions;
@@ -3900,7 +3900,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               padding: 0
             }}>
               <svg
-                viewBox={isMobile ? "0 0 720 1060" : "0 0 1280 870"}
+                viewBox={isMobile ? "0 0 720 1160" : "0 0 1280 870"}
                 preserveAspectRatio="xMidYMid meet"
                 style={{
                   position: 'absolute',
