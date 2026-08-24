@@ -2917,19 +2917,44 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             }}
           >
             <defs>
-              {/* Glow Filters */}
-              <filter id="nkGlowRed" x="-40%" y="-40%" width="180%" height="180%">
-                <feGaussianBlur stdDeviation="10" result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              {/* High-Performance GPU-Optimized Glow Filters */}
+              <filter id="nkGlowRed" x="-25%" y="-25%" width="150%" height="150%">
+                <feGaussianBlur stdDeviation="3.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
               </filter>
-              <filter id="nkGlowCyan" x="-40%" y="-40%" width="180%" height="180%">
-                <feGaussianBlur stdDeviation="10" result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              <filter id="nkGlowCyan" x="-25%" y="-25%" width="150%" height="150%">
+                <feGaussianBlur stdDeviation="3.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
               </filter>
-              <filter id="nkGlowGold" x="-40%" y="-40%" width="180%" height="180%">
-                <feGaussianBlur stdDeviation="12" result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              <filter id="nkGlowGold" x="-25%" y="-25%" width="150%" height="150%">
+                <feGaussianBlur stdDeviation="4.0" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
               </filter>
+
+              {/* Tiger Blood & Golden Flame Aura Gradients */}
+              <radialGradient id="tigerAuraGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.45" />
+                <stop offset="40%" stopColor="#ef4444" stopOpacity="0.3" />
+                <stop offset="75%" stopColor="#991b1b" stopOpacity="0.12" />
+                <stop offset="100%" stopColor="#450a0a" stopOpacity="0" />
+              </radialGradient>
+
+              {/* Whale Celestial Ocean Aura Gradients */}
+              <radialGradient id="whaleAuraGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.45" />
+                <stop offset="45%" stopColor="#06b6d4" stopOpacity="0.28" />
+                <stop offset="80%" stopColor="#0369a1" stopOpacity="0.1" />
+                <stop offset="100%" stopColor="#082f49" stopOpacity="0" />
+              </radialGradient>
 
               {/* Core & Atmosphere Gradients */}
               <radialGradient id="bloodVortexCore" cx="50%" cy="50%" r="50%">
@@ -3005,22 +3030,49 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 <stop offset="100%" stopColor="#082f49" stopOpacity="0" />
               </linearGradient>
 
-              {/* CSS Keyframe Animations */}
+              {/* High-Performance 60fps Keyframe Animations */}
               <style>{`
                 @keyframes nkSpinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                 @keyframes nkSpinReverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
-                @keyframes nkPulseBreathing { 0%, 100% { transform: scale(1); opacity: 0.88; } 50% { transform: scale(1.05); opacity: 1; } }
-                @keyframes nkTigerMajestic { 0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); } 50% { transform: translateY(-8px) rotate(-1deg) scale(1.02); } }
-                @keyframes nkTigerClawSlash { 0%, 100% { opacity: 0.35; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1.08); } }
-                @keyframes nkWhaleMajestic { 0%, 100% { transform: translate(0px, 0px) rotate(0deg); } 50% { transform: translate(14px, -12px) rotate(-2deg); } }
-                @keyframes nkWhaleSpoutSpray { 0% { opacity: 0.3; transform: scaleY(0.7); } 50% { opacity: 1; transform: scaleY(1.2); } 100% { opacity: 0.3; transform: scaleY(0.7); } }
-                @keyframes causticsShimmer { 0%, 100% { opacity: 0.45; transform: skewX(0deg); } 50% { opacity: 0.85; transform: skewX(4deg); } }
-                @keyframes currentDrift1 { 0% { transform: translateX(-40px) translateY(0px); } 50% { transform: translateX(40px) translateY(-10px); } 100% { transform: translateX(-40px) translateY(0px); } }
-                @keyframes currentDrift2 { 0% { transform: translateX(40px) translateY(0px); } 50% { transform: translateX(-40px) translateY(12px); } 100% { transform: translateX(40px) translateY(0px); } }
-                @keyframes nkEmberFloat1 { 0% { transform: translateY(0px) scale(0.8); opacity: 0; } 50% { opacity: 0.85; } 100% { transform: translateY(-190px) scale(1.3); opacity: 0; } }
-                @keyframes nkEmberFloat2 { 0% { transform: translateY(0px) scale(1); opacity: 0; } 50% { opacity: 0.9; } 100% { transform: translateY(-230px) scale(1.5); opacity: 0; } }
-                @keyframes nkDeepBubbleFloat { 0% { transform: translateY(0px) translateX(0px); opacity: 0; } 50% { opacity: 0.8; transform: translateY(-90px) translateX(8px); } 100% { transform: translateY(-180px) translateX(-6px); opacity: 0; } }
-                @keyframes nkMountainMist { 0%, 100% { transform: translateX(-20px); opacity: 0.35; } 50% { transform: translateX(20px); opacity: 0.6; } }
+                @keyframes nkPulseBreathing { 
+                  0%, 100% { transform: scale(1); opacity: 0.85; } 
+                  50% { transform: scale(1.04); opacity: 1; } 
+                }
+
+                /* THẦN THÚ HUYẾT HỔ: Chuyển động lơ lửng uy dũng mượt mà 60fps */
+                @keyframes nkTigerMajestic { 
+                  0% { transform: translate3d(0, 0px, 0) scale(1) rotate(0deg); } 
+                  25% { transform: translate3d(2px, -6px, 0) scale(1.015) rotate(-0.6deg); } 
+                  50% { transform: translate3d(0, -11px, 0) scale(1.028) rotate(0.4deg); } 
+                  75% { transform: translate3d(-2px, -6px, 0) scale(1.015) rotate(0.7deg); } 
+                  100% { transform: translate3d(0, 0px, 0) scale(1) rotate(0deg); } 
+                }
+                @keyframes nkTigerClawSlash { 
+                  0%, 100% { opacity: 0.25; transform: scale(0.95); } 
+                  50% { opacity: 0.95; transform: scale(1.05); } 
+                }
+
+                /* THÁI CỔ LONG KÌNH: Bơi lượn uốn lượn sâu trong Cấm Hải mượt như lụa */
+                @keyframes nkWhaleMajestic { 
+                  0% { transform: translate3d(0, 0px, 0) rotate(0deg); } 
+                  25% { transform: translate3d(10px, -7px, 0) rotate(-1.4deg); } 
+                  50% { transform: translate3d(0, -14px, 0) rotate(0.5deg); } 
+                  75% { transform: translate3d(-10px, -7px, 0) rotate(1.6deg); } 
+                  100% { transform: translate3d(0, 0px, 0) rotate(0deg); } 
+                }
+                @keyframes nkWhaleSpoutSpray { 
+                  0% { opacity: 0.25; transform: scaleY(0.7) translateY(4px); } 
+                  50% { opacity: 0.95; transform: scaleY(1.15) translateY(-4px); } 
+                  100% { opacity: 0.25; transform: scaleY(0.7) translateY(4px); } 
+                }
+
+                @keyframes causticsShimmer { 0%, 100% { opacity: 0.45; transform: skewX(0deg); } 50% { opacity: 0.85; transform: skewX(3deg); } }
+                @keyframes currentDrift1 { 0% { transform: translate3d(-30px, 0px, 0); } 50% { transform: translate3d(30px, -8px, 0); } 100% { transform: translate3d(-30px, 0px, 0); } }
+                @keyframes currentDrift2 { 0% { transform: translate3d(30px, 0px, 0); } 50% { transform: translate3d(-30px, 10px, 0); } 100% { transform: translate3d(30px, 0px, 0); } }
+                @keyframes nkEmberFloat1 { 0% { transform: translate3d(0, 0px, 0); opacity: 0; } 30% { opacity: 0.9; } 80% { opacity: 0.7; } 100% { transform: translate3d(8px, -170px, 0); opacity: 0; } }
+                @keyframes nkEmberFloat2 { 0% { transform: translate3d(0, 0px, 0); opacity: 0; } 30% { opacity: 0.9; } 80% { opacity: 0.7; } 100% { transform: translate3d(-10px, -200px, 0); opacity: 0; } }
+                @keyframes nkDeepBubbleFloat { 0% { transform: translate3d(0, 0px, 0); opacity: 0; } 30% { opacity: 0.85; } 70% { opacity: 0.7; } 100% { transform: translate3d(10px, -160px, 0); opacity: 0; } }
+                @keyframes nkMountainMist { 0%, 100% { transform: translate3d(-15px, 0, 0); opacity: 0.35; } 50% { transform: translate3d(15px, 0, 0); opacity: 0.6; } }
                 @keyframes nkLightningFlash1 { 0%, 88%, 100% { opacity: 0; } 90%, 93% { opacity: 0.95; } }
                 @keyframes nkLightningFlash2 { 0%, 75%, 100% { opacity: 0; } 78%, 81% { opacity: 0.9; } }
                 @keyframes nkLightningFlash3 { 0%, 92%, 100% { opacity: 0; } 94%, 97% { opacity: 0.95; } }
@@ -3044,11 +3096,11 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   {/* Đường viền khí huyết rực sáng trên đỉnh núi */}
                   <polyline points="0,510 150,420 300,500 460,360 620,480 770,400 920,520" fill="none" stroke="#fca5a5" strokeWidth="2" strokeOpacity="0.6" filter="url(#nkGlowRed)" />
                   {/* Sương mù khí huyết trôi lãng đãng quanh chân núi */}
-                  <ellipse cx="460" cy="560" rx="460" ry="80" fill="rgba(220, 38, 38, 0.12)" filter="url(#nkGlowRed)" style={{ animation: 'nkMountainMist 7s ease-in-out infinite' }} />
+                  <ellipse cx="460" cy="560" rx="460" ry="80" fill="rgba(220, 38, 38, 0.12)" style={{ animation: 'nkMountainMist 7s ease-in-out infinite' }} />
                 </g>
 
                 {/* 2. Quầng Huyết Nhật Khí Huyết Chi Viêm */}
-                <circle cx="460" cy="290" r="340" fill="rgba(239, 68, 68, 0.15)" filter="url(#nkGlowRed)" style={{ animation: 'nkPulseBreathing 4s ease-in-out infinite' }} />
+                <circle cx="460" cy="290" r="340" fill="rgba(239, 68, 68, 0.15)" style={{ animation: 'nkPulseBreathing 4s ease-in-out infinite' }} />
                 <circle cx="460" cy="290" r="220" fill="rgba(220, 38, 38, 0.12)" />
 
                 {/* 3. HỆ THỐNG TIA SÉT KHÍ HUYẾT GIÁNG THẾ (CRIMSON & GOLDEN LIGHTNING BOLTS) */}
@@ -3103,7 +3155,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   style={{ animation: 'nkLightningFlash3 5.2s ease-in-out infinite', animationDelay: '1.6s' }}
                 />
 
-                {/* 4. Các đốm lửa Huyết Khí bốc lên từ lòng đất & đỉnh núi */}
+                {/* 4. Các đốm lửa Huyết Khí bốc lên từ lòng đất & đỉnh núi (Siêu nhẹ, không tốn GPU) */}
                 {Array.from({ length: 20 }).map((_, idx) => (
                   <circle
                     key={idx}
@@ -3111,10 +3163,11 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     cy={520 + ((idx % 4) * 14)}
                     r={2.5 + (idx % 3)}
                     fill={idx % 2 === 0 ? '#fca5a5' : '#ef4444'}
-                    filter="url(#nkGlowRed)"
+                    opacity="0.85"
                     style={{
                       animation: `${idx % 2 === 0 ? 'nkEmberFloat1' : 'nkEmberFloat2'} ${2.4 + (idx % 4) * 0.5}s ease-in-out infinite`,
-                      animationDelay: `${idx * 0.18}s`
+                      animationDelay: `${idx * 0.18}s`,
+                      willChange: 'transform, opacity'
                     }}
                   />
                 ))}
@@ -3127,7 +3180,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             {viewMode === 'phap' && (
               <g>
                 {/* Vầng sáng đại dương trung tâm */}
-                <circle cx="460" cy="290" r="350" fill="rgba(6, 182, 212, 0.15)" filter="url(#nkGlowCyan)" style={{ animation: 'nkPulseBreathing 4.5s ease-in-out infinite' }} />
+                <circle cx="460" cy="290" r="350" fill="rgba(6, 182, 212, 0.15)" style={{ animation: 'nkPulseBreathing 4.5s ease-in-out infinite' }} />
                 <circle cx="460" cy="290" r="230" fill="rgba(3, 105, 161, 0.14)" />
 
                 {/* Chùm tia sáng thần thánh (Celestial Caustic Beams) chiếu từ mặt biển xuống vực sâu */}
@@ -3139,24 +3192,22 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
 
                 {/* Các dải hải lưu mềm mại trôi lơ lửng giữa tầng nước (Deep Ocean Current Ribbons) */}
-                <g style={{ animation: 'currentDrift1 8s ease-in-out infinite' }}>
+                <g style={{ animation: 'currentDrift1 8s ease-in-out infinite', willChange: 'transform' }}>
                   <path
                     d="M -50,450 Q 240,410 460,460 T 970,420"
                     fill="none"
                     stroke="url(#oceanRibbon1)"
                     strokeWidth="48"
                     strokeLinecap="round"
-                    filter="url(#nkGlowCyan)"
                   />
                 </g>
-                <g style={{ animation: 'currentDrift2 6.5s ease-in-out infinite' }}>
+                <g style={{ animation: 'currentDrift2 6.5s ease-in-out infinite', willChange: 'transform' }}>
                   <path
                     d="M -50,510 Q 280,550 520,500 T 970,530"
                     fill="none"
                     stroke="url(#oceanRibbon2)"
                     strokeWidth="56"
                     strokeLinecap="round"
-                    filter="url(#nkGlowCyan)"
                   />
                 </g>
 
@@ -3168,10 +3219,11 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     cy={410 + ((idx % 5) * 26)}
                     r={2.2 + (idx % 3) * 0.8}
                     fill={idx % 3 === 0 ? '#ffffff' : idx % 2 === 0 ? '#a5f3fc' : '#38bdf8'}
-                    filter="url(#nkGlowCyan)"
+                    opacity="0.85"
                     style={{
                       animation: `nkDeepBubbleFloat ${3.5 + (idx % 4) * 0.7}s ease-in-out infinite`,
-                      animationDelay: `${idx * 0.28}s`
+                      animationDelay: `${idx * 0.28}s`,
+                      willChange: 'transform, opacity'
                     }}
                   />
                 ))}
@@ -3230,7 +3282,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* VÒNG XOÁY NĂNG LƯỢNG ĐAN ĐIỀN */}
               {viewMode === 'the' ? (
-                <g style={{ transformOrigin: '0 0', animation: 'nkSpinSlow 14s linear infinite' }}>
+                <g style={{ transformOrigin: '0 0', animation: 'nkSpinSlow 14s linear infinite', willChange: 'transform' }}>
                   <circle cx="0" cy="0" r="50" fill="url(#bloodVortexCore)" />
                   <circle cx="0" cy="0" r="52" fill="none" stroke="#ef4444" strokeWidth="2.2" strokeDasharray="10 6" opacity="0.85" />
                   {/* Các cánh hoa lửa xoáy */}
@@ -3238,7 +3290,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <circle cx="0" cy="0" r="20" fill="#ffffff" filter="url(#nkGlowRed)" />
                 </g>
               ) : (
-                <g style={{ transformOrigin: '0 0', animation: 'nkSpinReverse 16s linear infinite' }}>
+                <g style={{ transformOrigin: '0 0', animation: 'nkSpinReverse 16s linear infinite', willChange: 'transform' }}>
                   <circle cx="0" cy="0" r="52" fill="url(#abyssOceanCore)" />
                   <circle cx="0" cy="0" r="54" fill="none" stroke="#38bdf8" strokeWidth="2.2" strokeDasharray="8 6" opacity="0.85" />
                   {/* Các luồng thủy triều xoáy sâu */}
@@ -3248,21 +3300,25 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               )}
 
               {/* ========================================================
-                  DỊ TƯỢNG 1: THẦN THÚ HUYẾT HỔ HOÀNG KIM CHÂN HỎA (HÌNH ẢNH THỰC TÁCH NỀN TO LỚN UY DŨNG)
+                  DỊ TƯỢNG 1: THẦN THÚ HUYẾT HỔ HOÀNG KIM CHÂN HỎA (TỐI ƯU 60FPS MƯỢT MÀ)
                  ======================================================== */}
               {viewMode === 'the' && hasTiger && (
                 <g
                   transform="translate(0, -25)"
-                  style={{ animation: 'nkTigerMajestic 3.4s ease-in-out infinite' }}
+                  style={{
+                    animation: 'nkTigerMajestic 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite',
+                    transformOrigin: '0px 0px',
+                    willChange: 'transform'
+                  }}
                 >
-                  {/* Aura Bão Lửa Khí Huyết Chân Hỏa To Lớn */}
-                  <circle cx="0" cy="0" r="190" fill="rgba(239, 68, 68, 0.18)" filter="url(#nkGlowRed)" />
-                  <circle cx="0" cy="0" r="165" fill="none" stroke="#f59e0b" strokeWidth="2.4" strokeDasharray="10 8" opacity="0.85" filter="url(#nkGlowGold)" />
+                  {/* Aura Bão Lửa Khí Huyết Chân Hỏa To Lớn (Dùng Radial Gradient GPU-accelerated) */}
+                  <circle cx="0" cy="0" r="195" fill="url(#tigerAuraGlow)" />
+                  <circle cx="0" cy="0" r="165" fill="none" stroke="#f59e0b" strokeWidth="2.0" strokeDasharray="10 8" opacity="0.85" />
 
                   {/* Vết cào Huyết Long Trảo (Energy Claws) To Lớn */}
-                  <g style={{ animation: 'nkTigerClawSlash 1.8s ease-in-out infinite' }}>
-                    <path d="M -160,-105 L -90,-35 M -140,-120 L -75,-50 M -175,-85 L -110,-15" stroke="#fef08a" strokeWidth="4.2" strokeLinecap="round" opacity="0.9" filter="url(#nkGlowGold)" />
-                    <path d="M 160,-105 L 90,-35 M 140,-120 L 75,-50 M 175,-85 L 110,-15" stroke="#fef08a" strokeWidth="4.2" strokeLinecap="round" opacity="0.9" filter="url(#nkGlowGold)" />
+                  <g style={{ animation: 'nkTigerClawSlash 2.2s ease-in-out infinite', willChange: 'transform, opacity' }}>
+                    <path d="M -160,-105 L -90,-35 M -140,-120 L -75,-50 M -175,-85 L -110,-15" stroke="#fef08a" strokeWidth="3.6" strokeLinecap="round" opacity="0.9" filter="url(#nkGlowGold)" />
+                    <path d="M 160,-105 L 90,-35 M 140,-120 L 75,-50 M 175,-85 L 110,-15" stroke="#fef08a" strokeWidth="3.6" strokeLinecap="round" opacity="0.9" filter="url(#nkGlowGold)" />
                   </g>
 
                   {/* HÌNH ẢNH HUYẾT HỔ CHÂN HỎA TÁCH NỀN TO LỚN (450px x 210px) */}
@@ -3274,8 +3330,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     height="210"
                     preserveAspectRatio="xMidYMid meet"
                     style={{
-                      filter: 'drop-shadow(0 0 22px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 40px rgba(239, 68, 68, 0.8))',
-                      pointerEvents: 'none'
+                      filter: 'drop-shadow(0 0 14px rgba(245, 158, 11, 0.85)) drop-shadow(0 0 28px rgba(239, 68, 68, 0.6))',
+                      pointerEvents: 'none',
+                      willChange: 'transform'
                     }}
                   />
 
@@ -3290,16 +3347,20 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               )}
 
               {/* ========================================================
-                  DỊ TƯỢNG 2: THẦN THÚ CẤM HẢI LONG KÌNH (CHỈ HIỂN THỊ KHI TẦNG 7+)
+                  DỊ TƯỢNG 2: THẦN THÚ CẤM HẢI LONG KÌNH (TỐI ƯU BƠI LƯỢN MƯỢT MÀ 60FPS)
                  ======================================================== */}
               {viewMode === 'phap' && hasWhale && (
                 <g
                   transform="translate(0, -30)"
-                  style={{ animation: 'nkWhaleMajestic 5.2s ease-in-out infinite' }}
+                  style={{
+                    animation: 'nkWhaleMajestic 5.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite',
+                    transformOrigin: '0px 0px',
+                    willChange: 'transform'
+                  }}
                 >
-                  {/* Quầng Linh Hải Xanh Thẳm Quanh Cự Kình */}
-                  <ellipse cx="0" cy="0" rx="148" ry="102" fill="rgba(6, 182, 212, 0.18)" filter="url(#nkGlowCyan)" />
-                  <ellipse cx="0" cy="0" rx="126" ry="86" fill="none" stroke="#38bdf8" strokeWidth="2" strokeDasharray="8 6" opacity="0.75" />
+                  {/* Quầng Linh Hải Xanh Thẳm Quanh Cự Kình (Dùng Radial Gradient GPU-accelerated) */}
+                  <ellipse cx="0" cy="0" rx="160" ry="110" fill="url(#whaleAuraGlow)" />
+                  <ellipse cx="0" cy="0" rx="126" ry="86" fill="none" stroke="#38bdf8" strokeWidth="1.8" strokeDasharray="8 6" opacity="0.75" />
 
                   {/* THÂN THỂ THÁI CỔ LONG KÌNH KHỔNG LỒ */}
                   {/* Thân Cá Voi Cổ Đại */}
@@ -3307,7 +3368,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     d="M -92,-8 Q -55,-60 28,-46 Q 92,-30 108,2 Q 114,35 38,42 Q -55,44 -92,-8 Z"
                     fill="url(#whaleBodyGrad)"
                     stroke="#7dd3fc"
-                    strokeWidth="2.8"
+                    strokeWidth="2.4"
                     filter="url(#nkGlowCyan)"
                   />
 
@@ -3318,22 +3379,22 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   />
 
                   {/* Vây Lưng & Cổ Ngữ Long Tộc Phát Sáng */}
-                  <path d="M 0,-48 Q 15,-74 30,-46 Z" fill="#0284c7" stroke="#bae6fd" strokeWidth="2" />
-                  <path d="M -28,-8 Q 0,-36 20,-8 Q 40,-36 60,-8" fill="none" stroke="#fde047" strokeWidth="2.2" strokeDasharray="3 4" filter="url(#nkGlowGold)" />
+                  <path d="M 0,-48 Q 15,-74 30,-46 Z" fill="#0284c7" stroke="#bae6fd" strokeWidth="1.8" />
+                  <path d="M -28,-8 Q 0,-36 20,-8 Q 40,-36 60,-8" fill="none" stroke="#fde047" strokeWidth="2.0" strokeDasharray="3 4" filter="url(#nkGlowGold)" />
 
                   {/* Vây Bơi Dài Uyển Chuyển (Pectoral Fins) */}
-                  <path d="M -28,16 Q -12,52 20,30 Z" fill="#0369a1" stroke="#38bdf8" strokeWidth="2" />
-                  <path d="M 6,14 Q 24,46 46,24 Z" fill="#0369a1" stroke="#38bdf8" strokeWidth="1.6" opacity="0.85" />
+                  <path d="M -28,16 Q -12,52 20,30 Z" fill="#0369a1" stroke="#38bdf8" strokeWidth="1.8" />
+                  <path d="M 6,14 Q 24,46 46,24 Z" fill="#0369a1" stroke="#38bdf8" strokeWidth="1.4" opacity="0.85" />
 
                   {/* Đuôi Cá Voi Bạt Lãng Uốn Lượn */}
                   <path
                     d="M -92,-8 Q -114,-26 -128,-18 Q -118,-4 -96,-7 Q -118,-4 -128,11 Q -114,20 -92,-8 Z"
                     fill="#0284c7"
                     stroke="#7dd3fc"
-                    strokeWidth="2.6"
+                    strokeWidth="2.2"
                   />
                   {/* Bọt nước phát quang sau đuôi */}
-                  <circle cx="-134" cy="-5" r="4.5" fill="#a5f3fc" filter="url(#nkGlowCyan)" />
+                  <circle cx="-134" cy="-5" r="4.5" fill="#a5f3fc" />
                   <circle cx="-145" cy="2" r="3" fill="#ffffff" />
 
                   {/* Cặp Mắt Thần Triệt Ngộ Hoàng Kim */}
@@ -3341,8 +3402,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <circle cx="77" cy="-11" r="2.2" fill="#082f49" />
 
                   {/* Luồng Linh Thủy & Tinh Tú Phun Lên Từ Đỉnh Đầu */}
-                  <g style={{ animation: 'nkWhaleSpoutSpray 3.2s ease-in-out infinite' }}>
-                    <path d="M 15,-50 Q 18,-92 34,-100 M 15,-50 Q 8,-85 -5,-94 M 15,-50 Q 26,-82 46,-88" fill="none" stroke="#67e8f9" strokeWidth="2.6" strokeLinecap="round" filter="url(#nkGlowCyan)" />
+                  <g style={{ animation: 'nkWhaleSpoutSpray 3.2s ease-in-out infinite', willChange: 'transform, opacity' }}>
+                    <path d="M 15,-50 Q 18,-92 34,-100 M 15,-50 Q 8,-85 -5,-94 M 15,-50 Q 26,-82 46,-88" fill="none" stroke="#67e8f9" strokeWidth="2.4" strokeLinecap="round" filter="url(#nkGlowCyan)" />
                     <circle cx="34" cy="-100" r="4" fill="#ffffff" filter="url(#nkGlowGold)" />
                     <circle cx="-5" cy="-94" r="3" fill="#ffffff" />
                     <circle cx="46" cy="-88" r="2.8" fill="#fef08a" />
