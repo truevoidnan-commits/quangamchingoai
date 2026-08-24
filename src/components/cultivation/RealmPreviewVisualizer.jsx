@@ -1344,9 +1344,9 @@ function TaiCucIcon({ size = 12, inverted = false }) {
   );
 }
 
-/* Component Bảng Thủy Tinh Âm Dương Sinh Tử Luân Hồi (Nhuộm Từng Phần Trái Sang Phải 7.5 Giây Chuẩn 100%) */
+/* Component Bảng Thủy Tinh Âm Dương Sinh Tử Luân Hồi (TỐI ƯU 60FPS ZERO LAG GPU COMPOSITED) */
 function CucCanhYinYangBadge({ is121Unlocked }) {
-  // 'black' (Nền Đen) -> 'dyeing_white' (Nhuộm Trắng 2.5s) -> 'white' (Nền Trắng) -> 'dyeing_black' (Nhuộm Đen 2.5s) -> 'black'
+  // 'black' -> 'dyeing_white' -> 'white' -> 'dyeing_black' -> 'black'
   const [dyeState, setDyeState] = React.useState('black');
 
   React.useEffect(() => {
@@ -1356,7 +1356,7 @@ function CucCanhYinYangBadge({ is121Unlocked }) {
     let timerId;
 
     const cycle = () => {
-      // 1. Sau 5s ở nền đen -> bắt đầu nhuộm trắng sang phải (tổng 7.5s chu kỳ)
+      // 1. Sau 5s ở nền đen -> bắt đầu nhuộm trắng sang phải
       timerId = setTimeout(() => {
         if (!isMounted) return;
         setDyeState('dyeing_white');
@@ -1394,15 +1394,14 @@ function CucCanhYinYangBadge({ is121Unlocked }) {
     return (
       <div style={{
         position: 'relative',
-        padding: '3.5px',
+        padding: '3px',
         borderRadius: '26px',
-        border: '1.4px solid rgba(56, 189, 248, 0.75)',
-        boxShadow: '0 0 16px rgba(56, 189, 248, 0.35), inset 0 0 8px rgba(56, 189, 248, 0.15)',
+        border: '1.2px solid rgba(56, 189, 248, 0.65)',
+        boxShadow: '0 0 14px rgba(56, 189, 248, 0.25)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'rgba(2, 6, 23, 0.65)',
-        backdropFilter: 'blur(12px)'
+        background: 'rgba(2, 6, 23, 0.85)'
       }}>
         {/* 4 Hạt kim cương góc */}
         <div style={{ position: 'absolute', top: -3, left: 12, width: 4, height: 4, transform: 'rotate(45deg)', background: '#38bdf8', boxShadow: '0 0 6px #38bdf8' }} />
@@ -1414,45 +1413,56 @@ function CucCanhYinYangBadge({ is121Unlocked }) {
           position: 'relative',
           padding: '5px 22px',
           borderRadius: '22px',
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(56, 189, 248, 0.08) 50%, rgba(8, 18, 36, 0.9) 100%)',
-          border: '1.2px solid rgba(255, 255, 255, 0.55)',
-          borderTop: '1.6px solid rgba(255, 255, 255, 0.95)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.6), inset 0 1.5px 2px rgba(255, 255, 255, 0.85)',
-          backdropFilter: 'blur(16px)',
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(8, 18, 36, 0.98) 100%)',
+          border: '1.2px solid rgba(56, 189, 248, 0.55)',
           display: 'flex',
           alignItems: 'center',
           gap: 8
         }}>
-          <span style={{ fontSize: 9, color: '#38bdf8', textShadow: '0 0 8px #38bdf8' }}>✦</span>
+          <span style={{ fontSize: 9, color: '#38bdf8' }}>✦</span>
           <span style={{
             fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
             fontSize: 11.5,
             fontWeight: 800,
             letterSpacing: 2.2,
             color: '#ffffff',
-            textShadow: '0 0 10px rgba(56, 189, 248, 0.9), 0 0 20px rgba(255, 255, 255, 0.5), 0 1px 3px rgba(0,0,0,0.8)'
+            textShadow: '0 0 10px rgba(56, 189, 248, 0.8), 0 1px 3px rgba(0,0,0,0.8)'
           }}>
             TRÚC CƠ TINH ĐỒ
           </span>
-          <span style={{ fontSize: 9, color: '#38bdf8', textShadow: '0 0 8px #38bdf8' }}>✦</span>
+          <span style={{ fontSize: 9, color: '#38bdf8' }}>✦</span>
         </div>
       </div>
     );
   }
 
-  // TÍNH TOÁN VỊ TRÍ & ĐỘ RỘNG MÀN NHUỘM TRẮNG (WHITE CURTAIN)
-  const isWhite = (dyeState === 'dyeing_white' || dyeState === 'white');
-  const isDyeingBlack = (dyeState === 'dyeing_black');
+  // TÍNH TOÁN VỊ TRÍ GPU TRANSFORM TRANSLATE (100% GPU COMPOSITING — ZERO LAG)
+  let curtainTranslate = '-100%';
+  let innerTranslate = '100%';
+  let transitionStyle = 'transform 2.5s cubic-bezier(0.4, 0, 0.2, 1)';
+
+  if (dyeState === 'black') {
+    curtainTranslate = '-100%';
+    innerTranslate = '100%';
+    transitionStyle = 'none';
+  } else if (dyeState === 'dyeing_white' || dyeState === 'white') {
+    curtainTranslate = '0%';
+    innerTranslate = '0%';
+    transitionStyle = dyeState === 'dyeing_white' ? 'transform 2.5s cubic-bezier(0.4, 0, 0.2, 1)' : 'none';
+  } else if (dyeState === 'dyeing_black') {
+    curtainTranslate = '100%';
+    innerTranslate = '-100%';
+    transitionStyle = 'transform 2.5s cubic-bezier(0.4, 0, 0.2, 1)';
+  }
 
   return (
     <div style={{
       position: 'relative',
-      padding: '4px',
-      borderRadius: '28px',
-      border: '1.6px solid rgba(255, 255, 255, 0.9)',
-      boxShadow: '0 0 22px rgba(255, 255, 255, 0.4), inset 0 0 8px rgba(255, 255, 255, 0.2)',
-      background: 'rgba(2, 6, 23, 0.75)',
-      backdropFilter: 'blur(16px)',
+      padding: '3px',
+      borderRadius: '26px',
+      border: '1.4px solid rgba(255, 255, 255, 0.85)',
+      boxShadow: '0 0 16px rgba(255, 255, 255, 0.3)',
+      background: 'rgba(2, 6, 23, 0.85)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -1464,13 +1474,14 @@ function CucCanhYinYangBadge({ is121Unlocked }) {
       <div style={{ position: 'absolute', bottom: -3, left: 12, width: 4, height: 4, transform: 'rotate(45deg)', background: '#ffffff', boxShadow: '0 0 6px #ffffff' }} />
       <div style={{ position: 'absolute', bottom: -3, right: 12, width: 4, height: 4, transform: 'rotate(45deg)', background: '#ffffff', boxShadow: '0 0 6px #ffffff' }} />
 
-      {/* KHUNG CHÍNH CHỨA 2 TẦNG XẾP CHỒNG (LAYER A & LAYER B) */}
+      {/* KHUNG CHÍNH (GPU ACCELERATED OVERFLOW CONTAINER) */}
       <div style={{
         position: 'relative',
         borderRadius: '22px',
         overflow: 'hidden',
         boxSizing: 'border-box',
-        display: 'inline-flex'
+        display: 'inline-flex',
+        contain: 'paint'
       }}>
         {/* ==========================================
             TẦNG 1 (LỚP ĐÁY): NỀN ĐEN - CHỮ TRẮNG (ÂM / TỬ)
@@ -1479,10 +1490,8 @@ function CucCanhYinYangBadge({ is121Unlocked }) {
           position: 'relative',
           padding: '5px 22px',
           borderRadius: '22px',
-          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.99) 50%, rgba(2, 6, 23, 0.99) 100%)',
-          border: '1.4px solid rgba(255, 255, 255, 0.85)',
-          boxShadow: '0 6px 24px rgba(0, 0, 0, 0.7), inset 0 2px 3px rgba(255, 255, 255, 0.85), inset 0 -2px 3px rgba(0, 0, 0, 0.6)',
-          backdropFilter: 'blur(20px)',
+          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #020617 100%)',
+          border: '1.2px solid rgba(255, 255, 255, 0.75)',
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -1491,8 +1500,8 @@ function CucCanhYinYangBadge({ is121Unlocked }) {
         }}>
           {/* Vệt bóng kính phía trên */}
           <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, height: '50%',
-            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.0) 100%)',
+            position: 'absolute', top: 0, left: 0, right: 0, height: '48%',
+            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.0) 100%)',
             borderRadius: '22px 22px 0 0', pointerEvents: 'none'
           }} />
 
@@ -1510,7 +1519,7 @@ function CucCanhYinYangBadge({ is121Unlocked }) {
             fontWeight: 900,
             letterSpacing: 2.6,
             color: '#ffffff',
-            textShadow: '0 0 12px rgba(255, 255, 255, 0.95), 0 0 24px rgba(255, 255, 255, 0.6), 0 1px 3px #000000',
+            textShadow: '0 0 10px rgba(255, 255, 255, 0.9), 0 1px 3px #000000',
             whiteSpace: 'nowrap'
           }}>
             CỰC CẢNH SINH TỬ
@@ -1523,43 +1532,42 @@ function CucCanhYinYangBadge({ is121Unlocked }) {
         </div>
 
         {/* ==========================================
-            TẦNG 2 (MÀN TRƯỢT NHUỘM TRẮNG TỪ TRÁI SANG PHẢI)
+            TẦNG 2 (MÀN TRƯỢT GPU TRANSLATE NHUỘM TRẮNG)
            ========================================== */}
         <div style={{
           position: 'absolute',
-          top: 0,
-          bottom: 0,
-          left: isDyeingBlack ? 'auto' : 0,
-          right: isDyeingBlack ? 0 : 'auto',
-          width: isWhite ? '100%' : '0%',
+          inset: 0,
           overflow: 'hidden',
-          transition: (dyeState === 'dyeing_white' || dyeState === 'dyeing_black') ? 'width 2.5s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+          transform: `translateX(${curtainTranslate})`,
+          transition: transitionStyle,
+          willChange: 'transform',
           zIndex: 2,
           pointerEvents: 'none'
         }}>
-          {/* NỘI DUNG TẦNG TRẮNG CỐ ĐỊNH CHIỀU RỘNG */}
+          {/* NỘI DUNG TẦNG TRẮNG ĐỐI NGHỊCH TRANSLATE ĐỂ GIỮ NGUYÊN VỊ TRÍ */}
           <div style={{
             position: 'absolute',
             top: 0,
+            left: 0,
+            right: 0,
             bottom: 0,
-            left: isDyeingBlack ? 'auto' : 0,
-            right: isDyeingBlack ? 0 : 'auto',
             padding: '5px 22px',
             borderRadius: '22px',
             background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 45%, #e2e8f0 100%)',
-            border: '1.4px solid #0f172a',
-            boxShadow: '0 6px 24px rgba(255, 255, 255, 0.5), inset 0 2px 3px #ffffff, inset 0 -2px 3px rgba(0, 0, 0, 0.15)',
-            backdropFilter: 'blur(20px)',
+            border: '1.2px solid #0f172a',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
             boxSizing: 'border-box',
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            transform: `translateX(${innerTranslate})`,
+            transition: transitionStyle,
+            willChange: 'transform'
           }}>
             {/* Vệt bóng kính phía trên */}
             <div style={{
-              position: 'absolute', top: 0, left: 0, right: 0, height: '50%',
-              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.0) 100%)',
+              position: 'absolute', top: 0, left: 0, right: 0, height: '48%',
+              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.0) 100%)',
               borderRadius: '22px 22px 0 0', pointerEvents: 'none'
             }} />
 
@@ -1577,7 +1585,7 @@ function CucCanhYinYangBadge({ is121Unlocked }) {
               fontWeight: 900,
               letterSpacing: 2.6,
               color: '#020617',
-              textShadow: '0 0 6px rgba(255, 255, 255, 0.8), 0 1px 1px rgba(0, 0, 0, 0.15)',
+              textShadow: '0 0 4px rgba(255, 255, 255, 0.6)',
               whiteSpace: 'nowrap'
             }}>
               CỰC CẢNH SINH TỬ
@@ -1590,17 +1598,19 @@ function CucCanhYinYangBadge({ is121Unlocked }) {
           </div>
         </div>
 
-        {/* TIA SÁNG LASER ĐẦU SÓNG NHUỘM QUÉT TỪ TRÁI SANG PHẢI */}
+        {/* TIA SÁNG LASER ĐẦU SÓNG GPU TRANSLATE */}
         <div style={{
           position: 'absolute',
           top: 0,
           bottom: 0,
-          left: isWhite ? '100%' : '0%',
-          width: '3px',
+          left: 0,
+          width: '2.5px',
           background: '#ffffff',
-          boxShadow: '0 0 12px #ffffff, 0 0 20px #38bdf8',
-          transition: (dyeState === 'dyeing_white' || dyeState === 'dyeing_black') ? 'left 2.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease' : 'none',
-          opacity: (dyeState === 'dyeing_white' || dyeState === 'dyeing_black') ? 1 : 0,
+          boxShadow: '0 0 10px #ffffff, 0 0 16px #38bdf8',
+          transform: `translateX(${dyeState === 'dyeing_white' || dyeState === 'white' ? '240px' : '0px'})`,
+          transition: (dyeState === 'dyeing_white' || dyeState === 'dyeing_black') ? 'transform 2.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease' : 'none',
+          opacity: (dyeState === 'dyeing_white' || dyeState === 'dyeing_black') ? 0.9 : 0,
+          willChange: 'transform, opacity',
           zIndex: 5,
           pointerEvents: 'none'
         }} />
