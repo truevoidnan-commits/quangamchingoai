@@ -36,6 +36,7 @@ import {
   TIER_BASE_THIEN_MENH_REWARDS
 } from '../../lib/cultivation';
 import ArtifactIcon from './ArtifactIcon';
+import { LAMP_THAN_PHAM_AI_ICONS } from '../../lib/artifactIcons';
 import styles from './RealmPreviewVisualizer.module.css';
 
 /* ============================================================
@@ -526,6 +527,170 @@ export function ChaosLotusThrone({ isFilled, lampObj, ArtifactIcon, idx = 'chaos
         )}
       </div>
     </div>
+  );
+}
+
+/* ============================================================
+   3B. COMPONENT: SvgChaosLotusThrone — Hỗn Độn Thanh Liên (Pure SVG)
+   Hiển thị trung tâm Tinh Đồ 1000x1000 — 100% tương thích Mobile / WebKit
+   3 tầng x 12 cánh = 36 cánh sen huyền diệu, hào quang quay ngược chiều
+   ============================================================ */
+export function SvgChaosLotusThrone({ cx, cy, isFilled, lampObj, idx = 'chaos', onClick }) {
+  const tier1Angles = Array.from({ length: 12 }, (_, i) => i * 30);            // ngoài (88px)
+  const tier2Angles = Array.from({ length: 12 }, (_, i) => i * 30 + 15);       // giữa (74px)
+  const tier3Angles = Array.from({ length: 12 }, (_, i) => i * 30);            // trong (60px)
+  const lampIconImg = lampObj?.id ? LAMP_THAN_PHAM_AI_ICONS[lampObj.id] : null;
+
+  return (
+    <g
+      onClick={onClick}
+      style={{ cursor: 'pointer', pointerEvents: 'all', willChange: 'transform' }}
+      className="chaos-lotus-interactive"
+    >
+      <defs>
+        {/* Tầng ngoài: đen -> lục hỗn mang (Tạo Hóa) */}
+        <linearGradient id={`svgChaosOuter-${idx}`} x1="0%" y1="100%" x2="0%" y2="0%">
+          <stop offset="0%" stopColor="rgba(2,6,15,0.98)" />
+          <stop offset="45%" stopColor="#0f6e56" stopOpacity="0.75" />
+          <stop offset="100%" stopColor="#5dcaa5" stopOpacity="1" />
+        </linearGradient>
+        {/* Tầng giữa: đen -> tím hắc (Diệt Thế) */}
+        <linearGradient id={`svgChaosMid-${idx}`} x1="0%" y1="100%" x2="0%" y2="0%">
+          <stop offset="0%" stopColor="rgba(4,10,22,0.96)" />
+          <stop offset="45%" stopColor="#3c3489" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#a78bfa" stopOpacity="1" />
+        </linearGradient>
+        {/* Tầng trong: đen -> kim -> bạch (Công Đức + Nghiệp Hỏa) */}
+        <linearGradient id={`svgChaosInner-${idx}`} x1="0%" y1="100%" x2="0%" y2="0%">
+          <stop offset="0%" stopColor="rgba(6,4,2,0.95)" />
+          <stop offset="40%" stopColor="#f59e0b" stopOpacity="0.8" />
+          <stop offset="75%" stopColor="#fde047" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="1" />
+        </linearGradient>
+        <radialGradient id={`svgChaosCore-${idx}`}>
+          <stop offset="0%" stopColor="rgba(255,255,255,0.95)" />
+          <stop offset="35%" stopColor="rgba(253,224,71,0.85)" />
+          <stop offset="70%" stopColor="rgba(6,8,16,0.95)" />
+          <stop offset="100%" stopColor="rgba(2,4,10,0.99)" />
+        </radialGradient>
+        <filter id={`svgChaosGlow-${idx}`} filterUnits="userSpaceOnUse" x={cx - 150} y={cy - 150} width="300" height="300">
+          <feGaussianBlur stdDeviation="3.0" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <clipPath id={`svgChaosClip-${idx}`}>
+          <circle cx={cx} cy={cy} r="40" />
+        </clipPath>
+      </defs>
+
+      {/* Hào quang nền sáng lung linh (Bán kính 88px) */}
+      <circle cx={cx} cy={cy} r="88" fill="#5dcaa5" opacity="0.25" filter={`url(#svgChaosGlow-${idx})`} style={{ animation: 'chaosPulseGlow 3s ease-in-out infinite' }} />
+      <circle cx={cx} cy={cy} r="76" fill="#fde047" opacity="0.2" filter={`url(#svgChaosGlow-${idx})`} />
+
+      {/* Tầng 1: 12 cánh ngoài (r tip = 88, r base = 42) */}
+      {tier1Angles.map((deg, i) => {
+        const { d, tipX, tipY } = buildPetalPath(cx, cy, deg, 88, 42, 66, 12, 15);
+        return (
+          <g key={`s-t1-${i}`}>
+            <path d={d} fill={`url(#svgChaosOuter-${idx})`} stroke="#a7f3d0" strokeWidth="1.2" opacity="0.98" />
+            <circle cx={tipX} cy={tipY} r="2.0" fill="#ffffff" filter={`url(#svgChaosGlow-${idx})`} />
+          </g>
+        );
+      })}
+
+      {/* Tầng 2: 12 cánh giữa (r tip = 74, r base = 42) */}
+      {tier2Angles.map((deg, i) => {
+        const { d, tipX, tipY } = buildPetalPath(cx, cy, deg, 74, 42, 58, 11, 14);
+        return (
+          <g key={`s-t2-${i}`}>
+            <path d={d} fill={`url(#svgChaosMid-${idx})`} stroke="#c4b5fd" strokeWidth="1.2" opacity="0.98" />
+            <circle cx={tipX} cy={tipY} r="1.8" fill="#ffffff" filter={`url(#svgChaosGlow-${idx})`} />
+          </g>
+        );
+      })}
+
+      {/* Tầng 3: 12 cánh trong (r tip = 60, r base = 42) */}
+      {tier3Angles.map((deg, i) => {
+        const { d, tipX, tipY } = buildPetalPath(cx, cy, deg, 60, 42, 50, 10, 13);
+        return (
+          <g key={`s-t3-${i}`}>
+            <path d={d} fill={`url(#svgChaosInner-${idx})`} stroke="#fef08a" strokeWidth="1.3" />
+            <circle cx={tipX} cy={tipY} r="1.6" fill="#ffffff" filter={`url(#svgChaosGlow-${idx})`} />
+          </g>
+        );
+      })}
+
+      {/* Vành hào quang kép quay ngược chiều (Nét liền mượt mà) */}
+      <g style={{ transformOrigin: `${cx}px ${cy}px`, animation: 'chaosRingCW 14s linear infinite' }}>
+        <circle cx={cx} cy={cy} r="46" fill="none" stroke="#fde047" strokeWidth="1.2" opacity="0.85" />
+      </g>
+      <g style={{ transformOrigin: `${cx}px ${cy}px`, animation: 'chaosRingCCW 18s linear infinite' }}>
+        <circle cx={cx} cy={cy} r="44" fill="none" stroke="#38bdf8" strokeWidth="1.0" opacity="0.8" />
+      </g>
+
+      {/* Nhụy trung tâm & Mệnh Đăng thứ 5 — Lấp đầy 100% không để viền thừa (Đường kính 80px) */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r="40"
+        fill={isFilled ? "rgba(4, 10, 24, 0.95)" : `url(#svgChaosCore-${idx})`}
+        stroke="#fde047"
+        strokeWidth="2.4"
+        filter={`url(#svgChaosGlow-${idx})`}
+      />
+
+      {isFilled && lampObj ? (
+        lampIconImg ? (
+          <g>
+            <image
+              href={lampIconImg}
+              x={cx - 40}
+              y={cy - 40}
+              width="80"
+              height="80"
+              preserveAspectRatio="xMidYMid slice"
+              clipPath={`url(#svgChaosClip-${idx})`}
+            />
+            {/* Viền sáng bao bọc mép ảnh AI */}
+            <circle cx={cx} cy={cy} r="40" fill="none" stroke="#fde047" strokeWidth="2.4" filter="url(#laserGlow)" />
+            <circle cx={cx} cy={cy} r="38.5" fill="none" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="1.0" />
+          </g>
+        ) : (
+          <g>
+            <text
+              x={cx}
+              y={cy + 2}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize="36"
+              textRendering="geometricPrecision"
+            >
+              {lampObj.icon || '🏮'}
+            </text>
+            <circle cx={cx} cy={cy} r="40" fill="none" stroke="#fde047" strokeWidth="2.4" filter="url(#laserGlow)" />
+          </g>
+        )
+      ) : (
+        <g>
+          <circle cx={cx} cy={cy} r="38" fill="none" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="1.0" opacity="0.9" />
+          <text
+            x={cx}
+            y={cy + 1}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize="36"
+            fontWeight="900"
+            fill="#ffffff"
+            filter="url(#laserGlow)"
+            textRendering="geometricPrecision"
+          >
+            +
+          </text>
+        </g>
+      )}
+    </g>
   );
 }
 
@@ -3846,6 +4011,23 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 0%, 100% { transform: scale(1); filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.8)); }
                 50% { transform: scale(1.18); filter: drop-shadow(0 0 16px rgba(253, 224, 71, 0.95)) drop-shadow(0 0 24px #ffffff); }
               }
+              @keyframes chaosPulseGlow {
+                0%, 100% { transform: scale(1); opacity: 0.85; }
+                50%      { transform: scale(1.06); opacity: 1; }
+              }
+              @keyframes chaosRingCW  { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
+              @keyframes chaosRingCCW { from { transform: rotate(360deg); } to { transform: rotate(0deg);     } }
+              @keyframes chaosChromaShift {
+                0%   { filter: hue-rotate(0deg) brightness(1.15) drop-shadow(0 0 10px rgba(93, 202, 165, 0.8)); }
+                25%  { filter: hue-rotate(90deg) brightness(1.25) drop-shadow(0 0 12px rgba(56, 189, 248, 0.85)); }
+                50%  { filter: hue-rotate(180deg) brightness(1.2) drop-shadow(0 0 14px rgba(168, 85, 247, 0.9)); }
+                75%  { filter: hue-rotate(270deg) brightness(1.3) drop-shadow(0 0 16px rgba(251, 191, 36, 0.95)); }
+                100% { filter: hue-rotate(360deg) brightness(1.15) drop-shadow(0 0 10px rgba(93, 202, 165, 0.8)); }
+              }
+              .chaos-lotus-interactive {
+                animation: chaosChromaShift 10s ease-in-out infinite;
+                transform-origin: 500px 500px;
+              }
             `}</style>
 
             {/* A. VÒNG LỤC ĐẠI TINH TỌA 120 KHIẾU */}
@@ -4101,81 +4283,71 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             </g>
 
             {/* ========================================================
-                C2. VÒNG BÁT QUÁI NỘI CUNG — XOAY NGƯỢC CHIỀU KIM ĐỒNG HỒ (R=129)
+                C2. VÒNG BÁT QUÁI NỘI CUNG — XOAY NGƯỢC CHIỀU KIM ĐỒNG HỒ (R=90 -> 154)
                ======================================================== */}
             <g 
               id="sacredBaguaTrigramRing"
               style={{ 
-                animation: isRotating ? 'celestialCounterRotate 140s linear infinite' : 'none', 
-                transformOrigin: `${cx}px ${cy}px` 
+                animation: isRotating ? 'celestialCounterRotate 160s linear infinite' : 'none', 
+                transformOrigin: `${cx}px ${cy}px`,
+                willChange: 'transform'
               }}
             >
-              <circle cx={cx} cy={cy} r="129" fill="none" stroke="rgba(56, 189, 248, 0.55)" strokeWidth="1.2" />
+              {/* Nền Thủy Tinh Huyền Ảo Vòng Bát Quái */}
+              <circle cx={cx} cy={cy} r="154" fill="rgba(6, 12, 24, 0.7)" stroke="rgba(251, 191, 36, 0.85)" strokeWidth="1.6" />
+              <circle cx={cx} cy={cy} r="118" fill="none" stroke="rgba(251, 191, 36, 0.45)" strokeWidth="1.0" filter="url(#laserGlow)" />
+              <circle cx={cx} cy={cy} r="90" fill="none" stroke="rgba(56, 189, 248, 0.85)" strokeWidth="1.8" />
 
-              {/* Bát Giác Trận Đồ Vàng Kim Nét Đứt & Đường Kinh Tuyến (R=129) */}
-              <polygon
-                points={Array.from({ length: 8 }).map((_, i) => {
-                  const ang = (i * 45 + 22.5) * Math.PI / 180;
-                  return `${cx + 129 * Math.cos(ang)},${cy + 129 * Math.sin(ang)}`;
-                }).join(' ')}
-                fill="rgba(6, 12, 24, 0.55)"
-                stroke="rgba(251, 191, 36, 0.9)"
-                strokeWidth="2.0"
-                strokeDasharray="6 3"
-                filter="url(#laserGlow)"
-              />
-
-              {/* 8 Nốt Phù Ấn Xanh Lam tại 8 đỉnh Bát Giác */}
-              {Array.from({ length: 8 }).map((_, i) => {
-                const ang = (i * 45 + 22.5) * Math.PI / 180;
-                const px = cx + 129 * Math.cos(ang);
-                const py = cy + 129 * Math.sin(ang);
+              {/* 8 Tia Phân Định 8 Cung Quẻ Rõ Ràng (Từ r=90 đến r=154, không cắt qua quẻ) */}
+              {[22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5].map((ang, i) => {
+                const rad = (ang * Math.PI) / 180;
+                const x1 = cx + 90 * Math.cos(rad);
+                const y1 = cy + 90 * Math.sin(rad);
+                const x2 = cx + 154 * Math.cos(rad);
+                const y2 = cy + 154 * Math.sin(rad);
                 return (
-                  <g key={`octa-node-${i}`}>
-                    <line x1={cx} y1={cy} x2={px} y2={py} stroke="rgba(56, 189, 248, 0.25)" strokeWidth="0.8" strokeDasharray="3 3" />
-                    <rect x={px - 2.5} y={py - 2.5} width="5" height="5" fill="#38bdf8" stroke="#ffffff" strokeWidth="0.8" filter="url(#laserGlow)" />
+                  <g key={`bagua-divider-${i}`}>
+                    <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(251, 191, 36, 0.55)" strokeWidth="1.2" />
+                    <circle cx={x2} cy={y2} r="2.2" fill="#fde047" stroke="#ffffff" strokeWidth="0.8" filter="url(#laserGlow)" />
                   </g>
                 );
               })}
 
-              {/* Vòng Tiên Thiên Bát Quái Nội Cung (Tách rõ ràng, không cắt qua vạch quẻ) */}
-              <circle cx={cx} cy={cy} r="121" fill="none" stroke="rgba(251, 191, 36, 0.4)" strokeWidth="1.0" />
-              <circle cx={cx} cy={cy} r="95" fill="none" stroke="rgba(251, 191, 36, 0.55)" strokeWidth="1.2" filter="url(#laserGlow)" />
-              <circle cx={cx} cy={cy} r="70" fill="none" stroke="rgba(56, 189, 248, 0.6)" strokeWidth="1.2" />
-
-              {/* 8 Quẻ Tiên Thiên Bát Quái: Màu Vàng Hoàng Kim Linh Lực, sắc nét thông thoáng */}
+              {/* 8 Quẻ Tiên Thiên Bát Quái: Bố Cục Rộng Rãi, Sắc Nét, Không Bị Rung Lắc */}
               {BAGUA_LIST.map((bg, idx) => {
                 const rotAngle = bg.angle + 90;
                 return (
                   <g key={idx} transform={`translate(${cx}, ${cy}) rotate(${rotAngle})`}>
-                    {/* Vạch Quẻ Tiên Thiên Vàng Kim Uy Nghiêm (Không bị đường tròn nào cắt qua) */}
+                    {/* Vạch Quẻ Tiên Thiên Vàng Kim Uy Nghiêm (r = 136) */}
                     <text
                       x="0"
-                      y="-108"
+                      y="-136"
                       textAnchor="middle"
                       dominantBaseline="central"
-                      fontSize="21"
+                      fontSize="26"
                       fontWeight="bold"
                       fill={is121Unlocked ? "#fde047" : "#fbbf24"}
                       filter="url(#laserGlow)"
+                      textRendering="geometricPrecision"
                       style={{
                         filter: 'drop-shadow(0 0 6px rgba(250, 204, 21, 0.95))'
                       }}
                     >
                       {bg.symbol}
                     </text>
-                    {/* Tên Quẻ Màu Xanh Lam Sáng */}
+                    {/* Tên Quẻ Màu Xanh Lam Sáng (r = 104) */}
                     <text
                       x="0"
-                      y="-82"
+                      y="-104"
                       textAnchor="middle"
                       dominantBaseline="central"
-                      fontSize="9.5"
+                      fontSize="11"
                       fontWeight="900"
                       fill="#38bdf8"
                       letterSpacing="1.2"
+                      textRendering="geometricPrecision"
                       style={{ 
-                        fontFamily: 'var(--font-serif, serif)',
+                        fontFamily: 'system-ui, -apple-system, sans-serif',
                         filter: 'drop-shadow(0 0 4px rgba(56, 189, 248, 0.95))'
                       }}
                     >
@@ -4190,22 +4362,15 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 C3. TRUNG TÂM TINH ĐỒ: 36 PHẨM HỖN ĐỘN THANH LIÊN (KHI MỞ 121) / THÁI CỰC ĐAN ĐIỀN (KHI PHONG ẤN)
                ======================================================== */}
             {is121Unlocked ? (
-              /* ĐÓA SEN 36 PHẨM HỖN ĐỘN THANH LIÊN CHÍNH TÂM 100% TINH ĐỒ */
-              <foreignObject
-                x={cx - 88}
-                y={cy - 88}
-                width={176}
-                height={176}
-                style={{ overflow: 'visible', pointerEvents: 'auto', cursor: 'pointer', background: 'transparent' }}
-                onClick={() => { setSelectedSlot(4); setLampModalOpen(true); }}
-              >
-                <ChaosLotusThrone
-                  isFilled={Boolean(absorbedLamps[4])}
-                  lampObj={fifthLampObj}
-                  ArtifactIcon={ArtifactIcon}
-                  idx={4}
-                />
-              </foreignObject>
+              /* ĐÓA SEN 36 PHẨM HỖN ĐỘN THANH LIÊN CHÍNH TÂM 100% TINH ĐỒ (SVG NATIVE) */
+              <SvgChaosLotusThrone
+                cx={cx}
+                cy={cy}
+                isFilled={Boolean(absorbedLamps[4])}
+                lampObj={fifthLampObj}
+                idx={4}
+                onClick={handleCenterClick}
+              />
             ) : (
               /* KHỐI THÁI CỰC THỦY TINH ĐAN ĐIỀN (KHI CỰC CẢNH 121 ĐANG PHONG ẤN) */
               <g onClick={handleCenterClick} style={{ cursor: 'pointer' }}>
@@ -4220,7 +4385,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   fill="none" 
                   stroke={openedCount >= 120 ? "#fde047" : "rgba(251, 191, 36, 0.65)"} 
                   strokeWidth={openedCount >= 120 ? "2.2" : "1.5"} 
-                  strokeDasharray="10 5" 
                   filter={openedCount >= 120 ? "url(#laserGlow)" : undefined}
                   style={{ animation: isRotating ? 'celestialRotate 14s linear infinite' : 'none', transformOrigin: `${cx}px ${cy}px` }} 
                 />
