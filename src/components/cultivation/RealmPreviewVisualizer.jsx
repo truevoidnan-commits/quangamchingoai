@@ -3407,7 +3407,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 >
                   {/* Aura Bão Lửa Khí Huyết Chân Hỏa To Lớn (Dùng Radial Gradient GPU-accelerated) */}
                   <circle cx="0" cy="0" r="195" fill="url(#tigerAuraGlow)" />
-                  <circle cx="0" cy="0" r="165" fill="none" stroke="#f59e0b" strokeWidth="1.6" opacity="0.75" />
 
                   {/* Vết cào Huyết Long Trảo (Energy Claws) Dáng Vuốt Thần Sắc Bén */}
                   <g style={{ animation: 'nkTigerClawSlash 2.2s ease-in-out infinite', willChange: 'transform, opacity' }}>
@@ -3461,7 +3460,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 >
                   {/* Quầng Linh Hải Xanh Thẳm Quanh Cự Kình (Dùng Radial Gradient GPU-accelerated) */}
                   <ellipse cx="0" cy="0" rx="160" ry="110" fill="url(#whaleAuraGlow)" />
-                  <ellipse cx="0" cy="0" rx="126" ry="86" fill="none" stroke="#38bdf8" strokeWidth="1.5" opacity="0.75" />
 
                   {/* THÂN THỂ THÁI CỔ LONG KÌNH KHỔNG LỒ */}
                   {/* Thân Cá Voi Cổ Đại */}
