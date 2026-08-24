@@ -2796,7 +2796,10 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          background: viewMode === 'the'
+            ? 'radial-gradient(circle at 50% 45%, #450a0a 0%, #280507 40%, #140203 80%, #050001 100%)'
+            : 'radial-gradient(circle at 50% 40%, #083344 0%, #042033 40%, #02101e 80%, #01060e 100%)'
         }}>
           
           {/* 1. BỘ CHUYỂN ĐỔI GÓC NHÌN TU LUYỆN & DẤU HIỆU ĐANG DỒN LINH LỰC */}
@@ -2909,9 +2912,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           <svg
             width="100%"
             height="100%"
-            viewBox={isMobile ? "130 10 660 620" : "0 0 920 640"}
-            preserveAspectRatio="xMidYMid meet"
-            style={{ width: '100%', height: '100%', minHeight: '620px', overflow: 'hidden' }}
+            viewBox={isMobile ? "130 -30 660 700" : "0 0 920 640"}
+            preserveAspectRatio="xMidYMid slice"
+            style={{ width: '100%', height: '100%', position: 'absolute', inset: 0, overflow: 'hidden' }}
             onClick={() => {
               try { playStarChime(523); } catch(e) {}
             }}
@@ -3079,8 +3082,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               `}</style>
             </defs>
 
-            {/* NỀN ĐẠI DƯƠNG / KHÍ HUYẾT SÂU THẲM */}
-            <rect width="920" height="640" fill={viewMode === 'the' ? 'url(#bloodBgGrad)' : 'url(#oceanBgGrad)'} />
+            {/* NỀN ĐẠI DƯƠNG / KHÍ HUYẾT SÂU THẲM - PHỦ KÍN 100% CANVAS */}
+            <rect x="-300" y="-300" width="1600" height="1300" fill={viewMode === 'the' ? 'url(#bloodBgGrad)' : 'url(#oceanBgGrad)'} />
 
             {/* ========================================================
                 HIỆU ỨNG NỀN 1: HẢI SƠN QUYẾT (LUYỆN THỂ — HUYẾT SƠN HÙNG VĨ & LÔI ĐIỆN KHÍ HUYẾT)
@@ -3421,75 +3424,105 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             </g>
           </svg>
 
-          {/* 3. THANH THÔNG SỐ CẢNH GIỚI NGƯNG KHÍ ĐƯỢC TỐI ƯU GỌN GÀNG Ở ĐÁY */}
+          {/* 3. THANH THÔNG SỐ CẢNH GIỚI NGƯNG KHÍ — HIỂN THỊ ĐỘC QUYỀN HƯỚNG ĐANG CHỌN (GỌN GÀNG, THOÁNG ĐÃNG) */}
           <div style={{
             position: 'absolute',
             bottom: 14,
             zIndex: 25,
             display: 'flex',
             alignItems: 'center',
-            gap: 12,
-            padding: '6px 16px',
+            gap: 10,
+            padding: '7px 18px',
             borderRadius: 24,
             background: 'rgba(8, 14, 24, 0.94)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
+            border: viewMode === 'the' ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid rgba(56, 189, 248, 0.45)',
             backdropFilter: 'blur(12px)',
-            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.6)'
+            boxShadow: viewMode === 'the' 
+              ? '0 6px 20px rgba(0, 0, 0, 0.7), 0 0 14px rgba(239, 68, 68, 0.25)' 
+              : '0 6px 20px rgba(0, 0, 0, 0.7), 0 0 14px rgba(56, 189, 248, 0.25)'
           }}>
-            {/* Box Hải Sơn */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 12,
-              fontWeight: 800,
-              color: '#f87171',
-              padding: '4px 10px',
-              borderRadius: 14,
-              background: (cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'the' ? 'rgba(239, 68, 68, 0.18)' : 'transparent',
-              border: (cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'the' ? '1px solid rgba(248, 113, 113, 0.6)' : '1px solid transparent',
-              boxShadow: (cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'the' ? '0 0 10px rgba(239, 68, 68, 0.4)' : 'none'
-            }}>
-              <span>⚔️ Hải Sơn:</span>
-              <span style={{ color: '#fca5a5' }}>Tầng {theLvl}/10</span>
-              <span style={{ fontSize: 10.5, color: '#94a3b8' }}>({theExp.toLocaleString()} / 4,500 EXP)</span>
-              {(cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'the' && (
-                <span style={{ fontSize: 10, color: '#fef08a', fontWeight: 900 }}>⚡ Đang nạp</span>
-              )}
-            </div>
-
-            <div style={{ width: 1, height: 14, background: 'rgba(255, 255, 255, 0.18)' }} />
-
-            {/* Box Hóa Hải */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 12,
-              fontWeight: 800,
-              color: '#38bdf8',
-              padding: '4px 10px',
-              borderRadius: 14,
-              background: (cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'phap' ? 'rgba(56, 189, 248, 0.18)' : 'transparent',
-              border: (cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'phap' ? '1px solid rgba(56, 189, 248, 0.6)' : '1px solid transparent',
-              boxShadow: (cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'phap' ? '0 0 10px rgba(56, 189, 248, 0.4)' : 'none'
-            }}>
-              <span>🌊 Hóa Hải:</span>
-              <span style={{ color: '#7dd3fc' }}>Tầng {phapLvl}/10</span>
-              <span style={{ fontSize: 10.5, color: '#94a3b8' }}>({phapExp.toLocaleString()} / 4,500 EXP)</span>
-              {(cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'phap' && (
-                <span style={{ fontSize: 10, color: '#bae6fd', fontWeight: 900 }}>⚡ Đang nạp</span>
-              )}
-            </div>
-
-            {theLvl >= 10 && phapLvl >= 10 && (
-              <>
-                <div style={{ width: 1, height: 14, background: 'rgba(255, 255, 255, 0.18)' }} />
-                <div style={{ fontSize: 11.5, fontWeight: 900, color: '#fde047', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>👑</span>
-                  <span>THỂ PHÁP SONG TU VIÊN MÃN</span>
-                </div>
-              </>
+            {viewMode === 'the' ? (
+              /* Chỉ hiển thị thông tin Hải Sơn khi đang chọn hướng Thể */
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 12.5,
+                fontWeight: 800,
+                color: '#f87171'
+              }}>
+                <span style={{ fontSize: 13 }}>⚔️ Hải Sơn (Thể):</span>
+                <span style={{ color: '#fca5a5', fontWeight: 900 }}>Tầng {theLvl}/10</span>
+                <span style={{ fontSize: 11, color: '#cbd5e1' }}>({theExp.toLocaleString()} / 4,500 EXP)</span>
+                {(cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'the' && (
+                  <span style={{
+                    fontSize: 9.5,
+                    color: '#fef08a',
+                    fontWeight: 900,
+                    background: 'rgba(239, 68, 68, 0.25)',
+                    padding: '2px 8px',
+                    borderRadius: 10,
+                    border: '1px solid rgba(254, 240, 138, 0.5)'
+                  }}>
+                    ⚡ Đang nạp tu vi
+                  </span>
+                )}
+                {theLvl >= 10 && phapLvl >= 10 && (
+                  <span style={{
+                    fontSize: 9.5,
+                    fontWeight: 900,
+                    color: '#fde047',
+                    background: 'rgba(245, 158, 11, 0.2)',
+                    padding: '2px 8px',
+                    borderRadius: 10,
+                    border: '1px solid rgba(253, 224, 71, 0.5)',
+                    marginLeft: 2
+                  }}>
+                    👑 Viên Mãn
+                  </span>
+                )}
+              </div>
+            ) : (
+              /* Chỉ hiển thị thông tin Hóa Hải khi đang chọn hướng Pháp */
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 12.5,
+                fontWeight: 800,
+                color: '#38bdf8'
+              }}>
+                <span style={{ fontSize: 13 }}>🌊 Hóa Hải (Pháp):</span>
+                <span style={{ color: '#7dd3fc', fontWeight: 900 }}>Tầng {phapLvl}/10</span>
+                <span style={{ fontSize: 11, color: '#cbd5e1' }}>({phapExp.toLocaleString()} / 4,500 EXP)</span>
+                {(cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'phap' && (
+                  <span style={{
+                    fontSize: 9.5,
+                    color: '#bae6fd',
+                    fontWeight: 900,
+                    background: 'rgba(6, 182, 212, 0.25)',
+                    padding: '2px 8px',
+                    borderRadius: 10,
+                    border: '1px solid rgba(186, 230, 253, 0.5)'
+                  }}>
+                    ⚡ Đang nạp tu vi
+                  </span>
+                )}
+                {theLvl >= 10 && phapLvl >= 10 && (
+                  <span style={{
+                    fontSize: 9.5,
+                    fontWeight: 900,
+                    color: '#fde047',
+                    background: 'rgba(245, 158, 11, 0.2)',
+                    padding: '2px 8px',
+                    borderRadius: 10,
+                    border: '1px solid rgba(253, 224, 71, 0.5)',
+                    marginLeft: 2
+                  }}>
+                    👑 Viên Mãn
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </div>
