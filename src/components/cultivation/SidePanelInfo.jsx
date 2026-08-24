@@ -988,23 +988,148 @@ export default function SidePanelInfo() {
         const bottleneckExp = targetExp - 1;
         const isBottleneck = currentThienCungExp >= bottleneckExp;
         const expPercent = Math.min(99.99, Math.round((currentThienCungExp / targetExp) * 100 * 100) / 100);
+        const totalRealizedAll = realizedThienCung + lampCount;
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {/* Thẻ Trạng Thái Tổng Quan Kim Đan */}
-            <div className="status-card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <h4 style={{ color: 'var(--color-kim)', margin: 0, fontSize: 13.5 }}>THIÊN CUNG KIM ĐAN</h4>
-                <span style={{ fontSize: 11, color: '#fde047', fontWeight: 800 }}>
-                  {realizedThienCung + lampCount}/{maxThienCung} Cung Thật
+            {/* THẺ TRẠNG THÁI TỔNG QUAN KIM ĐAN (NGỌC GIẢN THẦN ĐẠO) */}
+            <div style={{
+              padding: '16px',
+              borderRadius: 14,
+              background: 'linear-gradient(165deg, rgba(16, 24, 40, 0.95) 0%, rgba(8, 14, 26, 0.98) 100%)',
+              border: '1px solid rgba(251, 191, 36, 0.35)',
+              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {/* Vệt sáng vân khí mạ vàng góc trên */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                width: 100,
+                height: 100,
+                background: 'radial-gradient(circle at top right, rgba(251, 191, 36, 0.12) 0%, transparent 70%)',
+                pointerEvents: 'none'
+              }} />
+
+              {/* Tiêu đề & Tiến trình */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 16 }}>🏛️</span>
+                  <span style={{
+                    fontFamily: 'var(--font-serif)',
+                    color: '#fef08a',
+                    fontWeight: 900,
+                    fontSize: 13.5,
+                    letterSpacing: 0.5,
+                    textShadow: '0 0 10px rgba(251, 191, 36, 0.5)'
+                  }}>
+                    THIÊN CUNG KIM ĐAN
+                  </span>
+                </div>
+                <span style={{
+                  fontSize: 11,
+                  padding: '3px 9px',
+                  borderRadius: 10,
+                  fontWeight: 900,
+                  color: '#fde047',
+                  background: 'rgba(251, 191, 36, 0.15)',
+                  border: '1px solid rgba(251, 191, 36, 0.4)'
+                }}>
+                  {totalRealizedAll}/{maxThienCung} Cung Thật
                 </span>
               </div>
-              <p style={{ fontSize: 11.5, color: 'var(--text-sub)', margin: '0 0 8px', lineHeight: 1.4 }}>
-                Ngưng tụ Kim Đan, khai mở cửu tầng thiên cung, nạp đủ 99.99% linh lực và khảm nạm vật trấn áp để hóa thành Cung Thật 100%.
-              </p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 4 }}>
-                <span style={{ color: '#94a3b8' }}>Lực Chiến Kim Đan:</span>
-                <strong style={{ color: 'var(--color-kim)' }}>{calculatedCombatPower}</strong>
+
+              {/* 13-TINH CHÂU MA TRẬN (CONSTELLATION PROGRESS RADAR) */}
+              <div style={{
+                background: 'rgba(4, 8, 16, 0.75)',
+                padding: '10px 12px',
+                borderRadius: 10,
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                  <span style={{ color: '#94a3b8' }}>Trận Đồ Thập Tam Cung:</span>
+                  <span style={{ color: '#38bdf8', fontWeight: 700 }}>
+                    {totalRealizedAll === maxThienCung ? '✨ Viên Mãn' : `⚡ Đang tu ${realizedThienCung + 1}/${maxThienCung}`}
+                  </span>
+                </div>
+                {/* Dải 13 Tinh Châu */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
+                  {Array.from({ length: maxThienCung }).map((_, idx) => {
+                    const isRealizedSelf = idx < realizedThienCung;
+                    const isLamp = idx >= selfPalaceCount && (idx - selfPalaceCount) < lampCount;
+                    const isActive = idx === realizedThienCung && !isAllPalacesRealized;
+                    const isLocked = !isRealizedSelf && !isLamp && !isActive;
+
+                    let bg = 'rgba(100, 116, 139, 0.2)';
+                    let border = '1px solid rgba(100, 116, 139, 0.4)';
+                    let icon = '🔒';
+                    let glow = 'none';
+
+                    if (isRealizedSelf) {
+                      bg = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                      border = '1px solid #fde047';
+                      icon = '👑';
+                      glow = '0 0 6px rgba(251, 191, 36, 0.8)';
+                    } else if (isLamp) {
+                      bg = 'linear-gradient(135deg, #f97316, #dc2626)';
+                      border = '1px solid #fdba74';
+                      icon = '🪔';
+                      glow = '0 0 6px rgba(249, 115, 22, 0.8)';
+                    } else if (isActive) {
+                      bg = isBottleneck ? 'linear-gradient(135deg, #f97316, #eab308)' : 'linear-gradient(135deg, #0284c7, #38bdf8)';
+                      border = isBottleneck ? '1.5px solid #fef08a' : '1.5px solid #7dd3fc';
+                      icon = isBottleneck ? '⚠️' : '⚡';
+                      glow = isBottleneck ? '0 0 10px #f97316' : '0 0 10px #38bdf8';
+                    }
+
+                    return (
+                      <div
+                        key={`palace-node-${idx}`}
+                        title={`Thiên Cung #${idx + 1}`}
+                        style={{
+                          flex: 1,
+                          height: 24,
+                          borderRadius: 6,
+                          background: bg,
+                          border: border,
+                          boxShadow: glow,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 10,
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        {icon}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Thông số & Lực Chiến */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: 12,
+                paddingTop: 2,
+                borderTop: '1px solid rgba(255, 255, 255, 0.06)'
+              }}>
+                <span style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span>⚔️</span> Lực Chiến Kim Đan:
+                </span>
+                <strong style={{ color: 'var(--color-kim)', fontSize: 13, textShadow: '0 0 8px rgba(251, 191, 36, 0.4)' }}>
+                  {calculatedCombatPower}
+                </strong>
               </div>
             </div>
 
@@ -1014,68 +1139,120 @@ export default function SidePanelInfo() {
                 padding: '16px',
                 borderRadius: 14,
                 background: isBottleneck 
-                  ? 'linear-gradient(165deg, rgba(45, 20, 10, 0.96) 0%, rgba(15, 23, 42, 0.98) 100%)'
-                  : 'linear-gradient(165deg, rgba(20, 30, 60, 0.94) 0%, rgba(10, 16, 32, 0.98) 100%)',
+                  ? 'linear-gradient(165deg, rgba(45, 20, 10, 0.96) 0%, rgba(18, 12, 28, 0.98) 100%)'
+                  : 'linear-gradient(165deg, rgba(14, 28, 50, 0.95) 0%, rgba(8, 16, 32, 0.98) 100%)',
                 border: isBottleneck ? '1.5px solid #f97316' : '1.5px solid rgba(56, 189, 248, 0.45)',
-                boxShadow: isBottleneck ? '0 0 25px rgba(249, 115, 22, 0.4)' : '0 4px 20px rgba(0, 0, 0, 0.4)',
+                boxShadow: isBottleneck 
+                  ? '0 0 25px rgba(249, 115, 22, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1)' 
+                  : '0 8px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 12,
-                position: 'relative'
+                position: 'relative',
+                overflow: 'hidden'
               }}>
+                {/* 4 Góc Hoa Văn Cổ Phong */}
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  border: isBottleneck ? '1px solid rgba(251, 191, 36, 0.2)' : '1px solid rgba(56, 189, 248, 0.15)',
+                  margin: 3,
+                  borderRadius: 11,
+                  pointerEvents: 'none'
+                }} />
+
                 {/* Header Thẻ Đang Mở */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 20 }}>{isBottleneck ? '⚠️' : '⚡'}</span>
-                    <strong style={{ color: isBottleneck ? '#fdba74' : '#38bdf8', fontSize: 13.5, fontFamily: 'var(--font-serif)' }}>
-                      Thiên Cung Tự Thân #{realizedThienCung + 1}
-                    </strong>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 8,
+                      background: isBottleneck ? 'rgba(249, 115, 22, 0.2)' : 'rgba(56, 189, 248, 0.15)',
+                      border: isBottleneck ? '1px solid #f97316' : '1px solid rgba(56, 189, 248, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 14
+                    }}>
+                      {isBottleneck ? '👑' : '⚡'}
+                    </div>
+                    <div>
+                      <strong style={{
+                        color: isBottleneck ? '#fde047' : '#38bdf8',
+                        fontSize: 13.5,
+                        fontFamily: 'var(--font-serif)',
+                        display: 'block',
+                        letterSpacing: 0.3
+                      }}>
+                        Thiên Cung Tự Thân #{realizedThienCung + 1}
+                      </strong>
+                      <span style={{ fontSize: 10.5, color: '#94a3b8' }}>
+                        {isBottleneck ? 'Đã đạt nút thắt cực hạn' : 'Đang ngưng tụ chân khí'}
+                      </span>
+                    </div>
                   </div>
                   <span style={{
                     fontSize: 10.5,
-                    padding: '2px 8px',
+                    padding: '3px 9px',
                     borderRadius: 10,
                     fontWeight: 800,
-                    color: isBottleneck ? '#fed7aa' : '#38bdf8',
-                    background: isBottleneck ? 'rgba(234, 88, 12, 0.3)' : 'rgba(56, 189, 248, 0.15)',
-                    border: '1px solid ' + (isBottleneck ? '#f97316' : 'rgba(56, 189, 248, 0.4)')
+                    color: isBottleneck ? '#fed7aa' : '#7dd3fc',
+                    background: isBottleneck ? 'rgba(234, 88, 12, 0.35)' : 'rgba(56, 189, 248, 0.15)',
+                    border: '1px solid ' + (isBottleneck ? '#f97316' : 'rgba(56, 189, 248, 0.4)'),
+                    boxShadow: isBottleneck ? '0 0 8px rgba(249, 115, 22, 0.5)' : 'none'
                   }}>
-                    {isBottleneck ? '99.99% NÚT THẮT' : 'ĐANG NẠP LINH LỰC'}
+                    {isBottleneck ? '⚠️ 99.99% NÚT THẮT' : '⚡ ĐANG TỤ KHÍ'}
                   </span>
                 </div>
 
-                {/* Thanh Tiến Độ EXP */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 5 }}>
-                    <span style={{ color: '#94a3b8' }}>Tiến độ tích lũy linh lực:</span>
-                    <strong style={{ color: isBottleneck ? '#fde047' : '#38bdf8' }}>
-                      {currentThienCungExp.toLocaleString()} / {targetExp.toLocaleString()} EXP ({expPercent}%)
+                {/* Thanh Tiến Độ Linh Lực Hoạt Hóa */}
+                <div style={{ position: 'relative' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 6 }}>
+                    <span style={{ color: '#cbd5e1' }}>Linh lực tích lũy:</span>
+                    <strong style={{
+                      color: isBottleneck ? '#fde047' : '#38bdf8',
+                      fontFamily: 'var(--font-serif)',
+                      fontSize: 12.5,
+                      textShadow: isBottleneck ? '0 0 6px rgba(253, 224, 71, 0.6)' : '0 0 6px rgba(56, 189, 248, 0.6)'
+                    }}>
+                      {currentThienCungExp.toLocaleString()} / {targetExp.toLocaleString()} ({expPercent}%)
                     </strong>
                   </div>
-                  <div style={{ height: 9, background: 'rgba(0, 0, 0, 0.6)', borderRadius: 5, overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
+                  {/* Khung rãnh chứa linh lực */}
+                  <div style={{
+                    height: 12,
+                    background: 'rgba(4, 8, 16, 0.9)',
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    padding: 1.5,
+                    boxSizing: 'border-box'
+                  }}>
                     <div style={{
                       height: '100%',
                       width: ((currentThienCungExp / targetExp) * 100) + '%',
+                      borderRadius: 4,
                       background: isBottleneck 
-                        ? 'linear-gradient(90deg, #f97316, #fde047)' 
-                        : 'linear-gradient(90deg, #0284c7, #38bdf8)',
-                      boxShadow: isBottleneck ? '0 0 10px #f97316' : '0 0 8px #38bdf8',
-                      transition: 'width 0.3s ease'
+                        ? 'linear-gradient(90deg, #ea580c 0%, #f59e0b 50%, #fde047 100%)' 
+                        : 'linear-gradient(90deg, #0284c7 0%, #38bdf8 50%, #7dd3fc 100%)',
+                      boxShadow: isBottleneck ? '0 0 12px #f97316' : '0 0 10px #38bdf8',
+                      transition: 'width 0.4s ease'
                     }} />
                   </div>
                 </div>
 
-                {/* THÔNG BÁO & NÚT KHẢM NẠM KHI ĐẠT 99.99% */}
-                {isBottleneck && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 2 }}>
+                {/* CHỈ DẪN TU HÀNH & NÚT HÀNH ĐỘNG */}
+                {isBottleneck ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
                     <div style={{
-                      fontSize: 11,
+                      fontSize: 11.5,
                       color: '#fed7aa',
-                      background: 'rgba(234, 88, 12, 0.15)',
-                      padding: '9px 11px',
+                      background: 'rgba(234, 88, 12, 0.18)',
+                      padding: '10px 12px',
                       borderRadius: 8,
-                      border: '1px solid rgba(249, 115, 22, 0.35)',
-                      lineHeight: 1.4
+                      border: '1px solid rgba(249, 115, 22, 0.4)',
+                      lineHeight: 1.5
                     }}>
                       👑 <strong>ĐÃ ĐẠT 99.99% LINH LỰC!</strong> Nhấp nút bên dưới để chọn một Bảo Vật trong Túi Trữ Vật khảm nạm vào Cung, hoàn tất 100% Cung Thật!
                     </div>
@@ -1089,7 +1266,7 @@ export default function SidePanelInfo() {
                       style={{
                         width: '100%',
                         padding: '12px 14px',
-                        borderRadius: 8,
+                        borderRadius: 10,
                         background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
                         border: '1.5px solid #fef08a',
                         color: '#000000',
@@ -1097,7 +1274,7 @@ export default function SidePanelInfo() {
                         fontSize: 13,
                         letterSpacing: 0.5,
                         cursor: 'pointer',
-                        boxShadow: '0 0 20px rgba(245, 158, 11, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                        boxShadow: '0 0 25px rgba(245, 158, 11, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1105,6 +1282,35 @@ export default function SidePanelInfo() {
                       }}
                     >
                       👑 KHẢM NẠM BẢO VẬT (HÓA CUNG THẬT)
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    background: 'rgba(56, 189, 248, 0.08)',
+                    border: '1px solid rgba(56, 189, 248, 0.2)',
+                    fontSize: 11,
+                    color: '#94a3b8'
+                  }}>
+                    <span>📖 Đọc truyện tích lũy tu vi để nạp linh lực</span>
+                    <button
+                      onClick={() => navigate('/library')}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        background: 'rgba(56, 189, 248, 0.2)',
+                        border: '1px solid rgba(56, 189, 248, 0.45)',
+                        color: '#38bdf8',
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Đọc Truyện ➔
                     </button>
                   </div>
                 )}
