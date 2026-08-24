@@ -172,19 +172,6 @@ export default function SidePanelInfo() {
     }
   };
 
-  // 4. HỦY THẺ TRẢI NGHIỆM
-  const handleHuyThe = () => {
-    const isConfirmed = window.confirm(
-      '❌ HỦY THẺ TRẢI NGHIỆM KIM ĐAN:\n\n' +
-      '• Thử nghiệm sẽ kết thúc và tiêu biến.\n' +
-      '• Tu vi và cảnh giới sẽ được khôi phục về trạng thái trước khi kích hoạt thẻ.\n\n' +
-      'Đạo hữu có muốn kết thúc thử nghiệm?'
-    );
-    if (isConfirmed) {
-      endKimDanTrialV2();
-    }
-  };
-
   return (
     <div className="side-panel-info">
       
@@ -230,84 +217,6 @@ export default function SidePanelInfo() {
           </span>
         </div>
       </div>
-
-      {/* ========================================================
-          THẺ TRẢI NGHIỆM BANNER (TIÊN GIA MÀU SẮC RỰC RỠ)
-         ======================================================== */}
-      {isKimDanTrial ? (
-        <div style={{
-          padding: '10px 14px',
-          borderRadius: 10,
-          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%)',
-          border: '1.5px solid rgba(245, 158, 11, 0.7)',
-          boxShadow: '0 0 16px rgba(245, 158, 11, 0.35)',
-          marginBottom: 14,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div>
-            <div style={{ color: '#fbbf24', fontWeight: 800, fontSize: 12, letterSpacing: 0.5 }}>🧪 ĐANG TRẢI NGHIỆM KIM ĐAN</div>
-            <div style={{ fontSize: 10.5, color: 'var(--text-sub)' }}>Chế độ thử nghiệm 120 Khiếu + 4 Đèn</div>
-          </div>
-          <button
-            onClick={handleHuyThe}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 8,
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-              color: '#fff',
-              border: '1px solid #fca5a5',
-              fontSize: 11.5,
-              fontWeight: 800,
-              cursor: 'pointer',
-              boxShadow: '0 0 10px rgba(239, 68, 68, 0.6)'
-            }}
-          >
-            ❌ Hủy Thẻ
-          </button>
-        </div>
-      ) : (
-        !cultivation?.hasUsedKimDanTrialV2 && currentRealm === 'truc_co' && openedCount < 120 && (
-          <div style={{
-            padding: '10px 14px',
-            borderRadius: 10,
-            background: 'linear-gradient(135deg, rgba(255, 204, 0, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%)',
-            border: '1.5px solid var(--color-kim)',
-            boxShadow: '0 0 16px rgba(255, 204, 0, 0.25)',
-            marginBottom: 14,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <div>
-              <div style={{ color: 'var(--color-kim)', fontWeight: 800, fontSize: 12 }}>🏮 THẺ TRẢI NGHIỆM KIM ĐAN</div>
-              <div style={{ fontSize: 10.5, color: 'var(--text-sub)' }}>Mở sẵn 120 Khiếu + 4 Đèn để test</div>
-            </div>
-            <button
-              onClick={() => {
-                if (window.confirm('Kích hoạt Thẻ Trải Nghiệm Kim Đan để nhảy ngay lên 120 Pháp Khiếu + 4 Mệnh Đăng?')) {
-                  activateKimDanTrialV2();
-                  setActiveRealmView('kim_dan');
-                }
-              }}
-              style={{
-                padding: '6px 14px',
-                borderRadius: 8,
-                background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-                color: '#000',
-                border: '1px solid #fef08a',
-                fontSize: 11.5,
-                fontWeight: 800,
-                cursor: 'pointer',
-                boxShadow: '0 0 12px rgba(255, 204, 0, 0.5)'
-              }}
-            >
-              ✨ Kích Hoạt
-            </button>
-          </div>
-        )
-      )}
 
       {/* ========================================================
           1. NGƯNG KHÍ VIEW — HAI CON ĐƯỜNG: LUYỆN THỂ & PHÁP TU & SONG TU
