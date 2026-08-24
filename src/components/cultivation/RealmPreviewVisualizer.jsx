@@ -2475,7 +2475,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             </svg>
           </div>
           
-          {/* TRUNG TÂM PHÙ ĐIÊU TIÊN GIA: CỰC CẢNH SINH TỬ & CHUYỂN ĐỔI TINH ĐỒ (CANH GIỮA 100%, KHÔNG ĐÈ LÊN TỨ ĐẠI LIÊN ĐÀI) */}
+          {/* TRUNG TÂM PHÙ ĐIÊU THÁI CỰC SINH TỬ (TÔNG MÀU TRẮNG - ĐEN HUYỀN BÍ, CÂN ĐỐI 100%) */}
           <div style={{
             position: 'absolute',
             top: 8,
@@ -2489,57 +2489,63 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             pointerEvents: 'auto',
             userSelect: 'none'
           }}>
-            {/* 1. KIM BẢNG PHÙ ĐIÊU: CỰC CẢNH SINH TỬ */}
+            {/* 1. PHÙ ĐIÊU THÁI CỰC: CỰC CẢNH SINH TỬ (TRẮNG ĐEN ÂM DƯƠNG) */}
             <div style={{
               position: 'relative',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              padding: '5px 20px',
+              padding: '5px 22px',
               borderRadius: '6px',
-              background: is121Unlocked 
-                ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(49, 25, 78, 0.96) 50%, rgba(15, 23, 42, 0.96) 100%)'
-                : 'linear-gradient(135deg, rgba(8, 18, 36, 0.96) 0%, rgba(16, 38, 74, 0.94) 50%, rgba(8, 18, 36, 0.96) 100%)',
-              border: is121Unlocked 
-                ? '1.6px solid #fbbf24' 
-                : '1.4px solid rgba(251, 191, 36, 0.75)',
-              boxShadow: is121Unlocked 
-                ? '0 0 20px rgba(251, 191, 36, 0.45), inset 0 0 12px rgba(251, 191, 36, 0.25), 0 6px 16px rgba(0,0,0,0.9)' 
-                : '0 0 14px rgba(56, 189, 248, 0.3), inset 0 0 10px rgba(251, 191, 36, 0.2), 0 6px 14px rgba(0,0,0,0.8)',
+              background: 'linear-gradient(90deg, rgba(2, 6, 23, 0.98) 0%, rgba(15, 23, 42, 0.96) 50%, rgba(2, 6, 23, 0.98) 100%)',
+              border: '1.5px solid rgba(255, 255, 255, 0.85)',
+              boxShadow: '0 0 22px rgba(255, 255, 255, 0.35), inset 0 0 12px rgba(255, 255, 255, 0.15), 0 6px 18px rgba(0, 0, 0, 0.95)',
               backdropFilter: 'blur(16px)',
               whiteSpace: 'nowrap'
             }}>
-              {/* Cánh hoa văn cổ bên trái dát vàng */}
-              <span style={{ fontSize: 11, color: '#fbbf24', textShadow: '0 0 6px rgba(251,191,36,0.8)', lineHeight: 1 }}>❖</span>
+              {/* Điểm xuyết Dương Quang (Bạch Ngọc) bên trái */}
+              <span style={{ 
+                fontSize: 12, 
+                color: '#ffffff', 
+                textShadow: '0 0 8px #ffffff, 0 0 16px rgba(255,255,255,0.8)', 
+                lineHeight: 1 
+              }}>
+                ☯
+              </span>
 
               <span style={{ 
                 fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
                 fontSize: 12.5, 
                 fontWeight: 900, 
-                letterSpacing: 2.2,
-                color: is121Unlocked ? '#fef08a' : '#bae6fd',
-                textShadow: is121Unlocked 
-                  ? '0 0 14px rgba(251, 191, 36, 0.95), 0 2px 6px rgba(0,0,0,0.95)' 
-                  : '0 0 10px rgba(56, 189, 248, 0.8)'
+                letterSpacing: 2.4,
+                color: '#ffffff',
+                textShadow: '0 0 12px rgba(255, 255, 255, 0.95), 0 0 24px rgba(255, 255, 255, 0.6), 0 2px 6px #000000'
               }}>
-                {is121Unlocked ? '✦ CỰC CẢNH SINH TỬ ✦' : '✦ CỰC CẢNH TRÚC CƠ ✦'}
+                ✦ CỰC CẢNH SINH TỬ ✦
               </span>
 
-              {/* Cánh hoa văn cổ bên phải dát vàng */}
-              <span style={{ fontSize: 11, color: '#fbbf24', textShadow: '0 0 6px rgba(251,191,36,0.8)', lineHeight: 1 }}>❖</span>
+              {/* Điểm xuyết Âm Quang (Hắc Diệu) bên phải */}
+              <span style={{ 
+                fontSize: 12, 
+                color: '#ffffff', 
+                textShadow: '0 0 8px #ffffff, 0 0 16px rgba(255,255,255,0.8)', 
+                lineHeight: 1 
+              }}>
+                ☯
+              </span>
             </div>
 
-            {/* 2. NÚT CHUYỂN ĐỔI CHẾ ĐỘ TINH ĐỒ (TÍCH HỢP GỌN GÀNG TRỤC GIỮA) */}
+            {/* 2. NÚT CHUYỂN ĐỔI CHẾ ĐỘ TINH ĐỒ (TÔNG TRẮNG - ĐEN TINH TẾ) */}
             <button
               onClick={toggleConstelMode}
               title="Chuyển đổi giữa Tứ Tượng Thần Thú và Lục Đại Tinh Tọa"
               style={{
                 padding: '3px 12px',
                 borderRadius: '14px',
-                background: isTuTuong ? 'rgba(34, 197, 94, 0.25)' : 'rgba(56, 189, 248, 0.25)',
-                border: `1.2px solid ${isTuTuong ? '#22c55e' : '#38bdf8'}`,
-                color: isTuTuong ? '#86efac' : '#7dd3fc',
+                background: 'rgba(15, 23, 42, 0.9)',
+                border: '1.2px solid rgba(255, 255, 255, 0.6)',
+                color: '#f8fafc',
                 fontSize: 10.5,
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -2547,12 +2553,12 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5,
-                boxShadow: isTuTuong ? '0 0 10px rgba(34, 197, 94, 0.35)' : '0 0 10px rgba(56, 189, 248, 0.35)',
+                boxShadow: '0 0 10px rgba(255, 255, 255, 0.25), 0 2px 8px rgba(0,0,0,0.8)',
                 transition: 'all 0.2s ease'
               }}
             >
-              <span>{isTuTuong ? '🐉 Tứ Tượng Thần Thú' : '🌌 Lục Đại Tinh Tọa'}</span>
-              <span style={{ fontSize: 9.5, opacity: 0.85, background: 'rgba(255,255,255,0.15)', padding: '1px 5px', borderRadius: 4 }}>ĐỔI</span>
+              <span>{isTuTuong ? '🐉 Tứ Tượng' : '🌌 Lục Đại'}</span>
+              <span style={{ fontSize: 9.5, opacity: 0.9, background: 'rgba(255,255,255,0.2)', padding: '1px 5px', borderRadius: 4, color: '#ffffff' }}>ĐỔI</span>
             </button>
           </div>
 
