@@ -3802,39 +3802,64 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             </svg>
           </div>
           
-          {/* 121 CỰC CẢNH THIÊN ĐỈNH (HEADER BADGE TRUNG TÂM — THÔNG THOÁNG KHÔNG CHẠM LỬA) */}
+          {/* 121 CỰC CẢNH THIÊN ĐỈNH (HEADER BADGE TRUNG TÂM — CÂN ĐỐI SINH TỬ ĐẲNG CẤP TIÊN GIA) */}
           <div style={{
             position: 'absolute',
-            top: 8,
+            top: 10,
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 20,
             display: 'flex',
             alignItems: 'center',
-            gap: 4,
-            padding: '2px 8px',
-            borderRadius: 14,
+            gap: 6,
+            padding: '3px 14px',
+            borderRadius: 20,
             background: is121Unlocked 
-              ? 'linear-gradient(90deg, rgba(3, 7, 18, 0.96) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(255, 255, 255, 0.25) 100%)'
-              : 'rgba(8, 18, 36, 0.88)',
-            border: `1px solid ${is121Unlocked ? 'rgba(255, 255, 255, 0.9)' : 'rgba(56, 189, 248, 0.45)'}`,
-            backdropFilter: 'blur(12px)',
-            boxShadow: is121Unlocked ? '0 0 16px rgba(255, 255, 255, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.9)' : '0 0 8px rgba(0, 0, 0, 0.5)',
+              ? 'linear-gradient(135deg, rgba(2, 6, 23, 0.96) 0%, rgba(15, 23, 42, 0.92) 50%, rgba(30, 41, 59, 0.96) 100%)'
+              : 'rgba(8, 18, 36, 0.92)',
+            border: is121Unlocked 
+              ? '1.5px solid rgba(255, 255, 255, 0.85)' 
+              : '1.2px solid rgba(56, 189, 248, 0.55)',
+            backdropFilter: 'blur(16px)',
+            boxShadow: is121Unlocked 
+              ? '0 0 20px rgba(255, 255, 255, 0.35), inset 0 0 12px rgba(255, 255, 255, 0.12), 0 4px 14px rgba(0, 0, 0, 0.85)' 
+              : '0 0 12px rgba(56, 189, 248, 0.25), 0 4px 10px rgba(0, 0, 0, 0.6)',
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
-            maxWidth: '54%',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            fontSize: 10
+            maxWidth: '65%',
+            overflow: 'hidden'
           }}>
+            {/* Điểm xuyết Sinh (Dương Bạch) */}
             <span style={{ 
-              fontSize: 11.5, 
-              fontWeight: 900, 
-              letterSpacing: 0.8,
-              color: is121Unlocked ? '#ffffff' : '#bae6fd',
-              textShadow: is121Unlocked ? '0 0 8px rgba(255, 255, 255, 0.95), 0 0 16px rgba(0, 0, 0, 1)' : '0 0 8px rgba(56, 189, 248, 0.6)'
+              fontSize: 11, 
+              color: is121Unlocked ? '#ffffff' : '#38bdf8', 
+              textShadow: is121Unlocked ? '0 0 8px #ffffff' : '0 0 8px #38bdf8',
+              lineHeight: 1
             }}>
-              {is121Unlocked ? '✦ CỰC CẢNH SINH TỬ' : '✦ CỰC CẢNH'}
+              ✦
+            </span>
+
+            <span style={{ 
+              fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
+              fontSize: 12, 
+              fontWeight: 900, 
+              letterSpacing: 1.6,
+              color: is121Unlocked ? '#ffffff' : '#bae6fd',
+              textShadow: is121Unlocked 
+                ? '0 0 10px rgba(255, 255, 255, 0.95), 0 2px 6px rgba(0, 0, 0, 0.95)' 
+                : '0 0 8px rgba(56, 189, 248, 0.65)'
+            }}>
+              {is121Unlocked ? 'CỰC CẢNH SINH TỬ' : 'CỰC CẢNH'}
+            </span>
+
+            {/* Điểm xuyết Tử (Âm Bạc) Cân Đối */}
+            <span style={{ 
+              fontSize: 11, 
+              color: is121Unlocked ? '#ffffff' : '#38bdf8', 
+              textShadow: is121Unlocked ? '0 0 8px #ffffff' : '0 0 8px #38bdf8',
+              lineHeight: 1
+            }}>
+              ✦
             </span>
           </div>
 
