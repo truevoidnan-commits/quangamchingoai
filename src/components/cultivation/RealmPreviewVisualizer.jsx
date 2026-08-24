@@ -3994,16 +3994,12 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 to { stroke-dashoffset: 0; }
               }
               @keyframes celestialChainHum {
-                0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 6px #fde047); }
-                50% { opacity: 1; filter: drop-shadow(0 0 14px #fde047) drop-shadow(0 0 22px #ffffff); }
+                0%, 100% { opacity: 0.85; }
+                50% { opacity: 1; }
               }
               @keyframes shockwaveBreakthrough {
                 0% { r: 10px; opacity: 1; stroke-width: 8px; }
                 100% { r: 480px; opacity: 0; stroke-width: 1px; }
-              }
-              @keyframes stellarResonance {
-                0%, 100% { transform: scale(1); filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.8)); }
-                50% { transform: scale(1.18); filter: drop-shadow(0 0 16px rgba(253, 224, 71, 0.95)) drop-shadow(0 0 24px #ffffff); }
               }
               @keyframes chaosRingCW  { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
               @keyframes chaosRingCCW { from { transform: rotate(360deg); } to { transform: rotate(0deg);     } }
@@ -4098,10 +4094,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     onClick={() => setSelectedNode(star)}
                     onMouseEnter={() => setHoveredStar(star)}
                     onMouseLeave={() => setHoveredStar(null)}
-                    style={{ 
-                      cursor: 'pointer',
-                      animation: isAll120Ready ? 'stellarResonance 2.2s ease-in-out infinite alternate' : 'none'
-                    }}
+                    style={{ cursor: 'pointer' }}
                   >
                     {/* Click Hitbox to rộng dễ bấm */}
                     <circle r="18" fill="transparent" />
@@ -4346,86 +4339,104 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 onClick={handleCenterClick}
               />
             ) : (
-              /* KHỐI THÁI CỰC THỦY TINH ĐAN ĐIỀN (KHI CỰC CẢNH 121 ĐANG PHONG ẤN) */
-              <g onClick={handleCenterClick} style={{ cursor: 'pointer' }}>
-                {/* Quầng sáng linh khí xoáy động xung quanh Thái Cực */}
-                <circle cx={cx} cy={cy} r="60" fill="url(#taijiCoreGlow)" style={{ animation: 'pulseCore 2s ease-in-out infinite alternate' }} />
+              /* KHỐI THÁI CỰC ĐAN ĐIỀN NỘI CUNG (KHI CỰC CẢNH 121 ĐANG PHONG ẤN) */
+              <g onClick={handleCenterClick} style={{ cursor: 'pointer', pointerEvents: 'all' }}>
+                {/* Quầng sáng linh khí Đan Điền (R=84) */}
+                <circle cx={cx} cy={cy} r="84" fill="url(#taijiCoreGlow)" opacity="0.85" />
                 
-                {/* Vòng hào quang Thái Cực thủy tinh */}
+                {/* Vòng hào quang Thái Cực viền ngoài (R=76) */}
                 <circle 
                   cx={cx} 
                   cy={cy} 
-                  r="48" 
+                  r="76" 
                   fill="none" 
-                  stroke={openedCount >= 120 ? "#fde047" : "rgba(251, 191, 36, 0.65)"} 
-                  strokeWidth={openedCount >= 120 ? "2.2" : "1.5"} 
-                  filter={openedCount >= 120 ? "url(#laserGlow)" : undefined}
-                  style={{ animation: isRotating ? 'celestialRotate 14s linear infinite' : 'none', transformOrigin: `${cx}px ${cy}px` }} 
+                  stroke={openedCount >= 120 ? "#fde047" : "rgba(251, 191, 36, 0.75)"} 
+                  strokeWidth={openedCount >= 120 ? "2.4" : "1.6"} 
                 />
 
-                {/* Vành kính thủy tinh Đan Điền (Frosted Crystal Glass Bezel) */}
+                {/* Vành bảo hộ Kim Cương Đan Điền (R=64) */}
                 <circle 
                   cx={cx} 
                   cy={cy} 
-                  r="38" 
-                  fill="rgba(255, 255, 255, 0.1)" 
-                  stroke="rgba(255, 255, 255, 0.75)" 
-                  strokeWidth="2.0" 
-                  filter="url(#laserGlow)" 
+                  r="64" 
+                  fill="rgba(6, 12, 24, 0.85)" 
+                  stroke={openedCount >= 120 ? "#fde047" : "rgba(56, 189, 248, 0.75)"} 
+                  strokeWidth="1.8" 
                 />
 
-                {/* Khối Thái Cực Âm Dương Ngư Thủy Tinh Xoay Theo Chiều Kim Đồng Hồ */}
-                <g style={{ animation: isRotating ? 'celestialRotate 16s linear infinite' : 'none', transformOrigin: `${cx}px ${cy}px` }}>
+                {/* Khối Thái Cực Âm Dương Ngư To Lớn & Sắc Nét (R=54px) Xoay Thuận Chiều */}
+                <g style={{ animation: isRotating ? 'celestialRotate 16s linear infinite' : 'none', transformOrigin: `${cx}px ${cy}px`, willChange: 'transform' }}>
                   {/* Dương Ngư (Thái Dương - Trắng Ngọc Thủy Tinh Ánh Lam) */}
                   <path
-                    d={`M ${cx} ${cy - 34} A 34 34 0 0 1 ${cx} ${cy + 34} A 17 17 0 0 1 ${cx} ${cy} A 17 17 0 0 0 ${cx} ${cy - 34} Z`}
+                    d={`M ${cx} ${cy - 54} A 54 54 0 0 1 ${cx} ${cy + 54} A 27 27 0 0 1 ${cx} ${cy} A 27 27 0 0 0 ${cx} ${cy - 54} Z`}
                     fill="url(#taijiYangGrad)"
-                    filter="url(#laserGlow)"
                   />
                   {/* Âm Ngư (Thái Âm - Hắc Ngọc Thủy Tinh Dạ Lam) */}
                   <path
-                    d={`M ${cx} ${cy + 34} A 34 34 0 0 1 ${cx} ${cy - 34} A 17 17 0 0 1 ${cx} ${cy} A 17 17 0 0 0 ${cx} ${cy + 34} Z`}
+                    d={`M ${cx} ${cy + 54} A 54 54 0 0 1 ${cx} ${cy - 54} A 27 27 0 0 1 ${cx} ${cy} A 27 27 0 0 0 ${cx} ${cy + 54} Z`}
                     fill="url(#taijiYinGrad)"
                     stroke="rgba(56, 189, 248, 0.55)"
                     strokeWidth="1.0"
                   />
-                  {/* Vệt phản quang thủy tinh trong suốt (Glass Sheen Highlight) */}
+                  {/* Vệt phản quang thủy tinh ánh ngọc (Glass Sheen Highlight) */}
                   <path
-                    d={`M ${cx - 24} ${cy - 12} A 28 28 0 0 1 ${cx + 24} ${cy - 12} A 32 32 0 0 0 ${cx - 24} ${cy - 12} Z`}
-                    fill="rgba(255, 255, 255, 0.45)"
+                    d={`M ${cx - 36} ${cy - 18} A 42 42 0 0 1 ${cx + 36} ${cy - 18} A 48 48 0 0 0 ${cx - 36} ${cy - 18} Z`}
+                    fill="rgba(255, 255, 255, 0.35)"
                   />
                   {/* Đường cong S phân định Âm Dương phát sáng */}
                   <path
-                    d={`M ${cx} ${cy - 34} A 17 17 0 0 1 ${cx} ${cy} A 17 17 0 0 0 ${cx} ${cy + 34}`}
+                    d={`M ${cx} ${cy - 54} A 27 27 0 0 1 ${cx} ${cy} A 27 27 0 0 0 ${cx} ${cy + 54}`}
                     fill="none"
                     stroke="#ffffff"
-                    strokeWidth="1.2"
-                    filter="url(#laserGlow)"
+                    strokeWidth="1.4"
                   />
 
-                  {/* Âm Nhãn (Mắt ngọc Lam Thủy Tinh): Phát quang huyền ảo */}
-                  <circle cx={cx} cy={cy + 17} r="6.0" fill="#38bdf8" opacity="0.5" filter="url(#laserGlow)" />
-                  <circle cx={cx} cy={cy + 17} r="4.0" fill="#030712" stroke="#38bdf8" strokeWidth="1.5" />
-                  <circle cx={cx} cy={cy + 17} r="1.8" fill="#ffffff" filter="url(#laserGlow)" />
+                  {/* Âm Nhãn (Mắt ngọc Lam Thủy Tinh tại y = cy + 27) */}
+                  <circle cx={cx} cy={cy + 27} r="9.0" fill="#38bdf8" opacity="0.4" />
+                  <circle cx={cx} cy={cy + 27} r="6.0" fill="#030712" stroke="#38bdf8" strokeWidth="1.8" />
+                  <circle cx={cx} cy={cy + 27} r="2.4" fill="#ffffff" />
 
-                  {/* Dương Nhãn (Mắt ngọc Vàng Kim Thủy Tinh): Phát quang rực rỡ */}
-                  <circle cx={cx} cy={cy - 17} r="6.0" fill="#fbbf24" opacity="0.5" filter="url(#laserGlow)" />
-                  <circle cx={cx} cy={cy - 17} r="4.0" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.2" />
-                  <circle cx={cx} cy={cy - 17} r="1.8" fill="#ffffff" />
+                  {/* Dương Nhãn (Mắt ngọc Vàng Kim Thủy Tinh tại y = cy - 27) */}
+                  <circle cx={cx} cy={cy - 27} r="9.0" fill="#fbbf24" opacity="0.4" />
+                  <circle cx={cx} cy={cy - 27} r="6.0" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.8" />
+                  <circle cx={cx} cy={cy - 27} r="2.4" fill="#ffffff" />
                 </g>
 
-                {/* Vòng bao viền ngoài Thái Cực */}
-                <circle cx={cx} cy={cy} r="34" fill="none" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="1.4" filter="url(#laserGlow)" />
+                {/* Vành kính viền ngoài Thái Cực */}
+                <circle cx={cx} cy={cy} r="54" fill="none" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="1.6" />
 
-                {/* 4 SỢI XÍCH KHÓA THIÊN ĐẠO HOÀNG KIM (KHI ĐẠT 120 KHIẾU CHỜ PHÁ THIÊN KHAI 121) */}
+                {/* THIÊN ĐẠO TRẬN ẤN CỰC CẢNH (KHI ĐẠT 120 KHIẾU CHỜ PHÁ PHONG ẤN 121) */}
                 {openedCount >= 120 && (
-                  <g style={{ animation: 'celestialChainHum 1.6s ease-in-out infinite alternate', transformOrigin: `${cx}px ${cy}px` }}>
-                    {/* Xích Chữ X */}
-                    <line x1={cx - 38} y1={cy - 38} x2={cx + 38} y2={cy + 38} stroke="#fde047" strokeWidth="2.2" strokeDasharray="6 3" filter="url(#laserGlow)" />
-                    <line x1={cx + 38} y1={cy - 38} x2={cx - 38} y2={cy + 38} stroke="#fde047" strokeWidth="2.2" strokeDasharray="6 3" filter="url(#laserGlow)" />
-                    {/* Phù ấn Khóa Tâm */}
-                    <circle cx={cx} cy={cy} r="14" fill="rgba(253, 224, 71, 0.25)" stroke="#ffffff" strokeWidth="1.5" filter="url(#laserGlow)" />
-                    <text x={cx} y={cy + 4} textAnchor="middle" fontSize="11" fontWeight="900" fill="#ffffff">⚡</text>
+                  <g style={{ animation: 'celestialChainHum 2.5s ease-in-out infinite alternate', transformOrigin: `${cx}px ${cy}px` }}>
+                    {/* Vòng hào quang Thiên Đạo Bát Tinh Trận (Nét liền sang trọng) */}
+                    <circle cx={cx} cy={cy} r="68" fill="none" stroke="rgba(253, 224, 71, 0.8)" strokeWidth="1.8" />
+                    
+                    {/* 8 Điểm Phù Ấn Kim Cương tại 8 hướng */}
+                    {[0, 45, 90, 135, 180, 225, 270, 315].map((deg, i) => {
+                      const rad = (deg * Math.PI) / 180;
+                      const nx = cx + 68 * Math.cos(rad);
+                      const ny = cy + 68 * Math.sin(rad);
+                      return (
+                        <circle key={`chain-seal-node-${i}`} cx={nx} cy={ny} r="3.2" fill="#fde047" stroke="#ffffff" strokeWidth="1.0" />
+                      );
+                    })}
+
+                    {/* Huy Hiệu Phong Ấn Cực Cảnh Hoàng Kim tại Tâm */}
+                    <circle cx={cx} cy={cy} r="24" fill="rgba(6, 12, 24, 0.9)" stroke="#fde047" strokeWidth="2.0" />
+                    <circle cx={cx} cy={cy} r="21" fill="rgba(253, 224, 71, 0.2)" stroke="rgba(255, 255, 255, 0.8)" strokeWidth="1.0" />
+                    <text
+                      x={cx}
+                      y={cy + 1}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontSize="12"
+                      fontWeight="900"
+                      fill="#fde047"
+                      letterSpacing="0.5"
+                      style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+                    >
+                      ✦ 121
+                    </text>
                   </g>
                 )}
               </g>
