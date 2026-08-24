@@ -4526,11 +4526,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                         if (isBottleneck || (isCurrentActiveSelf && currentExp >= palaceBottleneck)) {
                           setAnchorModalPalace(selfLocalIdx);
                         } else if (isCurrentActiveSelf) {
-                          try {
-                            thangCung();
-                          } catch (e) {
-                            setAnchorModalPalace(selfLocalIdx);
-                          }
+                          setAnchorModalPalace(selfLocalIdx);
                         } else if (!isRealized && selfLocalIdx === realizedThienCung) {
                           setAnchorModalPalace(selfLocalIdx);
                         }
