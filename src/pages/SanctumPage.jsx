@@ -117,24 +117,48 @@ export default function SanctumPage() {
   const anchoredIds = Object.values(palaceAnchors).map(a => a?.id || a).filter(Boolean);
   const unanchoredArtifacts = inventoryArtifacts.filter(id => !anchoredIds.includes(id));
 
-  const TIER_ORDER = ['owned', 'ha_pham', 'trung_pham', 'thuong_pham', 'cuc_pham', 'tien_pham', 'than_pham'];
+  const TIER_WEIGHT = {
+    than_pham: 6,
+    tien_pham: 5,
+    cuc_pham: 4,
+    thuong_pham: 3,
+    trung_pham: 2,
+    ha_pham: 1,
+  };
+
+  const TIER_ORDER = ['owned', 'than_pham', 'tien_pham', 'cuc_pham', 'thuong_pham', 'trung_pham', 'ha_pham'];
 
   // Helper kiểm tra vật phẩm quý hiếm cần hỏi lại xác nhận
   const shouldConfirm = (tier) => tier === 'tien_pham' || tier === 'than_pham';
 
-  // Danh sách Mệnh Đăng sở hữu vs Danh sách hiển thị theo bộ lọc
+  // Danh sách Mệnh Đăng sở hữu vs Danh sách hiển thị theo bộ lọc (sắp xếp Thần -> Hạ)
   const ownedLampIds = Array.from(new Set([...absorbedLamps, ...inventoryLamps]));
-  const ownedLampsList = LIFE_LAMPS.filter(l => ownedLampIds.includes(l.id));
+  const ownedLampsList = LIFE_LAMPS.filter(l => ownedLampIds.includes(l.id))
+    .sort((a, b) => (TIER_WEIGHT[b.tier] || 0) - (TIER_WEIGHT[a.tier] || 0));
   const displayedLamps = lampFilterTier === 'owned'
     ? ownedLampsList
     : LIFE_LAMPS.filter(l => l.tier === lampFilterTier);
 
-  // Danh sách Bảo Vật sở hữu vs Danh sách hiển thị theo bộ lọc
+  // Danh sách Bảo Vật sở hữu vs Danh sách hiển thị theo bộ lọc (sắp xếp Thần -> Hạ)
   const ownedArtifactIds = Array.from(new Set([...anchoredIds, ...inventoryArtifacts]));
-  const ownedArtifactsList = SUPPRESSING_ARTIFACTS.filter(a => ownedArtifactIds.includes(a.id));
+  const ownedArtifactsList = SUPPRESSING_ARTIFACTS.filter(a => ownedArtifactIds.includes(a.id))
+    .sort((a, b) => (TIER_WEIGHT[b.tier] || 0) - (TIER_WEIGHT[a.tier] || 0));
   const displayedArtifacts = artifactFilterTier === 'owned'
     ? ownedArtifactsList
     : SUPPRESSING_ARTIFACTS.filter(a => a.tier === artifactFilterTier);
+
+  // Danh sách trong Túi Trữ Vật sắp xếp theo phẩm chất từ cao xuống thấp (Thần -> Tiên -> Cực -> Thượng -> Trung -> Hạ)
+  const sortedInventoryLamps = [...inventoryLamps].sort((idA, idB) => {
+    const lampA = LIFE_LAMPS.find(l => l.id === idA);
+    const lampB = LIFE_LAMPS.find(l => l.id === idB);
+    return (TIER_WEIGHT[lampB?.tier] || 0) - (TIER_WEIGHT[lampA?.tier] || 0);
+  });
+
+  const sortedUnanchoredArtifacts = [...unanchoredArtifacts].sort((idA, idB) => {
+    const artA = SUPPRESSING_ARTIFACTS.find(a => a.id === idA);
+    const artB = SUPPRESSING_ARTIFACTS.find(a => a.id === idB);
+    return (TIER_WEIGHT[artB?.tier] || 0) - (TIER_WEIGHT[artA?.tier] || 0);
+  });
 
   // Chiến lực thực tế đồng bộ 100% với hệ thống
   const calculatedCombatPower = getCombatPowerDisplay(cultivation);
@@ -1097,7 +1121,7 @@ export default function SanctumPage() {
                   </div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                    {inventoryLamps.map(lampId => {
+                    {sortedInventoryLamps.map(lampId => {
                       const lobj = LIFE_LAMPS.find(l => l.id === lampId);
                       if (!lobj) return null;
                       const tierInfo = LAMP_TIERS[lobj.tier] || LAMP_TIERS.ha_pham;
@@ -1226,7 +1250,7 @@ export default function SanctumPage() {
                   </div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                    {unanchoredArtifacts.map(artId => {
+                    {sortedUnanchoredArtifacts.map(artId => {
                       const artObj = SUPPRESSING_ARTIFACTS.find(a => a.id === artId);
                       if (!artObj) return null;
                       const tierInfo = LAMP_TIERS[artObj.tier] || LAMP_TIERS.ha_pham;
