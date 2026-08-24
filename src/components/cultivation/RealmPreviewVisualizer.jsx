@@ -1327,19 +1327,177 @@ export { FOUR_DIVINE_BEASTS, ORIGINAL_SIX_CONSTELLATIONS };
 export const SIX_CONSTELLATIONS = FOUR_DIVINE_BEASTS;
 
 
-/* Icon Thái Cực dạng SVG — Âm Dương Lưỡng Nghi */
-function TaiCucIcon({ size = 12 }) {
+
+/* Icon Thái Cực dạng SVG — Hỗ trợ cả 2 chế độ Âm Dương */
+function TaiCucIcon({ size = 12, inverted = false }) {
   const s = size;
   return (
-    <svg width={s} height={s} viewBox="0 0 32 32" style={{ flexShrink: 0, display: 'block' }}>
-      <circle cx="16" cy="16" r="15" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1" />
+    <svg width={s} height={s} viewBox="0 0 32 32" style={{ flexShrink: 0, display: 'block', transition: 'all 1.2s ease' }}>
+      <circle cx="16" cy="16" r="15" fill={inverted ? "#ffffff" : "#020617"} stroke={inverted ? "#020617" : "rgba(255,255,255,0.85)"} strokeWidth="1.2" />
       <path
         d="M16 1 A15 15 0 0 1 16 31 A7.5 7.5 0 0 1 16 16 A7.5 7.5 0 0 0 16 1 Z"
-        fill="rgba(255,255,255,0.85)"
+        fill={inverted ? "#020617" : "rgba(255,255,255,0.95)"}
       />
-      <circle cx="16" cy="8.5" r="1.6" fill="#020617" />
-      <circle cx="16" cy="23.5" r="1.6" fill="rgba(255,255,255,0.85)" />
+      <circle cx="16" cy="8.5" r="1.8" fill={inverted ? "#ffffff" : "#020617"} />
+      <circle cx="16" cy="23.5" r="1.8" fill={inverted ? "#020617" : "rgba(255,255,255,0.95)"} />
     </svg>
+  );
+}
+
+/* Component Bảng Thủy Tinh Âm Dương Sinh Tử Luân Hồi (Tự Động Đảo Trạng Thái Mượt Mà) */
+function CucCanhYinYangBadge({ is121Unlocked }) {
+  const [isWhiteState, setIsWhiteState] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!is121Unlocked) return;
+    const timer = setInterval(() => {
+      setIsWhiteState(prev => !prev);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [is121Unlocked]);
+
+  if (!is121Unlocked) {
+    return (
+      <div style={{
+        position: 'relative',
+        padding: '3.5px',
+        borderRadius: '26px',
+        border: '1.2px solid rgba(56, 189, 248, 0.65)',
+        boxShadow: '0 0 16px rgba(56, 189, 248, 0.25)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(2, 6, 23, 0.55)',
+        backdropFilter: 'blur(12px)'
+      }}>
+        <div style={{
+          position: 'relative',
+          padding: '5px 22px',
+          borderRadius: '22px',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(56, 189, 248, 0.08) 50%, rgba(8, 18, 36, 0.85) 100%)',
+          border: '1px solid rgba(255, 255, 255, 0.45)',
+          borderTop: '1.5px solid rgba(255, 255, 255, 0.95)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1.5px 2px rgba(255, 255, 255, 0.8)',
+          backdropFilter: 'blur(16px)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8
+        }}>
+          <span style={{ fontSize: 9, color: '#38bdf8', textShadow: '0 0 8px #38bdf8' }}>✦</span>
+          <span style={{
+            fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
+            fontSize: 11.5,
+            fontWeight: 800,
+            letterSpacing: 2.2,
+            color: '#ffffff',
+            textShadow: '0 0 10px rgba(56, 189, 248, 0.9), 0 0 20px rgba(255, 255, 255, 0.5), 0 1px 3px rgba(0,0,0,0.8)',
+            whiteSpace: 'nowrap'
+          }}>
+            TRÚC CƠ TINH ĐỒ
+          </span>
+          <span style={{ fontSize: 9, color: '#38bdf8', textShadow: '0 0 8px #38bdf8' }}>✦</span>
+        </div>
+      </div>
+    );
+  }
+
+  // TRẠNG THÁI CỰC CẢNH: CHUYỂN ĐỔI MƯỢT MÀ GIỮA NỀN ĐEN - CHỮ TRẮNG VÀ NỀN TRẮNG - CHỮ ĐEN
+  return (
+    <div style={{
+      position: 'relative',
+      padding: '4px',
+      borderRadius: '28px',
+      border: isWhiteState ? '1.6px solid rgba(255, 255, 255, 0.95)' : '1.6px solid rgba(255, 255, 255, 0.8)',
+      boxShadow: isWhiteState 
+        ? '0 0 26px rgba(255, 255, 255, 0.7), inset 0 0 10px rgba(255, 255, 255, 0.35)' 
+        : '0 0 20px rgba(255, 255, 255, 0.35), inset 0 0 8px rgba(255, 255, 255, 0.15)',
+      background: 'rgba(2, 6, 23, 0.65)',
+      transition: 'all 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      {/* 4 Hạt kim cương ở 4 góc viền ngoài tạo điểm nhấn khung */}
+      <div style={{
+        position: 'absolute', top: -3, left: 12, width: 4, height: 4, transform: 'rotate(45deg)',
+        background: '#ffffff', boxShadow: '0 0 6px #ffffff', transition: 'all 1.2s ease'
+      }} />
+      <div style={{
+        position: 'absolute', top: -3, right: 12, width: 4, height: 4, transform: 'rotate(45deg)',
+        background: '#ffffff', boxShadow: '0 0 6px #ffffff', transition: 'all 1.2s ease'
+      }} />
+      <div style={{
+        position: 'absolute', bottom: -3, left: 12, width: 4, height: 4, transform: 'rotate(45deg)',
+        background: '#ffffff', boxShadow: '0 0 6px #ffffff', transition: 'all 1.2s ease'
+      }} />
+      <div style={{
+        position: 'absolute', bottom: -3, right: 12, width: 4, height: 4, transform: 'rotate(45deg)',
+        background: '#ffffff', boxShadow: '0 0 6px #ffffff', transition: 'all 1.2s ease'
+      }} />
+
+      {/* KHỐI BẢNG THỦY TINH CHÍNH */}
+      <div style={{
+        position: 'relative',
+        padding: '5px 22px',
+        borderRadius: '22px',
+        background: isWhiteState 
+          ? 'linear-gradient(135deg, #ffffff 0%, #f8fafc 45%, #e2e8f0 100%)' 
+          : 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 50%, rgba(2, 6, 23, 0.98) 100%)',
+        border: isWhiteState ? '1.5px solid #0f172a' : '1.5px solid rgba(255, 255, 255, 0.85)',
+        boxShadow: isWhiteState
+          ? '0 6px 24px rgba(255, 255, 255, 0.5), inset 0 2px 3px #ffffff, inset 0 -2px 3px rgba(0, 0, 0, 0.15)'
+          : '0 6px 24px rgba(0, 0, 0, 0.7), inset 0 2px 3px rgba(255, 255, 255, 0.85), inset 0 -2px 3px rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(20px)',
+        transition: 'all 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        overflow: 'hidden'
+      }}>
+        {/* Vệt bóng kính phía trên */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '50%',
+          background: isWhiteState
+            ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.0) 100%)'
+            : 'linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.0) 100%)',
+          borderRadius: '22px 22px 0 0',
+          pointerEvents: 'none',
+          transition: 'all 1.2s ease'
+        }} />
+
+        {/* Icon Thái Cực xoay tròn trái */}
+        <div style={{ animation: 'taicuc-spin 9s linear infinite', display: 'flex', alignItems: 'center', zIndex: 1 }}>
+          <TaiCucIcon size={13} inverted={isWhiteState} />
+        </div>
+
+        {/* Chữ CỰC CẢNH SINH TỬ */}
+        <span style={{
+          position: 'relative',
+          zIndex: 1,
+          fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
+          fontSize: 11.5,
+          fontWeight: 900,
+          letterSpacing: 2.6,
+          color: isWhiteState ? '#020617' : '#ffffff',
+          textShadow: isWhiteState
+            ? '0 0 6px rgba(255, 255, 255, 0.8), 0 1px 1px rgba(0, 0, 0, 0.15)'
+            : '0 0 12px rgba(255, 255, 255, 0.95), 0 0 24px rgba(255, 255, 255, 0.6), 0 1px 3px #000000',
+          transition: 'all 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          whiteSpace: 'nowrap'
+        }}>
+          CỰC CẢNH SINH TỬ
+        </span>
+
+        {/* Icon Thái Cực xoay tròn phải */}
+        <div style={{ animation: 'taicuc-spin-rev 9s linear infinite', display: 'flex', alignItems: 'center', zIndex: 1 }}>
+          <TaiCucIcon size={13} inverted={isWhiteState} />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -2506,151 +2664,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             pointerEvents: 'auto',
             userSelect: 'none'
           }}>
-            {/* Quầng sáng khúc xạ quang phổ phía sau */}
-            <div style={{
-              position: 'absolute',
-              top: '40%',
-              left: '50%',
-              width: 290,
-              height: 48,
-              background: is121Unlocked
-                ? 'radial-gradient(ellipse, rgba(255,255,255,0.22) 0%, rgba(56,189,248,0.08) 40%, transparent 75%)'
-                : 'radial-gradient(ellipse, rgba(56,189,248,0.2) 0%, rgba(255,255,255,0.06) 40%, transparent 75%)',
-              filter: 'blur(10px)',
-              zIndex: -1,
-              animation: is121Unlocked ? 'halo-pulse 4.5s ease-in-out infinite' : undefined
-            }} />
-
-            {/* VIỀN BAO QUANH NGOẠI VI (ORNATE OUTER GLASS FRAME CÁCH KHUNG CHÍNH 3.5PX) */}
-            <div style={{
-              position: 'relative',
-              padding: '3px',
-              borderRadius: '28px',
-              border: is121Unlocked 
-                ? '1px dashed rgba(255, 255, 255, 0.45)' 
-                : '1px solid rgba(56, 189, 248, 0.35)',
-              animation: is121Unlocked ? 'yinyang-outer-frame-cycle 8s ease-in-out infinite' : undefined,
-              boxSizing: 'border-box',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              {/* 1. KHỐI THỦY TINH CHÍNH: ÂM DƯƠNG SINH TỬ LUÂN HỒI (8 GIÂY / CHU KỲ MƯỢT MÀ) */}
-              <div style={{
-                position: 'relative',
-                padding: '5px 22px',
-                borderRadius: '24px',
-                border: '1.2px solid rgba(255, 255, 255, 0.65)',
-                borderTop: '1.6px solid rgba(255, 255, 255, 0.95)',
-                animation: is121Unlocked ? 'yinyang-badge-cycle 8s ease-in-out infinite' : undefined,
-                background: is121Unlocked 
-                  ? undefined 
-                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(56, 189, 248, 0.06) 50%, rgba(8, 18, 36, 0.4) 100%)',
-                boxShadow: is121Unlocked 
-                  ? undefined 
-                  : '0 8px 28px rgba(0, 0, 0, 0.45), inset 0 1.5px 2px rgba(255, 255, 255, 0.9), inset 0 -1.5px 2.5px rgba(0, 0, 0, 0.35), 0 0 15px rgba(56, 189, 248, 0.25)',
-                backdropFilter: 'blur(16px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-                boxSizing: 'border-box',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                overflow: 'hidden'
-              }}>
-                {/* Vệt sáng bóng kính cong phía trên (Specular Reflection) */}
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: '50%',
-                  background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.02) 100%)',
-                  borderRadius: '24px 24px 0 0',
-                  pointerEvents: 'none'
-                }} />
-
-                {/* Vệt lóa sáng chéo góc mài kính */}
-                <div style={{
-                  position: 'absolute',
-                  top: -10,
-                  left: -20,
-                  width: 70,
-                  height: 50,
-                  background: 'linear-gradient(115deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.0) 60%)',
-                  transform: 'rotate(25deg)',
-                  pointerEvents: 'none'
-                }} />
-
-                {/* NỘI DUNG */}
-                {is121Unlocked ? (
-                  <>
-                    {/* Icon Thái Cực xoay tròn trái */}
-                    <div style={{ animation: 'taicuc-spin 9s linear infinite', display: 'flex', alignItems: 'center', zIndex: 1 }}>
-                      <TaiCucIcon size={13} />
-                    </div>
-
-                    {/* Danh hiệu CỰC CẢNH SINH TỬ chuyển đổi màu mượt mà theo chu kỳ Âm Dương */}
-                    <span style={{
-                      position: 'relative',
-                      zIndex: 1,
-                      fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
-                      fontSize: 11.5,
-                      fontWeight: 900,
-                      letterSpacing: 2.6,
-                      animation: 'yinyang-text-cycle 8s ease-in-out infinite',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      CỰC CẢNH SINH TỬ
-                    </span>
-
-                    {/* Icon Thái Cực xoay tròn phải */}
-                    <div style={{ animation: 'taicuc-spin-rev 9s linear infinite', display: 'flex', alignItems: 'center', zIndex: 1 }}>
-                      <TaiCucIcon size={13} />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {/* Trạng thái BÌNH THƯỜNG: Trúc Cơ Tinh Đồ */}
-                    <span style={{ 
-                      position: 'relative',
-                      zIndex: 1,
-                      fontSize: 9, 
-                      color: '#38bdf8', 
-                      textShadow: '0 0 8px #38bdf8', 
-                      lineHeight: 1 
-                    }}>
-                      ✦
-                    </span>
-
-                    <span style={{
-                      position: 'relative',
-                      zIndex: 1,
-                      fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
-                      fontSize: 11.5,
-                      fontWeight: 800,
-                      letterSpacing: 2.2,
-                      color: '#ffffff',
-                      textShadow: '0 0 10px rgba(56, 189, 248, 0.9), 0 0 20px rgba(255, 255, 255, 0.5), 0 1px 3px rgba(0,0,0,0.8)',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      TRÚC CƠ TINH ĐỒ
-                    </span>
-
-                    <span style={{ 
-                      position: 'relative',
-                      zIndex: 1,
-                      fontSize: 9, 
-                      color: '#38bdf8', 
-                      textShadow: '0 0 8px #38bdf8', 
-                      lineHeight: 1 
-                    }}>
-                      ✦
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
+            {/* 1. COMPONENT BẢNG THỦY TINH ÂM DƯƠNG TỰ ĐỘNG CHUYỂN ĐỔI */}
+            <CucCanhYinYangBadge is121Unlocked={is121Unlocked} />
 
             {/* 2. SEGMENTED TOGGLE THỦY TINH TRONG SUỐT (LIQUID GLASS SLIDER) */}
             <div style={{
