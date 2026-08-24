@@ -544,8 +544,7 @@ export function SvgChaosLotusThrone({ cx, cy, isFilled, lampObj, idx = 'chaos', 
   return (
     <g
       onClick={onClick}
-      style={{ cursor: 'pointer', pointerEvents: 'all', willChange: 'transform' }}
-      className="chaos-lotus-interactive"
+      style={{ cursor: 'pointer', pointerEvents: 'all' }}
     >
       <defs>
         {/* Tầng ngoài: đen -> lục hỗn mang (Tạo Hóa) */}
@@ -573,21 +572,18 @@ export function SvgChaosLotusThrone({ cx, cy, isFilled, lampObj, idx = 'chaos', 
           <stop offset="70%" stopColor="rgba(6,8,16,0.95)" />
           <stop offset="100%" stopColor="rgba(2,4,10,0.99)" />
         </radialGradient>
-        <filter id={`svgChaosGlow-${idx}`} filterUnits="userSpaceOnUse" x={cx - 150} y={cy - 150} width="300" height="300">
-          <feGaussianBlur stdDeviation="3.0" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
+        <radialGradient id={`svgChaosAura-${idx}`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#5dcaa5" stopOpacity="0.35" />
+          <stop offset="60%" stopColor="#fde047" stopOpacity="0.15" />
+          <stop offset="100%" stopColor="transparent" stopOpacity="0" />
+        </radialGradient>
         <clipPath id={`svgChaosClip-${idx}`}>
           <circle cx={cx} cy={cy} r="40" />
         </clipPath>
       </defs>
 
-      {/* Hào quang nền sáng lung linh (Bán kính 88px) */}
-      <circle cx={cx} cy={cy} r="88" fill="#5dcaa5" opacity="0.25" filter={`url(#svgChaosGlow-${idx})`} style={{ animation: 'chaosPulseGlow 3s ease-in-out infinite' }} />
-      <circle cx={cx} cy={cy} r="76" fill="#fde047" opacity="0.2" filter={`url(#svgChaosGlow-${idx})`} />
+      {/* Hào quang nền sáng thuần Gradient (0% lag trên Mobile GPU) */}
+      <circle cx={cx} cy={cy} r="88" fill={`url(#svgChaosAura-${idx})`} />
 
       {/* Tầng 1: 12 cánh ngoài (r tip = 88, r base = 42) */}
       {tier1Angles.map((deg, i) => {
@@ -595,7 +591,7 @@ export function SvgChaosLotusThrone({ cx, cy, isFilled, lampObj, idx = 'chaos', 
         return (
           <g key={`s-t1-${i}`}>
             <path d={d} fill={`url(#svgChaosOuter-${idx})`} stroke="#a7f3d0" strokeWidth="1.2" opacity="0.98" />
-            <circle cx={tipX} cy={tipY} r="2.0" fill="#ffffff" filter={`url(#svgChaosGlow-${idx})`} />
+            <circle cx={tipX} cy={tipY} r="2.0" fill="#ffffff" />
           </g>
         );
       })}
@@ -606,7 +602,7 @@ export function SvgChaosLotusThrone({ cx, cy, isFilled, lampObj, idx = 'chaos', 
         return (
           <g key={`s-t2-${i}`}>
             <path d={d} fill={`url(#svgChaosMid-${idx})`} stroke="#c4b5fd" strokeWidth="1.2" opacity="0.98" />
-            <circle cx={tipX} cy={tipY} r="1.8" fill="#ffffff" filter={`url(#svgChaosGlow-${idx})`} />
+            <circle cx={tipX} cy={tipY} r="1.8" fill="#ffffff" />
           </g>
         );
       })}
@@ -617,16 +613,16 @@ export function SvgChaosLotusThrone({ cx, cy, isFilled, lampObj, idx = 'chaos', 
         return (
           <g key={`s-t3-${i}`}>
             <path d={d} fill={`url(#svgChaosInner-${idx})`} stroke="#fef08a" strokeWidth="1.3" />
-            <circle cx={tipX} cy={tipY} r="1.6" fill="#ffffff" filter={`url(#svgChaosGlow-${idx})`} />
+            <circle cx={tipX} cy={tipY} r="1.6" fill="#ffffff" />
           </g>
         );
       })}
 
       {/* Vành hào quang kép quay ngược chiều (Nét liền mượt mà) */}
-      <g style={{ transformOrigin: `${cx}px ${cy}px`, animation: 'chaosRingCW 14s linear infinite' }}>
+      <g style={{ transformOrigin: `${cx}px ${cy}px`, animation: 'chaosRingCW 14s linear infinite', willChange: 'transform' }}>
         <circle cx={cx} cy={cy} r="46" fill="none" stroke="#fde047" strokeWidth="1.2" opacity="0.85" />
       </g>
-      <g style={{ transformOrigin: `${cx}px ${cy}px`, animation: 'chaosRingCCW 18s linear infinite' }}>
+      <g style={{ transformOrigin: `${cx}px ${cy}px`, animation: 'chaosRingCCW 18s linear infinite', willChange: 'transform' }}>
         <circle cx={cx} cy={cy} r="44" fill="none" stroke="#38bdf8" strokeWidth="1.0" opacity="0.8" />
       </g>
 
@@ -638,7 +634,6 @@ export function SvgChaosLotusThrone({ cx, cy, isFilled, lampObj, idx = 'chaos', 
         fill={isFilled ? "rgba(4, 10, 24, 0.95)" : `url(#svgChaosCore-${idx})`}
         stroke="#fde047"
         strokeWidth="2.4"
-        filter={`url(#svgChaosGlow-${idx})`}
       />
 
       {isFilled && lampObj ? (
@@ -654,7 +649,7 @@ export function SvgChaosLotusThrone({ cx, cy, isFilled, lampObj, idx = 'chaos', 
               clipPath={`url(#svgChaosClip-${idx})`}
             />
             {/* Viền sáng bao bọc mép ảnh AI */}
-            <circle cx={cx} cy={cy} r="40" fill="none" stroke="#fde047" strokeWidth="2.4" filter="url(#laserGlow)" />
+            <circle cx={cx} cy={cy} r="40" fill="none" stroke="#fde047" strokeWidth="2.4" />
             <circle cx={cx} cy={cy} r="38.5" fill="none" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="1.0" />
           </g>
         ) : (
@@ -669,7 +664,7 @@ export function SvgChaosLotusThrone({ cx, cy, isFilled, lampObj, idx = 'chaos', 
             >
               {lampObj.icon || '🏮'}
             </text>
-            <circle cx={cx} cy={cy} r="40" fill="none" stroke="#fde047" strokeWidth="2.4" filter="url(#laserGlow)" />
+            <circle cx={cx} cy={cy} r="40" fill="none" stroke="#fde047" strokeWidth="2.4" />
           </g>
         )
       ) : (
@@ -683,7 +678,6 @@ export function SvgChaosLotusThrone({ cx, cy, isFilled, lampObj, idx = 'chaos', 
             fontSize="36"
             fontWeight="900"
             fill="#ffffff"
-            filter="url(#laserGlow)"
             textRendering="geometricPrecision"
           >
             +
@@ -4011,23 +4005,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 0%, 100% { transform: scale(1); filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.8)); }
                 50% { transform: scale(1.18); filter: drop-shadow(0 0 16px rgba(253, 224, 71, 0.95)) drop-shadow(0 0 24px #ffffff); }
               }
-              @keyframes chaosPulseGlow {
-                0%, 100% { transform: scale(1); opacity: 0.85; }
-                50%      { transform: scale(1.06); opacity: 1; }
-              }
               @keyframes chaosRingCW  { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
               @keyframes chaosRingCCW { from { transform: rotate(360deg); } to { transform: rotate(0deg);     } }
-              @keyframes chaosChromaShift {
-                0%   { filter: hue-rotate(0deg) brightness(1.15) drop-shadow(0 0 10px rgba(93, 202, 165, 0.8)); }
-                25%  { filter: hue-rotate(90deg) brightness(1.25) drop-shadow(0 0 12px rgba(56, 189, 248, 0.85)); }
-                50%  { filter: hue-rotate(180deg) brightness(1.2) drop-shadow(0 0 14px rgba(168, 85, 247, 0.9)); }
-                75%  { filter: hue-rotate(270deg) brightness(1.3) drop-shadow(0 0 16px rgba(251, 191, 36, 0.95)); }
-                100% { filter: hue-rotate(360deg) brightness(1.15) drop-shadow(0 0 10px rgba(93, 202, 165, 0.8)); }
-              }
-              .chaos-lotus-interactive {
-                animation: chaosChromaShift 10s ease-in-out infinite;
-                transform-origin: 500px 500px;
-              }
             `}</style>
 
             {/* A. VÒNG LỤC ĐẠI TINH TỌA 120 KHIẾU */}
@@ -4327,11 +4306,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                       fontSize="26"
                       fontWeight="bold"
                       fill={is121Unlocked ? "#fde047" : "#fbbf24"}
-                      filter="url(#laserGlow)"
                       textRendering="geometricPrecision"
-                      style={{
-                        filter: 'drop-shadow(0 0 6px rgba(250, 204, 21, 0.95))'
-                      }}
                     >
                       {bg.symbol}
                     </text>
@@ -4347,8 +4322,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                       letterSpacing="1.2"
                       textRendering="geometricPrecision"
                       style={{ 
-                        fontFamily: 'system-ui, -apple-system, sans-serif',
-                        filter: 'drop-shadow(0 0 4px rgba(56, 189, 248, 0.95))'
+                        fontFamily: 'system-ui, -apple-system, sans-serif'
                       }}
                     >
                       {bg.name}
