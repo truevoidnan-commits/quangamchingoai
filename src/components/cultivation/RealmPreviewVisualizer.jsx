@@ -48,37 +48,37 @@ export const CORNER_LOTUS_CONFIGS = {
   topLeft: {
     name: 'Tạo Hóa Thanh Liên',
     grade: '12 Phẩm',
-    colorBack: '#0d9488',     // Lam Ngọc Bích tươi sáng
-    colorFront: '#2dd4bf',    // Thanh Bích sáng rực
-    petalTip: '#99f6e4',      // Đỉnh cánh ngọc phát quang
-    coreGlow: 'rgba(45, 212, 191, 0.65)',
-    ringColor: '#5eead4',
+    colorBack: '#065f46',
+    colorFront: '#10b981',
+    petalTip: '#a7f3d0',
+    coreGlow: 'rgba(16, 185, 129, 0.45)',
+    ringColor: '#34d399',
   },
   topRight: {
     name: 'Diệt Thế Hắc Liên',
     grade: '12 Phẩm',
-    colorBack: '#5b21b6',     // Tử Kim Ma Thần sáng rực rỡ, không bị đen tối
-    colorFront: '#8b5cf6',    // Tử Quang huyền ảo
-    petalTip: '#c4b5fd',      // Đỉnh cánh tím phát quang
-    coreGlow: 'rgba(139, 92, 246, 0.65)',
-    ringColor: '#a78bfa',
+    colorBack: '#1e1b4b',
+    colorFront: '#6366f1',
+    petalTip: '#c7d2fe',
+    coreGlow: 'rgba(99, 102, 241, 0.45)',
+    ringColor: '#818cf8',
   },
   bottomLeft: {
     name: 'Công Đức Kim Liên',
     grade: '12 Phẩm',
-    colorBack: '#d97706',     // Hoàng Kim rực rỡ
-    colorFront: '#fbbf24',    // Kim Quang chói lọi
-    petalTip: '#fef08a',      // Đỉnh cánh vàng ngọc sáng bừng
-    coreGlow: 'rgba(251, 191, 36, 0.65)',
-    ringColor: '#fde047',
+    colorBack: '#78350f',
+    colorFront: '#f59e0b',
+    petalTip: '#fef08a',
+    coreGlow: 'rgba(245, 158, 11, 0.45)',
+    ringColor: '#fbbf24',
   },
   bottomRight: {
     name: 'Nghiệp Hỏa Hồng Liên',
     grade: '12 Phẩm',
-    colorBack: '#dc2626',     // Hồng Hỏa rực sáng
-    colorFront: '#f87171',    // Hỏa Quang chói lọi
-    petalTip: '#fca5a5',      // Đỉnh cánh hồng phát quang
-    coreGlow: 'rgba(239, 68, 68, 0.65)',
+    colorBack: '#7f1d1d',
+    colorFront: '#ef4444',
+    petalTip: '#fecaca',
+    coreGlow: 'rgba(239, 68, 68, 0.45)',
     ringColor: '#f87171',
   },
 };
@@ -245,13 +245,15 @@ export function GradeLotusAltar({ config, isFilled, lampObj, ArtifactIcon, idx }
                     <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#000000" flood-opacity="0.9" />
                   </filter>
             <linearGradient id={`gradeBack-${idx}`} x1="0%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stopColor={config.colorBack} stopOpacity="0.85" />
-              <stop offset="45%" stopColor={config.colorFront} stopOpacity="0.95" />
+              <stop offset="0%" stopColor="rgba(4, 10, 20, 0.75)" />
+              <stop offset="35%" stopColor={config.colorBack} stopOpacity="0.9" />
+              <stop offset="75%" stopColor={config.colorFront} stopOpacity="0.95" />
               <stop offset="100%" stopColor={config.petalTip} stopOpacity="1" />
             </linearGradient>
             <linearGradient id={`gradeFront-${idx}`} x1="0%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stopColor={config.colorBack} stopOpacity="0.9" />
-              <stop offset="50%" stopColor={config.colorFront} stopOpacity="0.95" />
+              <stop offset="0%" stopColor={config.colorBack} stopOpacity="0.85" />
+              <stop offset="45%" stopColor={config.colorFront} stopOpacity="0.95" />
+              <stop offset="85%" stopColor={config.petalTip} stopOpacity="0.98" />
               <stop offset="100%" stopColor="#ffffff" stopOpacity="1" />
             </linearGradient>
             <radialGradient id={`gradeCore-${idx}`}>
@@ -1344,64 +1346,31 @@ function TaiCucIcon({ size = 12, inverted = false }) {
   );
 }
 
-/* Component Bảng Thủy Tinh Âm Dương Sinh Tử Luân Hồi (TỐI ƯU 60FPS ZERO LAG GPU COMPOSITED) */
+/* Component Bảng Thủy Tinh Âm Dương Sinh Tử Luân Hồi (Chuyển Đổi Mượt Mà 7.5s, Khung Viền Pha Lê Đẳng Cấp) */
 function CucCanhYinYangBadge({ is121Unlocked }) {
-  // 'black' -> 'dyeing_white' -> 'white' -> 'dyeing_black' -> 'black'
-  const [dyeState, setDyeState] = React.useState('black');
+  const [isWhite, setIsWhite] = React.useState(false);
 
   React.useEffect(() => {
     if (!is121Unlocked) return;
-
-    let isMounted = true;
-    let timerId;
-
-    const cycle = () => {
-      // 1. Sau 5s ở nền đen -> bắt đầu nhuộm trắng sang phải
-      timerId = setTimeout(() => {
-        if (!isMounted) return;
-        setDyeState('dyeing_white');
-
-        // 2. Nhuộm trắng mất 2.5s -> hoàn tất thành trắng
-        timerId = setTimeout(() => {
-          if (!isMounted) return;
-          setDyeState('white');
-
-          // 3. Sau 5s ở nền trắng -> bắt đầu nhuộm đen sang phải
-          timerId = setTimeout(() => {
-            if (!isMounted) return;
-            setDyeState('dyeing_black');
-
-            // 4. Nhuộm đen mất 2.5s -> hoàn tất thành đen và lặp lại
-            timerId = setTimeout(() => {
-              if (!isMounted) return;
-              setDyeState('black');
-              cycle();
-            }, 2500);
-          }, 5000);
-        }, 2500);
-      }, 5000);
-    };
-
-    cycle();
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timerId);
-    };
+    const timer = setInterval(() => {
+      setIsWhite(prev => !prev);
+    }, 7500);
+    return () => clearInterval(timer);
   }, [is121Unlocked]);
 
   if (!is121Unlocked) {
     return (
       <div style={{
         position: 'relative',
-        padding: '3px',
+        padding: '3.5px',
         borderRadius: '26px',
-        border: '1.2px solid rgba(56, 189, 248, 0.65)',
-        boxShadow: '0 0 14px rgba(56, 189, 248, 0.25)',
+        border: '1.4px solid rgba(56, 189, 248, 0.75)',
+        boxShadow: '0 0 16px rgba(56, 189, 248, 0.35)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'rgba(2, 6, 23, 0.85)'
+        background: 'rgba(2, 6, 23, 0.75)',
+        backdropFilter: 'blur(12px)'
       }}>
         {/* 4 Hạt kim cương góc */}
         <div style={{ position: 'absolute', top: -3, left: 12, width: 4, height: 4, transform: 'rotate(45deg)', background: '#38bdf8', boxShadow: '0 0 6px #38bdf8' }} />
@@ -1413,56 +1382,43 @@ function CucCanhYinYangBadge({ is121Unlocked }) {
           position: 'relative',
           padding: '5px 22px',
           borderRadius: '22px',
-          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(8, 18, 36, 0.98) 100%)',
-          border: '1.2px solid rgba(56, 189, 248, 0.55)',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(56, 189, 248, 0.08) 50%, rgba(8, 18, 36, 0.9) 100%)',
+          border: '1.2px solid rgba(255, 255, 255, 0.55)',
+          borderTop: '1.6px solid rgba(255, 255, 255, 0.95)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.6), inset 0 1.5px 2px rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(16px)',
           display: 'flex',
           alignItems: 'center',
           gap: 8
         }}>
-          <span style={{ fontSize: 9, color: '#38bdf8' }}>✦</span>
+          <span style={{ fontSize: 9, color: '#38bdf8', textShadow: '0 0 8px #38bdf8' }}>✦</span>
           <span style={{
             fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
             fontSize: 11.5,
             fontWeight: 800,
             letterSpacing: 2.2,
             color: '#ffffff',
-            textShadow: '0 0 10px rgba(56, 189, 248, 0.8), 0 1px 3px rgba(0,0,0,0.8)'
+            textShadow: '0 0 10px rgba(56, 189, 248, 0.9), 0 0 20px rgba(255, 255, 255, 0.5), 0 1px 3px rgba(0,0,0,0.8)'
           }}>
             TRÚC CƠ TINH ĐỒ
           </span>
-          <span style={{ fontSize: 9, color: '#38bdf8' }}>✦</span>
+          <span style={{ fontSize: 9, color: '#38bdf8', textShadow: '0 0 8px #38bdf8' }}>✦</span>
         </div>
       </div>
     );
   }
 
-  // TÍNH TOÁN VỊ TRÍ GPU TRANSFORM TRANSLATE (100% GPU COMPOSITING — ZERO LAG)
-  let curtainTranslate = '-100%';
-  let innerTranslate = '100%';
-  let transitionStyle = 'transform 2.5s cubic-bezier(0.4, 0, 0.2, 1)';
-
-  if (dyeState === 'black') {
-    curtainTranslate = '-100%';
-    innerTranslate = '100%';
-    transitionStyle = 'none';
-  } else if (dyeState === 'dyeing_white' || dyeState === 'white') {
-    curtainTranslate = '0%';
-    innerTranslate = '0%';
-    transitionStyle = dyeState === 'dyeing_white' ? 'transform 2.5s cubic-bezier(0.4, 0, 0.2, 1)' : 'none';
-  } else if (dyeState === 'dyeing_black') {
-    curtainTranslate = '100%';
-    innerTranslate = '-100%';
-    transitionStyle = 'transform 2.5s cubic-bezier(0.4, 0, 0.2, 1)';
-  }
-
   return (
     <div style={{
       position: 'relative',
-      padding: '3px',
-      borderRadius: '26px',
-      border: '1.4px solid rgba(255, 255, 255, 0.85)',
-      boxShadow: '0 0 16px rgba(255, 255, 255, 0.3)',
-      background: 'rgba(2, 6, 23, 0.85)',
+      padding: '4px',
+      borderRadius: '28px',
+      border: isWhite ? '1.6px solid rgba(255, 255, 255, 0.95)' : '1.6px solid rgba(255, 255, 255, 0.85)',
+      boxShadow: isWhite 
+        ? '0 0 26px rgba(255, 255, 255, 0.7), inset 0 0 10px rgba(255, 255, 255, 0.35)' 
+        : '0 0 20px rgba(255, 255, 255, 0.35), inset 0 0 8px rgba(255, 255, 255, 0.15)',
+      background: 'rgba(2, 6, 23, 0.75)',
+      transition: 'all 2s ease-in-out',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -1474,146 +1430,68 @@ function CucCanhYinYangBadge({ is121Unlocked }) {
       <div style={{ position: 'absolute', bottom: -3, left: 12, width: 4, height: 4, transform: 'rotate(45deg)', background: '#ffffff', boxShadow: '0 0 6px #ffffff' }} />
       <div style={{ position: 'absolute', bottom: -3, right: 12, width: 4, height: 4, transform: 'rotate(45deg)', background: '#ffffff', boxShadow: '0 0 6px #ffffff' }} />
 
-      {/* KHUNG CHÍNH (GPU ACCELERATED OVERFLOW CONTAINER) */}
+      {/* KHỐI BẢNG THỦY TINH CHUYỂN MÀU MƯỢT MÀ 2 GIÂY TRONG CHU KỲ 7.5S */}
       <div style={{
         position: 'relative',
+        padding: '5px 22px',
         borderRadius: '22px',
-        overflow: 'hidden',
+        background: isWhite
+          ? 'linear-gradient(135deg, #ffffff 0%, #f8fafc 45%, #e2e8f0 100%)'
+          : 'linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.99) 50%, rgba(2, 6, 23, 0.99) 100%)',
+        border: isWhite ? '1.4px solid #0f172a' : '1.4px solid rgba(255, 255, 255, 0.85)',
+        boxShadow: isWhite
+          ? '0 6px 24px rgba(255, 255, 255, 0.5), inset 0 2px 3px #ffffff, inset 0 -2px 3px rgba(0, 0, 0, 0.15)'
+          : '0 6px 24px rgba(0, 0, 0, 0.7), inset 0 2px 3px rgba(255, 255, 255, 0.85), inset 0 -2px 3px rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(20px)',
+        transition: 'all 2s ease-in-out',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
         boxSizing: 'border-box',
-        display: 'inline-flex',
-        contain: 'paint'
+        overflow: 'hidden'
       }}>
-        {/* ==========================================
-            TẦNG 1 (LỚP ĐÁY): NỀN ĐEN - CHỮ TRẮNG (ÂM / TỬ)
-           ========================================== */}
-        <div style={{
-          position: 'relative',
-          padding: '5px 22px',
-          borderRadius: '22px',
-          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #020617 100%)',
-          border: '1.2px solid rgba(255, 255, 255, 0.75)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          boxSizing: 'border-box',
-          whiteSpace: 'nowrap'
-        }}>
-          {/* Vệt bóng kính phía trên */}
-          <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, height: '48%',
-            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.0) 100%)',
-            borderRadius: '22px 22px 0 0', pointerEvents: 'none'
-          }} />
-
-          {/* Icon Thái Cực Trắng trái */}
-          <div style={{ animation: 'taicuc-spin 9s linear infinite', display: 'flex', alignItems: 'center', zIndex: 1 }}>
-            <TaiCucIcon size={13} inverted={false} />
-          </div>
-
-          {/* Chữ Bạch Ngọc Trắng */}
-          <span style={{
-            position: 'relative',
-            zIndex: 1,
-            fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
-            fontSize: 11.5,
-            fontWeight: 900,
-            letterSpacing: 2.6,
-            color: '#ffffff',
-            textShadow: '0 0 10px rgba(255, 255, 255, 0.9), 0 1px 3px #000000',
-            whiteSpace: 'nowrap'
-          }}>
-            CỰC CẢNH SINH TỬ
-          </span>
-
-          {/* Icon Thái Cực Trắng phải */}
-          <div style={{ animation: 'taicuc-spin-rev 9s linear infinite', display: 'flex', alignItems: 'center', zIndex: 1 }}>
-            <TaiCucIcon size={13} inverted={false} />
-          </div>
-        </div>
-
-        {/* ==========================================
-            TẦNG 2 (MÀN TRƯỢT GPU TRANSLATE NHUỘM TRẮNG)
-           ========================================== */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          overflow: 'hidden',
-          transform: `translateX(${curtainTranslate})`,
-          transition: transitionStyle,
-          willChange: 'transform',
-          zIndex: 2,
-          pointerEvents: 'none'
-        }}>
-          {/* NỘI DUNG TẦNG TRẮNG ĐỐI NGHỊCH TRANSLATE ĐỂ GIỮ NGUYÊN VỊ TRÍ */}
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            padding: '5px 22px',
-            borderRadius: '22px',
-            background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 45%, #e2e8f0 100%)',
-            border: '1.2px solid #0f172a',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            boxSizing: 'border-box',
-            whiteSpace: 'nowrap',
-            transform: `translateX(${innerTranslate})`,
-            transition: transitionStyle,
-            willChange: 'transform'
-          }}>
-            {/* Vệt bóng kính phía trên */}
-            <div style={{
-              position: 'absolute', top: 0, left: 0, right: 0, height: '48%',
-              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.0) 100%)',
-              borderRadius: '22px 22px 0 0', pointerEvents: 'none'
-            }} />
-
-            {/* Icon Thái Cực Đen trái */}
-            <div style={{ animation: 'taicuc-spin 9s linear infinite', display: 'flex', alignItems: 'center', zIndex: 1 }}>
-              <TaiCucIcon size={13} inverted={true} />
-            </div>
-
-            {/* Chữ Hắc Diệu Thạch Đen */}
-            <span style={{
-              position: 'relative',
-              zIndex: 1,
-              fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
-              fontSize: 11.5,
-              fontWeight: 900,
-              letterSpacing: 2.6,
-              color: '#020617',
-              textShadow: '0 0 4px rgba(255, 255, 255, 0.6)',
-              whiteSpace: 'nowrap'
-            }}>
-              CỰC CẢNH SINH TỬ
-            </span>
-
-            {/* Icon Thái Cực Đen phải */}
-            <div style={{ animation: 'taicuc-spin-rev 9s linear infinite', display: 'flex', alignItems: 'center', zIndex: 1 }}>
-              <TaiCucIcon size={13} inverted={true} />
-            </div>
-          </div>
-        </div>
-
-        {/* TIA SÁNG LASER ĐẦU SÓNG GPU TRANSLATE */}
+        {/* Vệt bóng kính phía trên */}
         <div style={{
           position: 'absolute',
           top: 0,
-          bottom: 0,
           left: 0,
-          width: '2.5px',
-          background: '#ffffff',
-          boxShadow: '0 0 10px #ffffff, 0 0 16px #38bdf8',
-          transform: `translateX(${dyeState === 'dyeing_white' || dyeState === 'white' ? '240px' : '0px'})`,
-          transition: (dyeState === 'dyeing_white' || dyeState === 'dyeing_black') ? 'transform 2.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease' : 'none',
-          opacity: (dyeState === 'dyeing_white' || dyeState === 'dyeing_black') ? 0.9 : 0,
-          willChange: 'transform, opacity',
-          zIndex: 5,
-          pointerEvents: 'none'
+          right: 0,
+          height: '50%',
+          background: isWhite
+            ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.0) 100%)'
+            : 'linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.0) 100%)',
+          borderRadius: '22px 22px 0 0',
+          pointerEvents: 'none',
+          transition: 'all 2s ease-in-out'
         }} />
+
+        {/* Icon Thái Cực xoay tròn trái */}
+        <div style={{ animation: 'taicuc-spin 9s linear infinite', display: 'flex', alignItems: 'center', zIndex: 1 }}>
+          <TaiCucIcon size={13} inverted={isWhite} />
+        </div>
+
+        {/* Chữ CỰC CẢNH SINH TỬ */}
+        <span style={{
+          position: 'relative',
+          zIndex: 1,
+          fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
+          fontSize: 11.5,
+          fontWeight: 900,
+          letterSpacing: 2.6,
+          color: isWhite ? '#020617' : '#ffffff',
+          textShadow: isWhite
+            ? '0 0 6px rgba(255, 255, 255, 0.8), 0 1px 1px rgba(0, 0, 0, 0.15)'
+            : '0 0 12px rgba(255, 255, 255, 0.95), 0 0 24px rgba(255, 255, 255, 0.6), 0 1px 3px #000000',
+          transition: 'all 2s ease-in-out',
+          whiteSpace: 'nowrap'
+        }}>
+          CỰC CẢNH SINH TỬ
+        </span>
+
+        {/* Icon Thái Cực xoay tròn phải */}
+        <div style={{ animation: 'taicuc-spin-rev 9s linear infinite', display: 'flex', alignItems: 'center', zIndex: 1 }}>
+          <TaiCucIcon size={13} inverted={isWhite} />
+        </div>
       </div>
     </div>
   );
