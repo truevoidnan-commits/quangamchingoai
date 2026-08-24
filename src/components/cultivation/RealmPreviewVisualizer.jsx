@@ -4408,7 +4408,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 {/* THIÊN ĐẠO TRẬN ẤN CỰC CẢNH (KHI ĐẠT 120 KHIẾU CHỜ PHÁ PHONG ẤN 121) */}
                 {openedCount >= 120 && (
                   <g style={{ animation: 'celestialChainHum 2.5s ease-in-out infinite alternate', transformOrigin: `${cx}px ${cy}px` }}>
-                    {/* Vòng hào quang Thiên Đạo Bát Tinh Trận (Nét liền sang trọng) */}
+                    {/* Vòng hào quang Thiên Đạo Bát Tinh Trận (Nét liền sang trọng viền ngoài, không che tâm) */}
                     <circle cx={cx} cy={cy} r="68" fill="none" stroke="rgba(253, 224, 71, 0.8)" strokeWidth="1.8" />
                     
                     {/* 8 Điểm Phù Ấn Kim Cương tại 8 hướng */}
@@ -4420,23 +4420,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                         <circle key={`chain-seal-node-${i}`} cx={nx} cy={ny} r="3.2" fill="#fde047" stroke="#ffffff" strokeWidth="1.0" />
                       );
                     })}
-
-                    {/* Huy Hiệu Phong Ấn Cực Cảnh Hoàng Kim tại Tâm */}
-                    <circle cx={cx} cy={cy} r="24" fill="rgba(6, 12, 24, 0.9)" stroke="#fde047" strokeWidth="2.0" />
-                    <circle cx={cx} cy={cy} r="21" fill="rgba(253, 224, 71, 0.2)" stroke="rgba(255, 255, 255, 0.8)" strokeWidth="1.0" />
-                    <text
-                      x={cx}
-                      y={cy + 1}
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      fontSize="12"
-                      fontWeight="900"
-                      fill="#fde047"
-                      letterSpacing="0.5"
-                      style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
-                    >
-                      ✦ 121
-                    </text>
                   </g>
                 )}
               </g>
