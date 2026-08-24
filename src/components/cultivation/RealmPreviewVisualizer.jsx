@@ -2492,7 +2492,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             </svg>
           </div>
           
-          {/* TRUNG TÂM PHÙ ĐIÊU THỦY TINH TINH THỂ (CHỈ HIỆN CỰC CẢNH KHI MỞ KHIẾU 121, BÌNH THƯỜNG LÀ TRÚC CƠ TINH ĐỒ) */}
+          {/* TRUNG TÂM PHÙ ĐIÊU THỦY TINH PHA LÊ THUẦN KHIẾT (HYPER-REALISTIC CRYSTAL LIQUID GLASS) */}
           <div style={{
             position: 'absolute',
             top: 6,
@@ -2506,108 +2506,131 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             pointerEvents: 'auto',
             userSelect: 'none'
           }}>
-            {/* Quầng sáng mờ pha lê phía sau bảng */}
+            {/* Quầng sáng khúc xạ quang phổ phía sau khối thủy tinh */}
             <div style={{
               position: 'absolute',
-              top: '38%',
+              top: '40%',
               left: '50%',
-              width: 260,
-              height: 50,
+              width: 280,
+              height: 46,
               background: is121Unlocked
-                ? 'radial-gradient(ellipse, rgba(255,255,255,0.2) 0%, rgba(56,189,248,0.08) 40%, transparent 70%)'
-                : 'radial-gradient(ellipse, rgba(56,189,248,0.18) 0%, rgba(34,195,240,0.05) 40%, transparent 70%)',
-              filter: 'blur(8px)',
+                ? 'radial-gradient(ellipse, rgba(255,255,255,0.25) 0%, rgba(56,189,248,0.12) 40%, transparent 75%)'
+                : 'radial-gradient(ellipse, rgba(56,189,248,0.22) 0%, rgba(255,255,255,0.08) 40%, transparent 75%)',
+              filter: 'blur(10px)',
               zIndex: -1,
               animation: is121Unlocked ? 'halo-pulse 4.5s ease-in-out infinite' : undefined
             }} />
 
-            {/* 1. BẢNG TÊN THỦY TINH PHA LÊ (GLASSMORPHISM CELESTIAL CRYSTAL) */}
+            {/* 1. KHỐI THỦY TINH PHA LÊ TRONG SUỐT 3D (PRISTINE FROSTED CRYSTAL GLASS) */}
             <div style={{
               position: 'relative',
-              padding: '5px 22px',
-              borderRadius: '8px',
+              padding: '6px 24px',
+              borderRadius: '24px',
+              /* Nền kính bán trong suốt nhìn thấu vũ trụ phía sau */
               background: is121Unlocked
-                ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(15, 23, 42, 0.8) 50%, rgba(2, 6, 23, 0.9) 100%)'
-                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(8, 18, 36, 0.8) 50%, rgba(2, 6, 23, 0.9) 100%)',
-              border: is121Unlocked
-                ? '1.2px solid rgba(255, 255, 255, 0.65)'
-                : '1.2px solid rgba(56, 189, 248, 0.45)',
+                ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(15, 23, 42, 0.45) 100%)'
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(56, 189, 248, 0.06) 50%, rgba(8, 18, 36, 0.4) 100%)',
+              /* Viền mài vát pha lê phản chiếu góc cạnh */
+              border: '1px solid rgba(255, 255, 255, 0.45)',
+              borderTop: '1.6px solid rgba(255, 255, 255, 0.95)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+              /* Đổ bóng khúc xạ nội ngoại của thủy tinh */
               boxShadow: is121Unlocked
-                ? '0 0 20px rgba(255, 255, 255, 0.28), inset 0 1px 2px rgba(255, 255, 255, 0.75), inset 0 -1px 2px rgba(0, 0, 0, 0.5), 0 6px 18px rgba(0, 0, 0, 0.85)'
-                : '0 0 14px rgba(56, 189, 248, 0.22), inset 0 1px 1.5px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px rgba(0, 0, 0, 0.75)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              animation: is121Unlocked ? 'taicuc-breathe 4.5s ease-in-out infinite' : undefined,
+                ? '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1.5px 2px rgba(255, 255, 255, 0.95), inset 0 -1.5px 3px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.3)'
+                : '0 8px 28px rgba(0, 0, 0, 0.45), inset 0 1.5px 2px rgba(255, 255, 255, 0.9), inset 0 -1.5px 2.5px rgba(0, 0, 0, 0.35), 0 0 15px rgba(56, 189, 248, 0.25)',
+              backdropFilter: 'blur(16px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(16px) saturate(180%)',
               boxSizing: 'border-box',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 8
+              gap: 8,
+              overflow: 'hidden'
             }}>
-              {/* Lớp phản chiếu ánh sáng bề mặt thủy tinh (Specular Glass Glint) */}
+              {/* Vệt sáng bóng kính chéo 3D (Diagonal Specular Crystal Sheen) */}
               <div style={{
                 position: 'absolute',
                 top: 0,
-                left: '10%',
-                right: '10%',
-                height: '45%',
-                borderRadius: '8px 8px 0 0',
-                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.0) 100%)',
+                left: 0,
+                right: 0,
+                height: '50%',
+                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.03) 100%)',
+                borderRadius: '24px 24px 0 0',
                 pointerEvents: 'none'
               }} />
 
-              {/* NỘI DUNG THAY ĐỔI THEO TRẠNG THÁI: CỰC CẢNH (KHIẾU 121) VS BÌNH THƯỜNG */}
+              {/* Vệt lóa sáng chéo góc mài kính */}
+              <div style={{
+                position: 'absolute',
+                top: -10,
+                left: -20,
+                width: 70,
+                height: 50,
+                background: 'linear-gradient(115deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.0) 60%)',
+                transform: 'rotate(25deg)',
+                pointerEvents: 'none'
+              }} />
+
+              {/* NỘI DUNG THỦY TINH */}
               {is121Unlocked ? (
                 <>
                   {/* Trạng thái CỰC CẢNH SINH TỬ: Icon Thái Cực xoay tròn 2 bên */}
-                  <div style={{ animation: 'taicuc-spin 9s linear infinite', display: 'flex', alignItems: 'center' }}>
+                  <div style={{ animation: 'taicuc-spin 9s linear infinite', display: 'flex', alignItems: 'center', zIndex: 1 }}>
                     <TaiCucIcon size={13} />
                   </div>
 
                   <span style={{
+                    position: 'relative',
+                    zIndex: 1,
                     fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
                     fontSize: 11.5,
                     fontWeight: 900,
                     letterSpacing: 2.6,
                     color: '#ffffff',
-                    textShadow: '0 0 12px rgba(255,255,255,0.95), 0 0 22px rgba(255,255,255,0.5), 0 1px 3px #000000',
+                    textShadow: '0 0 10px rgba(255,255,255,0.95), 0 0 20px rgba(255,255,255,0.6), 0 1px 3px rgba(0,0,0,0.8)',
                     whiteSpace: 'nowrap'
                   }}>
                     CỰC CẢNH SINH TỬ
                   </span>
 
-                  <div style={{ animation: 'taicuc-spin-rev 9s linear infinite', display: 'flex', alignItems: 'center' }}>
+                  <div style={{ animation: 'taicuc-spin-rev 9s linear infinite', display: 'flex', alignItems: 'center', zIndex: 1 }}>
                     <TaiCucIcon size={13} />
                   </div>
                 </>
               ) : (
                 <>
-                  {/* Trạng thái BÌNH THƯỜNG: Trúc Cơ Tinh Đồ Thủy Tinh Thanh Nhã */}
+                  {/* Trạng thái BÌNH THƯỜNG: Trúc Cơ Tinh Đồ Thủy Tinh Pha Lê */}
                   <span style={{ 
+                    position: 'relative',
+                    zIndex: 1,
                     fontSize: 9, 
                     color: '#38bdf8', 
-                    textShadow: '0 0 6px #38bdf8', 
+                    textShadow: '0 0 8px #38bdf8', 
                     lineHeight: 1 
                   }}>
                     ✦
                   </span>
 
                   <span style={{
+                    position: 'relative',
+                    zIndex: 1,
                     fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
                     fontSize: 11.5,
                     fontWeight: 800,
                     letterSpacing: 2.2,
-                    color: '#e0f2fe',
-                    textShadow: '0 0 10px rgba(56, 189, 248, 0.75), 0 1px 3px rgba(0,0,0,0.9)',
+                    color: '#ffffff',
+                    textShadow: '0 0 10px rgba(56, 189, 248, 0.9), 0 0 20px rgba(255, 255, 255, 0.5), 0 1px 3px rgba(0,0,0,0.8)',
                     whiteSpace: 'nowrap'
                   }}>
                     TRÚC CƠ TINH ĐỒ
                   </span>
 
                   <span style={{ 
+                    position: 'relative',
+                    zIndex: 1,
                     fontSize: 9, 
                     color: '#38bdf8', 
-                    textShadow: '0 0 6px #38bdf8', 
+                    textShadow: '0 0 8px #38bdf8', 
                     lineHeight: 1 
                   }}>
                     ✦
@@ -2616,17 +2639,18 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               )}
             </div>
 
-            {/* 2. SEGMENTED TOGGLE THỦY TINH TRONG SUỐT (FROSTED GLASS SLIDER) */}
+            {/* 2. SEGMENTED TOGGLE THỦY TINH TRONG SUỐT (LIQUID GLASS SLIDER) */}
             <div style={{
               position: 'relative',
               display: 'flex',
-              background: 'rgba(8, 18, 36, 0.75)',
-              border: '1px solid rgba(255,255,255,0.3)',
-              borderRadius: 12,
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderTop: '1.2px solid rgba(255, 255, 255, 0.8)',
+              borderRadius: 14,
               padding: '1.5px',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.35)'
+              backdropFilter: 'blur(16px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.4), inset 0 1px 1.5px rgba(255,255,255,0.7)'
             }}>
               {/* Thanh trượt pha lê thủy tinh */}
               <div className="segtoggle-slider" style={{
@@ -2635,10 +2659,10 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 bottom: 1.5,
                 left: 1.5,
                 width: 54,
-                borderRadius: 10,
-                background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(203,213,225,0.9) 100%)',
+                borderRadius: 12,
+                background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(226,232,240,0.9) 100%)',
                 transform: isTuTuong ? 'translateX(0)' : 'translateX(54px)',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.5), inset 0 1px 1px #ffffff'
+                boxShadow: '0 1px 6px rgba(0,0,0,0.4), inset 0 1px 1px #ffffff'
               }} />
 
               <button
@@ -2650,12 +2674,12 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   padding: '2px 0',
                   border: 'none',
                   background: 'transparent',
-                  borderRadius: 10,
+                  borderRadius: 12,
                   fontSize: 9.5,
                   fontWeight: 800,
                   letterSpacing: 0.4,
                   cursor: 'pointer',
-                  color: isTuTuong ? '#020617' : 'rgba(255,255,255,0.7)',
+                  color: isTuTuong ? '#020617' : 'rgba(255,255,255,0.75)',
                   transition: 'color 0.25s ease'
                 }}
               >
@@ -2671,12 +2695,12 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   padding: '2px 0',
                   border: 'none',
                   background: 'transparent',
-                  borderRadius: 10,
+                  borderRadius: 12,
                   fontSize: 9.5,
                   fontWeight: 800,
                   letterSpacing: 0.4,
                   cursor: 'pointer',
-                  color: !isTuTuong ? '#020617' : 'rgba(255,255,255,0.7)',
+                  color: !isTuTuong ? '#020617' : 'rgba(255,255,255,0.75)',
                   transition: 'color 0.25s ease'
                 }}
               >
