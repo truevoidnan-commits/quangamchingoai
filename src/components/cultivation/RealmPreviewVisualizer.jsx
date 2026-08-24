@@ -3830,19 +3830,19 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             ];
 
             const mobile13Positions = [
-              { id: 'van_menh_hu_vo',      x: 360, y: 135, isTop: true, scale: 1.35, nw: 185 },
-              { id: 'dai_dao_tieu_dao',    x: 140, y: 255, scale: 1.25, nw: 170 },
-              { id: 'to_long_than_cung',   x: 265, y: 380, scale: 1.22, nw: 165 },
-              { id: 'hu_vo_ban_nguyen',    x: 580, y: 255, scale: 1.25, nw: 170 },
-              { id: 'tuc_menh_nhan_qua',   x: 455, y: 380, scale: 1.22, nw: 165 },
-              { id: 'phat_thien_kiem',     x: 110, y: 560, scale: 1.28, nw: 170 },
-              { id: 'hong_mong_bat_diet',  x: 610, y: 560, scale: 1.28, nw: 170 },
-              { id: 'luan_hoi_ban',        x: 265, y: 740, scale: 1.22, nw: 165 },
-              { id: 'ngoc_diep',           x: 455, y: 740, scale: 1.22, nw: 165 },
-              { id: 'hon_don_so_khai',    x: 140, y: 865, scale: 1.25, nw: 170 },
-              { id: 'khoi_nguyen_thoi_khong', x: 580, y: 865, scale: 1.25, nw: 170 },
-              { id: 'sang_the_quang',      x: 255, y: 995, scale: 1.28, nw: 170 },
-              { id: 'cuu_chuyen_luan_hoi', x: 465, y: 995, scale: 1.28, nw: 170 },
+              { id: 'van_menh_hu_vo',      x: 360, y: 130, isTop: true, scale: 1.25, nw: 180 },
+              { id: 'dai_dao_tieu_dao',    x: 160, y: 260, scale: 1.16, nw: 165 },
+              { id: 'to_long_than_cung',   x: 240, y: 395, scale: 1.15, nw: 160 },
+              { id: 'hu_vo_ban_nguyen',    x: 560, y: 260, scale: 1.16, nw: 165 },
+              { id: 'tuc_menh_nhan_qua',   x: 480, y: 395, scale: 1.15, nw: 160 },
+              { id: 'phat_thien_kiem',     x: 145, y: 560, scale: 1.18, nw: 165 },
+              { id: 'hong_mong_bat_diet',  x: 575, y: 560, scale: 1.18, nw: 165 },
+              { id: 'luan_hoi_ban',        x: 240, y: 735, scale: 1.15, nw: 160 },
+              { id: 'ngoc_diep',           x: 480, y: 735, scale: 1.15, nw: 160 },
+              { id: 'hon_don_so_khai',    x: 160, y: 870, scale: 1.16, nw: 165 },
+              { id: 'khoi_nguyen_thoi_khong', x: 560, y: 870, scale: 1.16, nw: 165 },
+              { id: 'sang_the_quang',      x: 240, y: 1005, scale: 1.18, nw: 165 },
+              { id: 'cuu_chuyen_luan_hoi', x: 480, y: 1005, scale: 1.18, nw: 165 },
             ];
 
             const standardList = isMobile ? mobile13Positions : desktop13Positions;
@@ -4235,12 +4235,29 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 {/* ─── D. QUẦN THỂ THIÊN CUNG 6 PHẨM CẤP — BẢN PHÓNG ĐẠI & THẺ TÊN TINH GỌN ─── */}
                 <g>
                   <defs>
-                    {/* Filter làm mịn hào quang */}
-                    <filter id="palaceSoftBlur" x="-60%" y="-60%" width="220%" height="220%">
-                      <feGaussianBlur stdDeviation="2.8" />
+                    {/* Gradient và bóng ngọc bích lam thủy tinh cao cấp */}
+                    <linearGradient id="azureGlassGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="rgba(14, 65, 115, 0.96)" />
+                      <stop offset="50%" stopColor="rgba(8, 38, 74, 0.94)" />
+                      <stop offset="100%" stopColor="rgba(3, 20, 44, 0.98)" />
+                    </linearGradient>
+
+                    <linearGradient id="azureGlowBorder" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#38bdf8" />
+                      <stop offset="50%" stopColor="#7dd3fc" />
+                      <stop offset="100%" stopColor="#0284c7" />
+                    </linearGradient>
+
+                    <filter id="azureGlassShadow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.85" />
                     </filter>
-                    <filter id="glassGlow" x="-50%" y="-50%" width="200%" height="200%">
-                      <feGaussianBlur stdDeviation="1.2" />
+
+                    {/* Filter làm mịn hào quang */}
+                    <filter id="palaceSoftBlur" x="-30%" y="-30%" width="160%" height="160%">
+                      <feGaussianBlur stdDeviation="1.5" />
+                    </filter>
+                    <filter id="glassGlow" x="-30%" y="-30%" width="160%" height="160%">
+                      <feGaussianBlur stdDeviation="1" />
                     </filter>
 
                     {/* Vệt quét kim quang bảng tên rộng */}
@@ -4966,10 +4983,12 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                               y="1.2"
                               textAnchor="middle"
                               dominantBaseline="central"
-                              fontSize={nw < 225 ? "12" : "12.8"}
+                              textLength={nw - 36}
+                              lengthAdjust="spacingAndGlyphs"
+                              fontSize={nw < 200 ? "11.2" : "12.5"}
                               fontWeight="900"
                               fill={isRealized ? "#ffffff" : "#94a3b8"}
-                              letterSpacing="0.8"
+                              letterSpacing="0.4"
                               style={{
                                 fontFamily: 'var(--font-serif)',
                                 filter: isRealized 
