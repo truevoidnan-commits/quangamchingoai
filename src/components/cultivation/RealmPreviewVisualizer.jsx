@@ -4728,7 +4728,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               </div>
 
               <svg
-                viewBox={isMobile ? "120 20 1040 830" : "0 0 1280 870"}
+                viewBox="0 0 1280 870"
                 preserveAspectRatio="xMidYMid meet"
                 style={{
                   position: 'absolute',
@@ -4841,27 +4841,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     </feMerge>
                   </filter>
                 </defs>
-
-                {/* ─── A. PHONG CẢNH VŨ TRỤ THẦN NHÃN MỚI 3:2 GIỮ NGUYÊN TỈ LỆ 100% ─── */}
-                <g>
-                  {/* Bức tranh Thần Nhãn Tinh Vân xé toạc không gian hiển thị chuẩn tỉ lệ */}
-                  <image
-                    href={getAssetUrl('images/bg_god_cosmic_eye.jpg')}
-                    x="0"
-                    y="0"
-                    width="1280"
-                    height="870"
-                    preserveAspectRatio="xMidYMid slice"
-                    opacity="0.98"
-                  />
-
-                  {/* Lớp quầng tối viền 4 cạnh tạo độ sâu điện ảnh */}
-                  <radialGradient id="vignetteDarkGrad" cx="0.5" cy="0.5" r="0.55">
-                    <stop offset="72%" stopColor="#040710" stopOpacity="0" />
-                    <stop offset="100%" stopColor="#040710" stopOpacity="0.75" />
-                  </radialGradient>
-                  <rect x="0" y="0" width="1280" height="870" fill="url(#vignetteDarkGrad)" />
-                </g>
 
                 {/* ─── B. TÂM KIM ĐAN: QUẢ CẦU HOÀNG KIM 3D THUẦN TÚY SIÊU SÁNG & VÀNH TRẬN ĐỒ 8 LINH CHÂU ─── */}
                 <g style={{ transformOrigin: `${centerCanvasX}px ${centerCanvasY}px` }}>
