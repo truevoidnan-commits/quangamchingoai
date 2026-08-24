@@ -2992,6 +2992,18 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 <stop offset="100%" stopColor="#050001" stopOpacity="1" />
               </radialGradient>
 
+              {/* Gradients cho Vòng Linh Mạch Cao Cấp */}
+              <linearGradient id="layerReachedThe" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#fca5a5" />
+                <stop offset="50%" stopColor="#ef4444" />
+                <stop offset="100%" stopColor="#f59e0b" />
+              </linearGradient>
+              <linearGradient id="layerReachedPhap" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#bae6fd" />
+                <stop offset="50%" stopColor="#06b6d4" />
+                <stop offset="100%" stopColor="#38bdf8" />
+              </linearGradient>
+
               {/* Shimmering Sun / Starlight Caustics for Ocean */}
               <linearGradient id="causticRay1" x1="0%" y1="0%" x2="40%" y2="100%">
                 <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.25" />
@@ -3021,8 +3033,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* Deep Ocean Current Ribbons */}
               <linearGradient id="oceanRibbon1" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#06b6d4" stopOpacity="0" />
-                <stop offset="30%" stopColor="#06b6d4" stopOpacity="0.25" />
+                <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.25" />
                 <stop offset="70%" stopColor="#38bdf8" stopOpacity="0.35" />
                 <stop offset="100%" stopColor="#0284c7" stopOpacity="0" />
               </linearGradient>
@@ -3037,6 +3048,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               <style>{`
                 @keyframes nkSpinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                 @keyframes nkSpinReverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+                @keyframes nkRuneSpinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                @keyframes nkOrbitStar1 { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                 @keyframes nkPulseBreathing { 
                   0%, 100% { transform: scale(1); opacity: 0.85; } 
                   50% { transform: scale(1.04); opacity: 1; } 
@@ -3233,48 +3246,125 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               </g>
             )}
 
-            {/* TRẬN ĐỒ ĐAN ĐIỀN TRUNG TÂM (DAN DIEN SPHERE) */}
+            {/* ========================================================
+                TRẬN ĐỒ ĐAN ĐIỀN TRUNG TÂM — PHÁP TRẬN TIÊN HIỆP CAO CẤP
+               ======================================================== */}
             <g transform="translate(460, 290)">
-              {/* 10 VÒNG LINH MẠCH TƯƠNG ỨNG 10 TẦNG (CÁC ĐƯỜNG NÉT LIỀN ĐỒNG NHẤT SANG TRỌNG) */}
+
+              {/* 1. TIA LINH MẠCH BÁT HƯỚNG TỎA SÁNG (8 MERIDIAN CELESTIAL RAYS) */}
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((deg, idx) => {
+                const rad = (deg * Math.PI) / 180;
+                const x1 = 55 * Math.cos(rad);
+                const y1 = 55 * Math.sin(rad);
+                const x2 = 250 * Math.cos(rad);
+                const y2 = 250 * Math.sin(rad);
+                const mainColor = viewMode === 'the' ? '#f59e0b' : '#38bdf8';
+                return (
+                  <g key={`ray-${idx}`}>
+                    <line
+                      x1={x1}
+                      y1={y1}
+                      x2={x2}
+                      y2={y2}
+                      stroke={mainColor}
+                      strokeWidth="1.2"
+                      strokeOpacity="0.32"
+                    />
+                    {/* Tinh thạch tụ linh ở đầu mỗi tia */}
+                    <circle
+                      cx={x2}
+                      cy={y2}
+                      r="2.5"
+                      fill={mainColor}
+                      opacity="0.75"
+                    />
+                  </g>
+                );
+              })}
+
+              {/* 2. VÒNG BÁT QUÁI CỔ NGỮ XOAY HUYỀN ẢO (ROTATING TRIGRAM RUNE RING) */}
+              <g style={{ transformOrigin: '0 0', animation: 'nkRuneSpinSlow 55s linear infinite', willChange: 'transform' }}>
+                <circle cx="0" cy="0" r="256" fill="none" stroke={viewMode === 'the' ? '#f59e0b' : '#38bdf8'} strokeWidth="1.4" opacity="0.45" />
+                <circle cx="0" cy="0" r="248" fill="none" stroke={viewMode === 'the' ? '#ef4444' : '#0284c7'} strokeWidth="0.8" opacity="0.3" />
+
+                {/* 8 Ký Tự Bát Quái Cổ Phong */}
+                {['☰', '☱', '☲', '☳', '☴', '☵', '☶', '☷'].map((sym, sIdx) => {
+                  const sAngle = (sIdx * 45 * Math.PI) / 180;
+                  const symX = 252 * Math.cos(sAngle);
+                  const symY = 252 * Math.sin(sAngle);
+                  return (
+                    <text
+                      key={`trigram-${sIdx}`}
+                      x={symX}
+                      y={symY + 4}
+                      textAnchor="middle"
+                      fontSize="11"
+                      fontWeight="900"
+                      fill={viewMode === 'the' ? '#fef08a' : '#a5f3fc'}
+                      opacity="0.8"
+                      style={{ userSelect: 'none' }}
+                    >
+                      {sym}
+                    </text>
+                  );
+                })}
+              </g>
+
+              {/* 3. 10 VÒNG LINH MẠCH PHÂN TẦNG NGHỆ THUẬT (10 LAYERED MERIDIAN VEINS) */}
               {Array.from({ length: 10 }).map((_, i) => {
                 const layerNum = i + 1;
                 const isReached = viewMode === 'the' ? theLvl >= layerNum : phapLvl >= layerNum;
                 const isCurrent = viewMode === 'the' ? theLvl === layerNum : phapLvl === layerNum;
                 const ringR = 55 + layerNum * 19;
 
-                const strokeColor = viewMode === 'the'
-                  ? (isReached ? '#ef4444' : '#334155')
-                  : (isReached ? '#06b6d4' : '#1e3a5f');
+                const strokeFill = isReached
+                  ? (viewMode === 'the' ? 'url(#layerReachedThe)' : 'url(#layerReachedPhap)')
+                  : (viewMode === 'the' ? '#331518' : '#0e243a');
 
-                const strokeWidth = isReached ? 2.0 : 0.85;
-                const strokeOpacity = isReached ? 0.85 : 0.2;
+                const strokeWidth = isCurrent ? 2.4 : (isReached ? 1.8 : 0.85);
+                const strokeOpacity = isCurrent ? 1 : (isReached ? 0.88 : 0.35);
 
                 return (
                   <g key={layerNum}>
+                    {/* Vòng hào quang phụ tạo chiều sâu cho tầng đã mở */}
+                    {isReached && (
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r={ringR}
+                        fill="none"
+                        stroke={viewMode === 'the' ? '#f59e0b' : '#38bdf8'}
+                        strokeWidth={strokeWidth + 2.5}
+                        strokeOpacity="0.15"
+                      />
+                    )}
+
+                    {/* Vòng chính */}
                     <circle
                       cx="0"
                       cy="0"
                       r={ringR}
                       fill="none"
-                      stroke={strokeColor}
+                      stroke={strokeFill}
                       strokeWidth={strokeWidth}
                       strokeOpacity={strokeOpacity}
                     />
-                    {/* Điểm Tinh Tú Tụ Linh trên vòng hiện tại */}
+
+                    {/* Điểm Tinh Tú Tụ Linh Vận Chuyển trên vòng hiện tại (Quỹ đạo xoay mượt mà) */}
                     {isCurrent && (
-                      <g>
+                      <g style={{ transformOrigin: '0 0', animation: 'nkOrbitStar1 8s linear infinite', willChange: 'transform' }}>
                         <circle
-                          cx={ringR * Math.cos((i * 36) * Math.PI / 180)}
-                          cy={ringR * Math.sin((i * 36) * Math.PI / 180)}
-                          r="4.5"
+                          cx={ringR}
+                          cy="0"
+                          r="5.5"
                           fill="#ffffff"
                           filter="url(#nkGlowGold)"
                         />
                         <circle
-                          cx={ringR * Math.cos((i * 36 + 180) * Math.PI / 180)}
-                          cy={ringR * Math.sin((i * 36 + 180) * Math.PI / 180)}
-                          r="3.5"
-                          fill={viewMode === 'the' ? '#fca5a5' : '#a5f3fc'}
+                          cx={-ringR}
+                          cy="0"
+                          r="4"
+                          fill={viewMode === 'the' ? '#fde047' : '#7dd3fc'}
                         />
                       </g>
                     )}
@@ -3282,19 +3372,21 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 );
               })}
 
-              {/* VÒNG XOÁY NĂNG LƯỢNG ĐAN ĐIỀN */}
+              {/* 4. VÒNG XOÁY NĂNG LƯỢNG ĐAN ĐIỀN ĐA TẦNG */}
               {viewMode === 'the' ? (
                 <g style={{ transformOrigin: '0 0', animation: 'nkSpinSlow 14s linear infinite', willChange: 'transform' }}>
                   <circle cx="0" cy="0" r="50" fill="url(#bloodVortexCore)" />
-                  <circle cx="0" cy="0" r="52" fill="none" stroke="#ef4444" strokeWidth="1.8" opacity="0.85" />
+                  <circle cx="0" cy="0" r="53" fill="none" stroke="#f59e0b" strokeWidth="1.8" opacity="0.9" />
+                  <circle cx="0" cy="0" r="46" fill="none" stroke="#ef4444" strokeWidth="1.2" opacity="0.75" />
                   {/* Các cánh hoa lửa xoáy */}
-                  <path d="M 0,-48 Q 28,-28 0,0 Q 28,28 0,48 Q -28,28 0,0 Q -28,-28 0,-48 Z" fill="rgba(239, 68, 68, 0.4)" />
+                  <path d="M 0,-48 Q 28,-28 0,0 Q 28,28 0,48 Q -28,28 0,0 Q -28,-28 0,-48 Z" fill="rgba(239, 68, 68, 0.45)" />
                   <circle cx="0" cy="0" r="20" fill="#ffffff" filter="url(#nkGlowRed)" />
                 </g>
               ) : (
                 <g style={{ transformOrigin: '0 0', animation: 'nkSpinReverse 16s linear infinite', willChange: 'transform' }}>
                   <circle cx="0" cy="0" r="52" fill="url(#abyssOceanCore)" />
-                  <circle cx="0" cy="0" r="54" fill="none" stroke="#38bdf8" strokeWidth="1.8" opacity="0.85" />
+                  <circle cx="0" cy="0" r="55" fill="none" stroke="#38bdf8" strokeWidth="1.8" opacity="0.9" />
+                  <circle cx="0" cy="0" r="48" fill="none" stroke="#06b6d4" strokeWidth="1.2" opacity="0.75" />
                   {/* Các luồng thủy triều xoáy sâu */}
                   <path d="M 0,-50 Q 34,-18 0,0 Q 34,18 0,50 Q -34,18 0,0 Q -34,-18 0,-50 Z" fill="rgba(6, 182, 212, 0.45)" />
                   <circle cx="0" cy="0" r="22" fill="#ffffff" filter="url(#nkGlowCyan)" />
@@ -3317,10 +3409,17 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <circle cx="0" cy="0" r="195" fill="url(#tigerAuraGlow)" />
                   <circle cx="0" cy="0" r="165" fill="none" stroke="#f59e0b" strokeWidth="1.6" opacity="0.75" />
 
-                  {/* Vết cào Huyết Long Trảo (Energy Claws) To Lớn */}
+                  {/* Vết cào Huyết Long Trảo (Energy Claws) Dáng Vuốt Thần Sắc Bén */}
                   <g style={{ animation: 'nkTigerClawSlash 2.2s ease-in-out infinite', willChange: 'transform, opacity' }}>
-                    <path d="M -160,-105 L -90,-35 M -140,-120 L -75,-50 M -175,-85 L -110,-15" stroke="#fef08a" strokeWidth="3.6" strokeLinecap="round" opacity="0.9" filter="url(#nkGlowGold)" />
-                    <path d="M 160,-105 L 90,-35 M 140,-120 L 75,-50 M 175,-85 L 110,-15" stroke="#fef08a" strokeWidth="3.6" strokeLinecap="round" opacity="0.9" filter="url(#nkGlowGold)" />
+                    {/* Vuốt Trái */}
+                    <path d="M -165,-100 Q -120,-60 -90,-35" stroke="#fef08a" strokeWidth="4.2" strokeLinecap="round" opacity="0.95" filter="url(#nkGlowGold)" />
+                    <path d="M -145,-118 Q -105,-78 -75,-50" stroke="#fef08a" strokeWidth="4.2" strokeLinecap="round" opacity="0.95" filter="url(#nkGlowGold)" />
+                    <path d="M -180,-80 Q -140,-45 -110,-15" stroke="#fef08a" strokeWidth="4.2" strokeLinecap="round" opacity="0.95" filter="url(#nkGlowGold)" />
+                    
+                    {/* Vuốt Phải */}
+                    <path d="M 165,-100 Q 120,-60 90,-35" stroke="#fef08a" strokeWidth="4.2" strokeLinecap="round" opacity="0.95" filter="url(#nkGlowGold)" />
+                    <path d="M 145,-118 Q 105,-78 75,-50" stroke="#fef08a" strokeWidth="4.2" strokeLinecap="round" opacity="0.95" filter="url(#nkGlowGold)" />
+                    <path d="M 180,-80 Q 140,-45 110,-15" stroke="#fef08a" strokeWidth="4.2" strokeLinecap="round" opacity="0.95" filter="url(#nkGlowGold)" />
                   </g>
 
                   {/* HÌNH ẢNH HUYẾT HỔ CHÂN HỎA TÁCH NỀN TO LỚN (450px x 210px) */}
