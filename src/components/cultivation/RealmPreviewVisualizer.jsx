@@ -3447,11 +3447,11 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               )}
 
               {/* ========================================================
-                  DỊ TƯỢNG 2: THẦN THÚ CẤM HẢI LONG KÌNH (TỐI ƯU BƠI LƯỢN MƯỢT MÀ 60FPS)
+                  DỊ TƯỢNG 2: THẦN THÚ CẤM HẢI LONG KÌNH (HÌNH ẢNH CAO CẤP TÁCH NỀN TỐI ƯU 60FPS)
                  ======================================================== */}
               {viewMode === 'phap' && hasWhale && (
                 <g
-                  transform="translate(0, -30)"
+                  transform="translate(0, -15)"
                   style={{
                     animation: 'nkWhaleMajestic 5.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite',
                     transformOrigin: '0px 0px',
@@ -3459,57 +3459,31 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   }}
                 >
                   {/* Quầng Linh Hải Xanh Thẳm Quanh Cự Kình (Dùng Radial Gradient GPU-accelerated) */}
-                  <ellipse cx="0" cy="0" rx="160" ry="110" fill="url(#whaleAuraGlow)" />
+                  <ellipse cx="0" cy="0" rx="200" ry="140" fill="url(#whaleAuraGlow)" />
 
-                  {/* THÂN THỂ THÁI CỔ LONG KÌNH KHỔNG LỒ */}
-                  {/* Thân Cá Voi Cổ Đại */}
-                  <path
-                    d="M -92,-8 Q -55,-60 28,-46 Q 92,-30 108,2 Q 114,35 38,42 Q -55,44 -92,-8 Z"
-                    fill="url(#whaleBodyGrad)"
-                    stroke="#7dd3fc"
-                    strokeWidth="2.4"
-                    filter="url(#nkGlowCyan)"
+                  {/* HÌNH ẢNH THÁI CỔ LONG KÌNH CẤM HẢI TÁCH NỀN TO LỚN (440px x 322px) */}
+                  <image
+                    href={getAssetUrl('images/long_kinh_god.png')}
+                    x="-220"
+                    y="-165"
+                    width="440"
+                    height="322"
+                    preserveAspectRatio="xMidYMid meet"
+                    style={{
+                      filter: 'drop-shadow(0 0 16px rgba(56, 189, 248, 0.9)) drop-shadow(0 0 32px rgba(6, 182, 212, 0.6))',
+                      pointerEvents: 'none',
+                      willChange: 'transform'
+                    }}
                   />
 
-                  {/* Bụng Kình Phát Quang Ngọc Bích */}
-                  <path
-                    d="M -76,2 Q -32,32 32,30 Q 86,24 98,2 Q 54,11 -11,9 Q -54,4 -76,2 Z"
-                    fill="rgba(165, 243, 252, 0.6)"
-                  />
-
-                  {/* Vây Lưng & Cổ Ngữ Long Tộc Phát Sáng */}
-                  <path d="M 0,-48 Q 15,-74 30,-46 Z" fill="#0284c7" stroke="#bae6fd" strokeWidth="1.8" />
-                  <path d="M -28,-8 Q 0,-36 20,-8 Q 40,-36 60,-8" fill="none" stroke="#fde047" strokeWidth="1.6" filter="url(#nkGlowGold)" />
-
-                  {/* Vây Bơi Dài Uyển Chuyển (Pectoral Fins) */}
-                  <path d="M -28,16 Q -12,52 20,30 Z" fill="#0369a1" stroke="#38bdf8" strokeWidth="1.8" />
-                  <path d="M 6,14 Q 24,46 46,24 Z" fill="#0369a1" stroke="#38bdf8" strokeWidth="1.4" opacity="0.85" />
-
-                  {/* Đuôi Cá Voi Bạt Lãng Uốn Lượn */}
-                  <path
-                    d="M -92,-8 Q -114,-26 -128,-18 Q -118,-4 -96,-7 Q -118,-4 -128,11 Q -114,20 -92,-8 Z"
-                    fill="#0284c7"
-                    stroke="#7dd3fc"
-                    strokeWidth="2.2"
-                  />
-                  {/* Bọt nước phát quang sau đuôi */}
-                  <circle cx="-134" cy="-5" r="4.5" fill="#a5f3fc" />
-                  <circle cx="-145" cy="2" r="3" fill="#ffffff" />
-
-                  {/* Cặp Mắt Thần Triệt Ngộ Hoàng Kim */}
-                  <circle cx="76" cy="-11" r="5" fill="#fde047" filter="url(#nkGlowGold)" />
-                  <circle cx="77" cy="-11" r="2.2" fill="#082f49" />
-
-                  {/* Luồng Linh Thủy & Tinh Tú Phun Lên Từ Đỉnh Đầu */}
-                  <g style={{ animation: 'nkWhaleSpoutSpray 3.2s ease-in-out infinite', willChange: 'transform, opacity' }}>
-                    <path d="M 15,-50 Q 18,-92 34,-100 M 15,-50 Q 8,-85 -5,-94 M 15,-50 Q 26,-82 46,-88" fill="none" stroke="#67e8f9" strokeWidth="2.4" strokeLinecap="round" filter="url(#nkGlowCyan)" />
-                    <circle cx="34" cy="-100" r="4" fill="#ffffff" filter="url(#nkGlowGold)" />
-                    <circle cx="-5" cy="-94" r="3" fill="#ffffff" />
-                    <circle cx="46" cy="-88" r="2.8" fill="#fef08a" />
-                  </g>
+                  {/* Bọt nước linh hải phát quang trôi nổi quanh thân */}
+                  <circle cx="-135" cy="50" r="4.5" fill="#a5f3fc" opacity="0.8" />
+                  <circle cx="-150" cy="70" r="3" fill="#ffffff" opacity="0.9" />
+                  <circle cx="140" cy="-60" r="3.5" fill="#38bdf8" opacity="0.75" />
+                  <circle cx="160" cy="-40" r="2.5" fill="#ffffff" opacity="0.85" />
 
                   {/* Bảng Nhãn Thần Thú Long Kình */}
-                  <g transform="translate(0, 106)">
+                  <g transform="translate(0, 126)">
                     <rect x="-105" y="-14" width="210" height="28" rx="14" fill="rgba(8, 47, 73, 0.95)" stroke="#06b6d4" strokeWidth="1.8" filter="url(#nkGlowCyan)" />
                     <text y="5" textAnchor="middle" fontSize="12" fontWeight="900" fill="#a5f3fc" letterSpacing="1">
                       🐋 {phapLvl >= 10 ? '👑 THÁI CỔ LONG KÌNH' : '🐋 CẤM HẢI LONG KÌNH'}
