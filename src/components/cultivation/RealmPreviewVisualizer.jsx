@@ -48,38 +48,38 @@ export const CORNER_LOTUS_CONFIGS = {
   topLeft: {
     name: 'Tạo Hóa Thanh Liên',
     grade: '12 Phẩm',
-    colorBack: '#0f6e56',
-    colorFront: '#5dcaa5',
-    petalTip: '#9fe1cb',
-    coreGlow: 'rgba(93, 202, 165, 0.35)',
-    ringColor: '#5dcaa5',
+    colorBack: '#0d9488',     // Lam Ngọc Bích tươi sáng
+    colorFront: '#2dd4bf',    // Thanh Bích sáng rực
+    petalTip: '#99f6e4',      // Đỉnh cánh ngọc phát quang
+    coreGlow: 'rgba(45, 212, 191, 0.65)',
+    ringColor: '#5eead4',
   },
   topRight: {
     name: 'Diệt Thế Hắc Liên',
     grade: '12 Phẩm',
-    colorBack: '#0b0b0f',
-    colorFront: '#3c3489',
-    petalTip: '#7f77dd',
-    coreGlow: 'rgba(60, 52, 137, 0.45)',
-    ringColor: '#7f77dd',
+    colorBack: '#5b21b6',     // Tử Kim Ma Thần sáng rực rỡ, không bị đen tối
+    colorFront: '#8b5cf6',    // Tử Quang huyền ảo
+    petalTip: '#c4b5fd',      // Đỉnh cánh tím phát quang
+    coreGlow: 'rgba(139, 92, 246, 0.65)',
+    ringColor: '#a78bfa',
   },
   bottomLeft: {
     name: 'Công Đức Kim Liên',
     grade: '12 Phẩm',
-    colorBack: '#633806',
-    colorFront: '#fac775',
-    petalTip: '#fde047',
-    coreGlow: 'rgba(250, 199, 117, 0.45)',
-    ringColor: '#fac775',
+    colorBack: '#d97706',     // Hoàng Kim rực rỡ
+    colorFront: '#fbbf24',    // Kim Quang chói lọi
+    petalTip: '#fef08a',      // Đỉnh cánh vàng ngọc sáng bừng
+    coreGlow: 'rgba(251, 191, 36, 0.65)',
+    ringColor: '#fde047',
   },
   bottomRight: {
     name: 'Nghiệp Hỏa Hồng Liên',
     grade: '12 Phẩm',
-    colorBack: '#501313',
-    colorFront: '#e24b4a',
-    petalTip: '#f09595',
-    coreGlow: 'rgba(226, 75, 74, 0.45)',
-    ringColor: '#e24b4a',
+    colorBack: '#dc2626',     // Hồng Hỏa rực sáng
+    colorFront: '#f87171',    // Hỏa Quang chói lọi
+    petalTip: '#fca5a5',      // Đỉnh cánh hồng phát quang
+    coreGlow: 'rgba(239, 68, 68, 0.65)',
+    ringColor: '#f87171',
   },
 };
 
@@ -245,14 +245,14 @@ export function GradeLotusAltar({ config, isFilled, lampObj, ArtifactIcon, idx }
                     <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#000000" flood-opacity="0.9" />
                   </filter>
             <linearGradient id={`gradeBack-${idx}`} x1="0%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stopColor="rgba(2, 6, 15, 0.98)" />
-              <stop offset="55%" stopColor={config.colorBack} stopOpacity="0.7" />
-              <stop offset="100%" stopColor={config.petalTip} stopOpacity="0.95" />
+              <stop offset="0%" stopColor={config.colorBack} stopOpacity="0.85" />
+              <stop offset="45%" stopColor={config.colorFront} stopOpacity="0.95" />
+              <stop offset="100%" stopColor={config.petalTip} stopOpacity="1" />
             </linearGradient>
             <linearGradient id={`gradeFront-${idx}`} x1="0%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stopColor="rgba(4, 12, 24, 0.95)" />
-              <stop offset="50%" stopColor={config.colorFront} stopOpacity="0.85" />
-              <stop offset="100%" stopColor="#ffffff" stopOpacity="0.98" />
+              <stop offset="0%" stopColor={config.colorBack} stopOpacity="0.9" />
+              <stop offset="50%" stopColor={config.colorFront} stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#ffffff" stopOpacity="1" />
             </linearGradient>
             <radialGradient id={`gradeCore-${idx}`}>
               <stop offset="0%" stopColor={config.coreGlow} />
