@@ -1066,7 +1066,7 @@ export default function SidePanelInfo() {
                 </div>
 
                 {/* THÔNG BÁO & NÚT KHẢM NẠM KHI ĐẠT 99.99% */}
-                {isBottleneck ? (
+                {isBottleneck && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 2 }}>
                     <div style={{
                       fontSize: 11,
@@ -1105,51 +1105,6 @@ export default function SidePanelInfo() {
                       }}
                     >
                       👑 KHẢM NẠM BẢO VẬT (HÓA CUNG THẬT)
-                    </button>
-                  </div>
-                ) : (
-                  /* NÚT NẠP LINH LỰC NHANH KHI CHƯA ĐẦY */
-                  <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
-                    <button
-                      onClick={() => {
-                        if (gainReadingExp) gainReadingExp(500);
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: '9px 10px',
-                        borderRadius: 8,
-                        background: 'rgba(56, 189, 248, 0.12)',
-                        border: '1px solid rgba(56, 189, 248, 0.4)',
-                        color: '#38bdf8',
-                        fontSize: 11.5,
-                        fontWeight: 700,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      🔮 Tụ Khí (+500 EXP)
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        try {
-                          if (thangCung) thangCung();
-                        } catch (e) {
-                          alert(e.message || 'Chưa thể thăng cung.');
-                        }
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: '9px 10px',
-                        borderRadius: 8,
-                        background: 'rgba(251, 191, 36, 0.15)',
-                        border: '1px solid rgba(251, 191, 36, 0.5)',
-                        color: '#fde047',
-                        fontSize: 11.5,
-                        fontWeight: 800,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      ⚡ Nạp Đầy 99.99%
                     </button>
                   </div>
                 )}
