@@ -1336,14 +1336,15 @@ export function clearUnreadDrops() {
 
 /**
  * Tính tổng số Mệnh Hỏa sở hữu ở Trúc Cơ
- * = Mệnh hỏa tự thân (pháp khiếu / 30) + khiếu 121 (nếu có) + số Mệnh Đăng đã hấp thụ
- * Tối đa 10 Hỏa
+ * = Mệnh hỏa tự thân (4 hỏa từ 120 khiếu + 1 hỏa từ khiếu 121) + số Mệnh Đăng đã hấp thụ
+ * Tối đa 10 Hỏa (5 Hỏa tự thân + 5 Mệnh Đăng)
  */
 export function getTotalMenhHoa(state) {
-  const selfHoa = state.selfMenhHoa || Math.floor((state.phapKhieu || 0) / 30);
-  const secretHoa = state.has121st ? 1 : 0;
+  const baseHoa = Math.floor(Math.min(120, state.phapKhieu || 0) / 30);
+  const secretHoa = (state.has121st || (state.phapKhieu || 0) >= 121) ? 1 : 0;
+  const selfHoa = state.selfMenhHoa !== undefined ? Math.min(5, Math.max(state.selfMenhHoa, baseHoa + secretHoa)) : (baseHoa + secretHoa);
   const lampCount = (state.absorbedLamps || []).length;
-  return Math.min(10, selfHoa + secretHoa + lampCount);
+  return Math.min(10, selfHoa + lampCount);
 }
 
 /**

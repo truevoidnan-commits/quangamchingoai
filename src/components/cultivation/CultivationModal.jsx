@@ -102,7 +102,7 @@ export default function CultivationModal({ isOpen, onClose }) {
     }
   };
 
-  const selfHoa = cultivation.selfMenhHoa || Math.floor(cultivation.phapKhieu / 30);
+  const selfHoa = cultivation.selfMenhHoa !== undefined ? cultivation.selfMenhHoa : (Math.floor(Math.min(120, cultivation.phapKhieu || 0) / 30) + ((cultivation.has121st || (cultivation.phapKhieu || 0) >= 121) ? 1 : 0));
   const absorbedCount = (cultivation.absorbedLamps || []).length;
   const artifactCount = (cultivation.inventoryArtifacts || []).length;
   const isNguyenAnhStage = cultivation.realm === 'gia_anh' || cultivation.realm === 'nguyen_anh';
