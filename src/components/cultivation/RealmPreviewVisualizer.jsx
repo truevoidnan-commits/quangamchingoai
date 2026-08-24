@@ -2912,8 +2912,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           <svg
             width="100%"
             height="100%"
-            viewBox={isMobile ? "130 -30 660 700" : "0 0 920 640"}
-            preserveAspectRatio="xMidYMid slice"
+            viewBox={isMobile ? "110 0 700 640" : "0 0 920 640"}
+            preserveAspectRatio="xMidYMid meet"
             style={{ width: '100%', height: '100%', position: 'absolute', inset: 0, overflow: 'hidden' }}
             onClick={() => {
               try { playStarChime(523); } catch(e) {}
@@ -3027,7 +3027,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 <stop offset="100%" stopColor="#0284c7" stopOpacity="0" />
               </linearGradient>
               <linearGradient id="oceanRibbon2" x1="100%" y1="0%" x2="0%" y2="0%">
-                <stop offset="0%" stopColor="#0284c7" stopOpacity="0" />
+                <stop offset="0%" stopColor="#0284c7" stopOpacity="0.08" />
                 <stop offset="40%" stopColor="#38bdf8" stopOpacity="0.28" />
                 <stop offset="80%" stopColor="#7dd3fc" stopOpacity="0.2" />
                 <stop offset="100%" stopColor="#082f49" stopOpacity="0" />
@@ -3235,7 +3235,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
             {/* TRẬN ĐỒ ĐAN ĐIỀN TRUNG TÂM (DAN DIEN SPHERE) */}
             <g transform="translate(460, 290)">
-              {/* 10 VÒNG LINH MẠCH TƯƠNG ỨNG 10 TẦNG */}
+              {/* 10 VÒNG LINH MẠCH TƯƠNG ỨNG 10 TẦNG (CÁC ĐƯỜNG NÉT LIỀN ĐỒNG NHẤT SANG TRỌNG) */}
               {Array.from({ length: 10 }).map((_, i) => {
                 const layerNum = i + 1;
                 const isReached = viewMode === 'the' ? theLvl >= layerNum : phapLvl >= layerNum;
@@ -3246,8 +3246,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   ? (isReached ? '#ef4444' : '#334155')
                   : (isReached ? '#06b6d4' : '#1e3a5f');
 
-                const strokeWidth = isReached ? 2.2 : 0.9;
-                const strokeOpacity = isReached ? 0.85 : 0.22;
+                const strokeWidth = isReached ? 2.0 : 0.85;
+                const strokeOpacity = isReached ? 0.85 : 0.2;
 
                 return (
                   <g key={layerNum}>
@@ -3259,7 +3259,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                       stroke={strokeColor}
                       strokeWidth={strokeWidth}
                       strokeOpacity={strokeOpacity}
-                      strokeDasharray={layerNum % 2 === 0 ? '6 4' : 'none'}
                     />
                     {/* Điểm Tinh Tú Tụ Linh trên vòng hiện tại */}
                     {isCurrent && (
@@ -3287,7 +3286,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               {viewMode === 'the' ? (
                 <g style={{ transformOrigin: '0 0', animation: 'nkSpinSlow 14s linear infinite', willChange: 'transform' }}>
                   <circle cx="0" cy="0" r="50" fill="url(#bloodVortexCore)" />
-                  <circle cx="0" cy="0" r="52" fill="none" stroke="#ef4444" strokeWidth="2.2" strokeDasharray="10 6" opacity="0.85" />
+                  <circle cx="0" cy="0" r="52" fill="none" stroke="#ef4444" strokeWidth="1.8" opacity="0.85" />
                   {/* Các cánh hoa lửa xoáy */}
                   <path d="M 0,-48 Q 28,-28 0,0 Q 28,28 0,48 Q -28,28 0,0 Q -28,-28 0,-48 Z" fill="rgba(239, 68, 68, 0.4)" />
                   <circle cx="0" cy="0" r="20" fill="#ffffff" filter="url(#nkGlowRed)" />
@@ -3295,7 +3294,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               ) : (
                 <g style={{ transformOrigin: '0 0', animation: 'nkSpinReverse 16s linear infinite', willChange: 'transform' }}>
                   <circle cx="0" cy="0" r="52" fill="url(#abyssOceanCore)" />
-                  <circle cx="0" cy="0" r="54" fill="none" stroke="#38bdf8" strokeWidth="2.2" strokeDasharray="8 6" opacity="0.85" />
+                  <circle cx="0" cy="0" r="54" fill="none" stroke="#38bdf8" strokeWidth="1.8" opacity="0.85" />
                   {/* Các luồng thủy triều xoáy sâu */}
                   <path d="M 0,-50 Q 34,-18 0,0 Q 34,18 0,50 Q -34,18 0,0 Q -34,-18 0,-50 Z" fill="rgba(6, 182, 212, 0.45)" />
                   <circle cx="0" cy="0" r="22" fill="#ffffff" filter="url(#nkGlowCyan)" />
@@ -3316,7 +3315,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 >
                   {/* Aura Bão Lửa Khí Huyết Chân Hỏa To Lớn (Dùng Radial Gradient GPU-accelerated) */}
                   <circle cx="0" cy="0" r="195" fill="url(#tigerAuraGlow)" />
-                  <circle cx="0" cy="0" r="165" fill="none" stroke="#f59e0b" strokeWidth="2.0" strokeDasharray="10 8" opacity="0.85" />
+                  <circle cx="0" cy="0" r="165" fill="none" stroke="#f59e0b" strokeWidth="1.6" opacity="0.75" />
 
                   {/* Vết cào Huyết Long Trảo (Energy Claws) To Lớn */}
                   <g style={{ animation: 'nkTigerClawSlash 2.2s ease-in-out infinite', willChange: 'transform, opacity' }}>
@@ -3363,7 +3362,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 >
                   {/* Quầng Linh Hải Xanh Thẳm Quanh Cự Kình (Dùng Radial Gradient GPU-accelerated) */}
                   <ellipse cx="0" cy="0" rx="160" ry="110" fill="url(#whaleAuraGlow)" />
-                  <ellipse cx="0" cy="0" rx="126" ry="86" fill="none" stroke="#38bdf8" strokeWidth="1.8" strokeDasharray="8 6" opacity="0.75" />
+                  <ellipse cx="0" cy="0" rx="126" ry="86" fill="none" stroke="#38bdf8" strokeWidth="1.5" opacity="0.75" />
 
                   {/* THÂN THỂ THÁI CỔ LONG KÌNH KHỔNG LỒ */}
                   {/* Thân Cá Voi Cổ Đại */}
@@ -3383,7 +3382,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                   {/* Vây Lưng & Cổ Ngữ Long Tộc Phát Sáng */}
                   <path d="M 0,-48 Q 15,-74 30,-46 Z" fill="#0284c7" stroke="#bae6fd" strokeWidth="1.8" />
-                  <path d="M -28,-8 Q 0,-36 20,-8 Q 40,-36 60,-8" fill="none" stroke="#fde047" strokeWidth="2.0" strokeDasharray="3 4" filter="url(#nkGlowGold)" />
+                  <path d="M -28,-8 Q 0,-36 20,-8 Q 40,-36 60,-8" fill="none" stroke="#fde047" strokeWidth="1.6" filter="url(#nkGlowGold)" />
 
                   {/* Vây Bơi Dài Uyển Chuyển (Pectoral Fins) */}
                   <path d="M -28,16 Q -12,52 20,30 Z" fill="#0369a1" stroke="#38bdf8" strokeWidth="1.8" />
@@ -3424,22 +3423,27 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             </g>
           </svg>
 
-          {/* 3. THANH THÔNG SỐ CẢNH GIỚI NGƯNG KHÍ — HIỂN THỊ ĐỘC QUYỀN HƯỚNG ĐANG CHỌN (GỌN GÀNG, THOÁNG ĐÃNG) */}
+          {/* 3. THANH THÔNG SỐ CẢNH GIỚI NGƯNG KHÍ — HIỂN THỊ ĐỘC QUYỀN HƯỚNG ĐANG CHỌN (GỌN GÀNG, ĐẶT CAO TRÁNH BỊ THANH ĐIỀU HƯỚNG CHE) */}
           <div style={{
             position: 'absolute',
-            bottom: 14,
+            bottom: isMobile ? '80px' : '22px',
+            left: '50%',
+            transform: 'translateX(-50%)',
             zIndex: 25,
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: 10,
             padding: '7px 18px',
             borderRadius: 24,
             background: 'rgba(8, 14, 24, 0.94)',
-            border: viewMode === 'the' ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid rgba(56, 189, 248, 0.45)',
+            border: viewMode === 'the' ? '1.2px solid rgba(239, 68, 68, 0.5)' : '1.2px solid rgba(56, 189, 248, 0.5)',
             backdropFilter: 'blur(12px)',
             boxShadow: viewMode === 'the' 
               ? '0 6px 20px rgba(0, 0, 0, 0.7), 0 0 14px rgba(239, 68, 68, 0.25)' 
-              : '0 6px 20px rgba(0, 0, 0, 0.7), 0 0 14px rgba(56, 189, 248, 0.25)'
+              : '0 6px 20px rgba(0, 0, 0, 0.7), 0 0 14px rgba(56, 189, 248, 0.25)',
+            maxWidth: '92%',
+            whiteSpace: 'nowrap'
           }}>
             {viewMode === 'the' ? (
               /* Chỉ hiển thị thông tin Hải Sơn khi đang chọn hướng Thể */
