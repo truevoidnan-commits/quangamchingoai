@@ -2492,179 +2492,157 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             </svg>
           </div>
           
-          {/* TRUNG TÂM PHÙ ĐIÊU THÁI CỰC SINH TỬ & SEGMENTED TOGGLE (CAO CẤP, CÂN ĐỐI 100%) */}
+          {/* SIÊU PHẨM THÁI CỰC SINH TỬ THẦN BÀI (ALL-IN-ONE COMPACT MASTERPIECE — 100% KHÔNG ĐÈ TINH ĐỒ) */}
           <div style={{
             position: 'absolute',
-            top: 10,
+            top: 6,
             left: '50%',
             transform: 'translateX(-50%)',
-            zIndex: 35,
+            zIndex: 40,
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            gap: 8,
+            justifyContent: 'center',
             pointerEvents: 'auto',
             userSelect: 'none'
           }}>
-            {/* Quầng sáng mờ phía sau bảng — tạo chiều sâu */}
+            {/* Quầng sáng Hào Quang Thái Cực tỏa nhẹ phía sau */}
             <div style={{
               position: 'absolute',
-              top: '46%',
-              left: '50%',
-              width: 280,
-              height: 100,
-              background: 'radial-gradient(ellipse, rgba(255,255,255,0.16) 0%, transparent 70%)',
-              filter: 'blur(6px)',
+              width: 320,
+              height: 48,
+              background: 'radial-gradient(ellipse, rgba(255,255,255,0.2) 0%, rgba(56,189,248,0.08) 45%, transparent 75%)',
+              filter: 'blur(8px)',
               zIndex: -1,
-              animation: 'halo-pulse 4.5s ease-in-out infinite'
+              animation: 'halo-shimmer 4s ease-in-out infinite'
             }} />
 
-            {/* Hạt ngọc trang trí phía trên đỉnh bảng */}
-            <div style={{
-              width: 5, height: 5, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #ffffff, #94a3b8)',
-              boxShadow: '0 0 6px rgba(255,255,255,0.6)',
-              marginBottom: -2
-            }} />
-
-            {/* 1. BẢNG PHÙ ĐIÊU CHẠM KHẮC — 1 khung duy nhất, viền kép rõ ràng */}
-            <div style={{
-              position: 'relative',
-              padding: '11px 36px',
-              background: 'linear-gradient(180deg, rgba(30,41,59,0.97) 0%, rgba(2,6,23,0.99) 55%, rgba(15,23,42,0.97) 100%)',
-              border: '1.5px solid rgba(255,255,255,0.55)',
-              borderRadius: 4,
-              animation: 'taicuc-breathe 4.5s ease-in-out infinite'
-            }}>
-              {/* Viền khắc chìm thứ 2 */}
-              <div style={{
-                position: 'absolute',
-                inset: 5,
-                border: '1px solid rgba(255,255,255,0.32)',
-                boxShadow: 'inset 0 1px 5px rgba(0,0,0,0.9), inset 0 -1px 3px rgba(255,255,255,0.08)',
-                pointerEvents: 'none'
-              }} />
-
-              {/* Đường viền mảnh thứ 3 */}
-              <div style={{
-                position: 'absolute',
-                inset: 9,
-                border: '1px solid rgba(255,255,255,0.16)',
-                pointerEvents: 'none'
-              }} />
-
-              {/* Gờ nổi ngang trên & dưới */}
-              <div style={{
-                position: 'absolute', top: 5, left: 16, right: 16, height: 1,
-                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5) 20%, rgba(255,255,255,0.5) 80%, transparent)'
-              }} />
-              <div style={{
-                position: 'absolute', bottom: 5, left: 16, right: 16, height: 1,
-                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5) 20%, rgba(255,255,255,0.5) 80%, transparent)'
-              }} />
-
-              {/* GÓC KHUNG — bracket chữ L to bản, đậm nét */}
-              {[
-                { top: -7, left: -7, rotate: 0 },
-                { top: -7, right: -7, rotate: 90 },
-                { bottom: -7, right: -7, rotate: 180 },
-                { bottom: -7, left: -7, rotate: 270 },
-              ].map((pos, i) => (
-                <svg key={i} width="26" height="26" viewBox="0 0 26 26" style={{
-                  position: 'absolute',
-                  ...pos,
-                  transform: `rotate(${pos.rotate}deg)`,
-                  pointerEvents: 'none'
-                }}>
-                  <path d="M2 22 V8 Q2 2 8 2 H22" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="2" strokeLinecap="square" />
-                  <path d="M6.5 22 V11 Q6.5 6.5 11 6.5 H22" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
-                  <rect x="0" y="19.5" width="4" height="4" transform="rotate(45 2 21.5)" fill="rgba(255,255,255,0.95)" />
-                </svg>
-              ))}
-
-              {/* Nội dung: icon Thái Cực xoay + chữ + icon Thái Cực xoay ngược chiều */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-                <div style={{ animation: 'taicuc-spin 10s linear infinite' }}>
-                  <TaiCucIcon size={13} />
-                </div>
-                <span style={{
-                  fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  letterSpacing: 3.2,
-                  color: '#f1f5f9',
-                  textShadow: '0 0 10px rgba(255,255,255,0.4), 0 1px 2px rgba(0,0,0,0.9)',
-                  whiteSpace: 'nowrap'
-                }}>
-                  CỰC CẢNH SINH TỬ
-                </span>
-                <div style={{ animation: 'taicuc-spin-rev 10s linear infinite' }}>
-                  <TaiCucIcon size={13} />
-                </div>
-              </div>
-            </div>
-
-            {/* 2. SEGMENTED TOGGLE — KHÔNG EMOJI, KHÔNG ICON (MƯỢT MÀ, TINH TẾ) */}
+            {/* BẢNG PHÙ ĐIÊU HỢP NHẤT (ALL-IN-ONE CELESTIAL PLAQUE: DANH HIỆU + CÔNG TẮC CHUYỂN ĐỔI) */}
             <div style={{
               position: 'relative',
               display: 'flex',
-              background: 'rgba(2,6,23,0.85)',
-              border: '1px solid rgba(255,255,255,0.35)',
-              borderRadius: 12,
-              padding: 2,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.7)'
+              alignItems: 'center',
+              gap: 10,
+              padding: '4px 12px 4px 14px',
+              height: 34,
+              borderRadius: 20,
+              background: 'linear-gradient(90deg, rgba(2,6,23,0.98) 0%, rgba(15,23,42,0.96) 50%, rgba(2,6,23,0.98) 100%)',
+              border: '1.4px solid rgba(255,255,255,0.75)',
+              animation: 'master-breathe 4s ease-in-out infinite',
+              backdropFilter: 'blur(18px)',
+              boxSizing: 'border-box',
+              whiteSpace: 'nowrap'
             }}>
-              <div className="segtoggle-slider" style={{
-                position: 'absolute',
-                top: 2,
-                bottom: 2,
-                left: 2,
-                width: 66,
-                borderRadius: 10,
-                background: 'linear-gradient(180deg, #f8fafc, #cbd5e1)',
-                transform: isTuTuong ? 'translateX(0)' : 'translateX(66px)',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.5)'
+              {/* Cánh hoa văn chạm khắc mây lành góc trái */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ animation: 'taicuc-spin 9s linear infinite' }}>
+                  <TaiCucIcon size={14} />
+                </div>
+                <div style={{
+                  width: 3,
+                  height: 14,
+                  borderRadius: 2,
+                  background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.7), transparent)'
+                }} />
+              </div>
+
+              {/* DANH HIỆU CỰC CẢNH SINH TỬ (CHỮ KHẮC BẠCH NGỌC 3D) */}
+              <div style={{
+                fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
+                fontSize: 12,
+                fontWeight: 900,
+                letterSpacing: 2.2,
+                color: '#ffffff',
+                textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.5), 0 2px 4px #000000',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5
+              }}>
+                <span style={{ fontSize: 9, opacity: 0.8, color: '#e2e8f0' }}>✦</span>
+                <span>CỰC CẢNH SINH TỬ</span>
+                <span style={{ fontSize: 9, opacity: 0.8, color: '#e2e8f0' }}>✦</span>
+              </div>
+
+              {/* Đường ngăn cách khắc chìm */}
+              <div style={{
+                width: 1,
+                height: 16,
+                background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.5), transparent)'
               }} />
-              <button
-                onClick={() => setConstelMode('tu_tuong')}
-                style={{
-                  position: 'relative',
-                  zIndex: 1,
-                  width: 66,
-                  padding: '4px 0',
-                  border: 'none',
-                  background: 'transparent',
-                  borderRadius: 10,
-                  fontSize: 10.5,
-                  fontWeight: 700,
-                  letterSpacing: 0.5,
-                  cursor: 'pointer',
-                  color: isTuTuong ? '#0f172a' : 'rgba(255,255,255,0.65)',
-                  transition: 'color 0.25s ease'
-                }}
-              >
-                Tứ Tượng
-              </button>
-              <button
-                onClick={() => setConstelMode('luc_dai')}
-                style={{
-                  position: 'relative',
-                  zIndex: 1,
-                  width: 66,
-                  padding: '4px 0',
-                  border: 'none',
-                  background: 'transparent',
-                  borderRadius: 10,
-                  fontSize: 10.5,
-                  fontWeight: 700,
-                  letterSpacing: 0.5,
-                  cursor: 'pointer',
-                  color: !isTuTuong ? '#0f172a' : 'rgba(255,255,255,0.65)',
-                  transition: 'color 0.25s ease'
-                }}
-              >
-                Lục Đại
-              </button>
+
+              {/* CÔNG TẮC CHUYỂN ĐỔI CHẾ ĐỘ THÁI CỰC (TỨ TƯỢNG / LỤC ĐẠI KHẢM TRỰC TIẾP TRÊN PHÙ ĐIÊU) */}
+              <div style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                background: 'rgba(0,0,0,0.65)',
+                border: '1px solid rgba(255,255,255,0.35)',
+                borderRadius: 14,
+                padding: '2px',
+                height: 24,
+                boxSizing: 'border-box'
+              }}>
+                {/* Thanh trượt ngọc sáng */}
+                <div style={{
+                  position: 'absolute',
+                  top: 2,
+                  bottom: 2,
+                  left: 2,
+                  width: 58,
+                  borderRadius: 12,
+                  background: 'linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%)',
+                  transform: isTuTuong ? 'translateX(0)' : 'translateX(56px)',
+                  transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 0 8px rgba(255,255,255,0.8), 0 1px 4px rgba(0,0,0,0.6)'
+                }} />
+
+                <button
+                  onClick={() => setConstelMode('tu_tuong')}
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    width: 58,
+                    height: '100%',
+                    border: 'none',
+                    background: 'transparent',
+                    borderRadius: 12,
+                    fontSize: 9.5,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    color: isTuTuong ? '#020617' : 'rgba(255,255,255,0.65)',
+                    transition: 'color 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0
+                  }}
+                >
+                  Tứ Tượng
+                </button>
+
+                <button
+                  onClick={() => setConstelMode('luc_dai')}
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    width: 56,
+                    height: '100%',
+                    border: 'none',
+                    background: 'transparent',
+                    borderRadius: 12,
+                    fontSize: 9.5,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    color: !isTuTuong ? '#020617' : 'rgba(255,255,255,0.65)',
+                    transition: 'color 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0
+                  }}
+                >
+                  Lục Đại
+                </button>
+              </div>
             </div>
           </div>
 
@@ -2821,17 +2799,26 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             {/* CSS Keyframes cho hiệu ứng linh hoạt Cực Cảnh */}
             <style>{`
               
-        @keyframes taicuc-breathe {
-          0%, 100% { box-shadow: 0 0 18px rgba(255,255,255,0.22), 0 8px 20px rgba(0,0,0,0.9); }
-          50% { box-shadow: 0 0 28px rgba(255,255,255,0.36), 0 8px 22px rgba(0,0,0,0.9); }
+        @keyframes master-breathe {
+          0%, 100% { 
+            box-shadow: 0 0 16px rgba(255,255,255,0.25), inset 0 0 10px rgba(255,255,255,0.1), 0 8px 24px rgba(0,0,0,0.95);
+            border-color: rgba(255,255,255,0.7);
+          }
+          50% { 
+            box-shadow: 0 0 28px rgba(255,255,255,0.45), inset 0 0 14px rgba(255,255,255,0.2), 0 8px 28px rgba(0,0,0,0.95);
+            border-color: rgba(255,255,255,0.95);
+          }
         }
         @keyframes taicuc-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes taicuc-spin-rev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
-        @keyframes halo-pulse {
-          0%, 100% { opacity: 0.35; transform: translate(-50%,-50%) scale(1); }
-          50% { opacity: 0.55; transform: translate(-50%,-50%) scale(1.06); }
+        @keyframes halo-shimmer {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50% { opacity: 0.55; transform: scale(1.08); }
         }
-        .segtoggle-slider { transition: transform 0.28s cubic-bezier(0.4,0,0.2,1); }
+        @keyframes spark-glint {
+          0%, 100% { opacity: 0.2; transform: scale(0.8); }
+          50% { opacity: 0.9; transform: scale(1.2); }
+        }
 
               @keyframes spiritStreamFlow {
                 from { stroke-dashoffset: 40; }
