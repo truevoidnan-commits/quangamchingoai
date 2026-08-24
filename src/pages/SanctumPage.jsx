@@ -47,6 +47,7 @@ export default function SanctumPage() {
 
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('lamps'); // 'lamps' | 'artifacts' | 'inventory'
+  const [inventorySubTab, setInventorySubTab] = useState('lamps'); // 'lamps' | 'artifacts'
   const [lampFilterTier, setLampFilterTier] = useState('owned'); // 'owned' | 'ha_pham' | ...
   const [artifactFilterTier, setArtifactFilterTier] = useState('owned'); // 'owned' | 'ha_pham' | ...
   const [selectedLamps, setSelectedLamps] = useState([]);
@@ -918,239 +919,357 @@ export default function SanctumPage() {
 
         {/* TAB 3: TÚI TRỮ VẬT SỞ HỮU */}
         {activeTab === 'inventory' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             
-            {/* Phân Mục 1: Mệnh Đăng Trong Túi Trữ Vật Sẵn Sàng */}
-            {inventoryLamps.length > 0 && (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+            {/* Sub-Tab Navigation Bar (Chuyển đổi 2 trang Túi Đồ) */}
+            <div style={{
+              display: 'flex',
+              gap: 12,
+              background: 'rgba(0, 0, 0, 0.35)',
+              padding: '6px 8px',
+              borderRadius: 12,
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              width: 'fit-content',
+              flexWrap: 'wrap'
+            }}>
+              <button
+                onClick={() => setInventorySubTab('lamps')}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: inventorySubTab === 'lamps' 
+                    ? 'linear-gradient(135deg, rgba(255, 204, 0, 0.25) 0%, rgba(245, 158, 11, 0.35) 100%)' 
+                    : 'transparent',
+                  color: inventorySubTab === 'lamps' ? 'var(--color-kim)' : 'var(--text-sub)',
+                  border: inventorySubTab === 'lamps' ? '1px solid rgba(255, 204, 0, 0.5)' : '1px solid transparent',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>🏮 MỆNH ĐĂNG TRONG TÚI</span>
+                <span style={{ 
+                  fontSize: 11, 
+                  padding: '2px 7px', 
+                  borderRadius: 10, 
+                  background: inventorySubTab === 'lamps' ? 'rgba(255, 204, 0, 0.3)' : 'rgba(255,255,255,0.08)', 
+                  color: '#fff' 
+                }}>
+                  {inventoryLamps.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setInventorySubTab('artifacts')}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: inventorySubTab === 'artifacts' 
+                    ? 'linear-gradient(135deg, rgba(34, 195, 240, 0.25) 0%, rgba(14, 116, 144, 0.35) 100%)' 
+                    : 'transparent',
+                  color: inventorySubTab === 'artifacts' ? 'var(--accent-cyan-bright, #22c3f0)' : 'var(--text-sub)',
+                  border: inventorySubTab === 'artifacts' ? '1px solid rgba(34, 195, 240, 0.5)' : '1px solid transparent',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>🛡️ VẬT TRẤN ÁP SẴN SÀNG</span>
+                <span style={{ 
+                  fontSize: 11, 
+                  padding: '2px 7px', 
+                  borderRadius: 10, 
+                  background: inventorySubTab === 'artifacts' ? 'rgba(34, 195, 240, 0.3)' : 'rgba(255,255,255,0.08)', 
+                  color: '#fff' 
+                }}>
+                  {unanchoredArtifacts.length}
+                </span>
+              </button>
+            </div>
+
+            {/* TRANG 1: MỆNH ĐĂNG TRONG TÚI */}
+            {inventorySubTab === 'lamps' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                   <h3 style={{ color: 'var(--color-kim)', fontSize: 15, fontWeight: 800, margin: 0 }}>
-                    🏮 MỆNH ĐĂNG SẴN SÀNG TRONG TÚI ({inventoryLamps.length})
+                    🏮 DANH SÁCH MỆNH ĐĂNG TRONG TÚI TRỮ VẬT ({inventoryLamps.length})
                   </h3>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <button
-                      onClick={selectNormalLamps}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: 6,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        background: 'rgba(16, 185, 129, 0.15)',
-                        color: '#10b981',
-                        border: '1px solid rgba(16, 185, 129, 0.3)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      ⚡ Chọn Hạ → Cực
-                    </button>
-                    <button
-                      onClick={() => setSelectedLamps([...inventoryLamps])}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: 6,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        background: 'rgba(255, 255, 255, 0.06)',
-                        color: '#fff',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Chọn tất cả
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                  {inventoryLamps.map(lampId => {
-                    const lobj = LIFE_LAMPS.find(l => l.id === lampId);
-                    if (!lobj) return null;
-                    const tierInfo = LAMP_TIERS[lobj.tier] || LAMP_TIERS.ha_pham;
-                    const priceTT = tierInfo.tienTinh || Math.floor((tierInfo.priceExp || 100) / 10);
-                    const isSelected = selectedLamps.includes(lampId);
-
-                    return (
-                      <div 
-                        key={lampId} 
-                        style={{ 
-                          padding: 14, 
-                          borderRadius: 10, 
-                          background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'rgba(0,0,0,0.4)', 
-                          border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 204, 0, 0.3)'}`, 
-                          display: 'flex', 
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          gap: 10
+                  {inventoryLamps.length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button
+                        onClick={selectNormalLamps}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 6,
+                          fontSize: 11.5,
+                          fontWeight: 700,
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          color: '#10b981',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          cursor: 'pointer'
                         }}
                       >
-                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                          <div style={{ width: 44, height: 44, borderRadius: 8, background: tierInfo?.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <ArtifactIcon item={lobj} isLamp={true} size={40} />
-                          </div>
-                          <div>
-                            <div style={{ color: tierInfo?.color || '#ffcc00', fontWeight: 700, fontSize: 13 }}>{lobj.name}</div>
-                            <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{tierInfo.name} · +{priceTT.toLocaleString()} TT</div>
-                          </div>
-                        </div>
+                        ⚡ Chọn Hạ → Cực
+                      </button>
+                      <button
+                        onClick={() => setSelectedLamps([...inventoryLamps])}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 6,
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          background: 'rgba(255, 255, 255, 0.06)',
+                          color: '#fff',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Chọn tất cả
+                      </button>
+                      {selectedLamps.length > 0 && (
+                        <button
+                          onClick={() => setSelectedLamps([])}
+                          style={{
+                            padding: '5px 10px',
+                            borderRadius: 6,
+                            fontSize: 11.5,
+                            fontWeight: 600,
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            color: '#f87171',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Bỏ chọn ({selectedLamps.length})
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <div 
-                            onClick={() => toggleSelectLamp(lampId)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              cursor: 'pointer',
-                              padding: '4px 6px',
-                              borderRadius: 4,
-                              background: isSelected ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.06)',
-                              border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.15)'}`
-                            }}
-                          >
-                            <input type="checkbox" checked={isSelected} onChange={() => {}} style={{ cursor: 'pointer', accentColor: '#ef4444' }} />
+                {inventoryLamps.length === 0 ? (
+                  <div style={{ padding: 40, borderRadius: 14, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>
+                    Túi trữ vật chưa có Mệnh Đăng nào. Hãy ngộ đạo 60s hoặc đọc truyện để nhận Mệnh Đăng!
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                    {inventoryLamps.map(lampId => {
+                      const lobj = LIFE_LAMPS.find(l => l.id === lampId);
+                      if (!lobj) return null;
+                      const tierInfo = LAMP_TIERS[lobj.tier] || LAMP_TIERS.ha_pham;
+                      const priceTT = tierInfo.tienTinh || Math.floor((tierInfo.priceExp || 100) / 10);
+                      const isSelected = selectedLamps.includes(lampId);
+
+                      return (
+                        <div 
+                          key={lampId} 
+                          style={{ 
+                            padding: 14, 
+                            borderRadius: 10, 
+                            background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'rgba(0,0,0,0.4)', 
+                            border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 204, 0, 0.3)'}`, 
+                            display: 'flex', 
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: 10
+                          }}
+                        >
+                          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                            <div style={{ width: 44, height: 44, borderRadius: 8, background: tierInfo?.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <ArtifactIcon item={lobj} isLamp={true} size={40} />
+                            </div>
+                            <div>
+                              <div style={{ color: tierInfo?.color || '#ffcc00', fontWeight: 700, fontSize: 13 }}>{lobj.name}</div>
+                              <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{tierInfo.name} · +{priceTT.toLocaleString()} TT</div>
+                            </div>
                           </div>
 
-                          {sellLamp && (
-                            <button
-                              onClick={() => handleSellSingleLamp(lobj)}
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <div 
+                              onClick={() => toggleSelectLamp(lampId)}
                               style={{
-                                padding: '4px 8px',
-                                borderRadius: 6,
-                                fontSize: 11,
-                                fontWeight: 600,
-                                background: 'rgba(239, 68, 68, 0.15)',
-                                color: '#f87171',
-                                border: '1px solid rgba(239, 68, 68, 0.3)',
-                                cursor: 'pointer'
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                padding: '4px 6px',
+                                borderRadius: 4,
+                                background: isSelected ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                                border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.15)'}`
                               }}
                             >
-                              Bán
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                              <input type="checkbox" checked={isSelected} onChange={() => {}} style={{ cursor: 'pointer', accentColor: '#ef4444' }} />
+                            </div>
 
-            {/* Phân Mục 2: Vật Trấn Áp Sẵn Sàng Trong Túi */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-                <h3 style={{ color: 'var(--accent-cyan-bright, #22c3f0)', fontSize: 15, fontWeight: 800, margin: 0 }}>
-                  🛡️ VẬT TRẤN ÁP SẴN SÀNG ({unanchoredArtifacts.length})
-                </h3>
-                {unanchoredArtifacts.length > 0 && (
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <button
-                      onClick={selectNormalArtifacts}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: 6,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        background: 'rgba(16, 185, 129, 0.15)',
-                        color: '#10b981',
-                        border: '1px solid rgba(16, 185, 129, 0.3)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      ⚡ Chọn Hạ → Cực
-                    </button>
-                    <button
-                      onClick={() => setSelectedArtifacts([...unanchoredArtifacts])}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: 6,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        background: 'rgba(255, 255, 255, 0.06)',
-                        color: '#fff',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Chọn tất cả
-                    </button>
+                            {sellLamp && (
+                              <button
+                                onClick={() => handleSellSingleLamp(lobj)}
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: 6,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  background: 'rgba(239, 68, 68, 0.15)',
+                                  color: '#f87171',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Bán
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
+            )}
 
-              {unanchoredArtifacts.length === 0 ? (
-                <div style={{ padding: 30, borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
-                  Túi trữ vật chưa có vật trấn áp nào sẵn sàng. Hãy đọc thêm chương truyện để nhặt hoặc đổi bằng Tiên Tinh!
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                  {unanchoredArtifacts.map(artId => {
-                    const artObj = SUPPRESSING_ARTIFACTS.find(a => a.id === artId);
-                    if (!artObj) return null;
-                    const tierInfo = LAMP_TIERS[artObj.tier] || LAMP_TIERS.ha_pham;
-                    const priceTT = tierInfo.tienTinh || Math.floor((tierInfo.priceExp || 100) / 10);
-                    const isSelected = selectedArtifacts.includes(artId);
-
-                    return (
-                      <div 
-                        key={artId} 
-                        style={{ 
-                          padding: 14, 
-                          borderRadius: 10, 
-                          background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'rgba(0,0,0,0.4)', 
-                          border: `1px solid ${isSelected ? '#ef4444' : 'rgba(34, 195, 240, 0.35)'}`, 
-                          display: 'flex', 
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          gap: 10
+            {/* TRANG 2: VẬT TRẤN ÁP SẴN SÀNG */}
+            {inventorySubTab === 'artifacts' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <h3 style={{ color: 'var(--accent-cyan-bright, #22c3f0)', fontSize: 15, fontWeight: 800, margin: 0 }}>
+                    🛡️ DANH SÁCH VẬT TRẤN ÁP SẴN SÀNG ({unanchoredArtifacts.length})
+                  </h3>
+                  {unanchoredArtifacts.length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button
+                        onClick={selectNormalArtifacts}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 6,
+                          fontSize: 11.5,
+                          fontWeight: 700,
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          color: '#10b981',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          cursor: 'pointer'
                         }}
                       >
-                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                          <ArtifactIcon item={artObj} size={46} />
-                          <div>
-                            <div style={{ color: tierInfo?.color || '#38bdf8', fontWeight: 700, fontSize: 13 }}>{artObj.name}</div>
-                            <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{tierInfo?.name} · +{priceTT.toLocaleString()} TT</div>
-                          </div>
-                        </div>
+                        ⚡ Chọn Hạ → Cực
+                      </button>
+                      <button
+                        onClick={() => setSelectedArtifacts([...unanchoredArtifacts])}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 6,
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          background: 'rgba(255, 255, 255, 0.06)',
+                          color: '#fff',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Chọn tất cả
+                      </button>
+                      {selectedArtifacts.length > 0 && (
+                        <button
+                          onClick={() => setSelectedArtifacts([])}
+                          style={{
+                            padding: '5px 10px',
+                            borderRadius: 6,
+                            fontSize: 11.5,
+                            fontWeight: 600,
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            color: '#f87171',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Bỏ chọn ({selectedArtifacts.length})
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <div 
-                            onClick={() => toggleSelectArtifact(artId)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              cursor: 'pointer',
-                              padding: '4px 6px',
-                              borderRadius: 4,
-                              background: isSelected ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.06)',
-                              border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.15)'}`
-                            }}
-                          >
-                            <input type="checkbox" checked={isSelected} onChange={() => {}} style={{ cursor: 'pointer', accentColor: '#ef4444' }} />
+                {unanchoredArtifacts.length === 0 ? (
+                  <div style={{ padding: 40, borderRadius: 14, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>
+                    Túi trữ vật chưa có vật trấn áp nào sẵn sàng. Hãy đọc thêm chương truyện để nhặt hoặc đổi bằng Tiên Tinh!
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                    {unanchoredArtifacts.map(artId => {
+                      const artObj = SUPPRESSING_ARTIFACTS.find(a => a.id === artId);
+                      if (!artObj) return null;
+                      const tierInfo = LAMP_TIERS[artObj.tier] || LAMP_TIERS.ha_pham;
+                      const priceTT = tierInfo.tienTinh || Math.floor((tierInfo.priceExp || 100) / 10);
+                      const isSelected = selectedArtifacts.includes(artId);
+
+                      return (
+                        <div 
+                          key={artId} 
+                          style={{ 
+                            padding: 14, 
+                            borderRadius: 10, 
+                            background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'rgba(0,0,0,0.4)', 
+                            border: `1px solid ${isSelected ? '#ef4444' : 'rgba(34, 195, 240, 0.35)'}`, 
+                            display: 'flex', 
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: 10
+                          }}
+                        >
+                          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                            <ArtifactIcon item={artObj} size={46} />
+                            <div>
+                              <div style={{ color: tierInfo?.color || '#38bdf8', fontWeight: 700, fontSize: 13 }}>{artObj.name}</div>
+                              <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{tierInfo?.name} · +{priceTT.toLocaleString()} TT</div>
+                            </div>
                           </div>
 
-                          {sellArtifact && (
-                            <button
-                              onClick={() => handleSellSingleArtifact(artObj)}
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <div 
+                              onClick={() => toggleSelectArtifact(artId)}
                               style={{
-                                padding: '4px 8px',
-                                borderRadius: 6,
-                                fontSize: 11,
-                                fontWeight: 600,
-                                background: 'rgba(239, 68, 68, 0.15)',
-                                color: '#f87171',
-                                border: '1px solid rgba(239, 68, 68, 0.3)',
-                                cursor: 'pointer'
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                padding: '4px 6px',
+                                borderRadius: 4,
+                                background: isSelected ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                                border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.15)'}`
                               }}
                             >
-                              Bán
-                            </button>
-                          )}
+                              <input type="checkbox" checked={isSelected} onChange={() => {}} style={{ cursor: 'pointer', accentColor: '#ef4444' }} />
+                            </div>
+
+                            {sellArtifact && (
+                              <button
+                                onClick={() => handleSellSingleArtifact(artObj)}
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: 6,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  background: 'rgba(239, 68, 68, 0.15)',
+                                  color: '#f87171',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Bán
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
           </div>
         )}
