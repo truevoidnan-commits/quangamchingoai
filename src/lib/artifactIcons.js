@@ -5,24 +5,24 @@
 
 const baseUrl = (typeof import.meta !== 'undefined' && import.meta?.env?.BASE_URL ? import.meta.env.BASE_URL : '/').replace(/\/$/, '') + '/';
 
-/** Map of all 16 Thần Phẩm artifact IDs to AI-generated PNG/JPG icons */
+/** Map of all Thần Phẩm artifact IDs to AI-generated PNG/JPG icons */
 export const THAN_PHAM_AI_ICONS = {
-  hong_mong_khi:      baseUrl + 'icons/than_pham/hong_mong_tu_khi.jpg',
-  van_menh_chau:      baseUrl + 'icons/than_pham/van_menh_chau.jpg',
-  hon_don_so_khai:    baseUrl + 'icons/than_pham/hon_don_so_khai.jpg',
-  ngoc_diep:          baseUrl + 'icons/than_pham/ngoc_diep.jpg',
-  bat_hu_dinh:        baseUrl + 'icons/than_pham/bat_hu_dinh.jpg',
-  thien_dao_an:       baseUrl + 'icons/than_pham/so_tam_quyet.jpg',
-  hu_vo_ban_nguyen:   baseUrl + 'icons/than_pham/hu_vo_tich_diet.jpg',
-  khoi_nguyen_moc:    baseUrl + 'icons/than_pham/the_gioi_moc.jpg',
-  luan_hoi_ban:       baseUrl + 'icons/than_pham/luan_hoi_chan_kinh.jpg',
-  tuc_menh_toa:       baseUrl + 'icons/than_pham/tuc_menh_toa.jpg',
-  thuong_thuong_kiem: baseUrl + 'icons/than_pham/phat_thien_kiem.jpg',
-  dai_la_chuong:      baseUrl + 'icons/than_pham/thien_cuong_chuong.jpg',
-  thoi_khong_chau:    baseUrl + 'icons/than_pham/thoi_khong_chau.jpg',
-  van_co_long_to:     baseUrl + 'icons/than_pham/van_co_long_to.jpg',
-  sang_the_quang:     baseUrl + 'icons/than_pham/sang_the_quang.jpg',
-  dai_dao_tieu_dao:  baseUrl + 'icons/than_pham/tieu_dao_thien.jpg',
+  ngoc_diep:                baseUrl + 'icons/than_pham/ngoc_diep.jpg',
+  bat_hu_dinh:              baseUrl + 'icons/than_pham/bat_hu_dinh.jpg',
+  thien_dao_an:             baseUrl + 'icons/than_pham/so_tam_quyet.jpg',
+  khoi_nguyen_moc:          baseUrl + 'icons/than_pham/the_gioi_moc.jpg',
+  tuc_menh_toa:             baseUrl + 'icons/than_pham/tuc_menh_toa.jpg',
+  dai_la_chuong:            baseUrl + 'icons/than_pham/thien_cuong_chuong.jpg',
+  dai_dao_tieu_dao:        baseUrl + 'icons/than_pham/tieu_dao_thien.jpg',
+  hu_vo_ban_nguyen:         baseUrl + 'icons/than_pham/hu_vo_tich_diet.jpg',
+  thai_co_phong_ma_bang:    baseUrl + 'icons/than_pham/hong_mong_tu_khi.jpg',
+  cuu_tieu_tru_than_tran:   baseUrl + 'icons/than_pham/phat_thien_kiem.jpg',
+  huyen_thien_khi_van_thap: baseUrl + 'icons/than_pham/sang_the_quang.jpg',
+  thai_so_khai_thien_phu:   baseUrl + 'icons/than_pham/hon_don_so_khai.jpg',
+  vo_luong_cuc_quang_chau:  baseUrl + 'icons/than_pham/van_menh_chau.jpg',
+  thien_co_dao_chuyen_ban:  baseUrl + 'icons/than_pham/thoi_khong_chau.jpg',
+  tam_thien_phat_quoc_kinh: baseUrl + 'icons/than_pham/luan_hoi_chan_kinh.jpg',
+  cam_hai_to_long_khai:     baseUrl + 'icons/than_pham/van_co_long_to.jpg',
 };
 
 /** Map of Thần Phẩm Life Lamp IDs to AI-generated icons */
