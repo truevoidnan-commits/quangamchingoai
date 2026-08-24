@@ -1209,6 +1209,13 @@ export function getCultivationState() {
       state.selfMenhHoa = Math.max(state.selfMenhHoa || 0, 5);
     }
 
+    if (state.realm === 'truc_co') {
+      const minThreshold = TRUC_CO_KHIEU_THRESHOLDS[state.phapKhieu || 0] || 0;
+      if (state.expCurrentRealm === undefined || state.expCurrentRealm < minThreshold) {
+        state.expCurrentRealm = minThreshold;
+      }
+    }
+
     if (state.realm === 'kim_dan') {
       const lampCount = (state.absorbedLamps || []).length;
       const selfPalacesMax = Math.max(1, (state.maxThienCung || 6) - lampCount);
@@ -2729,7 +2736,7 @@ export function breakthroughToTrucCo() {
   const isSongTu = theLvl >= 10 && phapLvl >= 10;
 
   state.realm = 'truc_co';
-  state.expCurrentRealm = 0;
+  state.expCurrentRealm = TRUC_CO_KHIEU_THRESHOLDS[1]; // Khởi đầu 50 EXP tương ứng Khiếu 1 đã mở
   state.phapKhieu = 1;
   state.selfMenhHoa = 0;
   state.has121st = false;

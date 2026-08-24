@@ -121,9 +121,12 @@ export default function SidePanelInfo() {
   const prevCumulative = TRUC_CO_KHIEU_THRESHOLDS[openedCount] || 0;
   const nextCumulative = TRUC_CO_KHIEU_THRESHOLDS[nextIndex] || 0;
   const nextNodeCost = getExpForPhapKhieuIndex(nextIndex);
-  const currentKhieuExp = Math.max(0, exp - prevCumulative);
-  const canUnlockNext = !isMax120 && exp >= nextCumulative;
-  const khieuProgressPercent = Math.min(100, Math.floor((currentKhieuExp / nextNodeCost) * 100));
+  const currentRealmExp = cultivation?.expCurrentRealm !== undefined ? cultivation.expCurrentRealm : 0;
+  const currentKhieuExp = Math.max(0, currentRealmExp - prevCumulative);
+  const canUnlockNext = !isMax120 && currentRealmExp >= nextCumulative;
+  const khieuProgressPercent = nextNodeCost > 0 
+    ? Math.min(100, Math.floor((Math.min(nextNodeCost, currentKhieuExp) / nextNodeCost) * 100)) 
+    : 0;
 
   const getNodeElement = (idx) => {
     if (idx <= 20) return 'Kim';
