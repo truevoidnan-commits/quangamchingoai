@@ -2492,7 +2492,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             </svg>
           </div>
           
-          {/* TRUNG TÂM PHÙ ĐIÊU THÁI CỰC SINH TỬ & SEGMENTED TOGGLE (2 THÀNH PHẦN TÁCH BIỆT, SIÊU GỌN — 100% KHÔNG ĐÈ TINH ĐỒ) */}
+          {/* TRUNG TÂM PHÙ ĐIÊU THỦY TINH TINH THỂ (CHỈ HIỆN CỰC CẢNH KHI MỞ KHIẾU 121, BÌNH THƯỜNG LÀ TRÚC CƠ TINH ĐỒ) */}
           <div style={{
             position: 'absolute',
             top: 6,
@@ -2506,129 +2506,139 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             pointerEvents: 'auto',
             userSelect: 'none'
           }}>
-            {/* Quầng sáng mờ phía sau bảng — tạo chiều sâu huyền ảo */}
+            {/* Quầng sáng mờ pha lê phía sau bảng */}
             <div style={{
               position: 'absolute',
               top: '38%',
               left: '50%',
               width: 260,
-              height: 60,
-              background: 'radial-gradient(ellipse, rgba(255,255,255,0.18) 0%, rgba(56,189,248,0.06) 40%, transparent 70%)',
+              height: 50,
+              background: is121Unlocked
+                ? 'radial-gradient(ellipse, rgba(255,255,255,0.2) 0%, rgba(56,189,248,0.08) 40%, transparent 70%)'
+                : 'radial-gradient(ellipse, rgba(56,189,248,0.18) 0%, rgba(34,195,240,0.05) 40%, transparent 70%)',
               filter: 'blur(8px)',
               zIndex: -1,
-              animation: 'halo-pulse 4.5s ease-in-out infinite'
+              animation: is121Unlocked ? 'halo-pulse 4.5s ease-in-out infinite' : undefined
             }} />
 
-            {/* Hạt ngọc tinh anh trên đỉnh bảng */}
-            <div style={{
-              width: 4,
-              height: 4,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #ffffff, #94a3b8)',
-              boxShadow: '0 0 6px rgba(255,255,255,0.8)',
-              marginBottom: -2
-            }} />
-
-            {/* 1. BẢNG PHÙ ĐIÊU CHẠM KHẮC ĐÁ 3 LỚP (RIÊNG BIỆT, GỌN GÀNG, SẮC NÉT) */}
+            {/* 1. BẢNG TÊN THỦY TINH PHA LÊ (GLASSMORPHISM CELESTIAL CRYSTAL) */}
             <div style={{
               position: 'relative',
-              padding: '6px 28px',
-              background: 'linear-gradient(180deg, rgba(30,41,59,0.98) 0%, rgba(2,6,23,0.99) 55%, rgba(15,23,42,0.98) 100%)',
-              border: '1.4px solid rgba(255,255,255,0.65)',
-              borderRadius: 3,
-              animation: 'taicuc-breathe 4.5s ease-in-out infinite',
-              backdropFilter: 'blur(16px)',
-              boxSizing: 'border-box'
+              padding: '5px 22px',
+              borderRadius: '8px',
+              background: is121Unlocked
+                ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(15, 23, 42, 0.8) 50%, rgba(2, 6, 23, 0.9) 100%)'
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(8, 18, 36, 0.8) 50%, rgba(2, 6, 23, 0.9) 100%)',
+              border: is121Unlocked
+                ? '1.2px solid rgba(255, 255, 255, 0.65)'
+                : '1.2px solid rgba(56, 189, 248, 0.45)',
+              boxShadow: is121Unlocked
+                ? '0 0 20px rgba(255, 255, 255, 0.28), inset 0 1px 2px rgba(255, 255, 255, 0.75), inset 0 -1px 2px rgba(0, 0, 0, 0.5), 0 6px 18px rgba(0, 0, 0, 0.85)'
+                : '0 0 14px rgba(56, 189, 248, 0.22), inset 0 1px 1.5px rgba(255, 255, 255, 0.6), inset 0 -1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px rgba(0, 0, 0, 0.75)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              animation: is121Unlocked ? 'taicuc-breathe 4.5s ease-in-out infinite' : undefined,
+              boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8
             }}>
-              {/* Viền khắc chìm thứ 2 */}
+              {/* Lớp phản chiếu ánh sáng bề mặt thủy tinh (Specular Glass Glint) */}
               <div style={{
                 position: 'absolute',
-                inset: 3,
-                border: '1px solid rgba(255,255,255,0.28)',
-                boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.9), inset 0 -1px 2px rgba(255,255,255,0.08)',
+                top: 0,
+                left: '10%',
+                right: '10%',
+                height: '45%',
+                borderRadius: '8px 8px 0 0',
+                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.0) 100%)',
                 pointerEvents: 'none'
               }} />
 
-              {/* Đường viền mảnh thứ 3 */}
-              <div style={{
-                position: 'absolute',
-                inset: 5,
-                border: '0.8px solid rgba(255,255,255,0.14)',
-                pointerEvents: 'none'
-              }} />
+              {/* NỘI DUNG THAY ĐỔI THEO TRẠNG THÁI: CỰC CẢNH (KHIẾU 121) VS BÌNH THƯỜNG */}
+              {is121Unlocked ? (
+                <>
+                  {/* Trạng thái CỰC CẢNH SINH TỬ: Icon Thái Cực xoay tròn 2 bên */}
+                  <div style={{ animation: 'taicuc-spin 9s linear infinite', display: 'flex', alignItems: 'center' }}>
+                    <TaiCucIcon size={13} />
+                  </div>
 
-              {/* Gờ nổi ngang trên & dưới */}
-              <div style={{
-                position: 'absolute', top: 3, left: 12, right: 12, height: 1,
-                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5) 20%, rgba(255,255,255,0.5) 80%, transparent)'
-              }} />
-              <div style={{
-                position: 'absolute', bottom: 3, left: 12, right: 12, height: 1,
-                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5) 20%, rgba(255,255,255,0.5) 80%, transparent)'
-              }} />
+                  <span style={{
+                    fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
+                    fontSize: 11.5,
+                    fontWeight: 900,
+                    letterSpacing: 2.6,
+                    color: '#ffffff',
+                    textShadow: '0 0 12px rgba(255,255,255,0.95), 0 0 22px rgba(255,255,255,0.5), 0 1px 3px #000000',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    CỰC CẢNH SINH TỬ
+                  </span>
 
-              {/* 4 GÓC KHUNG CHỮ L CHẠM ĐÍNH KIM CƯƠNG */}
-              {[
-                { top: -4, left: -4, rotate: 0 },
-                { top: -4, right: -4, rotate: 90 },
-                { bottom: -4, right: -4, rotate: 180 },
-                { bottom: -4, left: -4, rotate: 270 },
-              ].map((pos, i) => (
-                <svg key={i} width="18" height="18" viewBox="0 0 24 24" style={{
-                  position: 'absolute',
-                  ...pos,
-                  transform: `rotate(${pos.rotate}deg)`,
-                  pointerEvents: 'none'
-                }}>
-                  <path d="M2 18 V6 Q2 2 6 2 H18" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1.8" strokeLinecap="square" />
-                  <path d="M5 18 V8 Q5 5 8 5 H18" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.8" />
-                  <rect x="0" y="16" width="3" height="3" transform="rotate(45 1.5 17.5)" fill="rgba(255,255,255,0.95)" />
-                </svg>
-              ))}
+                  <div style={{ animation: 'taicuc-spin-rev 9s linear infinite', display: 'flex', alignItems: 'center' }}>
+                    <TaiCucIcon size={13} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Trạng thái BÌNH THƯỜNG: Trúc Cơ Tinh Đồ Thủy Tinh Thanh Nhã */}
+                  <span style={{ 
+                    fontSize: 9, 
+                    color: '#38bdf8', 
+                    textShadow: '0 0 6px #38bdf8', 
+                    lineHeight: 1 
+                  }}>
+                    ✦
+                  </span>
 
-              {/* Nội dung: icon Thái Cực xoay + Chữ Cinzel 3D + icon Thái Cực xoay ngược chiều */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                <div style={{ animation: 'taicuc-spin 9s linear infinite' }}>
-                  <TaiCucIcon size={12} />
-                </div>
-                <span style={{
-                  fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
-                  fontSize: 11.5,
-                  fontWeight: 900,
-                  letterSpacing: 2.6,
-                  color: '#ffffff',
-                  textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.4), 0 1px 3px #000000',
-                  whiteSpace: 'nowrap'
-                }}>
-                  CỰC CẢNH SINH TỬ
-                </span>
-                <div style={{ animation: 'taicuc-spin-rev 9s linear infinite' }}>
-                  <TaiCucIcon size={12} />
-                </div>
-              </div>
+                  <span style={{
+                    fontFamily: 'var(--font-serif, "Cinzel", "Times New Roman", serif)',
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                    letterSpacing: 2.2,
+                    color: '#e0f2fe',
+                    textShadow: '0 0 10px rgba(56, 189, 248, 0.75), 0 1px 3px rgba(0,0,0,0.9)',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    TRÚC CƠ TINH ĐỒ
+                  </span>
+
+                  <span style={{ 
+                    fontSize: 9, 
+                    color: '#38bdf8', 
+                    textShadow: '0 0 6px #38bdf8', 
+                    lineHeight: 1 
+                  }}>
+                    ✦
+                  </span>
+                </>
+              )}
             </div>
 
-            {/* 2. NÚT CHUYỂN ĐỔI CHẾ ĐỘ SEGMENTED TOGGLE (RIÊNG BIỆT, SIÊU COMPACT H=20PX) */}
+            {/* 2. SEGMENTED TOGGLE THỦY TINH TRONG SUỐT (FROSTED GLASS SLIDER) */}
             <div style={{
               position: 'relative',
               display: 'flex',
-              background: 'rgba(2,6,23,0.92)',
-              border: '1px solid rgba(255,255,255,0.4)',
-              borderRadius: 11,
+              background: 'rgba(8, 18, 36, 0.75)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: 12,
               padding: '1.5px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.8)'
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.35)'
             }}>
-              {/* Thanh trượt ngọc sáng */}
+              {/* Thanh trượt pha lê thủy tinh */}
               <div className="segtoggle-slider" style={{
                 position: 'absolute',
                 top: 1.5,
                 bottom: 1.5,
                 left: 1.5,
                 width: 54,
-                borderRadius: 9,
-                background: 'linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%)',
+                borderRadius: 10,
+                background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(203,213,225,0.9) 100%)',
                 transform: isTuTuong ? 'translateX(0)' : 'translateX(54px)',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.6)'
+                boxShadow: '0 1px 4px rgba(0,0,0,0.5), inset 0 1px 1px #ffffff'
               }} />
 
               <button
@@ -2640,7 +2650,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   padding: '2px 0',
                   border: 'none',
                   background: 'transparent',
-                  borderRadius: 9,
+                  borderRadius: 10,
                   fontSize: 9.5,
                   fontWeight: 800,
                   letterSpacing: 0.4,
@@ -2661,7 +2671,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   padding: '2px 0',
                   border: 'none',
                   background: 'transparent',
-                  borderRadius: 9,
+                  borderRadius: 10,
                   fontSize: 9.5,
                   fontWeight: 800,
                   letterSpacing: 0.4,
