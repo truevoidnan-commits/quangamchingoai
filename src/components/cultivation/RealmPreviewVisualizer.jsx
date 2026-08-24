@@ -3996,18 +3996,16 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   </linearGradient>
 
                   <filter id="godEyeGlow">
-                    <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                    <feGaussianBlur stdDeviation="2" result="coloredBlur" />
                     <feMerge>
                       <feMergeNode in="coloredBlur" />
                       <feMergeNode in="SourceGraphic" />
                     </feMerge>
                   </filter>
 
-                  <filter id="coreSuperBloom" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="8" result="blur1" />
-                    <feGaussianBlur stdDeviation="18" result="blur2" />
+                  <filter id="coreSuperBloom" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur1" />
                     <feMerge>
-                      <feMergeNode in="blur2" />
                       <feMergeNode in="blur1" />
                       <feMergeNode in="SourceGraphic" />
                     </feMerge>
@@ -4065,12 +4063,11 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     cy={centerCanvasY}
                     r="125"
                     fill="url(#divineSupernovaGrad)"
-                    filter="url(#coreSuperBloom)"
-                    style={{ animation: 'pulseCore 2.6s ease-in-out infinite alternate' }}
+                    style={{ animation: 'pulseCore 3s ease-in-out infinite alternate', willChange: 'opacity' }}
                   />
 
                   {/* 3. HỆ THỐNG VÀNH TRẬN ĐỒ HOÀNG KIM + 8 LINH CHÂU VỆ TINH (XOAY THEO CHIỀU KIM ĐỒNG HỒ 60s) */}
-                  <g style={{ transformOrigin: `${centerCanvasX}px ${centerCanvasY}px`, animation: 'celestialRotate 60s linear infinite' }}>
+                  <g style={{ transformOrigin: `${centerCanvasX}px ${centerCanvasY}px`, animation: 'celestialRotate 60s linear infinite', willChange: 'transform' }}>
                     {/* Vành 1: Rãnh kép chỉ vàng nội vi (R = 56px & R = 53px) */}
                     <circle 
                       cx={centerCanvasX} 
@@ -4292,34 +4289,35 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     </linearGradient>
                   </defs>
 
-                  {/* Keyframes CSS */}
+                  {/* Keyframes CSS Tối Ưu Hardware Acceleration */}
                   <style>{`
-                    @keyframes floatY { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-5px); } }
-                    @keyframes auraPulse { 0%, 100% { opacity: 0.32; } 50% { opacity: 0.65; } }
-                    @keyframes shimmerMove { 0% { transform: translateX(-120px); opacity: 0; } 15% { opacity: 0.85; } 85% { opacity: 0.85; } 100% { transform: translateX(120px); opacity: 0; } }
-                    @keyframes orbBreathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
-                    @keyframes orbSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-                    @keyframes orbImageTremble {
-                      0%   { transform: scale(1)     rotate(0deg)    translate(0px, 0px); }
-                      22%  { transform: scale(1.02)  rotate(0.6deg)  translate(0.4px, -0.3px); }
-                      46%  { transform: scale(0.99)  rotate(-0.5deg) translate(-0.3px, 0.2px); }
-                      70%  { transform: scale(1.015) rotate(0.4deg)  translate(0.3px, 0.3px); }
-                      100% { transform: scale(1)     rotate(0deg)    translate(0px, 0px); }
+                    @keyframes floatY {
+                      0%, 100% { transform: translate3d(0, 0px, 0); }
+                      50% { transform: translate3d(0, -4px, 0); }
+                    }
+                    @keyframes auraPulse {
+                      0%, 100% { opacity: 0.35; }
+                      50% { opacity: 0.65; }
+                    }
+                    @keyframes orbBreathe {
+                      0%, 100% { transform: scale(1); }
+                      50% { transform: scale(1.03); }
                     }
                     .palace-shrine-floating { 
-                      animation: floatY 5s ease-in-out infinite; 
+                      animation: floatY 4.5s ease-in-out infinite; 
                       transform-origin: 0 0;
+                      will-change: transform;
                     }
-                    .aura-pulse-anim { animation: auraPulse 2.4s ease-in-out infinite; transform-origin: center; }
-                    .shimmer-sweep-anim { animation: shimmerMove 3.2s linear infinite; }
-                    .orb-breathe-anim { animation: orbBreathe 3.6s ease-in-out infinite; transform-origin: 0 0; }
-                    .orb-orbit-anim { animation: orbSpin 7s linear infinite; transform-origin: 0 0; }
-                    .orb-image-tremble-anim {
-                      animation-name: orbImageTremble;
-                      animation-timing-function: ease-in-out;
-                      animation-iteration-count: infinite;
-                      transform-box: fill-box;
-                      transform-origin: center;
+                    .aura-pulse-anim { animation: auraPulse 2.4s ease-in-out infinite; }
+                    .orb-breathe-anim {
+                      animation: orbBreathe 3.6s ease-in-out infinite;
+                      transform-origin: 0 0;
+                      will-change: transform;
+                    }
+                    .orb-orbit-anim {
+                      animation: orbSpin 8s linear infinite;
+                      transform-origin: 0 0;
+                      will-change: transform;
                     }
                   `}</style>
 
@@ -4531,11 +4529,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                     const sphereGradId = `orbSphere3D-${i}`;
                     const clipId = `orbClip3D-${i}`;
-                    const rippleId = `orbRipple3D-${i}`;
-
-                    const rippleDur = 3.2 + (i % 4) * 0.45;
-                    const trembleDur = 2.5 + (i % 3) * 0.5;
-                    const trembleDelay = i * 0.22;
                     const highlight = isRealized ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.12)';
 
                     // Bảng tên chiều rộng tương ứng từng vành
@@ -4595,7 +4588,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                         style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
                       >
                         {/* Thẻ con bọc hiệu ứng bay bổng độc lập */}
-                        <g className="palace-shrine-floating" style={{ animationDelay: `${i * 0.35}s` }}>
+                        <g className="palace-shrine-floating" style={{ animationDelay: `${(i * 0.35) % 3}s` }}>
                           <defs>
                             <radialGradient id={sphereGradId} cx="32%" cy="28%" r="72%">
                               <stop offset="0%" stopColor="#ffffff" />
@@ -4608,32 +4601,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             <clipPath id={clipId}>
                               <circle r={r} />
                             </clipPath>
-
-                            {itemImage && (
-                              <filter id={rippleId} x="-30%" y="-30%" width="160%" height="160%">
-                                <feTurbulence
-                                  type="fractalNoise"
-                                  baseFrequency="0.95"
-                                  numOctaves="2"
-                                  seed={i * 7 + 3}
-                                  result="noise"
-                                >
-                                  <animate
-                                    attributeName="baseFrequency"
-                                    values="0.92;1.02;0.92"
-                                    dur={`${rippleDur}s`}
-                                    repeatCount="indefinite"
-                                  />
-                                </feTurbulence>
-                                <feDisplacementMap
-                                  in="SourceGraphic"
-                                  in2="noise"
-                                  scale={isRealized ? 2.2 : 0.8}
-                                  xChannelSelector="R"
-                                  yChannelSelector="G"
-                                />
-                              </filter>
-                            )}
                           </defs>
 
                           {/* 0. Quầng Hào Quang Nền Dưới Chân Điện */}
@@ -4644,7 +4611,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             ry={20 * scale}
                             fill={cfg.primary}
                             opacity={isRealized ? 0.12 : 0.03}
-                            filter="url(#palaceSoftBlur)"
                           />
                           <ellipse
                             cx="0"
@@ -4653,7 +4619,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             ry={15 * scale}
                             fill={cfg.primary}
                             opacity={isRealized ? 0.32 : 0.08}
-                            filter="url(#palaceSoftBlur)"
                             className={pulse ? "aura-pulse-anim" : ""}
                           />
 
@@ -4665,7 +4630,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                               stroke={cfg.primary}
                               strokeWidth="1.6"
                               strokeOpacity={isRealized ? 0.9 : 0.3}
-                              filter="url(#palaceSoftBlur)"
                             />
                             <path
                               d="M -48 19 Q -32 13 -16 19 T 16 19 T 48 19"
@@ -4694,8 +4658,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             <g transform={`translate(0, ${orbCenterY})`}>
                               <g className={isRealized ? "orb-breathe-anim" : ""}>
                                 {/* A. Hào quang tỏa tròn 2 lớp */}
-                                <circle r={r * 2.0} fill={cfg.primary} opacity={0.35 * dim} filter="url(#palaceSoftBlur)" />
-                                <circle r={r * 1.4} fill={cfg.starGlow} opacity={0.48 * dim} filter="url(#palaceSoftBlur)" />
+                                <circle r={r * 1.8} fill={cfg.primary} opacity={0.25 * dim} />
+                                <circle r={r * 1.3} fill={cfg.starGlow} opacity={0.35 * dim} />
 
                                 {/* B. Vành đai thiên thể năng lượng */}
                                 {isRealized && (
@@ -4717,7 +4681,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                 {/* C. Quỹ đạo hạt tinh linh bay quanh */}
                                 {isRealized && (
                                   <g className="orb-orbit-anim">
-                                    <circle cx={r * 1.65} cy="0" r="1.6" fill={cfg.starGlow} filter="url(#glassGlow)" />
+                                    <circle cx={r * 1.65} cy="0" r="1.6" fill={cfg.starGlow} />
                                     <circle cx={-r * 1.65} cy="0" r="1.2" fill="#ffffff" opacity="0.95" />
                                   </g>
                                 )}
@@ -4729,7 +4693,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                   stroke={cfg.border}
                                   strokeWidth="1.4"
                                   opacity={Math.max(dim, 0.7)}
-                                  filter="drop-shadow(0 0 8px rgba(0,0,0,0.85))"
                                 />
 
                                 {/* E. BÊN TRONG KIM ĐAN: HIỂN THỊ ẢNH GEN AI HOẶC BIỂU TƯỢNG VẬT TRẤN ÁP */}
@@ -4737,9 +4700,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                   <g
                                     clipPath={`url(#${clipId})`}
                                     opacity={isRealized ? 0.96 : 0.6}
-                                    filter={`url(#${rippleId})`}
-                                    className="orb-image-tremble-anim"
-                                    style={{ animationDuration: `${trembleDur}s`, animationDelay: `${trembleDelay}s` }}
                                   >
                                     <image
                                       href={itemImage}
