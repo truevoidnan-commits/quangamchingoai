@@ -190,7 +190,7 @@ export default function CultivationWorkspace() {
                 transition: 'all 0.2s ease',
                 whiteSpace: 'nowrap'
               }}
-              title="Mở Tàng Bảo Điện trưng bày toàn cảnh 72 Mệnh Đăng & 13 Thiên Cung"
+              title="Mở Tàng Bảo Điện trưng bày toàn cảnh Mệnh Đăng & 13 Thiên Cung"
             >
               <span>🏛️ Điện</span>
             </button>

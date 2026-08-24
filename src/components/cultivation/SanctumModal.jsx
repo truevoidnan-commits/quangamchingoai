@@ -91,7 +91,7 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
                 TÀNG BẢO ĐIỆN · TIÊN GIA BẢO KHỐ
               </h2>
               <div style={{ fontSize: 11.5, color: 'var(--text-sub)', marginTop: 2 }}>
-                Không gian chuyên biệt quản lý 72 Mệnh Đăng, Bảo Vật Trấn Áp Thiên Cung & Túi Trữ Vật
+                Không gian chuyên biệt quản lý Mệnh Đăng, Bảo Vật Trấn Áp Thiên Cung & Túi Trữ Vật
               </div>
             </div>
           </div>

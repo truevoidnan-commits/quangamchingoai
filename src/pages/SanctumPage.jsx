@@ -370,7 +370,7 @@ export default function SanctumPage() {
             transition: 'all 0.2s ease'
           }}
         >
-          <span>🏮 TẾ ĐÀN 72 MỆNH ĐĂNG</span>
+          <span>🏮 TẾ ĐÀN MỆNH ĐĂNG</span>
         </button>
 
         <button

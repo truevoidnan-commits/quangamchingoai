@@ -598,7 +598,7 @@ export default function CultivationModal({ isOpen, onClose }) {
               <div className={styles.lampHeroGlow} />
               <div className={styles.lampHeroTop}>
                 <div>
-                  <h3 className={styles.cardHeader}>Bách Khoa 72 Mệnh Đăng · Thu Thập & Tiên Tinh</h3>
+                  <h3 className={styles.cardHeader}>Bách Khoa Mệnh Đăng · Thu Thập & Tiên Tinh</h3>
                   <p className={styles.subtext}>
                     • Đã Hấp Thụ: <strong>{absorbedCount}/5 Mệnh Đăng</strong> (Tối đa 5 Đèn, không thể hoàn trả).
                     <br />
@@ -1199,7 +1199,7 @@ export default function CultivationModal({ isOpen, onClose }) {
             </div>
 
             <div className={styles.ruleCard}>
-              <h4>4. Hệ Thống 72 Mệnh Đăng & 96 Vật Trấn Áp</h4>
+              <h4>4. Hệ Thống Mệnh Đăng & Vật Trấn Áp</h4>
               <p>• <strong>Phân Cấp Phẩm</strong>: <strong>Hạ Phẩm</strong> (Trắng) · <strong>Trung Phẩm</strong> (Xanh Lá) · <strong>Thượng Phẩm</strong> (Xanh Lam) · <strong>Cực Phẩm</strong> (Tím) · <strong>Tiên Phẩm</strong> (Kim Sắc) · <strong>Thần Phẩm</strong> (Đỏ Thần Thánh).</p>
               <p>• <strong>Tỉ lệ rơi</strong>: Cơ duyên nhặt được Mệnh Đăng (~15%) và Vật Trấn Áp (~20%) khi ngộ đạo 60s.</p>
               <p>• <strong>Tỉ Lệ Tiên Tinh</strong>: 1 Tu Vi = 5 Tiên Tinh. Có thể bán đèn / trấn vật không dùng để tích lũy Tiên Tinh mua bảo vật cấp cao!</p>
@@ -1330,7 +1330,7 @@ export default function CultivationModal({ isOpen, onClose }) {
             <span>💀 NGHỊCH THIÊN HÓA PHÀM · TẢN ĐI TU VI</span>
           </div>
           <p className={styles.dangerZoneDesc}>
-            Tản đi toàn bộ tu vi hiện có, tán sạch toàn bộ 72 Mệnh Đăng và 96 Vật Trấn Áp đã thu thập và khảm nạm để hóa phàm trùng tu đạo lộ lại từ đầu.
+            Tản đi toàn bộ tu vi hiện có, tán sạch toàn bộ Mệnh Đăng và Vật Trấn Áp đã thu thập và khảm nạm để hóa phàm trùng tu đạo lộ lại từ đầu.
           </p>
           <button
             className={styles.resetCultivationBtn}
