@@ -3807,9 +3807,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           };
 
           const canvasWidth = isMobile ? 720 : 1280;
-          const canvasHeight = isMobile ? 1120 : 870;
+          const canvasHeight = isMobile ? 1280 : 870;
           const centerCanvasX = isMobile ? 360 : 646;
-          const centerCanvasY = isMobile ? 560 : 444;
+          const centerCanvasY = isMobile ? 640 : 444;
           const totalPalaces = maxThienCung;
 
           const palaceCoordinates = (() => {
@@ -3830,19 +3830,19 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             ];
 
             const mobile13Positions = [
-              { id: 'van_menh_hu_vo',      x: 360, y: 130, isTop: true, scale: 1.25, nw: 180 },
-              { id: 'dai_dao_tieu_dao',    x: 160, y: 260, scale: 1.16, nw: 165 },
-              { id: 'to_long_than_cung',   x: 240, y: 395, scale: 1.15, nw: 160 },
-              { id: 'hu_vo_ban_nguyen',    x: 560, y: 260, scale: 1.16, nw: 165 },
-              { id: 'tuc_menh_nhan_qua',   x: 480, y: 395, scale: 1.15, nw: 160 },
-              { id: 'phat_thien_kiem',     x: 145, y: 560, scale: 1.18, nw: 165 },
-              { id: 'hong_mong_bat_diet',  x: 575, y: 560, scale: 1.18, nw: 165 },
-              { id: 'luan_hoi_ban',        x: 240, y: 735, scale: 1.15, nw: 160 },
-              { id: 'ngoc_diep',           x: 480, y: 735, scale: 1.15, nw: 160 },
-              { id: 'hon_don_so_khai',    x: 160, y: 870, scale: 1.16, nw: 165 },
-              { id: 'khoi_nguyen_thoi_khong', x: 560, y: 870, scale: 1.16, nw: 165 },
-              { id: 'sang_the_quang',      x: 240, y: 1005, scale: 1.18, nw: 165 },
-              { id: 'cuu_chuyen_luan_hoi', x: 480, y: 1005, scale: 1.18, nw: 165 },
+              { id: 'van_menh_hu_vo',      x: 360, y: 115, isTop: true, scale: 1.15, nw: 180 },
+              { id: 'dai_dao_tieu_dao',    x: 150, y: 245, scale: 1.05, nw: 165 },
+              { id: 'to_long_than_cung',   x: 220, y: 420, scale: 1.05, nw: 160 },
+              { id: 'hu_vo_ban_nguyen',    x: 570, y: 245, scale: 1.05, nw: 165 },
+              { id: 'tuc_menh_nhan_qua',   x: 500, y: 420, scale: 1.05, nw: 160 },
+              { id: 'phat_thien_kiem',     x: 130, y: 640, scale: 1.08, nw: 165 },
+              { id: 'hong_mong_bat_diet',  x: 590, y: 640, scale: 1.08, nw: 165 },
+              { id: 'luan_hoi_ban',        x: 220, y: 860, scale: 1.05, nw: 160 },
+              { id: 'ngoc_diep',           x: 500, y: 860, scale: 1.05, nw: 160 },
+              { id: 'hon_don_so_khai',    x: 150, y: 1035, scale: 1.05, nw: 165 },
+              { id: 'khoi_nguyen_thoi_khong', x: 570, y: 1035, scale: 1.05, nw: 165 },
+              { id: 'sang_the_quang',      x: 240, y: 1195, scale: 1.05, nw: 165 },
+              { id: 'cuu_chuyen_luan_hoi', x: 480, y: 1195, scale: 1.05, nw: 165 },
             ];
 
             const standardList = isMobile ? mobile13Positions : desktop13Positions;
@@ -3900,7 +3900,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               padding: 0
             }}>
               <svg
-                viewBox={isMobile ? "0 0 720 1120" : "0 0 1280 870"}
+                viewBox={isMobile ? "0 0 720 1280" : "0 0 1280 870"}
                 preserveAspectRatio="xMidYMid meet"
                 style={{
                   position: 'absolute',
@@ -4927,72 +4927,68 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                           </g>
 
                           {/* 4. BẢNG TÊN NGỌC BÍCH LAM THỦY TINH THẦN PHẨM RỘNG RÃI */}
-                          <g transform={`translate(0, ${33 * scale})`}>
-                            {/* Khung nền ngọc bích lam thủy tinh cao cấp */}
+                          {/* 4. BIỂN NGẠCH TIÊN CUNG CỔ ĐIỆN ĐỈNH CAO (ANCIENT XIANXIA PLAQUE) */}
+                          <g transform={`translate(0, ${27 * scale})`}>
+                            {/* Nền bảng biển ngạch gỗ mun / ngọc huyền vũ đen nhung viền phẩm cấp */}
                             <rect
                               x={-halfNw}
-                              y="-14"
+                              y="-12"
                               width={nw}
-                              height="28"
-                              rx="6"
-                              fill="url(#azureGlassGrad)"
-                              stroke="rgba(56, 189, 248, 0.92)"
-                              strokeWidth={isRealized ? "1.8" : "1.2"}
-                              filter="url(#azureGlassShadow)"
+                              height="24"
+                              rx="3"
+                              fill="rgba(6, 10, 18, 0.94)"
+                              stroke={isRealized ? cfg.border : "rgba(100, 116, 139, 0.6)"}
+                              strokeWidth={isRealized ? "1.3" : "0.9"}
+                              strokeOpacity={isRealized ? "0.95" : "0.5"}
                             />
 
-                            {/* Vệt phản quang thủy tinh vòm trên (Specular Glass Highlight) */}
-                            <path
-                              d={`M ${-halfNw + 3} -14 L ${halfNw - 3} -14 L ${halfNw - 8} -2 L ${-halfNw + 8} -2 Z`}
-                              fill="rgba(255, 255, 255, 0.18)"
-                            />
-
-                            {/* Viền chỉ lam ngọc song tầng bên trong */}
+                            {/* Viền chỉ vàng / hào quang phẩm cấp bên trong */}
                             <rect
-                              x={-halfNw + 4}
-                              y="-10.5"
-                              width={nw - 8}
-                              height="21"
-                              rx="4"
+                              x={-halfNw + 3}
+                              y="-9"
+                              width={nw - 6}
+                              height="18"
+                              rx="2"
                               fill="none"
-                              stroke="rgba(125, 211, 252, 0.5)"
-                              strokeWidth="0.9"
+                              stroke={cfg.primary}
+                              strokeWidth="0.8"
+                              strokeOpacity={isRealized ? "0.65" : "0.25"}
                             />
 
-                            {/* 4 Góc Bảo Thạch Lam Băng Mạ Bạc */}
+                            {/* 4 Góc Phù Điêu Hoa Văn Cổ Thạch / Mạ Vàng */}
                             {isRealized && (
-                              <g stroke="#38bdf8" strokeWidth="1.4" fill="none">
-                                <path d={`M ${-halfNw + 7} -14 L ${-halfNw + 1} -14 L ${-halfNw + 1} -8`} />
-                                <path d={`M ${halfNw - 7} -14 L ${halfNw - 1} -14 L ${halfNw - 1} -8`} />
-                                <path d={`M ${-halfNw + 7} 14 L ${-halfNw + 1} 14 L ${-halfNw + 1} 8`} />
-                                <path d={`M ${halfNw - 7} 14 L ${halfNw - 1} 14 L ${halfNw - 1} 8`} />
+                              <g stroke={cfg.border} strokeWidth="1.1" fill="none">
+                                <path d={`M ${-halfNw + 6} -12 L ${-halfNw + 1} -12 L ${-halfNw + 1} -7`} />
+                                <path d={`M ${halfNw - 6} -12 L ${halfNw - 1} -12 L ${halfNw - 1} -7`} />
+                                <path d={`M ${-halfNw + 6} 12 L ${-halfNw + 1} 12 L ${-halfNw + 1} 7`} />
+                                <path d={`M ${halfNw - 6} 12 L ${halfNw - 1} 12 L ${halfNw - 1} 7`} />
                               </g>
                             )}
 
-                            {/* Đính Lam Tinh Thần Châu 2 đầu phát sáng */}
+                            {/* Đính Linh Thạch / Hạt Ngọc Phẩm Cấp 2 đầu */}
                             {isRealized && (
                               <g>
-                                <circle cx={-halfNw + 11} cy="0" r="2.5" fill="#38bdf8" stroke="#ffffff" strokeWidth="0.8" style={{ filter: 'drop-shadow(0 0 5px #38bdf8)' }} />
-                                <circle cx={halfNw - 11} cy="0" r="2.5" fill="#38bdf8" stroke="#ffffff" strokeWidth="0.8" style={{ filter: 'drop-shadow(0 0 5px #38bdf8)' }} />
+                                <circle cx={-halfNw + 8} cy="0" r="1.8" fill={cfg.starGlow} />
+                                <circle cx={halfNw - 8} cy="0" r="1.8" fill={cfg.starGlow} />
                               </g>
                             )}
 
-                            {/* Tên Cung Điện Thần Uy Tuyệt Sắc */}
+                            {/* Tên Cung Điện Thư Pháp Hoàng Kim Thần Uy */}
                             <text
                               x="0"
-                              y="1.2"
+                              y="0.8"
                               textAnchor="middle"
                               dominantBaseline="central"
-                              textLength={nw - 36}
+                              textLength={nw - 30}
                               lengthAdjust="spacingAndGlyphs"
-                              fontSize={nw < 200 ? "11.2" : "12.5"}
+                              fontSize={nw < 200 ? "11.5" : "12.8"}
                               fontWeight="900"
-                              fill={isRealized ? "#ffffff" : "#94a3b8"}
+                              fill={isRealized ? (cfg.nameColor || "#fde047") : "#94a3b8"}
                               letterSpacing="0.4"
                               style={{
                                 fontFamily: 'var(--font-serif)',
                                 filter: isRealized 
-                                  ? 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.95)) drop-shadow(0 2px 4px rgba(0,0,0,0.95))' 
+                                  ? `drop-shadow(0 0 5px ${cfg.starGlow}) drop-shadow(0 1px 2px rgba(0,0,0,0.95))` 
                                   : 'none',
                               }}
                             >
