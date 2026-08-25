@@ -50,13 +50,12 @@ export const LAMP_THAN_PHAM_AI_ICONS = {
   bat_hu_thoi_khong:           baseUrl + 'icons/than_pham/lamp_khoi_nguyen_thoi_khong.jpg',
   van_gioi_quy_nhat:            baseUrl + 'icons/than_pham/lamp_van_gioi_quy_nhat.jpg',
   toi_cao_thien_menh:          baseUrl + 'icons/than_pham/lamp_toi_cao_thien_menh.jpg',
-  dai_dao_vo_cuc:              baseUrl + 'icons/than_pham/lamp_tuc_menh_nhan_qua.jpg',
-  nguyen_thuy_thien_ma:         baseUrl + 'icons/than_pham/lamp_chu_thien_tich_diet.jpg',
-  cuu_khieu_linh_lung:          baseUrl + 'icons/than_pham/lamp_bat_diet_than_quyen.jpg',
-  thien_dao_chi_ton:            baseUrl + 'icons/than_pham/lamp_thai_co_trong_dong_hoang.jpg',
-  nguyen_gioi_hon_co:           baseUrl + 'icons/than_pham/lamp_dai_hong_thoi_quang.jpg',
-  cam_ky_cuc_dao:               baseUrl + 'icons/than_pham/lamp_than_linh_tan_dien.jpg',
-  dao_tam_chung_ma:             baseUrl + 'icons/than_pham/lamp_cuc_canh_nghich_menh.jpg',
+  nguyen_thuy_thien_ma:         baseUrl + 'icons/than_pham/lamp_nguyen_thuy_thien_ma.jpg',
+  cuu_khieu_linh_lung:          baseUrl + 'icons/than_pham/lamp_cuu_khieu_linh_lung.jpg',
+  thien_dao_chi_ton:            baseUrl + 'icons/than_pham/lamp_thien_dao_chi_ton.jpg',
+  nguyen_gioi_hon_co:           baseUrl + 'icons/than_pham/lamp_nguyen_gioi_hon_co.jpg',
+  cam_ky_cuc_dao:               baseUrl + 'icons/than_pham/lamp_cam_ky_cuc_dao.jpg',
+  dao_tam_chung_ma:             baseUrl + 'icons/than_pham/lamp_dao_tam_chung_ma.jpg',
 };
 
 /**
