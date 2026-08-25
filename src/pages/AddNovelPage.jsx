@@ -3,83 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { nanoid } from '../lib/nanoid';
 import { saveNovel, saveChaptersBulk } from '../lib/db';
 import { addToLibrary } from '../lib/storage';
-import { parseNovelFile, resizeCoverImage } from '../lib/chapterParser';
+import { parseNovelFile, resizeCoverImage, analyzeChapterSequence } from '../lib/chapterParser';
 import Footer from '../components/layout/Footer';
 import styles from './AddNovelPage.module.css';
 
-/**
- * Kiểm tra mạch số thứ tự chương: phát hiện nhảy số (+2, +3...), trùng số hoặc lùi số (-1, -2...)
- */
-export function analyzeChapterSequence(chapters) {
-  if (!chapters || chapters.length < 2) return { anomalies: [], isPerfect: true };
-
-  const anomalies = [];
-  let prevNum = null;
-  let prevTitle = '';
-
-  for (let i = 0; i < chapters.length; i++) {
-    const ch = chapters[i];
-    if (ch.isExtra) continue;
-
-    const m = ch.title.match(/(?:chương|chuong|chapter|chap|đệ|thu)\s+(\d+)/i) || ch.title.match(/^(\d+)\b/);
-    if (!m) continue;
-
-    const currentNum = parseInt(m[1], 10);
-    if (isNaN(currentNum)) continue;
-
-    if (prevNum !== null) {
-      const diff = currentNum - prevNum;
-      if (diff !== 1) {
-        if (diff > 1) {
-          const missingCount = diff - 1;
-          const missingText = diff === 2 ? `Chương ${prevNum + 1}` : `Chương ${prevNum + 1} ➔ Chương ${currentNum - 1}`;
-          anomalies.push({
-            type: 'jump_forward',
-            fromNum: prevNum,
-            toNum: currentNum,
-            fromTitle: prevTitle,
-            toTitle: ch.title,
-            diff,
-            index: i + 1,
-            missingCount,
-            missingText,
-            message: `Chương ${prevNum} ➔ Chương ${currentNum} (Nhảy +${diff} số, nghi vấn thiếu ${missingCount} chương: ${missingText})`,
-          });
-        } else if (diff === 0) {
-          anomalies.push({
-            type: 'duplicate',
-            fromNum: prevNum,
-            toNum: currentNum,
-            fromTitle: prevTitle,
-            toTitle: ch.title,
-            diff,
-            index: i + 1,
-            message: `Trùng số chương: Có 2 "Chương ${currentNum}" đứng cạnh nhau`,
-          });
-        } else {
-          anomalies.push({
-            type: 'jump_backward',
-            fromNum: prevNum,
-            toNum: currentNum,
-            fromTitle: prevTitle,
-            toTitle: ch.title,
-            diff,
-            index: i + 1,
-            message: `Lùi số chương bất thường: Chương ${prevNum} ➔ Chương ${currentNum} (giảm ${Math.abs(diff)} số)`,
-          });
-        }
-      }
-    }
-
-    prevNum = currentNum;
-    prevTitle = ch.title;
-  }
-
-  return {
-    anomalies,
-    isPerfect: anomalies.length === 0,
-  };
-}
+export { analyzeChapterSequence };
 
 export default function AddNovelPage() {
   const navigate = useNavigate();
