@@ -37,7 +37,7 @@ import {
 } from '../../lib/cultivation';
 import ArtifactIcon from './ArtifactIcon';
 import { LAMP_THAN_PHAM_AI_ICONS } from '../../lib/artifactIcons';
-import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage } from '../../lib/daoAnhData';
+import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhScale } from '../../lib/daoAnhData';
 import styles from './RealmPreviewVisualizer.module.css';
 
 /* ============================================================
@@ -5824,7 +5824,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             opacity={isReady80 ? 0.45 : (isHovered ? 0.38 : 0.22)}
                           />
 
-                          <g transform={`scale(${scale})`}>
+                          <g transform={`scale(${scale * getDaoAnhScale(daoAnhDef)})`}>
                             {/* 1. HÌNH ẢNH GEN AI ĐẠO ANH HOẶC PHÁP TƯỚNG BẢN NGUYÊN (PHÓNG TO 144x144) */}
                             <g>
                               {daoAnhDef?.image ? (
@@ -6175,7 +6175,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                           <circle r="62" fill="none" stroke={modalDaoAnhDef?.secondaryColor || modalArch.glow} strokeWidth="0.8" opacity="0.5" style={{ transformOrigin: '0 0', animation: 'haloSpinReverse 45s linear infinite', willChange: 'transform' }} />
 
                           {modalDaoAnhDef?.image ? (
-                            <g style={{ willChange: 'transform', animation: 'spiritBreathing 3.6s ease-in-out infinite alternate' }}>
+                            <g style={{ willChange: 'transform', animation: 'spiritBreathing 3.6s ease-in-out infinite alternate', transform: `scale(${getDaoAnhScale(modalDaoAnhDef)})`, transformOrigin: '0 0' }}>
                               <image
                                 href={getAssetUrl(getDaoAnhEvolutionImage(modalDaoAnhDef, curKiep))}
                                 x="-56"

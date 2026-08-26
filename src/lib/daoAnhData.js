@@ -1107,3 +1107,69 @@ export function getDaoAnhEvolutionImage(daoAnhDef, currentKiep = 0) {
   return daoAnhDef.image || '';
 }
 
+/**
+ * Danh sách ID các Đạo Ảnh có dáng nghiêng/xòe cần phóng to kích thước
+ */
+export const DAO_ANH_ENLARGED_IDS = new Set([
+  'da_van_gioi_quy_nhat',
+  'van_gioi_quy_nhat',
+  'da_khoi_nguyen_vu_tru_ban_nguyen',
+  'khoi_nguyen_vu_tru_ban_nguyen',
+  'da_cam_ky_cuc_dao',
+  'cam_ky_cuc_dao',
+  'da_dao_tam_chung_ma',
+  'dao_tam_chung_ma',
+  'da_tan_tien_phe_than',
+  'tan_tien_phe_than',
+  'da_nguyen_thuy_thai_so_ma_kinh',
+  'nguyen_thuy_thai_so_ma_kinh',
+  'da_dao_menh_thien_ma_cong',
+  'dao_menh_thien_ma_cong',
+  'da_diet_the_loi_viem_dong',
+  'diet_the_loi_viem_dong',
+  'da_tuc_menh_nhan_qua',
+  'tuc_menh_nhan_qua',
+  'da_luc_dao_luan_hoi_tien_can',
+  'luc_dao_luan_hoi_tien_can',
+  'da_tam_sinh_luan_hoi_an',
+  'tam_sinh_luan_hoi_an',
+  'da_tieu_tuc_menh_thuat',
+  'tieu_tuc_menh_thuat',
+  'da_sang_the_ban_nguyen',
+  'sang_the_ban_nguyen',
+  'da_kim_o_luyen_van_linh',
+  'kim_o_luyen_van_linh',
+  'da_khoi_nguyen_thoi_khong',
+  'khoi_nguyen_thoi_khong',
+  'da_nguyen_gioi_hon_co',
+  'nguyen_gioi_hon_co',
+  'da_ngu_hanh_dai_dong_thien',
+  'ngu_hanh_dai_dong_thien',
+  'da_can_khon_luong_nghi_ho',
+  'can_khon_luong_nghi_ho',
+  'da_nhat_khi_hoa_tam_thanh',
+  'nhat_khi_hoa_tam_thanh',
+  'da_thai_co_than_long',
+  'thai_co_than_long',
+  'da_thien_dao_chi_ton',
+  'thien_dao_chi_ton',
+  'da_tran_nguc_minh_vuong_the',
+  'tran_nguc_minh_vuong_the',
+  'da_vo_thuy_vo_chung_vo_vi_than',
+  'vo_thuy_vo_chung_vo_vi_than',
+]);
+
+/**
+ * Lấy tỉ lệ phóng to (scale factor) của Đạo Ảnh
+ */
+export function getDaoAnhScale(daoAnhDef) {
+  if (!daoAnhDef) return 1;
+  if (typeof daoAnhDef.avatarScale === 'number') return daoAnhDef.avatarScale;
+  const id = daoAnhDef.id || '';
+  const sourceId = daoAnhDef.sourceId || '';
+  if (DAO_ANH_ENLARGED_IDS.has(id) || DAO_ANH_ENLARGED_IDS.has(sourceId)) {
+    return 1.32; // Tăng ~32% kích thước
+  }
+  return 1;
+}
+

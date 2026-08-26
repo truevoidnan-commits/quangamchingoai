@@ -1,5 +1,5 @@
 import React from 'react';
-import { getDaoAnhEvolutionImage } from '../../lib/daoAnhData';
+import { getDaoAnhEvolutionImage, getDaoAnhScale } from '../../lib/daoAnhData';
 
 /**
  * DAO ANH AVATAR RENDERER
@@ -123,8 +123,8 @@ export default function DaoAnhAvatarRenderer({
         {/* 2. HÌNH ẢNH ĐẠO ANH TO RÕ - TRUNG TÂM TRIỂN LÃM */}
         <div
           style={{
-            width: '92%',
-            height: '92%',
+            width: `${Math.min(132, 94 * getDaoAnhScale(daoAnh))}%`,
+            height: `${Math.min(132, 94 * getDaoAnhScale(daoAnh))}%`,
             position: 'relative',
             display: 'flex',
             alignItems: 'center',
