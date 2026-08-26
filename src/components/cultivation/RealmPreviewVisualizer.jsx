@@ -5801,8 +5801,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     return findDaoAnhDefinition(da || { palaceIndex: i }, cultivation);
                   })();
 
-                  const scale = (pos.scale || 1.0) * 1.02;
-                  const canvasScaleFactor = getDaoAnhScale(daoAnhDef) > 1 ? 1.12 : 1.0;
+                  const scale = (pos.scale || 1.0) * 1.25;
+                  const canvasScaleFactor = getDaoAnhScale(daoAnhDef) > 1 ? 1.08 : 1.0;
 
                   return (
                     <g key={`na-palace-group-${i}`}>
@@ -5818,15 +5818,15 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                           
                           <ellipse
                             cx="0"
-                            cy="24"
-                            rx={64 * scale}
-                            ry={20 * scale}
+                            cy="28"
+                            rx={74 * scale}
+                            ry={24 * scale}
                             fill={daoAnhDef?.primaryColor || arch.color}
                             opacity={isReady80 ? 0.45 : (isHovered ? 0.38 : 0.22)}
                           />
 
                           <g transform={`scale(${scale * canvasScaleFactor})`}>
-                            {/* 1. HÌNH ẢNH GEN AI ĐẠO ANH HOẶC PHÁP TƯỚNG BẢN NGUYÊN (PHÓNG TO VỪA VẶN 112x112) */}
+                            {/* 1. HÌNH ẢNH GEN AI ĐẠO ANH HOẶC PHÁP TƯỚNG BẢN NGUYÊN (PHÓNG TO 144x144) */}
                             <g>
                               {daoAnhDef?.image ? (
                                 <g style={{ willChange: 'transform' }}>
@@ -5834,7 +5834,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                   <circle
                                     cx="0"
                                     cy="0"
-                                    r="45"
+                                    r="50"
                                     fill={daoAnhDef.primaryColor || arch.color}
                                     opacity={0.26}
                                   />
@@ -5845,7 +5845,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                       <circle
                                         cx="0"
                                         cy="0"
-                                        r="53"
+                                        r="58"
                                         fill="none"
                                         stroke={daoAnhDef.primaryColor || arch.color}
                                         strokeWidth="1.2"
@@ -5857,8 +5857,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                         return (
                                           <circle
                                             key={`ai-halo-dot-${sidx}`}
-                                            cx={Math.cos(rad) * 53}
-                                            cy={Math.sin(rad) * 53}
+                                            cx={Math.cos(rad) * 58}
+                                            cy={Math.sin(rad) * 58}
                                             r="1.8"
                                             fill={daoAnhDef.secondaryColor || arch.glow || '#fde047'}
                                           />
@@ -5871,7 +5871,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                     <circle
                                       cx="0"
                                       cy="0"
-                                      r="61"
+                                      r="68"
                                       fill="none"
                                       stroke={daoAnhDef.secondaryColor || arch.glow || '#fde047'}
                                       strokeWidth="0.9"
@@ -5881,13 +5881,13 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                     />
                                   )}
 
-                                  {/* Hình ảnh Chibi Tiên Thai Gen AI Cắt Nền Trong Suốt */}
+                                  {/* Hình ảnh Chibi Tiên Thai Gen AI Cắt Nền Trong Suốt (144x144) */}
                                   <image
                                     href={getAssetUrl(getDaoAnhEvolutionImage(daoAnhDef, currentKiep))}
-                                    x="-56"
-                                    y="-60"
-                                    width="112"
-                                    height="112"
+                                    x="-72"
+                                    y="-76"
+                                    width="144"
+                                    height="144"
                                     preserveAspectRatio="xMidYMid meet"
                                     style={{
                                       filter: isReady80
@@ -5900,14 +5900,14 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                   />
                                 </g>
                               ) : (
-                                <g transform="scale(1.4)">
+                                <g transform="scale(1.5)">
                                   {renderDetailedPrimordialAvatar(arch, currentKiep, isMaxKiep, isReady80, false)}
                                 </g>
                               )}
                             </g>
 
                             {/* 2. ĐÀI LINH ẤN TIÊN HIỆP BÁT GIÁC KHẢM 5 TINH THẠCH ĐỘ KIẾP */}
-                            <g transform="translate(0, 60)">
+                            <g transform="translate(0, 72)">
                               {/* Đài Bát Giác Pha Lê Thần Tinh */}
                               <polygon
                                 points="-48,-11 48,-11 54,0 48,11 -48,11 -54,0"
