@@ -61,334 +61,70 @@ export default function DaoAnhAvatarRenderer({
         }}
       >
         <style>{`
-          @keyframes haloSpinSlow {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          @keyframes haloSpinReverse {
-            from { transform: rotate(360deg); }
-            to { transform: rotate(0deg); }
-          }
           @keyframes spiritBreathing {
-            0% { transform: scale(0.97); opacity: 0.88; }
-            100% { transform: scale(1.03); opacity: 1; }
+            0% { transform: scale(0.97) translateY(0px); opacity: 0.92; }
+            100% { transform: scale(1.02) translateY(-2px); opacity: 1; }
           }
-          @keyframes flamePulse {
-            0% { transform: scale(0.98) rotate(0deg); opacity: 0.75; }
-            50% { transform: scale(1.02) rotate(2deg); opacity: 0.95; }
-            100% { transform: scale(0.98) rotate(0deg); opacity: 0.75; }
+          @keyframes subtleGlowPulse {
+            0%, 100% { opacity: 0.6; transform: scale(0.96); }
+            50% { opacity: 0.9; transform: scale(1.04); }
+          }
+          @keyframes crownFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-3px); }
           }
         `}</style>
 
-        {/* 1. CELESTIAL SVG SPIRIT MANDALA & AURA */}
-        <svg
-          viewBox="-100 -100 200 200"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            pointerEvents: 'none',
-            overflow: 'visible',
-            zIndex: 1,
-          }}
-        >
-          <defs>
-            {/* Atmospheric Spirit Glow Disc */}
-            <radialGradient id={`${uid}_aiAura`} cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor={pColor} stopOpacity="0.45" />
-              <stop offset="40%" stopColor={sColor} stopOpacity="0.22" />
-              <stop offset="75%" stopColor={pColor} stopOpacity="0.06" />
-              <stop offset="96%" stopColor={pColor} stopOpacity="0" />
-            </radialGradient>
+        {/* 1. NỀN QUẦNG SÁNG AURA DỊU ÊM THANH THOÁT PHÍA SAU */}
+        {showAura && (
+          <svg
+            viewBox="-100 -100 200 200"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none',
+              overflow: 'visible',
+              zIndex: 1,
+            }}
+          >
+            <defs>
+              <radialGradient id={`${uid}_aiAura`} cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor={pColor} stopOpacity="0.4" />
+                <stop offset="45%" stopColor={sColor} stopOpacity="0.18" />
+                <stop offset="80%" stopColor={pColor} stopOpacity="0.04" />
+                <stop offset="100%" stopColor={pColor} stopOpacity="0" />
+              </radialGradient>
+            </defs>
 
-            {/* Radiant Stroke Gradients */}
-            <linearGradient id={`${uid}_goldGrad`} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
-              <stop offset="35%" stopColor={pColor} stopOpacity="0.95" />
-              <stop offset="70%" stopColor={sColor} stopOpacity="0.8" />
-              <stop offset="100%" stopColor={pColor} stopOpacity="0.95" />
-            </linearGradient>
-
-            <linearGradient id={`${uid}_flameGrad`} x1="0" y1="1" x2="0" y2="0">
-              <stop offset="0%" stopColor={sColor} stopOpacity="0.1" />
-              <stop offset="50%" stopColor={pColor} stopOpacity="0.5" />
-              <stop offset="100%" stopColor="#ffffff" stopOpacity="0.85" />
-            </linearGradient>
-
-            <linearGradient id={`${uid}_sunrayGrad`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-              <stop offset="40%" stopColor={pColor} stopOpacity="0.85" />
-              <stop offset="85%" stopColor={sColor} stopOpacity="0.3" />
-              <stop offset="100%" stopColor={sColor} stopOpacity="0" />
-            </linearGradient>
-          </defs>
-
-          {/* ========================================================
-              KIẾP 0: NGUYÊN THAI LINH QUANG (Primordial Nebula Glow)
-             ======================================================== */}
-          {showAura && (
+            {/* Quầng sáng êm dịu */}
             <circle
               cx="0"
               cy="0"
-              r="92"
+              r="85"
               fill={`url(#${uid}_aiAura)`}
               style={{
-                animation: animate ? 'spiritBreathing 4s ease-in-out infinite alternate' : 'none',
+                animation: animate ? 'subtleGlowPulse 4s ease-in-out infinite' : 'none',
                 transformOrigin: '0 0',
               }}
             />
-          )}
 
-          {/* Floating stardust motes */}
-          {showAura && (
-            <g opacity="0.75" style={{ animation: animate ? 'spiritBreathing 3s ease-in-out infinite alternate' : 'none', transformOrigin: '0 0' }}>
-              <circle cx="-55" cy="-50" r="1.2" fill="#ffffff" />
-              <circle cx="58" cy="-45" r="1.5" fill="#fde047" />
-              <circle cx="-50" cy="55" r="1.3" fill="#ffffff" />
-              <circle cx="52" cy="52" r="1.4" fill={pColor} />
+            {/* Vài đốm tinh tú lấp lánh nhẹ */}
+            <g opacity="0.65" style={{ animation: animate ? 'spiritBreathing 3.5s ease-in-out infinite alternate' : 'none', transformOrigin: '0 0' }}>
+              <circle cx="-52" cy="-45" r="1.2" fill="#ffffff" />
+              <circle cx="54" cy="-40" r="1.4" fill="#fde047" />
+              <circle cx="-48" cy="50" r="1.2" fill="#ffffff" />
+              <circle cx="48" cy="46" r="1.3" fill={pColor} />
             </g>
-          )}
+          </svg>
+        )}
 
-          {/* ========================================================
-              KIẾP 1: TINH HÀ LINH HOÀN (Astral Halo & 4 Cardinal Stars)
-             ======================================================== */}
-          {currentKiep >= 1 && (
-            <g
-              style={{
-                animation: animate ? 'haloSpinSlow 40s linear infinite' : 'none',
-                transformOrigin: '0 0',
-              }}
-            >
-              {/* Inner fine halo */}
-              <circle
-                cx="0"
-                cy="0"
-                r="76"
-                fill="none"
-                stroke={`url(#${uid}_goldGrad)`}
-                strokeWidth="1.2"
-                opacity="0.75"
-              />
-              <circle
-                cx="0"
-                cy="0"
-                r="79"
-                fill="none"
-                stroke={pColor}
-                strokeWidth="0.6"
-                strokeDasharray="2 4"
-                opacity="0.5"
-              />
-
-              {/* 4 Cardinal Diamond Stars (✦) */}
-              {[0, 90, 180, 270].map((deg, idx) => (
-                <g key={`k1-star-${idx}`} transform={`rotate(${deg}) translate(0, -76)`}>
-                  <path d="M 0,-4.5 Q 0,0 4.5,0 Q 0,0 0,4.5 Q 0,0 -4.5,0 Q 0,0 0,-4.5 Z" fill="#ffffff" />
-                  <circle cx="0" cy="0" r="1.2" fill={sColor} />
-                </g>
-              ))}
-
-              {/* 4 Intermediary Pearls */}
-              {[45, 135, 225, 315].map((deg, idx) => (
-                <g key={`k1-dot-${idx}`} transform={`rotate(${deg}) translate(0, -76)`}>
-                  <circle cx="0" cy="0" r="2.2" fill={sColor} />
-                  <circle cx="0" cy="0" r="1" fill="#ffffff" />
-                </g>
-              ))}
-            </g>
-          )}
-
-          {/* ========================================================
-              KIẾP 2: ÂM DƯƠNG SONG LUÂN (Yin-Yang Twin Crescent Wisps)
-             ======================================================== */}
-          {currentKiep >= 2 && (
-            <g
-              style={{
-                animation: animate ? 'haloSpinReverse 28s linear infinite' : 'none',
-                transformOrigin: '0 0',
-              }}
-              opacity="0.7"
-            >
-              {/* Twin Crescent Curved Spirit Blades */}
-              <path
-                d="M -70,-20 C -78,15 -50,68 0,72 C 35,74 65,50 68,20 C 60,45 30,62 0,60 C -40,58 -62,15 -58,-15 Z"
-                fill={`url(#${uid}_flameGrad)`}
-              />
-              <path
-                d="M 70,20 C 78,-15 50,-68 0,-72 C -35,-74 -65,-50 -68,-20 C -60,-45 -30,-62 0,-60 C 40,-58 62,-15 58,15 Z"
-                fill={`url(#${uid}_flameGrad)`}
-              />
-              {/* Concentric Runic Ring */}
-              <circle
-                cx="0"
-                cy="0"
-                r="68"
-                fill="none"
-                stroke={sColor}
-                strokeWidth="0.8"
-                strokeDasharray="8 4 2 4"
-                opacity="0.6"
-              />
-            </g>
-          )}
-
-          {/* ========================================================
-              KIẾP 3: BÁCH THẦN BÁT QUÁI TRẬN (8-Petal Sacred Lotus Mandala)
-             ======================================================== */}
-          {currentKiep >= 3 && (
-            <g
-              style={{
-                animation: animate ? 'haloSpinSlow 50s linear infinite' : 'none',
-                transformOrigin: '0 0',
-              }}
-              opacity="0.8"
-            >
-              {/* 8-Petal Sacred Lotus Outer Geometry */}
-              {[0, 45, 90, 135, 180, 225, 270, 315].map((deg, idx) => (
-                <g key={`k3-petal-${idx}`} transform={`rotate(${deg})`}>
-                  {/* Lotus Petal Arc */}
-                  <path
-                    d="M -9,-78 C -4,-86 0,-89 0,-89 C 0,-89 4,-86 9,-78 C 5,-74 0,-73 -9,-78 Z"
-                    fill={pColor}
-                    stroke="#ffffff"
-                    strokeWidth="0.4"
-                    opacity="0.85"
-                  />
-                  <circle cx="0" cy="-88" r="1.3" fill="#ffffff" />
-                </g>
-              ))}
-
-              {/* Outer Star Dial */}
-              <circle
-                cx="0"
-                cy="0"
-                r="84"
-                fill="none"
-                stroke={`url(#${uid}_goldGrad)`}
-                strokeWidth="1"
-                opacity="0.75"
-              />
-
-              {/* 16 Celestial Ticks */}
-              {[0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5].map((deg, idx) => (
-                <line
-                  key={`k3-tick-${idx}`}
-                  x1="0"
-                  y1="-81"
-                  x2="0"
-                  y2="-85"
-                  stroke={sColor}
-                  strokeWidth="0.8"
-                  transform={`rotate(${deg})`}
-                />
-              ))}
-            </g>
-          )}
-
-          {/* ========================================================
-              KIẾP 4: TỨ TƯỢNG THẦN VIÊM (Four Celestial Beasts Flame Wings)
-             ======================================================== */}
-          {currentKiep >= 4 && (
-            <g
-              style={{
-                animation: animate ? 'flamePulse 3.5s ease-in-out infinite' : 'none',
-                transformOrigin: '0 0',
-              }}
-              opacity="0.85"
-            >
-              {/* 4 Majestic Auroral Wing Wisps at 4 Diagonals */}
-              {[35, 125, 215, 305].map((deg, idx) => (
-                <g key={`k4-wing-${idx}`} transform={`rotate(${deg})`}>
-                  <path
-                    d="M 0,-70 C 15,-78 28,-88 32,-82 C 34,-76 22,-68 12,-62 Z"
-                    fill={`url(#${uid}_goldGrad)`}
-                    opacity="0.8"
-                  />
-                  <path
-                    d="M 0,-70 C -15,-78 -28,-88 -32,-82 C -34,-76 -22,-68 -12,-62 Z"
-                    fill={`url(#${uid}_goldGrad)`}
-                    opacity="0.8"
-                  />
-                </g>
-              ))}
-
-              {/* Electric Lôi Quang Ring */}
-              <circle
-                cx="0"
-                cy="0"
-                r="82"
-                fill="none"
-                stroke="#ffffff"
-                strokeWidth="1.5"
-                strokeDasharray="16 10 4 10"
-                opacity="0.85"
-              />
-            </g>
-          )}
-
-          {/* ========================================================
-              KIẾP 5: VẠN CỔ CHÍ TÔN THẦN LUÂN (Solar Sovereign Mandorla & Crown)
-             ======================================================== */}
-          {isMaxKiep && (
-            <g>
-              {/* Radiant Sunburst Solar Corona Rays (16 Blades) */}
-              <g
-                style={{
-                  animation: animate ? 'haloSpinSlow 60s linear infinite' : 'none',
-                  transformOrigin: '0 0',
-                }}
-                opacity="0.9"
-              >
-                {[0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5].map((deg, idx) => (
-                  <g key={`k5-ray-${idx}`} transform={`rotate(${deg})`}>
-                    {/* Tapered Sunray Blade */}
-                    <polygon
-                      points="0,-92 2.2,-78 0,-70 -2.2,-78"
-                      fill={`url(#${uid}_sunrayGrad)`}
-                    />
-                    <circle cx="0" cy="-92" r="1.2" fill="#ffffff" />
-                  </g>
-                ))}
-              </g>
-
-              {/* Vương Miện Chí Tôn / Tiên Đính Bảo Quang (Crown above head) */}
-              <g
-                transform="translate(0, -68)"
-                style={{
-                  animation: animate ? 'spiritBreathing 3s ease-in-out infinite alternate' : 'none',
-                  transformOrigin: '0 0',
-                }}
-              >
-                {/* Crown Lotus Crest */}
-                <path
-                  d="M 0,-14 C 4,-8 8,-3 0,4 C -8,-3 -4,-8 0,-14 Z"
-                  fill="#fde047"
-                  stroke="#ffffff"
-                  strokeWidth="0.8"
-                />
-                <circle cx="0" cy="-6" r="2.5" fill="#ef4444" stroke="#ffffff" strokeWidth="0.6" />
-                {/* Crest Wings */}
-                <path
-                  d="M -3,-6 Q -12,-10 -16,-4 Q -10,-2 -4,-3"
-                  fill="#fbbf24"
-                  opacity="0.85"
-                />
-                <path
-                  d="M 3,-6 Q 12,-10 16,-4 Q 10,-2 4,-3"
-                  fill="#fbbf24"
-                  opacity="0.85"
-                />
-              </g>
-            </g>
-          )}
-        </svg>
-
-        {/* 2. CHARACTER CUTOUT DISPLAY (Centered & Scaled to fit comfortably inside Aura) */}
+        {/* 2. HÌNH ẢNH ĐẠO ANH TO RÕ - TRUNG TÂM TRIỂN LÃM */}
         <div
           style={{
-            width: '78%',
-            height: '78%',
+            width: '92%',
+            height: '92%',
             position: 'relative',
             display: 'flex',
             alignItems: 'center',
@@ -405,14 +141,82 @@ export default function DaoAnhAvatarRenderer({
               height: '100%',
               objectFit: 'contain',
               userSelect: 'none',
-              filter: showAura ? `drop-shadow(0 0 10px ${glow})` : 'none',
+              filter: showAura ? `drop-shadow(0 0 12px ${glow})` : 'none',
               animation: animate ? 'spiritBreathing 3.6s ease-in-out infinite alternate' : 'none',
               willChange: animate ? 'transform' : 'auto',
             }}
           />
+
+          {/* Vương miện nhỏ hoàng kim nếu đạt Kiếp 5 Đại Viên Mãn */}
+          {isMaxKiep && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '-6%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                fontSize: Math.max(12, size * 0.14),
+                filter: 'drop-shadow(0 0 6px #fde047)',
+                animation: animate ? 'crownFloat 3s ease-in-out infinite' : 'none',
+                zIndex: 4,
+                lineHeight: 1,
+              }}
+              title="Đại Viên Mãn 5/5 Kiếp"
+            >
+              👑
+            </div>
+          )}
         </div>
 
-        {/* 3. HIỂN THỊ TÊN ĐẠO ANH NẾU YÊU CẦU */}
+        {/* 3. CHI TIẾT ĐƠN GIẢN: 5 HẠT TINH THẠCH BÁO TẦNG KIẾP Ở DƯỚI ĐÁY */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '2%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: Math.max(3, size * 0.035),
+            padding: '2px 8px',
+            borderRadius: 12,
+            background: 'rgba(5, 10, 20, 0.75)',
+            border: '0.8px solid rgba(255, 255, 255, 0.12)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 3,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
+          }}
+          title={isMaxKiep ? 'Đạo Anh Đại Viên Mãn (5/5 Kiếp)' : `Đang ở Kiếp ${Math.max(1, currentKiep)}/5`}
+        >
+          {[1, 2, 3, 4, 5].map((kNum) => {
+            const isReached = currentKiep >= kNum;
+            const isCurrent = currentKiep === kNum - 1 && !isMaxKiep;
+
+            return (
+              <div
+                key={`k-indicator-${kNum}`}
+                style={{
+                  width: Math.max(5, size * 0.05),
+                  height: Math.max(5, size * 0.05),
+                  transform: 'rotate(45deg)',
+                  borderRadius: 1,
+                  background: isReached
+                    ? (isMaxKiep ? 'linear-gradient(135deg, #fde047 0%, #f59e0b 100%)' : '#fde047')
+                    : (isCurrent ? 'rgba(56, 189, 248, 0.6)' : 'rgba(255, 255, 255, 0.18)'),
+                  border: isReached
+                    ? '0.6px solid #ffffff'
+                    : (isCurrent ? '0.6px solid #38bdf8' : '0.6px solid rgba(255, 255, 255, 0.25)'),
+                  boxShadow: isReached
+                    ? '0 0 6px rgba(253, 224, 71, 0.8)'
+                    : (isCurrent ? '0 0 5px rgba(56, 189, 248, 0.7)' : 'none'),
+                  transition: 'all 0.3s ease',
+                }}
+              />
+            );
+          })}
+        </div>
+
+        {/* 4. HIỂN THỊ TÊN ĐẠO ANH NẾU YÊU CẦU */}
         {showTitle && (
           <div
             style={{
