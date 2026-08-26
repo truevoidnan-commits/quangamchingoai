@@ -5801,7 +5801,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     return findDaoAnhDefinition(da || { palaceIndex: i }, cultivation);
                   })();
 
-                  const scale = (pos.scale || 1.0) * 1.25;
+                  const scale = (pos.scale || 1.0) * 1.30;
                   const canvasScaleFactor = getDaoAnhScale(daoAnhDef) > 1 ? 1.08 : 1.0;
 
                   return (
