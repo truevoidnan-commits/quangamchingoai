@@ -5801,7 +5801,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     return findDaoAnhDefinition(da || { palaceIndex: i }, cultivation);
                   })();
 
-                  const scale = (pos.scale || 1.0) * 1.36;
+                  const scale = (pos.scale || 1.0) * 1.02;
+                  const canvasScaleFactor = getDaoAnhScale(daoAnhDef) > 1 ? 1.12 : 1.0;
 
                   return (
                     <g key={`na-palace-group-${i}`}>
@@ -5817,15 +5818,15 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                           
                           <ellipse
                             cx="0"
-                            cy="32"
-                            rx={84 * scale}
-                            ry={28 * scale}
+                            cy="24"
+                            rx={64 * scale}
+                            ry={20 * scale}
                             fill={daoAnhDef?.primaryColor || arch.color}
                             opacity={isReady80 ? 0.45 : (isHovered ? 0.38 : 0.22)}
                           />
 
-                          <g transform={`scale(${scale * getDaoAnhScale(daoAnhDef)})`}>
-                            {/* 1. HÌNH ẢNH GEN AI ĐẠO ANH HOẶC PHÁP TƯỚNG BẢN NGUYÊN (PHÓNG TO 144x144) */}
+                          <g transform={`scale(${scale * canvasScaleFactor})`}>
+                            {/* 1. HÌNH ẢNH GEN AI ĐẠO ANH HOẶC PHÁP TƯỚNG BẢN NGUYÊN (PHÓNG TO VỪA VẶN 112x112) */}
                             <g>
                               {daoAnhDef?.image ? (
                                 <g style={{ willChange: 'transform' }}>
@@ -5833,9 +5834,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                   <circle
                                     cx="0"
                                     cy="0"
-                                    r="56"
+                                    r="45"
                                     fill={daoAnhDef.primaryColor || arch.color}
-                                    opacity={0.28}
+                                    opacity={0.26}
                                   />
 
                                   {/* Vòng xoay độ kiếp theo tầng */}
@@ -5844,21 +5845,21 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                       <circle
                                         cx="0"
                                         cy="0"
-                                        r="64"
+                                        r="53"
                                         fill="none"
                                         stroke={daoAnhDef.primaryColor || arch.color}
-                                        strokeWidth="1.4"
+                                        strokeWidth="1.2"
                                         strokeDasharray="4 5"
-                                        opacity="0.7"
+                                        opacity="0.65"
                                       />
                                       {[0, 90, 180, 270].map((deg, sidx) => {
                                         const rad = (deg * Math.PI) / 180;
                                         return (
                                           <circle
                                             key={`ai-halo-dot-${sidx}`}
-                                            cx={Math.cos(rad) * 64}
-                                            cy={Math.sin(rad) * 64}
-                                            r="2.2"
+                                            cx={Math.cos(rad) * 53}
+                                            cy={Math.sin(rad) * 53}
+                                            r="1.8"
                                             fill={daoAnhDef.secondaryColor || arch.glow || '#fde047'}
                                           />
                                         );
@@ -5870,43 +5871,43 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                     <circle
                                       cx="0"
                                       cy="0"
-                                      r="74"
+                                      r="61"
                                       fill="none"
                                       stroke={daoAnhDef.secondaryColor || arch.glow || '#fde047'}
-                                      strokeWidth="1.1"
-                                      strokeDasharray="6 6"
-                                      opacity="0.55"
+                                      strokeWidth="0.9"
+                                      strokeDasharray="5 5"
+                                      opacity="0.5"
                                       style={{ transformOrigin: '0 0', animation: 'haloSpinReverse 25s linear infinite', willChange: 'transform' }}
                                     />
                                   )}
 
-                                  {/* Hình ảnh Chibi Tiên Thai Gen AI Cắt Nền Trong Suốt PHÓNG TO 144x144 */}
+                                  {/* Hình ảnh Chibi Tiên Thai Gen AI Cắt Nền Trong Suốt */}
                                   <image
                                     href={getAssetUrl(getDaoAnhEvolutionImage(daoAnhDef, currentKiep))}
-                                    x="-72"
-                                    y="-76"
-                                    width="144"
-                                    height="144"
+                                    x="-56"
+                                    y="-60"
+                                    width="112"
+                                    height="112"
                                     preserveAspectRatio="xMidYMid meet"
                                     style={{
                                       filter: isReady80
-                                        ? 'drop-shadow(0 0 18px #f0abfc)'
+                                        ? 'drop-shadow(0 0 16px #f0abfc)'
                                         : isMaxKiep
-                                        ? 'drop-shadow(0 0 18px #fde047)'
-                                        : `drop-shadow(0 0 16px ${daoAnhDef.glowColor || arch.color || '#fbbf24'})`,
+                                        ? 'drop-shadow(0 0 16px #fde047)'
+                                        : `drop-shadow(0 0 14px ${daoAnhDef.glowColor || arch.color || '#fbbf24'})`,
                                       pointerEvents: 'none',
                                     }}
                                   />
                                 </g>
                               ) : (
-                                <g transform="scale(1.7)">
+                                <g transform="scale(1.4)">
                                   {renderDetailedPrimordialAvatar(arch, currentKiep, isMaxKiep, isReady80, false)}
                                 </g>
                               )}
                             </g>
 
                             {/* 2. ĐÀI LINH ẤN TIÊN HIỆP BÁT GIÁC KHẢM 5 TINH THẠCH ĐỘ KIẾP */}
-                            <g transform="translate(0, 78)">
+                            <g transform="translate(0, 60)">
                               {/* Đài Bát Giác Pha Lê Thần Tinh */}
                               <polygon
                                 points="-48,-11 48,-11 54,0 48,11 -48,11 -54,0"
