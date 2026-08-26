@@ -5897,14 +5897,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                       pointerEvents: 'none',
                                     }}
                                   />
-
-                                  {/* Vương Miện Chí Tôn Khi Đạt Max 5 Kiếp */}
-                                  {isMaxKiep && (
-                                    <g transform="translate(0, -70)">
-                                      <polygon points="0,-12 7,-4 4.5,-4 0,-8 -4.5,-4 -7,-4" fill="#fde047" stroke="#b45309" strokeWidth="1" />
-                                      <circle cx="0" cy="-12" r="2.4" fill="#ef4444" />
-                                    </g>
-                                  )}
                                 </g>
                               ) : (
                                 <g transform="scale(1.7)">
@@ -6199,12 +6191,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                     : `drop-shadow(0 0 12px ${modalDaoAnhDef.glowColor || modalArch.color || '#fbbf24'})`,
                                 }}
                               />
-                              {isMax && (
-                                <g transform="translate(0, -64)">
-                                  <polygon points="0,-12 8,-3 5,-3 0,-7 -5,-3 -8,-3" fill="#fde047" stroke="#b45309" strokeWidth="1" />
-                                  <circle cx="0" cy="-12" r="2.2" fill="#ef4444" />
-                                </g>
-                              )}
                             </g>
                           ) : (
                             <g transform="scale(1.4)">

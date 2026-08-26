@@ -146,26 +146,6 @@ export default function DaoAnhAvatarRenderer({
               willChange: animate ? 'transform' : 'auto',
             }}
           />
-
-          {/* Vương miện nhỏ hoàng kim nếu đạt Kiếp 5 Đại Viên Mãn */}
-          {isMaxKiep && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '-6%',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                fontSize: Math.max(12, size * 0.14),
-                filter: 'drop-shadow(0 0 6px #fde047)',
-                animation: animate ? 'crownFloat 3s ease-in-out infinite' : 'none',
-                zIndex: 4,
-                lineHeight: 1,
-              }}
-              title="Đại Viên Mãn 5/5 Kiếp"
-            >
-              👑
-            </div>
-          )}
         </div>
 
         {/* 3. CHI TIẾT ĐƠN GIẢN: 5 HẠT TINH THẠCH BÁO TẦNG KIẾP Ở DƯỚI ĐÁY */}
