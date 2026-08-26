@@ -24,6 +24,13 @@ export const DAO_ANH_LIST = [
     category: 'ma_dao',
     tier: 'than_pham',
     image: '/images/dao_anh/nguyen_thuy_thien_ma.png',
+    evolutionImages: [
+      '/images/dao_anh/nguyen_thuy_thien_ma.png',
+      '/images/dao_anh/nguyen_thuy_thien_ma_k2.png',
+      '/images/dao_anh/nguyen_thuy_thien_ma_k3.png',
+      '/images/dao_anh/nguyen_thuy_thien_ma_k4.png',
+      '/images/dao_anh/nguyen_thuy_thien_ma_k5.png',
+    ],
     primaryColor: '#a855f7',
     secondaryColor: '#ef4444',
     glowColor: 'rgba(239, 68, 68, 0.75)',
@@ -1079,6 +1086,31 @@ export function findDaoAnhDefinition(da, state) {
   if (matchByName) return matchByName;
 
   return DAO_ANH_LIST[0];
+}
+
+/**
+ * Chuyển đổi đường dẫn tài nguyên tĩnh tương thích với GitHub Pages / Subpath
+ */
+export function getAssetUrl(p) {
+  if (!p) return '';
+  if (p.startsWith('http://') || p.startsWith('https://') || p.startsWith('data:')) return p;
+  const cleanPath = p.startsWith('/') ? p.slice(1) : p;
+
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin;
+    let path = window.location.pathname;
+    if (path.includes('.')) {
+      path = path.substring(0, path.lastIndexOf('/') + 1);
+    }
+    if (!path.endsWith('/')) {
+      path = path + '/';
+    }
+    path = path.replace(/\/(cultivation|sanctum|novel|add-novel|edit-novel|search)\/?$/, '/');
+    return `${origin}${path}${cleanPath}`;
+  }
+
+  const base = import.meta.env?.BASE_URL || './';
+  return base.endsWith('/') ? `${base}${cleanPath}` : `${base}/${cleanPath}`;
 }
 
 /**

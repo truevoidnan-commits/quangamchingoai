@@ -1,5 +1,5 @@
 import React from 'react';
-import { getDaoAnhEvolutionImage, getDaoAnhScale } from '../../lib/daoAnhData';
+import { getDaoAnhEvolutionImage, getDaoAnhScale, getAssetUrl } from '../../lib/daoAnhData';
 
 /**
  * DAO ANH AVATAR RENDERER
@@ -133,7 +133,7 @@ export default function DaoAnhAvatarRenderer({
           }}
         >
           <img
-            src={getDaoAnhEvolutionImage(daoAnh, currentKiep)}
+            src={getAssetUrl(getDaoAnhEvolutionImage(daoAnh, currentKiep))}
             alt={daoAnh.name}
             onError={() => setImgError(true)}
             style={{
