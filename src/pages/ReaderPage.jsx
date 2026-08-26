@@ -84,40 +84,74 @@ export default function ReaderPage() {
     return () => { isMounted = false; };
   }, [chapterId, activeNovelId]);
 
-  // Khôi phục vị trí đọc chính xác (ví dụ 56%) khi vào lại chương
+  // Khôi phục vị trí đọc chính xác (đoạn văn đang đọc dở hoặc %) khi vào lại chương
   useEffect(() => {
     if (!chapter || loading) return;
+
+    // Nếu vào từ thanh tìm kiếm có từ khoá thì cuộn đến từ khoá đầu tiên
+    if (searchKeyword) {
+      const searchTimer = setTimeout(() => {
+        const mark = document.querySelector(`.${styles.readerMark}`);
+        if (mark) {
+          mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+      return () => clearTimeout(searchTimer);
+    }
 
     let restored = false;
     const tryRestore = () => {
       const savedRaw = localStorage.getItem(`scroll_pos_${activeNovelId}_${chapter.id}`);
       if (savedRaw) {
         try {
-          const { percent } = JSON.parse(savedRaw);
-          if (percent && percent > 0.01) {
-            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-            if (maxScroll > 100) {
+          const { percent, scrollY, paraIndex } = JSON.parse(savedRaw);
+
+          // 1. Ưu tiên cuộn đến đúng đoạn văn (paragraph) đang đọc dở
+          if (typeof paraIndex === 'number' && paraIndex > 0) {
+            const targetPara = document.getElementById(`para-${paraIndex}`);
+            if (targetPara) {
+              const targetY = Math.max(0, targetPara.offsetTop - 70);
+              window.scrollTo({ top: targetY, behavior: 'instant' });
+              restored = true;
+              return;
+            }
+          }
+
+          // 2. Dự phòng theo % hoặc tọa độ pixel scrollY
+          const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+          if (maxScroll > 60) {
+            if (typeof percent === 'number' && percent > 0.005) {
               const targetY = percent * maxScroll;
               window.scrollTo({ top: targetY, behavior: 'instant' });
               restored = true;
+              return;
+            } else if (typeof scrollY === 'number' && scrollY > 20) {
+              window.scrollTo({ top: Math.min(scrollY, maxScroll), behavior: 'instant' });
+              restored = true;
+              return;
             }
           }
-        } catch (e) {}
+        } catch (e) {
+          console.warn('Lỗi khôi phục vị trí đọc:', e);
+        }
       }
+
       if (!restored) {
         window.scrollTo({ top: 0, behavior: 'instant' });
       }
     };
 
-    // Delay ngắn để trình duyệt render xong toàn bộ đoạn văn và layout
-    const timer1 = setTimeout(tryRestore, 80);
-    const timer2 = setTimeout(tryRestore, 250);
+    // Delay các nhịp để đảm bảo toàn bộ font chữ và layout đoạn văn đã được render đầy đủ
+    const timer1 = setTimeout(tryRestore, 60);
+    const timer2 = setTimeout(tryRestore, 180);
+    const timer3 = setTimeout(tryRestore, 320);
 
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
+      clearTimeout(timer3);
     };
-  }, [chapter?.id, loading, activeNovelId]);
+  }, [chapter?.id, loading, activeNovelId, searchKeyword]);
 
   // Chu kỳ ngộ đạo 60s lặp lại liên tục (cứ 60s tăng tu vi âm thầm & bắt đầu vòng mới)
   const [cycleSeconds, setCycleSeconds] = useState(0);
@@ -163,20 +197,45 @@ export default function ReaderPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [chapter?.id, loading, novelId, gainReadingExp]);
+  }, [chapter?.id, loading, activeNovelId, gainReadingExp]);
 
-  // Lưu lại vị trí cuộn (% đọc) real-time khi người đọc lướt trang
+  // Lưu lại vị trí cuộn (% đọc & đoạn văn đang đọc) real-time khi người đọc lướt trang
   useEffect(() => {
     if (!chapter || loading) return;
 
     const saveCurrentPosition = () => {
       const scrollY = window.scrollY;
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      if (maxScroll > 0) {
-        const percent = Math.max(0, Math.min(1, scrollY / maxScroll));
-        localStorage.setItem(`scroll_pos_${novelId}_${chapter.id}`, JSON.stringify({ percent, scrollY, time: Date.now() }));
-        saveReadingProgress(activeNovelId, { chapterId: chapter.id, scrollTop: scrollY, percent });
+
+      // Tìm đoạn văn đang hiển thị ở phần trên của màn hình
+      let currentParaIndex = 0;
+      const paraEls = document.querySelectorAll('[data-para-index]');
+      if (paraEls.length > 0) {
+        const targetOffset = scrollY + 85;
+        for (let i = 0; i < paraEls.length; i++) {
+          if (paraEls[i].offsetTop <= targetOffset) {
+            currentParaIndex = i;
+          } else {
+            break;
+          }
+        }
       }
+
+      const percent = maxScroll > 0 ? Math.max(0, Math.min(1, scrollY / maxScroll)) : 0;
+      const posData = {
+        percent,
+        scrollY,
+        paraIndex: currentParaIndex,
+        time: Date.now()
+      };
+
+      localStorage.setItem(`scroll_pos_${activeNovelId}_${chapter.id}`, JSON.stringify(posData));
+      saveReadingProgress(activeNovelId, {
+        chapterId: chapter.id,
+        scrollTop: scrollY,
+        percent,
+        paraIndex: currentParaIndex
+      });
     };
 
     let throttleTimer = null;
@@ -189,7 +248,7 @@ export default function ReaderPage() {
         throttleTimer = setTimeout(() => {
           saveCurrentPosition();
           throttleTimer = null;
-        }, 200);
+        }, 180);
       }
     };
 
@@ -214,7 +273,7 @@ export default function ReaderPage() {
       const queryStr = searchKeyword ? `?q=${encodeURIComponent(searchKeyword)}` : '';
       navigate(`/novel/${activeNovelId}/read/${ch.id}${queryStr}`);
     }
-  }, [navigate, novelId, searchKeyword]);
+  }, [navigate, activeNovelId, searchKeyword]);
 
   const clearHighlight = () => {
     const next = new URLSearchParams(searchParams);
@@ -394,7 +453,7 @@ export default function ReaderPage() {
             </h2>
 
             {paragraphs.map((p, i) => (
-              <p key={i} className={styles.paragraph}>
+              <p key={i} id={`para-${i}`} data-para-index={i} className={styles.paragraph}>
                 {highlightText(p, searchKeyword, styles.readerMark)}
               </p>
             ))}

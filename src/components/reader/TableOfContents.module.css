@@ -26,13 +26,15 @@
 }
 
 .active {
-  background: rgba(34, 195, 240, 0.08);
-  border-left: 3px solid var(--accent-cyan);
-  padding-left: 17px;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.16) 0%, rgba(245, 158, 11, 0.03) 100%);
+  border-left: 4px solid var(--accent-gold);
+  padding-left: 16px;
 }
 
 .active .itemTitle {
-  color: var(--accent-cyan);
+  color: var(--accent-gold);
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
 }
 
 .extra .itemTitle {

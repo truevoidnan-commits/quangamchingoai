@@ -3,6 +3,7 @@ import { useCultivationContext } from '../context/CultivationContext';
 import RealmTimeline from '../components/cultivation/RealmTimeline';
 import SidePanelInfo from '../components/cultivation/SidePanelInfo';
 import RealmPreviewVisualizer from '../components/cultivation/RealmPreviewVisualizer';
+import DaoAnhGalleryModal from '../components/cultivation/DaoAnhGalleryModal';
 import { getRealmDisplayName } from '../lib/cultivation';
 import { useNavigate } from 'react-router-dom';
 
@@ -13,7 +14,9 @@ export default function CultivationWorkspace() {
     cultivation, 
     gainReadingExp,
     activeRealmView,
-    thangCung
+    thangCung,
+    galleryModalOpen,
+    setGalleryModalOpen
   } = useCultivationContext();
 
   const navigate = useNavigate();
@@ -236,6 +239,12 @@ export default function CultivationWorkspace() {
       <div className={`cultivation-col-right ${mobileTab === 'actions' ? 'mobile-show' : ''}`}>
         <SidePanelInfo />
       </div>
+
+      {/* Đạo Anh Đồ Lục Modal */}
+      <DaoAnhGalleryModal
+        isOpen={galleryModalOpen}
+        onClose={() => setGalleryModalOpen && setGalleryModalOpen(false)}
+      />
 
     </div>
   );

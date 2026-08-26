@@ -329,6 +329,28 @@ button {
   border: 1px solid var(--border-cyan);
 }
 
+.badge-gold {
+  background: rgba(245, 158, 11, 0.16);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
+}
+
+.badge-reading-pulse {
+  animation: readingPulse 2s infinite ease-in-out;
+}
+
+@keyframes readingPulse {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.3);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.6);
+    opacity: 0.85;
+  }
+}
+
 /* --- Page transition wrapper --- */
 .page-enter {
   animation: pageEnter 0.3s ease forwards;

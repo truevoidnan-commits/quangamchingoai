@@ -37,6 +37,7 @@ import {
 } from '../../lib/cultivation';
 import ArtifactIcon from './ArtifactIcon';
 import { LAMP_THAN_PHAM_AI_ICONS } from '../../lib/artifactIcons';
+import { DAO_ANH_LIST, findDaoAnhDefinition } from '../../lib/daoAnhData';
 import styles from './RealmPreviewVisualizer.module.css';
 
 /* ============================================================
@@ -5162,12 +5163,12 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         // ─── HỆ THỐNG 13 PHÁP TƯỚNG BẢN NGUYÊN ĐẠO ANH TINH TUYỂN ĐỘC BẢN ───
         const renderDetailedPrimordialAvatar = (arch, currentKiep, isMaxKiep, isReady80, isModal = false) => {
           return (
-            <g style={{ animation: 'spiritBreathing 3.8s ease-in-out infinite alternate' }}>
+            <g style={{ animation: 'spiritBreathing 3.8s ease-in-out infinite alternate', willChange: 'transform' }}>
               
               {/* 1. VẦNG HÀO QUANG CỔ TRẬN ĐỘ KIẾP TIẾN HÓA (KIEP 1 - 5) */}
               {/* Kiếp 1+: Vòng Phù Văn Cổ Tự Xoay */}
               {currentKiep >= 1 && (
-                <g style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 45s linear infinite' }}>
+                <g style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 45s linear infinite', willChange: 'transform' }}>
                   <circle cx="0" cy="0" r="33" fill="none" stroke={isMaxKiep ? 'rgba(251, 191, 36, 0.75)' : (isReady80 ? 'rgba(240, 171, 252, 0.7)' : 'rgba(255, 255, 255, 0.22)')} strokeWidth="1" strokeDasharray="3 5" />
                   {/* 8 Điểm Phù Tự */}
                   {[0, 45, 90, 135, 180, 225, 270, 315].map((deg, sidx) => {
@@ -5181,20 +5182,20 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* Kiếp 3+: 4 Điểm Linh Quang Thiên Văn Tứ Trụ Xoay Ngược */}
               {currentKiep >= 3 && (
-                <g style={{ transformOrigin: '0 0', animation: 'haloSpinReverse 30s linear infinite' }}>
+                <g style={{ transformOrigin: '0 0', animation: 'haloSpinReverse 30s linear infinite', willChange: 'transform' }}>
                   <circle cx="0" cy="0" r="37" fill="none" stroke={arch.glow || '#fde047'} strokeWidth="0.8" opacity="0.4" strokeDasharray="6 8" />
-                  <polygon points="37,-3 40,0 37,3 34,0" fill="#ffffff" filter="url(#naGlowGold)" />
-                  <polygon points="-37,-3 -34,0 -37,3 -40,0" fill="#ffffff" filter="url(#naGlowGold)" />
-                  <polygon points="-3,37 0,40 3,37 0,34" fill="#ffffff" filter="url(#naGlowGold)" />
-                  <polygon points="-3,-37 0,-40 3,-37 0,-34" fill="#ffffff" filter="url(#naGlowGold)" />
+                  <polygon points="37,-3 40,0 37,3 34,0" fill="#ffffff" stroke="#fde047" strokeWidth="0.5" />
+                  <polygon points="-37,-3 -34,0 -37,3 -40,0" fill="#ffffff" stroke="#fde047" strokeWidth="0.5" />
+                  <polygon points="-3,37 0,40 3,37 0,34" fill="#ffffff" stroke="#fde047" strokeWidth="0.5" />
+                  <polygon points="-3,-37 0,-40 3,-37 0,-34" fill="#ffffff" stroke="#fde047" strokeWidth="0.5" />
                 </g>
               )}
 
               {/* Kiếp 4+: Tia Sét Linh Kiếp Lôi Đình */}
               {currentKiep >= 4 && (
-                <g opacity="0.85">
-                  <path d="M -24,-20 L -18,-12 L -22,-8 L -14,0" fill="none" stroke="#fde047" strokeWidth="1.2" strokeLinecap="round" filter="url(#naGlowGold)" />
-                  <path d="M 24,-20 L 18,-12 L 22,-8 L 14,0" fill="none" stroke="#c084fc" strokeWidth="1.2" strokeLinecap="round" filter="url(#naGlowPurple)" />
+                <g opacity="0.9">
+                  <path d="M -24,-20 L -18,-12 L -22,-8 L -14,0" fill="none" stroke="#fde047" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M 24,-20 L 18,-12 L 22,-8 L 14,0" fill="none" stroke="#c084fc" strokeWidth="1.5" strokeLinecap="round" />
                 </g>
               )}
 
@@ -5202,7 +5203,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               {isMaxKiep && (
                 <g>
                   {/* Hào quang Thái Dương Tỏa Rạng Phía Sau */}
-                  <g style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 60s linear infinite' }} opacity="0.65">
+                  <g style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 60s linear infinite', willChange: 'transform' }} opacity="0.75">
                     {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg, sidx) => {
                       const rad = (deg * Math.PI) / 180;
                       return (
@@ -5221,7 +5222,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   </g>
                   {/* Vương Miện Chí Tôn Trên Đỉnh */}
                   <g transform="translate(0, -26)">
-                    <polygon points="0,-8 5,-2 3,-2 0,-5 -3,-2 -5,-2" fill="#fde047" stroke="#b45309" strokeWidth="0.8" filter="url(#naGlowGold)" />
+                    <polygon points="0,-8 5,-2 3,-2 0,-5 -3,-2 -5,-2" fill="#fde047" stroke="#b45309" strokeWidth="0.8" />
                     <circle cx="0" cy="-8" r="1.5" fill="#ef4444" />
                     <circle cx="-5" cy="-2" r="1" fill="#38bdf8" />
                     <circle cx="5" cy="-2" r="1" fill="#38bdf8" />
@@ -5233,7 +5234,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               
               {/* 🐲 A. TỔ LONG (Thái Cổ Kim Long) */}
               {arch.type === 'dragon' && (
-                <g filter="url(#naGlowGold)">
+                <g>
                   {/* Tường vân cuộn dưới chân */}
                   <path d="M -20,18 C -14,14 -6,22 2,16 C 10,22 18,16 22,19" fill="none" stroke="rgba(251, 191, 36, 0.45)" strokeWidth="1.6" strokeDasharray="3 3" />
                   {/* Thân Rồng Cuộn Hoàng Kim */}
@@ -5257,7 +5258,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   {/* Vuốt Rồng Nâng Thái Cổ Long Châu */}
                   <g transform="translate(0, 4)">
                     <path d="M -6,8 L -2,4 L 0,8 M 6,8 L 2,4 L 0,8" fill="none" stroke="#fbbf24" strokeWidth="1.4" />
-                    <circle cx="0" cy="2" r="5" fill="url(#dragonPearlGrad)" filter="url(#naGlowGold)" style={{ animation: 'daoAnhHeartbeat 1.6s ease-in-out infinite' }} />
+                    <circle cx="0" cy="2" r="5" fill="url(#dragonPearlGrad)" stroke="#fde047" strokeWidth="0.8" style={{ animation: 'daoAnhHeartbeat 1.6s ease-in-out infinite', willChange: 'transform' }} />
                     <circle cx="0" cy="2" r="2.5" fill="#ffffff" />
                   </g>
                 </g>
@@ -5265,7 +5266,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* 🌸 B. HỒNG MÔNG (Hồng Mông Tử Liên) */}
               {arch.type === 'purple_lotus' && (
-                <g filter="url(#naGlowPurple)">
+                <g>
                   {/* Làn Khói Hồng Mông Tử Khí */}
                   <path d="M -16,16 Q -22,4 -14,-4 Q -8,-12 0,-18 Q 8,-12 14,-4 Q 22,4 16,16" fill="none" stroke="rgba(192, 132, 252, 0.4)" strokeWidth="1.2" strokeDasharray="3 4" />
                   {/* Tầng Cánh Sen Ngoài (Tím Đậm) */}
@@ -5275,7 +5276,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   {/* Tầng Cánh Sen Trong (Pha Lê Trắng Tím) */}
                   <path d="M -8,2 C -10,-6 -4,-12 0,-14 C 4,-12 10,-6 8,2 C 4,8 -4,8 -8,2 Z" fill="url(#violetLotusInnerGrad)" />
                   {/* Nhụy Sen & Đạo Thai Chân Linh */}
-                  <circle cx="0" cy="-2" r="4.5" fill="#ffffff" filter="url(#naGlowGold)" />
+                  <circle cx="0" cy="-2" r="4.5" fill="#ffffff" stroke="#fde047" strokeWidth="1" />
                   <circle cx="0" cy="-2" r="2.5" fill="#fde047" />
                   {/* Các Hạt Sương Linh Tính */}
                   {[-12, -7, 0, 7, 12].map((x, idx) => (
@@ -5286,11 +5287,11 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* ⚔️ C. PHẠT THIÊN (Vô Thượng Kiếm Thần) */}
               {arch.type === 'sword' && (
-                <g filter="url(#naGlowGold)">
+                <g>
                   {/* Kiếm Trận Hào Quang Phía Sau */}
-                  <circle cx="0" cy="-2" r="22" fill="none" stroke="rgba(56, 189, 248, 0.35)" strokeWidth="1" strokeDasharray="4 6" style={{ transformOrigin: '0 -2px', animation: 'haloSpinSlow 40s linear infinite' }} />
+                  <circle cx="0" cy="-2" r="22" fill="none" stroke="rgba(56, 189, 248, 0.35)" strokeWidth="1" strokeDasharray="4 6" style={{ transformOrigin: '0 -2px', animation: 'haloSpinSlow 40s linear infinite', willChange: 'transform' }} />
                   {/* 4 Thanh Phi Kiếm Hộ Thể Nhỏ */}
-                  <g style={{ transformOrigin: '0 -2px', animation: 'haloSpinReverse 25s linear infinite' }}>
+                  <g style={{ transformOrigin: '0 -2px', animation: 'haloSpinReverse 25s linear infinite', willChange: 'transform' }}>
                     <line x1="-18" y1="-2" x2="-26" y2="-2" stroke="#38bdf8" strokeWidth="1.5" strokeLinecap="round" />
                     <line x1="18" y1="-2" x2="26" y2="-2" stroke="#38bdf8" strokeWidth="1.5" strokeLinecap="round" />
                     <line x1="0" y1="-20" x2="0" y2="-28" stroke="#38bdf8" strokeWidth="1.5" strokeLinecap="round" />
@@ -5305,7 +5306,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <circle cx="0" cy="4" r="1.2" fill="#ffffff" />
                   {/* Hộ Thủ Cánh Rồng (Crossguard) */}
                   <path d="M -12,12 Q 0,8 12,12 L 8,15 Q 0,12 -8,15 Z" fill="#b45309" stroke="#fde047" strokeWidth="1" />
-                  <circle cx="0" cy="13" r="2.5" fill="#ef4444" filter="url(#naGlowFire)" />
+                  <circle cx="0" cy="13" r="2.5" fill="#ef4444" stroke="#fde047" strokeWidth="0.8" />
                   {/* Chuôi Kiếm & Núm Cầm */}
                   <line x1="0" y1="15" x2="0" y2="24" stroke="#78350f" strokeWidth="2.2" strokeLinecap="round" />
                   <circle cx="0" cy="25" r="2" fill="#fde047" />
@@ -5314,9 +5315,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* 🌙 D. VẬN MỆNH (Tử Nguyệt Thần Đồng) */}
               {arch.type === 'destiny_moon' && (
-                <g filter="url(#naGlowPurple)">
+                <g>
                   {/* Vòng Tinh Văn Tinh Túc */}
-                  <circle cx="0" cy="0" r="24" fill="none" stroke="rgba(232, 121, 249, 0.4)" strokeWidth="0.8" strokeDasharray="2 4" style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 50s linear infinite' }} />
+                  <circle cx="0" cy="0" r="24" fill="none" stroke="rgba(232, 121, 249, 0.4)" strokeWidth="0.8" strokeDasharray="2 4" style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 50s linear infinite', willChange: 'transform' }} />
                   {/* Trăng Lưỡi Liềm Khắc Hoa Văn */}
                   <path d="M -16,-20 A 24 24 0 1 0 16,-20 A 18 18 0 1 1 -16,-20 Z" fill="url(#destinyMoonGrad)" stroke="#e879f9" strokeWidth="1.2" />
                   {/* Họa Tiết Nguyệt Thổ */}
@@ -5328,7 +5329,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     <ellipse cx="0" cy="0" rx="10" ry="6" fill="rgba(8, 14, 30, 0.95)" stroke="#38bdf8" strokeWidth="1.4" />
                     <circle cx="0" cy="0" r="4.5" fill="url(#voidSingularityGrad)" />
                     <line x1="0" y1="-6" x2="0" y2="6" stroke="#ffffff" strokeWidth="1.2" />
-                    <circle cx="0" cy="0" r="1.5" fill="#ffffff" filter="url(#naGlowCyan)" />
+                    <circle cx="0" cy="0" r="1.5" fill="#ffffff" stroke="#38bdf8" strokeWidth="0.8" />
                   </g>
                   {/* 4 Ngôi Sao Định Mệnh */}
                   {[[-18, -14], [18, -14], [-20, 10], [20, 10]].map(([sx, sy], sidx) => (
@@ -5339,7 +5340,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* ☯️ E. LUÂN HỒI (Lục Đạo Thái Cực) */}
               {arch.type === 'reincarnation' && (
-                <g filter="url(#naGlowCyan)">
+                <g>
                   {/* Bánh Xe Lục Đạo (6 Căm Khắc Cổ Phù) */}
                   <circle cx="0" cy="0" r="22" fill="rgba(6, 12, 28, 0.9)" stroke="#38bdf8" strokeWidth="1.8" />
                   <circle cx="0" cy="0" r="18" fill="none" stroke="rgba(251, 191, 36, 0.6)" strokeWidth="1" strokeDasharray="3 4" />
@@ -5354,7 +5355,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     );
                   })}
                   {/* Tâm Thái Cực Âm Dương Xoáy */}
-                  <g style={{ transformOrigin: '0 0', animation: 'haloSpinReverse 30s linear infinite' }}>
+                  <g style={{ transformOrigin: '0 0', animation: 'haloSpinReverse 30s linear infinite', willChange: 'transform' }}>
                     <circle cx="0" cy="0" r="10" fill="#0f172a" stroke="#ffffff" strokeWidth="1" />
                     <path d="M 0,-10 A 10 10 0 0 1 0,10 A 5 5 0 0 1 0,0 A 5 5 0 0 0 0,-10 Z" fill="#38bdf8" />
                     <path d="M 0,-10 A 10 10 0 0 0 0,10 A 5 5 0 0 0 0,0 A 5 5 0 0 1 0,-10 Z" fill="#e2e8f0" />
@@ -5366,7 +5367,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* 🦅 F. SÁNG THẾ (Sáng Thế Kim Phượng) */}
               {arch.type === 'phoenix' && (
-                <g filter="url(#naGlowGold)">
+                <g>
                   {/* Thần Vũ Hào Quang */}
                   <circle cx="0" cy="-4" r="22" fill="none" stroke="rgba(249, 115, 22, 0.4)" strokeWidth="1" strokeDasharray="3 5" />
                   {/* Cánh Phượng Hoàng Lửa 3 Tầng */}
@@ -5387,13 +5388,13 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <circle cx="0" cy="26" r="2.6" fill="#ef4444" stroke="#fde047" strokeWidth="0.8" />
                   <circle cx="10" cy="24" r="2.2" fill="#ef4444" stroke="#fde047" strokeWidth="0.8" />
                   {/* Lửa Sáng Thế Giữa Ngực */}
-                  <circle cx="0" cy="-4" r="4.5" fill="#ffffff" filter="url(#naGlowFire)" />
+                  <circle cx="0" cy="-4" r="4.5" fill="#ffffff" stroke="#f97316" strokeWidth="1.2" />
                 </g>
               )}
 
               {/* 🦋 G. TẠO HÓA (Tạo Hóa Bích Điệp) */}
               {arch.type === 'jade_butterfly' && (
-                <g filter="url(#naGlowCyan)">
+                <g>
                   {/* Cuộn Trúc Thư / Ngọc Điệp Phía Dưới */}
                   <rect x="-18" y="12" width="36" height="7" rx="2" fill="#065f46" stroke="#34d399" strokeWidth="1" />
                   <line x1="-14" y1="15.5" x2="14" y2="15.5" stroke="#a7f3d0" strokeWidth="1" strokeDasharray="2 2" />
@@ -5409,15 +5410,15 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   {/* Thân Bướm & Râu Bướm */}
                   <line x1="0" y1="-10" x2="0" y2="8" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
                   <path d="M 0,-10 Q -4,-16 -6,-18 M 0,-10 Q 4,-16 6,-18" fill="none" stroke="#67e8f9" strokeWidth="1.2" strokeLinecap="round" />
-                  <circle cx="0" cy="-2" r="3.5" fill="#ffffff" filter="url(#naGlowCyan)" />
+                  <circle cx="0" cy="-2" r="3.5" fill="#ffffff" stroke="#2dd4bf" strokeWidth="1" />
                 </g>
               )}
 
               {/* ⏳ H. THỜI KHÔNG (Tuế Nguyệt Bàn Chu) */}
               {arch.type === 'space_time' && (
-                <g filter="url(#naGlowPurple)">
+                <g>
                   {/* Vành Thiên Văn Bàn 3 Chiều */}
-                  <ellipse cx="0" cy="0" rx="22" ry="10" fill="none" stroke="#818cf8" strokeWidth="1.4" strokeDasharray="3 3" style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 40s linear infinite' }} />
+                  <ellipse cx="0" cy="0" rx="22" ry="10" fill="none" stroke="#818cf8" strokeWidth="1.4" strokeDasharray="3 3" style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 40s linear infinite', willChange: 'transform' }} />
                   <ellipse cx="0" cy="0" rx="18" ry="18" fill="none" stroke="#c7d2fe" strokeWidth="0.8" />
                   {/* Khung Đồng Hồ Cát Thời Không */}
                   <line x1="-12" y1="-16" x2="12" y2="-16" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
@@ -5428,7 +5429,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <polygon points="-8,-14 8,-14 0,-1" fill="url(#astrolabeGrad)" stroke="#818cf8" strokeWidth="1" opacity="0.85" />
                   <polygon points="0,1 8,14 -8,14" fill="url(#astrolabeGrad)" stroke="#818cf8" strokeWidth="1" opacity="0.85" />
                   {/* Hạt Cát Tuế Nguyệt Đảo Chiều */}
-                  <circle cx="0" cy="0" r="2.8" fill="#ffffff" filter="url(#naGlowGold)" />
+                  <circle cx="0" cy="0" r="2.8" fill="#ffffff" stroke="#fde047" strokeWidth="1" />
                   <circle cx="0" cy="-6" r="1.5" fill="#fde047" />
                   <circle cx="0" cy="6" r="1.5" fill="#fde047" />
                 </g>
@@ -5436,7 +5437,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* 🦩 I. TIÊU DAO (Tiêu Dao Tiên Hạc) */}
               {arch.type === 'crane' && (
-                <g filter="url(#naGlowCyan)">
+                <g>
                   {/* Tường Vân Tầng Tầng */}
                   <path d="M -18,16 C -24,12 -12,8 -6,14 C 0,10 12,10 16,15 C 22,14 18,18 10,18 Z" fill="rgba(186, 230, 253, 0.4)" stroke="#38bdf8" strokeWidth="0.8" />
                   {/* Cánh Tiên Hạc Sải Dài */}
@@ -5461,7 +5462,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* 🌳 J. THẦN MỘC (Khởi Nguyên Thần Mộc) */}
               {arch.type === 'world_tree' && (
-                <g filter="url(#naGlowEmerald)">
+                <g>
                   {/* Đảo Nổi Thần Mộc & Rễ Cổ Thụ */}
                   <ellipse cx="0" cy="14" rx="18" ry="5" fill="#14532d" stroke="#22c55e" strokeWidth="1" />
                   <path d="M -12,16 Q -16,24 -18,26 M 0,16 Q 2,24 0,27 M 12,16 Q 16,24 18,26" fill="none" stroke="#86efac" strokeWidth="1.2" strokeLinecap="round" />
@@ -5472,9 +5473,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <circle cx="10" cy="-10" r="9" fill="url(#worldTreeGrad)" opacity="0.9" />
                   <circle cx="0" cy="-16" r="11" fill="url(#worldTreeGrad)" opacity="0.95" />
                   {/* Đạo Quả / Giọt Sương Trường Sinh */}
-                  <circle cx="-8" cy="-8" r="2.2" fill="#fde047" filter="url(#naGlowGold)" />
-                  <circle cx="8" cy="-8" r="2.2" fill="#fde047" filter="url(#naGlowGold)" />
-                  <circle cx="0" cy="-16" r="3.2" fill="#ffffff" filter="url(#naGlowGold)" />
+                  <circle cx="-8" cy="-8" r="2.2" fill="#fde047" stroke="#86efac" strokeWidth="0.6" />
+                  <circle cx="8" cy="-8" r="2.2" fill="#fde047" stroke="#86efac" strokeWidth="0.6" />
+                  <circle cx="0" cy="-16" r="3.2" fill="#ffffff" stroke="#fde047" strokeWidth="0.8" />
                   <circle cx="-3" cy="-13" r="1.5" fill="#f43f5e" />
                   <circle cx="3" cy="-13" r="1.5" fill="#f43f5e" />
                 </g>
@@ -5482,7 +5483,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* 🏺 K. BẤT HỦ (Cửu Châu Thần Đỉnh) */}
               {arch.type === 'cauldron' && (
-                <g filter="url(#naGlowGold)">
+                <g>
                   {/* Đài Bát Giác Hoàng Kim */}
                   <polygon points="-18,18 18,18 14,22 -14,22" fill="#78350f" stroke="#f59e0b" strokeWidth="1" />
                   {/* Làn Khói Tiên Hương Nghi Ngút */}
@@ -5505,23 +5506,23 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* 🌌 L. HƯ VÔ (Hư Vô Chi Đồng) */}
               {arch.type === 'void_eye' && (
-                <g filter="url(#naGlowPurple)">
+                <g>
                   {/* Đĩa Bồi Tụ Hư Vô Nghiêng 3D */}
-                  <ellipse cx="0" cy="0" rx="26" ry="12" fill="none" stroke="url(#voidAccretionGrad)" strokeWidth="2.5" strokeDasharray="4 2" style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 25s linear infinite' }} />
+                  <ellipse cx="0" cy="0" rx="26" ry="12" fill="none" stroke="url(#voidAccretionGrad)" strokeWidth="2.5" strokeDasharray="4 2" style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 25s linear infinite', willChange: 'transform' }} />
                   {/* Tia Plasma 2 Cực */}
                   <line x1="0" y1="-26" x2="0" y2="26" stroke="#c084fc" strokeWidth="1.8" strokeLinecap="round" strokeDasharray="4 3" />
                   {/* Chân Trời Sự Kiện */}
                   <circle cx="0" cy="0" r="14" fill="#020617" stroke="#cbd5e1" strokeWidth="1.8" />
-                  <circle cx="0" cy="0" r="10" fill="none" stroke="#e879f9" strokeWidth="1.4" strokeDasharray="3 3" style={{ transformOrigin: '0 0', animation: 'haloSpinReverse 15s linear infinite' }} />
+                  <circle cx="0" cy="0" r="10" fill="none" stroke="#e879f9" strokeWidth="1.4" strokeDasharray="3 3" style={{ transformOrigin: '0 0', animation: 'haloSpinReverse 15s linear infinite', willChange: 'transform' }} />
                   {/* Kỳ Điểm Hắc Động */}
                   <circle cx="0" cy="0" r="6" fill="#000000" />
-                  <circle cx="0" cy="0" r="2.2" fill="#ffffff" filter="url(#naGlowCyan)" />
+                  <circle cx="0" cy="0" r="2.2" fill="#ffffff" stroke="#38bdf8" strokeWidth="0.8" />
                 </g>
               )}
 
               {/* 🪢 M. TÚC MỆNH (Nhân Quả Chi Kết) */}
               {arch.type === 'karma_knot' && (
-                <g filter="url(#naGlowCrimson)">
+                <g>
                   {/* Bàn Trận Nhân Quả */}
                   <circle cx="0" cy="0" r="22" fill="none" stroke="rgba(244, 63, 94, 0.4)" strokeWidth="1" strokeDasharray="3 3" />
                   {/* 2 Cây Kim Nhân Quả */}
@@ -5533,7 +5534,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <path d="M -12,-6 C -18,-16 -4,-18 0,-8 C 4,-18 18,-16 12,-6 C 18,4 4,16 0,8 C -4,16 -18,4 -12,-6 Z" fill="none" stroke="url(#karmaRedGrad)" strokeWidth="3.2" strokeLinejoin="round" />
                   <path d="M -6,-12 C -16,-18 -18,-4 -8,0 C -18,4 -16,18 -6,12 C 4,18 16,18 8,0 C 18,-4 18,-18 6,-12" fill="none" stroke="#fbbf24" strokeWidth="1.2" />
                   {/* Chuông & Hạt Châu Mệnh Định */}
-                  <circle cx="0" cy="0" r="4" fill="#fbbf24" filter="url(#naGlowGold)" />
+                  <circle cx="0" cy="0" r="4" fill="#fbbf24" stroke="#f43f5e" strokeWidth="1" />
                   <circle cx="0" cy="0" r="2" fill="#f43f5e" />
                   <line x1="0" y1="8" x2="0" y2="22" stroke="#f43f5e" strokeWidth="1.8" strokeLinecap="round" />
                   <circle cx="0" cy="22" r="2.5" fill="#fde047" />
@@ -5542,10 +5543,10 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* 👑 N. CHÍ TÔN (Default) */}
               {arch.type === 'sovereign_deity' && (
-                <g filter="url(#naGlowGold)">
+                <g>
                   <polygon points="0,-22 16,-4 0,18 -16,-4" fill="none" stroke="#fbbf24" strokeWidth="2.2" />
                   <polygon points="0,-16 12,-4 0,12 -12,-4" fill="rgba(251, 191, 36, 0.15)" stroke="#fde047" strokeWidth="1.2" />
-                  <circle cx="0" cy="-2" r="6" fill="#ffffff" filter="url(#naGlowGold)" />
+                  <circle cx="0" cy="-2" r="6" fill="#ffffff" stroke="#fbbf24" strokeWidth="1.5" />
                   <circle cx="0" cy="-2" r="3" fill="#fbbf24" />
                 </g>
               )}
@@ -5713,8 +5714,35 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     return { type: 'sovereign_deity', color: '#fbbf24', glow: '#fde047', name: 'Chí Tôn Thần Thai' };
                   })();
 
-                  // TÊN ĐẠO ANH CHÍNH DANH (KHÔNG DÙNG CHỮ CUNG NỮA)
+                  // TÌM ĐỊNH NGHĨA ĐẠO ANH GEN AI TƯƠNG ỨNG TỪ DAO_ANH_LIST
+                  const daoAnhDef = (() => {
+                    if (da) {
+                      const def = findDaoAnhDefinition(da, cultivation);
+                      if (def && def.image) return def;
+                    }
+                    if (lampId) {
+                      const match = DAO_ANH_LIST.find(d => d.sourceType === 'lamp' && d.sourceId === lampId);
+                      if (match && match.image) return match;
+                    }
+                    const artId = anchor?.id || artifactObj?.id;
+                    if (artId) {
+                      const match = DAO_ANH_LIST.find(d => d.sourceType === 'artifact' && d.sourceId === artId);
+                      if (match && match.image) return match;
+                    }
+                    if (arch?.name) {
+                      const clean = arch.name.toLowerCase().replace(/đạo anh/gi, '').trim();
+                      const match = DAO_ANH_LIST.find(d => d.name.toLowerCase().includes(clean) || clean.includes(d.name.toLowerCase().replace(/đạo anh/gi, '').trim()));
+                      if (match && match.image) return match;
+                    }
+                    return findDaoAnhDefinition(da || { palaceIndex: i }, cultivation);
+                  })();
+
+                  // TÊN ĐẠO ANH CHÍNH DANH
                   const daoAnhDisplayName = (() => {
+                    if (daoAnhDef?.name) {
+                      const clean = daoAnhDef.name.replace(/^Đạo Anh · /, '').replace(/^Đạo Anh /, '').trim();
+                      return `Đạo Anh · ${clean}`;
+                    }
                     if (arch.name) return `Đạo Anh · ${arch.name}`;
                     const clean = palaceName.replace(/Cung$/i, '').trim();
                     return `Đạo Anh · ${clean}`;
@@ -5725,155 +5753,235 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   const arcCircumference = 2 * Math.PI * arcR;
                   const arcDashoffset = arcCircumference - (arcCircumference * expPercent) / 100;
 
-                  return (
-                    <g
-                      key={`na-palace-${i}`}
-                      transform={`translate(${pos.x}, ${pos.y})`}
-                      style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
-                      onMouseEnter={() => setHoveredPalace(`palace_na_${i}`)}
-                      onMouseLeave={() => setHoveredPalace(null)}
-                      onClick={() => setFocusedDaoAnhId(da ? da.id : i)}
-                    >
-                      <g style={{ animation: 'spiritBreathing 3.6s ease-in-out infinite alternate', animationDelay: `${i * 0.35}s` }}>
-                        
-                        {/* Quầng Hào Quang Dưới Chân */}
-                        <ellipse
-                          cx="0"
-                          cy="16"
-                          rx={46 * scale}
-                          ry={14 * scale}
-                          fill={arch.color}
-                          opacity={isReady80 ? 0.45 : (isHovered ? 0.35 : 0.18)}
-                          filter="url(#naGlowGold)"
-                        />
-
-                        <g transform={`scale(${scale})`}>
+                    return (
+                      <g
+                        key={`na-palace-${i}`}
+                        transform={`translate(${pos.x}, ${pos.y})`}
+                        style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
+                        onMouseEnter={() => setHoveredPalace(`palace_na_${i}`)}
+                        onMouseLeave={() => setHoveredPalace(null)}
+                        onClick={() => setFocusedDaoAnhId(da ? da.id : i)}
+                      >
+                        <g style={{ animation: 'spiritBreathing 3.6s ease-in-out infinite alternate', animationDelay: `${i * 0.35}s`, willChange: 'transform' }}>
                           
-                          {/* 1. VÒNG TIẾN ĐỘ EXP LINH LỰC */}
-                          <circle
+                          {/* Quầng Hào Quang Dưới Chân */}
+                          <ellipse
                             cx="0"
-                            cy="0"
-                            r={arcR}
-                            fill="none"
-                            stroke="rgba(255, 255, 255, 0.06)"
-                            strokeWidth="1.8"
-                          />
-                          <circle
-                            cx="0"
-                            cy="0"
-                            r={arcR}
-                            fill="none"
-                            stroke={isMaxKiep ? '#fbbf24' : (isReady80 ? '#c084fc' : arch.color)}
-                            strokeWidth="2.2"
-                            strokeDasharray={arcCircumference}
-                            strokeDashoffset={isMaxKiep ? 0 : arcDashoffset}
-                            strokeLinecap="round"
-                            transform="rotate(-90)"
+                            cy="16"
+                            rx={46 * scale}
+                            ry={14 * scale}
+                            fill={daoAnhDef?.primaryColor || arch.color}
+                            opacity={isReady80 ? 0.35 : (isHovered ? 0.3 : 0.15)}
                           />
 
-                          {/* 2. PHÁP TƯỚNG BẢN NGUYÊN ĐỘC BẢN */}
-                          <g>
-                            {renderDetailedPrimordialAvatar(arch, currentKiep, isMaxKiep, isReady80, false)}
-                          </g>
-
-                          {/* 3. TÊN ĐẠO ANH TINH TẾ (PHÍA TRÊN ĐẦU) */}
-                          <g transform="translate(0, -42)">
-                            <text
-                              textAnchor="middle"
-                              fontSize="9.5"
-                              fontWeight="900"
-                              fill={isMaxKiep ? '#fde047' : (isReady80 ? '#f0abfc' : 'var(--color-kim)')}
-                              fontFamily="var(--font-serif)"
-                              letterSpacing="0.6"
-                            >
-                              {daoAnhDisplayName}
-                            </text>
-                          </g>
-
-                          {/* 4. HỆ THỐNG 5 LINH KIẾP TINH ẤN / CHÂU QUANG (THAY THẾ CHỮ THÔ) */}
-                          <g transform="translate(0, 46)">
-                            <rect
-                              x="-34"
-                              y="-7.5"
-                              width="68"
-                              height="15"
-                              rx="7.5"
-                              fill="rgba(6, 12, 28, 0.92)"
-                              stroke={isMaxKiep ? 'rgba(251, 191, 36, 0.7)' : (isReady80 ? 'rgba(240, 171, 252, 0.6)' : 'rgba(255, 255, 255, 0.16)')}
-                              strokeWidth="0.9"
+                          <g transform={`scale(${scale})`}>
+                            
+                            {/* 1. VÒNG TIẾN ĐỘ EXP LINH LỰC */}
+                            <circle
+                              cx="0"
+                              cy="0"
+                              r={arcR}
+                              fill="none"
+                              stroke="rgba(255, 255, 255, 0.06)"
+                              strokeWidth="1.8"
+                            />
+                            <circle
+                              cx="0"
+                              cy="0"
+                              r={arcR}
+                              fill="none"
+                              stroke={isMaxKiep ? '#fbbf24' : (isReady80 ? '#c084fc' : (daoAnhDef?.primaryColor || arch.color))}
+                              strokeWidth="2.2"
+                              strokeDasharray={arcCircumference}
+                              strokeDashoffset={isMaxKiep ? 0 : arcDashoffset}
+                              strokeLinecap="round"
+                              transform="rotate(-90)"
                             />
 
-                            <line
-                              x1="-22"
-                              y1="0"
-                              x2="22"
-                              y2="0"
-                              stroke={isMaxKiep ? '#fde047' : 'rgba(255, 255, 255, 0.14)'}
-                              strokeWidth="0.8"
-                              strokeDasharray={isMaxKiep ? 'none' : '2 2'}
-                            />
+                            {/* 2. HÌNH ẢNH GEN AI ĐẠO ANH HOẶC PHÁP TƯỚNG BẢN NGUYÊN */}
+                            <g>
+                              {daoAnhDef?.image ? (
+                                <g style={{ willChange: 'transform' }}>
+                                  {/* Quầng sáng nhẹ phía sau ảnh */}
+                                  <circle
+                                    cx="0"
+                                    cy="0"
+                                    r="28"
+                                    fill={daoAnhDef.primaryColor || arch.color}
+                                    opacity={0.2}
+                                  />
 
-                            {/* 5 Hạt Tinh Ấn Đại Biểu Cho 5 Kiếp */}
-                            {[-22, -11, 0, 11, 22].map((xPos, kIdx) => {
-                              const kiepNum = kIdx + 1;
-                              const isCompleted = currentKiep >= kiepNum;
-                              const isCurrentActive = currentKiep === kIdx && !isMaxKiep;
+                                  {/* Vòng xoay độ kiếp theo tầng */}
+                                  {currentKiep >= 1 && (
+                                    <g style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 40s linear infinite', willChange: 'transform' }}>
+                                      <circle
+                                        cx="0"
+                                        cy="0"
+                                        r="32"
+                                        fill="none"
+                                        stroke={daoAnhDef.primaryColor || arch.color}
+                                        strokeWidth="1"
+                                        strokeDasharray="3 4"
+                                        opacity="0.6"
+                                      />
+                                      {[0, 90, 180, 270].map((deg, sidx) => {
+                                        const rad = (deg * Math.PI) / 180;
+                                        return (
+                                          <circle
+                                            key={`ai-halo-dot-${sidx}`}
+                                            cx={Math.cos(rad) * 32}
+                                            cy={Math.sin(rad) * 32}
+                                            r="1.4"
+                                            fill={daoAnhDef.secondaryColor || arch.glow || '#fde047'}
+                                          />
+                                        );
+                                      })}
+                                    </g>
+                                  )}
 
-                              if (isCompleted) {
+                                  {currentKiep >= 3 && (
+                                    <circle
+                                      cx="0"
+                                      cy="0"
+                                      r="36"
+                                      fill="none"
+                                      stroke={daoAnhDef.secondaryColor || arch.glow || '#fde047'}
+                                      strokeWidth="0.8"
+                                      strokeDasharray="6 6"
+                                      opacity="0.45"
+                                      style={{ transformOrigin: '0 0', animation: 'haloSpinReverse 25s linear infinite', willChange: 'transform' }}
+                                    />
+                                  )}
+
+                                  {/* Hình ảnh Chibi Tiên Thai Gen AI Cắt Nền Trong Suốt */}
+                                  <image
+                                    href={getAssetUrl(daoAnhDef.image)}
+                                    x="-28"
+                                    y="-30"
+                                    width="56"
+                                    height="56"
+                                    preserveAspectRatio="xMidYMid meet"
+                                    style={{
+                                      filter: isReady80
+                                        ? 'drop-shadow(0 0 10px #f0abfc)'
+                                        : isMaxKiep
+                                        ? 'drop-shadow(0 0 10px #fde047)'
+                                        : `drop-shadow(0 0 8px ${daoAnhDef.glowColor || arch.color || '#fbbf24'})`,
+                                      pointerEvents: 'none',
+                                    }}
+                                  />
+
+                                  {/* Vương Miện Chí Tôn Khi Đạt Max 5 Kiếp */}
+                                  {isMaxKiep && (
+                                    <g transform="translate(0, -30)">
+                                      <polygon points="0,-7 4,-2 2,-2 0,-4 -2,-2 -4,-2" fill="#fde047" stroke="#b45309" strokeWidth="0.7" />
+                                      <circle cx="0" cy="-7" r="1.4" fill="#ef4444" />
+                                    </g>
+                                  )}
+                                </g>
+                              ) : (
+                                renderDetailedPrimordialAvatar(arch, currentKiep, isMaxKiep, isReady80, false)
+                              )}
+                            </g>
+
+                            {/* 3. TÊN ĐẠO ANH TINH TẾ (PHÍA TRÊN ĐẦU) */}
+                            <g transform="translate(0, -42)">
+                              <text
+                                textAnchor="middle"
+                                fontSize="9.5"
+                                fontWeight="900"
+                                fill={isMaxKiep ? '#fde047' : (isReady80 ? '#f0abfc' : 'var(--color-kim)')}
+                                fontFamily="var(--font-serif)"
+                                letterSpacing="0.6"
+                              >
+                                {daoAnhDisplayName}
+                              </text>
+                            </g>
+
+                            {/* 4. HỆ THỐNG 5 LINH KIẾP TINH ẤN / CHÂU QUANG (THAY THẾ CHỮ THÔ) */}
+                            <g transform="translate(0, 46)">
+                              <rect
+                                x="-34"
+                                y="-7.5"
+                                width="68"
+                                height="15"
+                                rx="7.5"
+                                fill="rgba(6, 12, 28, 0.92)"
+                                stroke={isMaxKiep ? 'rgba(251, 191, 36, 0.7)' : (isReady80 ? 'rgba(240, 171, 252, 0.6)' : 'rgba(255, 255, 255, 0.16)')}
+                                strokeWidth="0.9"
+                              />
+
+                              <line
+                                x1="-22"
+                                y1="0"
+                                x2="22"
+                                y2="0"
+                                stroke={isMaxKiep ? '#fde047' : 'rgba(255, 255, 255, 0.14)'}
+                                strokeWidth="0.8"
+                                strokeDasharray={isMaxKiep ? 'none' : '2 2'}
+                              />
+
+                              {/* 5 Hạt Tinh Ấn Đại Biểu Cho 5 Kiếp */}
+                              {[-22, -11, 0, 11, 22].map((xPos, kIdx) => {
+                                const kiepNum = kIdx + 1;
+                                const isCompleted = currentKiep >= kiepNum;
+                                const isCurrentActive = currentKiep === kIdx && !isMaxKiep;
+
+                                if (isCompleted) {
+                                  return (
+                                    <g key={`kiep-gem-${kIdx}`} transform={`translate(${xPos}, 0)`}>
+                                      <polygon
+                                        points="0,-3.6 3.6,0 0,3.6 -3.6,0"
+                                        fill={isMaxKiep ? '#fde047' : (arch.glow || '#fde047')}
+                                        stroke="#ffffff"
+                                        strokeWidth="0.5"
+                                      />
+                                      <circle cx="0" cy="0" r="1.1" fill="#ffffff" />
+                                    </g>
+                                  );
+                                }
+
+                                if (isCurrentActive) {
+                                  return (
+                                    <g key={`kiep-gem-${kIdx}`} transform={`translate(${xPos}, 0)`}>
+                                      {isReady80 ? (
+                                        <g style={{ animation: 'daoAnhHeartbeat 1.4s ease-in-out infinite', willChange: 'transform' }}>
+                                          <polygon
+                                            points="0,-4.2 4,0 0,4.2 -4,0"
+                                            fill="#f0abfc"
+                                            stroke="#c084fc"
+                                            strokeWidth="0.8"
+                                          />
+                                          <circle cx="0" cy="0" r="1.3" fill="#ffffff" />
+                                        </g>
+                                      ) : (
+                                        <g>
+                                          <polygon
+                                            points="0,-3.2 3.2,0 0,3.2 -3.2,0"
+                                            fill="rgba(56, 189, 248, 0.45)"
+                                            stroke="#38bdf8"
+                                            strokeWidth="0.8"
+                                          />
+                                          <circle cx="0" cy="0" r="0.9" fill="#38bdf8" />
+                                        </g>
+                                      )}
+                                    </g>
+                                  );
+                                }
+
                                 return (
                                   <g key={`kiep-gem-${kIdx}`} transform={`translate(${xPos}, 0)`}>
                                     <polygon
-                                      points="0,-3.6 3.6,0 0,3.6 -3.6,0"
-                                      fill={isMaxKiep ? '#fde047' : (arch.glow || '#fde047')}
-                                      filter="url(#naGlowGold)"
+                                      points="0,-2.8 2.8,0 0,2.8 -2.8,0"
+                                      fill="none"
+                                      stroke="rgba(255, 255, 255, 0.22)"
+                                      strokeWidth="0.7"
                                     />
-                                    <circle cx="0" cy="0" r="1.1" fill="#ffffff" />
+                                    <circle cx="0" cy="0" r="0.6" fill="rgba(255, 255, 255, 0.25)" />
                                   </g>
                                 );
-                              }
-
-                              if (isCurrentActive) {
-                                return (
-                                  <g key={`kiep-gem-${kIdx}`} transform={`translate(${xPos}, 0)`}>
-                                    {isReady80 ? (
-                                      <g style={{ animation: 'daoAnhHeartbeat 1.4s ease-in-out infinite' }}>
-                                        <polygon
-                                          points="0,-4.2 4,0 0,4.2 -4,0"
-                                          fill="#f0abfc"
-                                          stroke="#c084fc"
-                                          strokeWidth="0.8"
-                                          filter="url(#naGlowPurple)"
-                                        />
-                                        <circle cx="0" cy="0" r="1.3" fill="#ffffff" />
-                                      </g>
-                                    ) : (
-                                      <g>
-                                        <polygon
-                                          points="0,-3.2 3.2,0 0,3.2 -3.2,0"
-                                          fill="rgba(56, 189, 248, 0.45)"
-                                          stroke="#38bdf8"
-                                          strokeWidth="0.8"
-                                        />
-                                        <circle cx="0" cy="0" r="0.9" fill="#38bdf8" />
-                                      </g>
-                                    )}
-                                  </g>
-                                );
-                              }
-
-                              return (
-                                <g key={`kiep-gem-${kIdx}`} transform={`translate(${xPos}, 0)`}>
-                                  <polygon
-                                    points="0,-2.8 2.8,0 0,2.8 -2.8,0"
-                                    fill="none"
-                                    stroke="rgba(255, 255, 255, 0.22)"
-                                    strokeWidth="0.7"
-                                  />
-                                  <circle cx="0" cy="0" r="0.6" fill="rgba(255, 255, 255, 0.25)" />
-                                </g>
-                              );
-                            })}
-                          </g>
+                              })}
+                            </g>
 
                           {/* 5. NHÃN PHỤ TRẠNG THÁI (ĐỘ KIẾP HOẶC VIÊN MÃN) */}
                           {isMaxKiep && (
@@ -5938,7 +6046,26 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 return { type: 'sovereign_deity', color: '#fbbf24', glow: '#fde047', name: 'Chí Tôn Thần Thai' };
               })();
 
-              const modalDaoAnhDisplayName = `Đạo Anh · ${modalArch.name || matchedDaoAnh.name || 'Bản Nguyên Thần Thể'}`.replace(/^Đạo Anh · Đạo Anh · /, 'Đạo Anh · ');
+              const modalDaoAnhDef = (() => {
+                if (matchedDaoAnh) {
+                  const def = findDaoAnhDefinition(matchedDaoAnh, cultivation);
+                  if (def && def.image) return def;
+                }
+                const matchByName = DAO_ANH_LIST.find(d => 
+                  d.name.toLowerCase().includes((matchedDaoAnh.name || '').toLowerCase().replace(/đạo anh/gi, '').trim()) ||
+                  (modalArch.name && d.name.toLowerCase().includes(modalArch.name.toLowerCase()))
+                );
+                if (matchByName && matchByName.image) return matchByName;
+                return findDaoAnhDefinition(matchedDaoAnh, cultivation);
+              })();
+
+              const modalDaoAnhDisplayName = (() => {
+                if (modalDaoAnhDef?.name) {
+                  const clean = modalDaoAnhDef.name.replace(/^Đạo Anh · /, '').replace(/^Đạo Anh /, '').trim();
+                  return `Đạo Anh · ${clean}`;
+                }
+                return `Đạo Anh · ${modalArch.name || matchedDaoAnh.name || 'Bản Nguyên Thần Thể'}`.replace(/^Đạo Anh · Đạo Anh · /, 'Đạo Anh · ');
+              })();
 
               return (
                 <div
@@ -5961,7 +6088,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                       width: '100%',
                       maxWidth: 680,
                       background: 'linear-gradient(180deg, #0f172a 0%, #030712 100%)',
-                      border: '1.5px solid rgba(251, 191, 36, 0.5)',
+                      border: `1.5px solid ${modalDaoAnhDef?.primaryColor || 'rgba(251, 191, 36, 0.5)'}`,
                       borderRadius: 16,
                       overflow: 'hidden',
                       display: 'flex',
@@ -5984,8 +6111,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                           <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--color-kim)', fontFamily: 'var(--font-serif)' }}>
                             {modalDaoAnhDisplayName}
                           </div>
-                          <div style={{ fontSize: 12, color: modalArch.color || tierInfo.color || '#38bdf8', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span>Pháp Tướng: [{modalArch.name}]</span>
+                          <div style={{ fontSize: 12, color: modalDaoAnhDef?.primaryColor || modalArch.color || tierInfo.color || '#38bdf8', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span>Pháp Tướng: [{modalDaoAnhDef?.title || modalArch.name}]</span>
                             <span>•</span>
                             <span>Phẩm Cấp: {tierInfo.name}</span>
                           </div>
@@ -6005,27 +6132,52 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                       {/* Avatar Phòng Thiền Cận Cảnh */}
                       <div style={{
                         position: 'relative',
-                        height: 200,
+                        height: 220,
                         borderRadius: 12,
                         background: 'radial-gradient(circle at center, rgba(30, 41, 75, 0.8) 0%, rgba(8, 12, 24, 0.95) 100%)',
-                        border: `1px solid ${modalArch.color || 'rgba(56, 189, 248, 0.3)'}`,
+                        border: `1px solid ${modalDaoAnhDef?.primaryColor || modalArch.color || 'rgba(56, 189, 248, 0.3)'}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         overflow: 'hidden'
                       }}>
-                        <svg width="100%" height="100%" viewBox="-100 -75 200 150" style={{ overflow: 'visible' }}>
+                        <svg width="100%" height="100%" viewBox="-100 -80 200 160" style={{ overflow: 'visible' }}>
                           {/* Vành Hào Quang Tinh Tú */}
-                          <circle r="48" fill="none" stroke={modalArch.color} strokeWidth="1.6" strokeDasharray="4 4" style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 30s linear infinite' }} />
-                          <circle r="56" fill="none" stroke={modalArch.glow} strokeWidth="0.8" opacity="0.5" style={{ transformOrigin: '0 0', animation: 'haloSpinReverse 45s linear infinite' }} />
+                          <circle r="52" fill="none" stroke={modalDaoAnhDef?.primaryColor || modalArch.color} strokeWidth="1.6" strokeDasharray="4 4" style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 30s linear infinite', willChange: 'transform' }} />
+                          <circle r="62" fill="none" stroke={modalDaoAnhDef?.secondaryColor || modalArch.glow} strokeWidth="0.8" opacity="0.5" style={{ transformOrigin: '0 0', animation: 'haloSpinReverse 45s linear infinite', willChange: 'transform' }} />
 
-                          {/* Pháp Tướng Bản Nguyên Phóng To Trong Phòng Thiền */}
-                          <g transform="scale(1.4)">
-                            {renderDetailedPrimordialAvatar(modalArch, curKiep, isMax, canTribulate, true)}
-                          </g>
+                          {modalDaoAnhDef?.image ? (
+                            <g style={{ willChange: 'transform', animation: 'spiritBreathing 3.6s ease-in-out infinite alternate' }}>
+                              <image
+                                href={getAssetUrl(modalDaoAnhDef.image)}
+                                x="-56"
+                                y="-60"
+                                width="112"
+                                height="112"
+                                preserveAspectRatio="xMidYMid meet"
+                                style={{
+                                  filter: isMax
+                                    ? 'drop-shadow(0 0 16px #fde047)'
+                                    : canTribulate
+                                    ? 'drop-shadow(0 0 16px #f0abfc)'
+                                    : `drop-shadow(0 0 12px ${modalDaoAnhDef.glowColor || modalArch.color || '#fbbf24'})`,
+                                }}
+                              />
+                              {isMax && (
+                                <g transform="translate(0, -64)">
+                                  <polygon points="0,-12 8,-3 5,-3 0,-7 -5,-3 -8,-3" fill="#fde047" stroke="#b45309" strokeWidth="1" />
+                                  <circle cx="0" cy="-12" r="2.2" fill="#ef4444" />
+                                </g>
+                              )}
+                            </g>
+                          ) : (
+                            <g transform="scale(1.4)">
+                              {renderDetailedPrimordialAvatar(modalArch, curKiep, isMax, canTribulate, true)}
+                            </g>
+                          )}
 
                           {/* 5 Hạt Tinh Ấn Kiếp trong Modal */}
-                          <g transform="translate(0, 52)">
+                          <g transform="translate(0, 56)">
                             {[-30, -15, 0, 15, 30].map((xPos, kIdx) => {
                               const kiepNum = kIdx + 1;
                               const isCompleted = curKiep >= kiepNum;
@@ -6036,8 +6188,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                   <g key={`modal-kiep-${kIdx}`} transform={`translate(${xPos}, 0)`}>
                                     <polygon
                                       points="0,-4.5 4.5,0 0,4.5 -4.5,0"
-                                      fill={isMax ? '#fde047' : (modalArch.glow || '#fde047')}
-                                      filter="url(#naGlowGold)"
+                                      fill={isMax ? '#fde047' : (modalDaoAnhDef?.glowColor || modalArch.glow || '#fde047')}
+                                      stroke="#ffffff"
+                                      strokeWidth="0.6"
                                     />
                                     <circle cx="0" cy="0" r="1.3" fill="#ffffff" />
                                   </g>

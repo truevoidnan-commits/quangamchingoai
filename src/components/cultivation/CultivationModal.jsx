@@ -6,9 +6,13 @@ import RealmPreviewVisualizer from './RealmPreviewVisualizer';
 import BreakthroughModal from './BreakthroughModal';
 import TribulationModal from './TribulationModal';
 import ArtifactIcon from './ArtifactIcon';
+import DaoAnhAvatarRenderer from './DaoAnhAvatarRenderer';
+import DaoAnhGalleryModal from './DaoAnhGalleryModal';
+import { findDaoAnhDefinition } from '../../lib/daoAnhData';
 import styles from './CultivationModal.module.css';
 
 export default function CultivationModal({ isOpen, onClose }) {
+  const [daoAnhGalleryOpen, setDaoAnhGalleryOpen] = useState(false);
   const {
     cultivation,
     displayName,
@@ -1052,20 +1056,41 @@ export default function CultivationModal({ isOpen, onClose }) {
               </div>
 
               {/* Nạp Đầy 100% & Vạn Kiếp Tề Thăng buttons */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, marginTop: 8 }}>
                 <button
                   className="btn-gold"
-                  style={{ width: '100%', padding: '10px 14px', fontSize: 12.5, fontWeight: 800, background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}
+                  style={{ padding: '10px 14px', fontSize: 12, fontWeight: 800, background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}
                   onClick={() => triggerAction(fillAllDaoAnhThienMenh)}
                 >
-                  ⚡ NẠP ĐẦY 100% LINH LỰC TOÀN BỘ
+                  ⚡ NẠP ĐẦY 100% LINH LỰC
                 </button>
                 <button
                   className={`btn-gold ${styles.massTribulationBtn}`}
-                  style={{ width: '100%', padding: '10px 14px', fontSize: 12.5, fontWeight: 700 }}
+                  style={{ padding: '10px 14px', fontSize: 12, fontWeight: 700 }}
                   onClick={handleAllTribulation}
                 >
-                  👑 VẠN KIẾP TỀ THĂNG (+50% BONUS THIÊN MỆNH)
+                  👑 VẠN KIẾP TỀ THĂNG (+50% TM)
+                </button>
+                <button
+                  style={{
+                    padding: '10px 14px',
+                    fontSize: 12,
+                    fontWeight: 900,
+                    borderRadius: 8,
+                    background: 'linear-gradient(135deg, #a855f7, #f59e0b)',
+                    border: '1.5px solid #fde047',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    boxShadow: '0 0 14px rgba(251, 191, 36, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6
+                  }}
+                  onClick={() => setDaoAnhGalleryOpen(true)}
+                  title="Mở Đạo Anh Đồ Lục"
+                >
+                  ✨ ĐẠO ANH ĐỒ LỤC (42 THẦN PHẨM)
                 </button>
               </div>
             </div>
@@ -1079,6 +1104,7 @@ export default function CultivationModal({ isOpen, onClose }) {
               <div className={styles.daoAnhCardsGrid}>
                 {(cultivation?.daoAnhs || []).map(da => {
                   const daTheme = getDaoAnhTheme(da, cultivation);
+                  const daoAnhDef = findDaoAnhDefinition(da, cultivation);
                   const curExp = da.currentExp !== undefined ? da.currentExp : (da.currentThienMenh || 0);
                   const maxExp = da.maxExp || KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
                   const percent = Math.min(100, Math.floor((curExp / maxExp) * 100));
@@ -1094,10 +1120,16 @@ export default function CultivationModal({ isOpen, onClose }) {
                       className={`${styles.daoAnhCard} ${da.currentKiep >= 5 ? styles.daoAnhMax : ''}`}
                       style={{ borderColor: isEligible ? '#c084fc' : daTheme.color, boxShadow: `0 0 14px ${daTheme.glow}`, background: daTheme.bg }}
                     >
-                      <div className={styles.daoAnhTop}>
-                        <span className={styles.daoAnhIcon} style={{ textShadow: `0 0 10px ${daTheme.color}` }}>
-                          {daTheme.icon}
-                        </span>
+                      <div className={styles.daoAnhTop} style={{ alignItems: 'center' }}>
+                        <div style={{ marginRight: 10, flexShrink: 0 }}>
+                          <DaoAnhAvatarRenderer
+                            daoAnh={daoAnhDef}
+                            size={56}
+                            currentKiep={da.currentKiep || 0}
+                            animate={true}
+                            showAura={true}
+                          />
+                        </div>
                         <div className={styles.daoAnhInfo}>
                           <h4 className={styles.daoAnhTitle} style={{ color: daTheme.color, fontWeight: 700 }}>
                             {formatDaoAnhTitle(da.name)}
@@ -1358,6 +1390,12 @@ export default function CultivationModal({ isOpen, onClose }) {
       {tribulationModalData && (
         <TribulationModal activeData={tribulationModalData} onClose={() => setTribulationModalData(null)} />
       )}
+
+      {/* Đạo Anh Đồ Lục Modal */}
+      <DaoAnhGalleryModal
+        isOpen={daoAnhGalleryOpen}
+        onClose={() => setDaoAnhGalleryOpen(false)}
+      />
     </BottomSheet>
   );
 }

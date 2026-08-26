@@ -46,7 +46,7 @@ export default function NovelDetailPage() {
       }
     }
     load();
-  }, [novelId]);
+  }, [activeNovelId]);
 
   // Handle in-novel full-text search
   useEffect(() => {
@@ -66,28 +66,29 @@ export default function NovelDetailPage() {
     }, 180);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, novelId]);
+  }, [searchQuery, activeNovelId]);
 
   // Tự động cuộn đến chương đang đọc dở khi vào trang thông tin truyện
   useEffect(() => {
     if (!loading && chapters.length > 0) {
       const prog = getReadingProgress(activeNovelId);
       if (prog?.chapterId) {
-        const timer = setTimeout(() => {
+        const scrollToLastRead = () => {
           const el = document.getElementById(`chapter-item-${prog.chapterId}`);
           if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
-        }, 350);
+        };
+        const timer = setTimeout(scrollToLastRead, 250);
         return () => clearTimeout(timer);
       }
     }
-  }, [loading, chapters.length, novelId]);
+  }, [loading, chapters.length, activeNovelId]);
 
   if (loading) return <LoadingState />;
   if (!novel) return <NotFoundState />;
 
-  const progress = getReadingProgress(novelId);
+  const progress = getReadingProgress(activeNovelId);
   const mainChapters = chapters.filter(c => !c.isExtra);
   const extraChapters = chapters.filter(c => c.isExtra);
 
@@ -132,7 +133,7 @@ export default function NovelDetailPage() {
 
   const handleDeleteChapter = async () => {
     if (!deleteChapter) return;
-    await deleteChapterDB(deleteChapter.id, novelId);
+    await deleteChapterDB(deleteChapter.id, activeNovelId);
     const newChapters = chapters.filter(c => c.id !== deleteChapter.id);
     setChapters(newChapters);
     if (novel) {
@@ -142,7 +143,7 @@ export default function NovelDetailPage() {
         totalChapters: newChapters.length,
       };
       setNovel(updatedNovel);
-      updateLibraryItem(novelId, { chapterCount: newChapters.length });
+      updateLibraryItem(activeNovelId, { chapterCount: newChapters.length });
     }
     setDeleteChapter(null);
   };
@@ -436,9 +437,9 @@ function ChapterRow({ chapter, novelId, isExtra, isLastRead, isHighlighted, onDe
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleOpen(); }}
     >
       <div className={styles.chapterBtn} style={{ display: 'flex', alignItems: 'center', flex: 1, pointerEvents: 'none' }}>
-        <span className={styles.chapterTitle}>{chapter.title}</span>
-        {isLastRead && <span className="badge badge-gold" style={{ marginLeft: 6 }}>✦ Đang đọc</span>}
-        {isExtra && <span className="badge badge-extra" style={{ marginLeft: 6 }}>Ngoại truyện</span>}
+        <span className={`${styles.chapterTitle} ${isLastRead ? styles.lastReadTitle : ''}`}>{chapter.title}</span>
+        {isLastRead && <span className="badge badge-gold badge-reading-pulse" style={{ marginLeft: 8, flexShrink: 0 }}>✦ Đang đọc</span>}
+        {isExtra && <span className="badge badge-extra" style={{ marginLeft: 6, flexShrink: 0 }}>Ngoại truyện</span>}
       </div>
       <div className={styles.chapterActions} onClick={(e) => e.stopPropagation()}>
         <button

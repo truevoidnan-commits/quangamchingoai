@@ -484,8 +484,15 @@
 
 /* Chapter state highlights */
 .chapterLastRead {
-  border-left: 3px solid var(--accent-gold) !important;
-  background: rgba(255, 204, 0, 0.08) !important;
+  border-left: 4px solid var(--accent-gold) !important;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.16) 0%, rgba(245, 158, 11, 0.03) 100%) !important;
+  box-shadow: inset 0 0 16px rgba(245, 158, 11, 0.06);
+}
+
+.lastReadTitle {
+  color: var(--accent-gold) !important;
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
 }
 
 .chapterJumpHighlighted {

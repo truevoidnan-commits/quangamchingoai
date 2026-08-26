@@ -1582,7 +1582,7 @@ export default function SidePanelInfo() {
                 <span>⛈️ VẠN KIẾP TỀ THĂNG (+50% TM)</span>
               </button>
 
-              {/* 4. Bách Thần Đồ */}
+              {/* 4. Đạo Anh Đồ Lục */}
               <button
                 onClick={() => {
                   if (setGalleryModalOpen) setGalleryModalOpen(true);
@@ -1590,20 +1590,21 @@ export default function SidePanelInfo() {
                 style={{
                   padding: '10px 14px',
                   borderRadius: 8,
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                  border: '1px solid #fde047',
-                  color: '#000',
+                  background: 'linear-gradient(135deg, #a855f7 0%, #f59e0b 100%)',
+                  border: '1.5px solid #fde047',
+                  color: '#fff',
                   fontSize: 12,
                   fontWeight: 900,
                   cursor: 'pointer',
-                  boxShadow: '0 0 12px rgba(245, 158, 11, 0.4)',
+                  boxShadow: '0 0 16px rgba(251, 191, 36, 0.45)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 6
                 }}
+                title="Mở Đạo Anh Đồ Lục (42 Pháp Tướng Thần Phẩm Nguyên Anh)"
               >
-                <span>🎨 BÁCH THẦN ĐỒ (29 SVG)</span>
+                <span>✨ ĐẠO ANH ĐỒ LỤC (42 THẦN PHẨM)</span>
               </button>
             </div>
           </div>

@@ -1633,6 +1633,7 @@ export function getCultivationState() {
     }
 
     if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
+      const maxThienCung = state.maxThienCung || 13;
       const lampCount = (state.absorbedLamps || []).length;
       const selfRealized = state.realizedThienCung || 0;
       const totalRealized = lampCount + selfRealized;
@@ -3408,6 +3409,7 @@ export function manifestDaoAnh(palaceIndex) {
   if (!state.daoAnhs) state.daoAnhs = [];
 
   const absorbed = state.absorbedLamps || [];
+  const maxThienCung = state.maxThienCung || 13;
 
   const buildDaoAnhObj = (idx) => {
     const isLampPalace = idx < lampCount;
