@@ -265,27 +265,23 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                       </span>
                     </div>
 
-                    {/* Stage Portrait Mirror */}
+                    {/* Stage Portrait Mirror - PHÓNG TO NỔI BẬT NGHỆ THUẬT */}
                     <div className={styles.avatarStageWrap}>
                       <DaoAnhAvatarRenderer
                         daoAnh={da}
-                        size={135}
+                        size={200}
                         currentKiep={previewKiep}
                         animate={isHovered}
                         showAura={true}
                       />
                     </div>
 
-                    {/* Text Details */}
+                    {/* Text Details - TINH GỌN SANG TRỌNG */}
                     <div className={styles.cardContent}>
                       <h3 className={styles.cardName}>{da.name}</h3>
                       <div className={styles.cardTitle}>{da.title}</div>
 
-                      <div className={styles.poemBox}>
-                        <span>"{da.poem}"</span>
-                      </div>
-
-                      <div className={styles.skillPreviewTag}>
+                      <div className={styles.skillPreviewTag} title={da.skillDesc}>
                         <span className={styles.skillIcon}>⚡</span>
                         <span className={styles.skillNameText}>{da.skillName}</span>
                       </div>
