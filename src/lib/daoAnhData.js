@@ -240,6 +240,13 @@ export const DAO_ANH_LIST = [
     category: 'thoi_khong',
     tier: 'than_pham',
     image: '/images/dao_anh/khoi_nguyen_thoi_khong.png',
+    evolutionImages: [
+      '/images/dao_anh/khoi_nguyen_thoi_khong.png',
+      '/images/dao_anh/khoi_nguyen_thoi_khong_k2.png',
+      '/images/dao_anh/khoi_nguyen_thoi_khong_k3.png',
+      '/images/dao_anh/khoi_nguyen_thoi_khong_k4.png',
+      '/images/dao_anh/khoi_nguyen_thoi_khong_k5.png',
+    ],
     primaryColor: '#818cf8',
     secondaryColor: '#38bdf8',
     glowColor: 'rgba(129, 140, 248, 0.8)',
@@ -1066,11 +1073,37 @@ export function findDaoAnhDefinition(da, state) {
   // 3. Fallback tìm kiếm theo tên
   const cleanName = (da.name || '').toLowerCase();
   const matchByName = DAO_ANH_LIST.find(d => 
-    cleanName.includes(d.name.toLowerCase().replace('đạo anh', '').trim()) ||
-    cleanName.includes(d.sourceId.replace(/_/g, ' '))
+    (d.name && cleanName.includes(d.name.toLowerCase().replace('đạo anh', '').trim())) ||
+    (d.sourceId && cleanName.includes(d.sourceId.replace(/_/g, ' ')))
   );
   if (matchByName) return matchByName;
 
   return DAO_ANH_LIST[0];
+}
+
+/**
+ * Lấy URL hình ảnh Đạo Ảnh theo tầng Kiếp (Kiếp 1 -> Kiếp 5)
+ * Quy tắc: 
+ * - Kiếp 0, 1: Hiển thị hình ảnh Kiếp 1 (index 0)
+ * - Kiếp 2: Hiển thị hình ảnh Kiếp 2 (index 1)
+ * - Kiếp 3: Hiển thị hình ảnh Kiếp 3 (index 2)
+ * - Kiếp 4: Hiển thị hình ảnh Kiếp 4 (index 3)
+ * - Kiếp 5: Hiển thị hình ảnh Kiếp 5 (index 4)
+ * Nếu chưa cập nhật evolutionImages cho Đạo Ảnh đó -> an toàn fallback về ảnh gốc (Kiếp 1).
+ */
+export function getDaoAnhEvolutionImage(daoAnhDef, currentKiep = 0) {
+  if (!daoAnhDef) return '';
+  const kiep = typeof currentKiep === 'number' ? currentKiep : 0;
+
+  // 1. Đọc từ mảng evolutionImages nếu đã được cập nhật
+  if (Array.isArray(daoAnhDef.evolutionImages) && daoAnhDef.evolutionImages.length > 0) {
+    const targetIndex = kiep <= 1 ? 0 : Math.min(daoAnhDef.evolutionImages.length - 1, kiep - 1);
+    if (daoAnhDef.evolutionImages[targetIndex]) {
+      return daoAnhDef.evolutionImages[targetIndex];
+    }
+  }
+
+  // 2. Mặc định an toàn trả về ảnh gốc Kiếp 1
+  return daoAnhDef.image || '';
 }
 
