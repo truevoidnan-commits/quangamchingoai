@@ -16,6 +16,7 @@ import AddChapterPage from './pages/AddChapterPage';
 import SearchPage from './pages/SearchPage';
 
 import { preloadCoreArtifactIcons } from './lib/artifactIcons';
+import { preloadAllDaoAnhEvolutionImages } from './lib/daoAnhData';
 
 function ScrollRestorer() {
   const { pathname } = useLocation();
@@ -24,6 +25,7 @@ function ScrollRestorer() {
   }, [pathname]);
   useEffect(() => {
     preloadCoreArtifactIcons();
+    preloadAllDaoAnhEvolutionImages();
   }, []);
   return null;
 }

@@ -265,12 +265,12 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                       </span>
                     </div>
 
-                    {/* Stage Portrait Mirror - PHÓNG TO NỔI BẬT NGHỆ THUẬT */}
+                    {/* Stage Portrait Mirror - PHÓNG TO NỔI BẬT NGHỆ THUẬT (KIẾP 5 ĐẠI VIÊN MÃN) */}
                     <div className={styles.avatarStageWrap}>
                       <DaoAnhAvatarRenderer
                         daoAnh={da}
                         size={200}
-                        currentKiep={1}
+                        currentKiep={5}
                         animate={isHovered}
                         showAura={true}
                       />
@@ -324,7 +324,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                     <DaoAnhAvatarRenderer
                       daoAnh={da}
                       size={52}
-                      currentKiep={previewKiep}
+                      currentKiep={5}
                       animate={false}
                       showAura={false}
                     />

@@ -1166,6 +1166,28 @@ export function getDaoAnhEvolutionImage(daoAnhDef, currentKiep = 0) {
   return resolveDaoAnhImage(chosenPath);
 }
 
+/** Preload all 5 Kiep evolution images of all Dao Anh into browser memory */
+let _hasPreloadedDaoAnh = false;
+export function preloadAllDaoAnhEvolutionImages() {
+  if (typeof window === 'undefined' || _hasPreloadedDaoAnh) return;
+  _hasPreloadedDaoAnh = true;
+
+  const runPreload = () => {
+    Object.values(bundledDaoAnh).forEach((imgUrl) => {
+      if (imgUrl) {
+        const img = new Image();
+        img.src = imgUrl;
+      }
+    });
+  };
+
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(runPreload, { timeout: 1500 });
+  } else {
+    setTimeout(runPreload, 50);
+  }
+}
+
 /**
  * Danh sách ID các Đạo Ảnh có dáng nghiêng/xòe cần phóng to kích thước
  */
