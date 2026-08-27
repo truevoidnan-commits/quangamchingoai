@@ -7,7 +7,7 @@ const iconModules = import.meta.glob('../assets/icons/than_pham/*.jpg', { eager:
 const bundledIcons = {};
 
 for (const [filepath, mod] of Object.entries(iconModules)) {
-  const filename = filepath.split('/').pop().replace(/\.jpg$/, '');
+  const filename = filepath.split(/[\/\\]/).pop().split('.')[0];
   bundledIcons[filename] = mod;
 }
 
