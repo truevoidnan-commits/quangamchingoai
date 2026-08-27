@@ -15,11 +15,16 @@ import EditNovelPage from './pages/EditNovelPage';
 import AddChapterPage from './pages/AddChapterPage';
 import SearchPage from './pages/SearchPage';
 
+import { preloadCoreArtifactIcons } from './lib/artifactIcons';
+
 function ScrollRestorer() {
   const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
+  useEffect(() => {
+    preloadCoreArtifactIcons();
+  }, []);
   return null;
 }
 

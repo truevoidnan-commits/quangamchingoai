@@ -60,21 +60,6 @@ export default function DaoAnhAvatarRenderer({
           ...style,
         }}
       >
-        <style>{`
-          @keyframes spiritBreathing {
-            0% { transform: scale(0.97) translateY(0px); opacity: 0.92; }
-            100% { transform: scale(1.02) translateY(-2px); opacity: 1; }
-          }
-          @keyframes subtleGlowPulse {
-            0%, 100% { opacity: 0.6; transform: scale(0.96); }
-            50% { opacity: 0.9; transform: scale(1.04); }
-          }
-          @keyframes crownFloat {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-3px); }
-          }
-        `}</style>
-
         {/* 1. NỀN QUẦNG SÁNG AURA DỊU ÊM THANH THOÁT PHÍA SAU */}
         {showAura && (
           <svg
@@ -105,18 +90,10 @@ export default function DaoAnhAvatarRenderer({
               r="85"
               fill={`url(#${uid}_aiAura)`}
               style={{
-                animation: animate ? 'subtleGlowPulse 4s ease-in-out infinite' : 'none',
+                opacity: 0.8,
                 transformOrigin: '0 0',
               }}
             />
-
-            {/* Vài đốm tinh tú lấp lánh nhẹ */}
-            <g opacity="0.65" style={{ animation: animate ? 'spiritBreathing 3.5s ease-in-out infinite alternate' : 'none', transformOrigin: '0 0' }}>
-              <circle cx="-52" cy="-45" r="1.2" fill="#ffffff" />
-              <circle cx="54" cy="-40" r="1.4" fill="#fde047" />
-              <circle cx="-48" cy="50" r="1.2" fill="#ffffff" />
-              <circle cx="48" cy="46" r="1.3" fill={pColor} />
-            </g>
           </svg>
         )}
 
@@ -135,7 +112,6 @@ export default function DaoAnhAvatarRenderer({
           <img
             src={getAssetUrl(getDaoAnhEvolutionImage(daoAnh, currentKiep))}
             alt={daoAnh.name}
-            loading="lazy"
             decoding="async"
             onError={() => setImgError(true)}
             style={{
@@ -143,9 +119,7 @@ export default function DaoAnhAvatarRenderer({
               height: '100%',
               objectFit: 'contain',
               userSelect: 'none',
-              filter: showAura ? `drop-shadow(0 0 12px ${glow})` : 'none',
-              animation: animate ? 'spiritBreathing 3.6s ease-in-out infinite alternate' : 'none',
-              willChange: animate ? 'transform' : 'auto',
+              filter: showAura ? `drop-shadow(0 0 10px ${glow})` : 'none',
             }}
           />
         </div>

@@ -65,6 +65,32 @@ export function getArtifactImageUrl(artId) {
   return getAssetUrl(path);
 }
 
+/** Preload all 42 core Thần Phẩm icons into browser memory for instant 0ms rendering */
+let _hasPreloaded = false;
+export function preloadCoreArtifactIcons() {
+  if (typeof window === 'undefined' || _hasPreloaded) return;
+  _hasPreloaded = true;
+
+  // Run in idle callback or small timeout to avoid delaying initial paint
+  const runner = () => {
+    const urls = [
+      ...Object.values(LAMP_THAN_PHAM_AI_ICONS).map(p => getAssetUrl(p)),
+      ...Object.values(THAN_PHAM_AI_ICONS).map(p => getAssetUrl(p)),
+    ];
+    urls.forEach(url => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = url;
+    });
+  };
+
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(runner, { timeout: 1000 });
+  } else {
+    setTimeout(runner, 200);
+  }
+}
+
 
 /**
  * Returns the icon config for a given artifact/lamp object.

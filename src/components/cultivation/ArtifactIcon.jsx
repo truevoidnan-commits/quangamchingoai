@@ -503,7 +503,6 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
           <img
             src={getLampImageUrl(item.id)}
             alt={item?.name || 'Mệnh Đăng'}
-            loading="lazy"
             decoding="async"
             className={styles.aiImg}
             style={{ width: size, height: size }}
@@ -569,7 +568,6 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
         <img
           src={getArtifactImageUrl(item.id)}
           alt={item?.name}
-          loading="lazy"
           decoding="async"
           className={styles.aiImg}
           style={{ width: size, height: size }}

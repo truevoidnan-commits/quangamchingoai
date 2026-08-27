@@ -457,7 +457,6 @@ export default function SanctumPage() {
                     <img
                       src={imgUrl}
                       alt={lamp.name}
-                      loading="lazy"
                       decoding="async"
                       className={styles.stageImage}
                       style={{
@@ -699,7 +698,6 @@ export default function SanctumPage() {
                     <img
                       src={imgUrl}
                       alt={art.name}
-                      loading="lazy"
                       decoding="async"
                       className={styles.stageImage}
                       style={{
