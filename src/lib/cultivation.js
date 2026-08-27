@@ -528,7 +528,7 @@ export function getCultivationState() {
     const parsed = JSON.parse(raw);
     const state = { ...DEFAULT_STATE, ...parsed };
 
-    // Khởi tạo các chỉ số Ngưng Khí Thể & Pháp nếu chưa có
+    // Khởi tạo và đồng bộ chuẩn xác tầng Ngưng Khí Thể & Pháp theo EXP
     if (state.ngungKhiTheExp === undefined) {
       state.ngungKhiTheExp = state.realm === 'ngung_khi' ? (state.expCurrentRealm || state.totalExp || 0) : 4500;
     }
@@ -538,11 +538,28 @@ export function getCultivationState() {
     if (!state.ngungKhiActivePath || state.ngungKhiActivePath === 'song_tu') {
       state.ngungKhiActivePath = 'the';
     }
-    if (!state.ngungKhiTheLevel) {
-      state.ngungKhiTheLevel = state.ngungKhiLevel || 1;
-    }
-    if (!state.ngungKhiPhapLevel) {
-      state.ngungKhiPhapLevel = state.ngungKhiLevel || 1;
+    if (state.realm === 'ngung_khi') {
+      let theLvl = 1;
+      for (let lvl = 10; lvl >= 1; lvl--) {
+        if ((state.ngungKhiTheExp || 0) >= (NGUNG_KHI_THRESHOLDS[lvl - 1] || 0)) {
+          theLvl = lvl;
+          break;
+        }
+      }
+      state.ngungKhiTheLevel = theLvl;
+
+      let phapLvl = 1;
+      for (let lvl = 10; lvl >= 1; lvl--) {
+        if ((state.ngungKhiPhapExp || 0) >= (NGUNG_KHI_THRESHOLDS[lvl - 1] || 0)) {
+          phapLvl = lvl;
+          break;
+        }
+      }
+      state.ngungKhiPhapLevel = phapLvl;
+      state.ngungKhiLevel = Math.max(theLvl, phapLvl);
+    } else {
+      if (!state.ngungKhiTheLevel) state.ngungKhiTheLevel = 10;
+      if (!state.ngungKhiPhapLevel) state.ngungKhiPhapLevel = 10;
     }
 
     if (state.has121st || state.phapKhieu >= 121) {
@@ -845,7 +862,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
             state.ngungKhiTheExp = newExp;
           }
           for (let lvl = 10; lvl >= 1; lvl--) {
-            if (state.ngungKhiTheExp >= 450) {
+            if (state.ngungKhiTheExp >= (NGUNG_KHI_THRESHOLDS[lvl - 1] || 0)) {
               state.ngungKhiTheLevel = lvl;
               break;
             }
@@ -861,7 +878,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
             state.ngungKhiPhapExp = newExp;
           }
           for (let lvl = 10; lvl >= 1; lvl--) {
-            if (state.ngungKhiPhapExp >= 450) {
+            if (state.ngungKhiPhapExp >= (NGUNG_KHI_THRESHOLDS[lvl - 1] || 0)) {
               state.ngungKhiPhapLevel = lvl;
               break;
             }

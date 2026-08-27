@@ -28,6 +28,7 @@ import {
   LAMP_TIERS, 
   SUPPRESSING_ARTIFACTS, 
   TRUC_CO_KHIEU_THRESHOLDS,
+  NGUNG_KHI_THRESHOLDS,
   getLampPalaceName,
   getPalaceCost,
   calculateDaoAnhTribulationReward,
@@ -1707,10 +1708,26 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
     }
   }, [cultivation?.ngungKhiActivePath]);
 
-  const theLvl = cultivation?.ngungKhiTheLevel || cultivation?.theLevel || 1;
-  const phapLvl = cultivation?.ngungKhiPhapLevel || cultivation?.phapLevel || 1;
-  const theExp = cultivation?.ngungKhiTheExp || cultivation?.theExp || 0;
-  const phapExp = cultivation?.ngungKhiPhapExp || cultivation?.phapExp || 0;
+  const theExp = cultivation?.ngungKhiTheExp !== undefined ? cultivation.ngungKhiTheExp : (cultivation?.theExp || 0);
+  const phapExp = cultivation?.ngungKhiPhapExp !== undefined ? cultivation.ngungKhiPhapExp : (cultivation?.phapExp || 0);
+
+  let theLvl = 1;
+  for (let lvl = 10; lvl >= 1; lvl--) {
+    if (theExp >= (NGUNG_KHI_THRESHOLDS?.[lvl - 1] || 0)) {
+      theLvl = lvl;
+      break;
+    }
+  }
+
+  let phapLvl = 1;
+  for (let lvl = 10; lvl >= 1; lvl--) {
+    if (phapExp >= (NGUNG_KHI_THRESHOLDS?.[lvl - 1] || 0)) {
+      phapLvl = lvl;
+      break;
+    }
+  }
+
+  // Thần thú chỉ xuất hiện sau khi đột phá Tầng 7 trở lên (Tầng 7 -> 10)
   const hasTiger = theLvl >= 7;
   const hasWhale = phapLvl >= 7;
 
