@@ -1130,35 +1130,40 @@ export function findDaoAnhDefinition(da, state) {
   return DAO_ANH_LIST[0];
 }
 
-/**
- * Chuyển đổi đường dẫn tài nguyên tĩnh tương thích với GitHub Pages / Subpath
- */
+const daoAnhModules = import.meta.glob('../assets/images/dao_anh/*.png', { eager: true, import: 'default' });
+const bundledDaoAnh = {};
+
+for (const [filepath, mod] of Object.entries(daoAnhModules)) {
+  const filename = filepath.split('/').pop().replace(/\.png$/, '');
+  bundledDaoAnh[filename] = mod;
+}
+
 export { getAssetUrl } from './assetHelper';
+
+export function resolveDaoAnhImage(rawPathOrId) {
+  if (!rawPathOrId) return '';
+  if (rawPathOrId.startsWith('http') || rawPathOrId.startsWith('data:')) return rawPathOrId;
+  const cleanKey = rawPathOrId.split('/').pop().replace(/\.png$/, '');
+  return bundledDaoAnh[cleanKey] || '';
+}
 
 /**
  * Lấy URL hình ảnh Đạo Ảnh theo tầng Kiếp (Kiếp 1 -> Kiếp 5)
- * Quy tắc: 
- * - Kiếp 0, 1: Hiển thị hình ảnh Kiếp 1 (index 0)
- * - Kiếp 2: Hiển thị hình ảnh Kiếp 2 (index 1)
- * - Kiếp 3: Hiển thị hình ảnh Kiếp 3 (index 2)
- * - Kiếp 4: Hiển thị hình ảnh Kiếp 4 (index 3)
- * - Kiếp 5: Hiển thị hình ảnh Kiếp 5 (index 4)
- * Nếu chưa cập nhật evolutionImages cho Đạo Ảnh đó -> an toàn fallback về ảnh gốc (Kiếp 1).
+ * Sử dụng asset bundle của Vite cho tốc độ load tức thì 0ms.
  */
 export function getDaoAnhEvolutionImage(daoAnhDef, currentKiep = 0) {
   if (!daoAnhDef) return '';
   const kiep = typeof currentKiep === 'number' ? currentKiep : 0;
 
-  // 1. Đọc từ mảng evolutionImages nếu đã được cập nhật
+  let chosenPath = daoAnhDef.image || '';
   if (Array.isArray(daoAnhDef.evolutionImages) && daoAnhDef.evolutionImages.length > 0) {
     const targetIndex = kiep <= 1 ? 0 : Math.min(daoAnhDef.evolutionImages.length - 1, kiep - 1);
     if (daoAnhDef.evolutionImages[targetIndex]) {
-      return daoAnhDef.evolutionImages[targetIndex];
+      chosenPath = daoAnhDef.evolutionImages[targetIndex];
     }
   }
 
-  // 2. Mặc định an toàn trả về ảnh gốc Kiếp 1
-  return daoAnhDef.image || '';
+  return resolveDaoAnhImage(chosenPath);
 }
 
 /**
