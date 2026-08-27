@@ -5,7 +5,16 @@ import styles from './NovelCard.module.css';
 /**
  * NovelCard — 3:4 ratio cover card with persistent long-press context menu
  */
-export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode = 'grid' }) {
+export default function NovelCard({
+  novel,
+  onClick,
+  onEdit,
+  onDelete,
+  onHide,
+  onUnhide,
+  isVaultMode = false,
+  viewMode = 'grid',
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const suppressClickRef = useRef(false);
 
@@ -13,6 +22,11 @@ export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode =
     suppressClickRef.current = true;
     setMenuOpen(true);
   }, 450);
+
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setMenuOpen(true);
+  };
 
   const handleClick = () => {
     if (suppressClickRef.current) {
@@ -39,6 +53,18 @@ export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode =
     }
   };
 
+  const handleHide = (e) => {
+    e.stopPropagation();
+    setMenuOpen(false);
+    onHide?.(novel);
+  };
+
+  const handleUnhide = (e) => {
+    e.stopPropagation();
+    setMenuOpen(false);
+    onUnhide?.(novel);
+  };
+
   const closeMenu = (e) => {
     e.stopPropagation();
     setMenuOpen(false);
@@ -49,6 +75,7 @@ export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode =
       <div
         className={`${styles.listItem} ${menuOpen ? styles.menuActive : ''}`}
         {...handlers}
+        onContextMenu={handleContextMenu}
         onClick={handleClick}
         role="button"
         tabIndex={0}
@@ -61,12 +88,38 @@ export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode =
           )}
         </div>
         <div className={styles.listInfo}>
-          <h3 className={styles.listTitle}>{novel.title}</h3>
+          <div className={styles.listTitleRow}>
+            <h3 className={styles.listTitle}>{novel.title}</h3>
+            {novel.isHidden && <span className={styles.hiddenTag}>🔒 Ẩn</span>}
+          </div>
           <span className="text-muted">{novel.chapterCount} chương</span>
         </div>
         <div className={styles.listActions}>
-          <button className="btn-ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={handleEdit}>Sửa</button>
-          <button className="btn-danger" style={{ fontSize: 12, padding: '4px 10px' }} onClick={handleDelete}>Xóa</button>
+          {novel.isHidden || isVaultMode ? (
+            <button
+              className="btn-ghost"
+              style={{ fontSize: 12, padding: '4px 10px', color: '#c084fc' }}
+              onClick={handleUnhide}
+              title="Hiện truyện lại"
+            >
+              👁️ Hiện
+            </button>
+          ) : (
+            <button
+              className="btn-ghost"
+              style={{ fontSize: 12, padding: '4px 10px', color: '#a855f7' }}
+              onClick={handleHide}
+              title="Ẩn truyện vào Mật Thất"
+            >
+              🔒 Ẩn
+            </button>
+          )}
+          <button className="btn-ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={handleEdit}>
+            Sửa
+          </button>
+          <button className="btn-danger" style={{ fontSize: 12, padding: '4px 10px' }} onClick={handleDelete}>
+            Xóa
+          </button>
         </div>
       </div>
     );
@@ -76,6 +129,7 @@ export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode =
     <div
       className={`${styles.card} ${menuOpen ? styles.menuActive : ''}`}
       {...handlers}
+      onContextMenu={handleContextMenu}
       onClick={handleClick}
       role="button"
       tabIndex={0}
@@ -90,6 +144,13 @@ export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode =
         )}
         {/* Gradient overlay */}
         <div className={styles.coverOverlay} />
+
+        {/* Hidden badge on cover if in vault */}
+        {novel.isHidden && (
+          <div className={styles.cardHiddenBadge}>
+            🔒 ẨN
+          </div>
+        )}
       </div>
 
       {/* Info */}
@@ -100,7 +161,16 @@ export default function NovelCard({ novel, onClick, onEdit, onDelete, viewMode =
 
       {/* Persistent Context menu overlay upon long-press */}
       {menuOpen && (
-        <div className={styles.contextMenu} onClick={e => e.stopPropagation()}>
+        <div className={styles.contextMenu} onClick={(e) => e.stopPropagation()}>
+          {novel.isHidden || isVaultMode ? (
+            <button className={`${styles.menuItem} ${styles.menuUnhide}`} onClick={handleUnhide}>
+              👁️ Bỏ ẩn (Hiện truyện)
+            </button>
+          ) : (
+            <button className={`${styles.menuItem} ${styles.menuHide}`} onClick={handleHide}>
+              🔒 Ẩn truyện (Mật Thất)
+            </button>
+          )}
           <button className={styles.menuItem} onClick={handleEdit}>
             ✏️ Sửa truyện
           </button>

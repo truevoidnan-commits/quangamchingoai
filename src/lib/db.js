@@ -3,6 +3,7 @@
  * Stores: novels, chapters
  */
 import { openDB } from 'idb';
+import { getHiddenLibrary } from './storage';
 
 const DB_NAME = 'thien-co-lau';
 const DB_VERSION = 1;
@@ -198,9 +199,11 @@ export async function searchChapters(novelId, query) {
 export async function searchAllNovels(query) {
   if (!query || query.trim() === '') return [];
   const novels = await getAllNovels();
+  const hiddenIds = new Set(getHiddenLibrary().map(n => n.id));
   const q = query.toLowerCase().trim();
   return novels.filter(n =>
-    n.title.toLowerCase().includes(q) ||
-    (n.description && n.description.toLowerCase().includes(q))
+    !hiddenIds.has(n.id) &&
+    (n.title.toLowerCase().includes(q) ||
+     (n.description && n.description.toLowerCase().includes(q)))
   );
 }

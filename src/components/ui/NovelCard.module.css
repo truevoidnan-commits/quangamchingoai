@@ -157,6 +157,61 @@
   color: var(--accent-cyan);
 }
 
+.menuHide {
+  color: #c084fc;
+  border-color: rgba(192, 132, 252, 0.3);
+}
+
+.menuHide:hover, .menuHide:active {
+  border-color: rgba(168, 85, 247, 0.7);
+  background: rgba(168, 85, 247, 0.18);
+  color: #e9d5ff;
+}
+
+.menuUnhide {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.menuUnhide:hover, .menuUnhide:active {
+  border-color: rgba(56, 189, 248, 0.7);
+  background: rgba(56, 189, 248, 0.18);
+  color: #bae6fd;
+}
+
+.cardHiddenBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(10, 8, 20, 0.85);
+  border: 1px solid rgba(168, 85, 247, 0.6);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+  color: #e9d5ff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 20px;
+  z-index: 2;
+}
+
+.listTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hiddenTag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+
 .menuDanger {
   color: #ff6b6b;
   border-color: rgba(255, 107, 107, 0.3);

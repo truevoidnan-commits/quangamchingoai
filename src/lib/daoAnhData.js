@@ -148,6 +148,13 @@ export const DAO_ANH_LIST = [
     category: 'loi_dinh',
     tier: 'than_pham',
     image: '/images/dao_anh/thuong_thuong_loi_kiep.png',
+    evolutionImages: [
+      '/images/dao_anh/thuong_thuong_loi_kiep.png',
+      '/images/dao_anh/thuong_thuong_loi_kiep_k2.png',
+      '/images/dao_anh/thuong_thuong_loi_kiep_k3.png',
+      '/images/dao_anh/thuong_thuong_loi_kiep_k4.png',
+      '/images/dao_anh/thuong_thuong_loi_kiep_k5.png',
+    ],
     primaryColor: '#60a5fa',
     secondaryColor: '#facc15',
     glowColor: 'rgba(96, 165, 250, 0.85)',
