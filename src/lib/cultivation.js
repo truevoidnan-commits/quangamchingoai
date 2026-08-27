@@ -608,31 +608,47 @@ export function getCultivationState() {
       }
     }
 
-    if (state.realm === 'kim_dan') {
+    if (state.realm === 'kim_dan' || state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
+      const selfHoa = state.selfMenhHoa || Math.floor((state.phapKhieu || 0) / 30);
+      const totalBaseHoa = selfHoa + (state.has121st ? 1 : 0);
+      let baseSelfPalaces = 6;
+      if (totalBaseHoa === 4) baseSelfPalaces = 7;
+      else if (totalBaseHoa >= 5) baseSelfPalaces = 8;
+
       const lampCount = (state.absorbedLamps || []).length;
-      const selfPalacesMax = Math.max(1, (state.maxThienCung || 6) - lampCount);
-      if ((state.realizedThienCung || 0) > selfPalacesMax) {
-        state.realizedThienCung = selfPalacesMax;
+      state.maxThienCung = Math.min(13, baseSelfPalaces + lampCount);
+
+      // Đếm chuẩn xác số Cung Tự Thân đã có vật trấn áp trong palaceAnchors
+      const actualAnchorsCount = Object.keys(state.palaceAnchors || {}).length;
+      state.realizedThienCung = Math.min(baseSelfPalaces, actualAnchorsCount);
+
+      // Tự động sửa sai: Nếu chưa hóa thực đủ baseSelfPalaces mà đã bị nhảy sang Giả Anh / Nguyên Anh, đưa về Kim Đan để tiếp tục tu luyện Cung Thật
+      if (state.realizedThienCung < baseSelfPalaces && (state.realm === 'gia_anh' || (state.realm === 'nguyen_anh' && (!state.daoAnhs || state.daoAnhs.length === 0)))) {
+        state.realm = 'kim_dan';
+        state.daoAnhs = [];
+        state.daoAnhExp = 0;
       }
 
-      // Xả uẩn tích tích trữ vào Thiên Cung hiện tại hoặc Thai Nghén Đạo Anh
-      if ((state.storedExp || 0) > 0) {
-        if ((state.realizedThienCung || 0) < selfPalacesMax) {
-          const targetExp = getPalaceCost((state.realizedThienCung || 0) + 1);
-          const bottleneck = targetExp - 1;
-          if ((state.currentThienCungExp || 0) < bottleneck) {
-            const canFlush = bottleneck - (state.currentThienCungExp || 0);
-            const flushed = Math.min(canFlush, state.storedExp);
-            state.currentThienCungExp = (state.currentThienCungExp || 0) + flushed;
-            state.storedExp -= flushed;
-          }
-        } else {
-          if ((state.daoAnhExp || 0) < 10000) {
-            const canFlush = 10000 - (state.daoAnhExp || 0);
-            const flushed = Math.min(canFlush, state.storedExp);
-            state.daoAnhExp = (state.daoAnhExp || 0) + flushed;
-            state.currentThienCungExp = state.daoAnhExp;
-            state.storedExp -= flushed;
+      if (state.realm === 'kim_dan') {
+        // Xả uẩn tích tích trữ vào Thiên Cung hiện tại hoặc Thai Nghén Đạo Anh
+        if ((state.storedExp || 0) > 0) {
+          if (state.realizedThienCung < baseSelfPalaces) {
+            const targetExp = getPalaceCost(state.realizedThienCung + 1);
+            const bottleneck = targetExp - 1;
+            if ((state.currentThienCungExp || 0) < bottleneck) {
+              const canFlush = bottleneck - (state.currentThienCungExp || 0);
+              const flushed = Math.min(canFlush, state.storedExp);
+              state.currentThienCungExp = (state.currentThienCungExp || 0) + flushed;
+              state.storedExp -= flushed;
+            }
+          } else {
+            if ((state.daoAnhExp || 0) < 10000) {
+              const canFlush = 10000 - (state.daoAnhExp || 0);
+              const flushed = Math.min(canFlush, state.storedExp);
+              state.daoAnhExp = (state.daoAnhExp || 0) + flushed;
+              state.currentThienCungExp = state.daoAnhExp;
+              state.storedExp -= flushed;
+            }
           }
         }
       }
@@ -1124,10 +1140,15 @@ export function absorbLifeLamp(lampId) {
   state.inventoryLamps = state.inventoryLamps.filter(id => id !== lampId);
   state.absorbedLamps = [...currentAbsorbed, lampId];
 
-  if (state.realm === 'kim_dan') {
-    state.maxThienCung = (state.maxThienCung || 6) + 1;
-    state.realizedThienCung = (state.realizedThienCung || 0) + 1;
-  }
+  // Tính lại trần maxThienCung (tối đa 13)
+  const selfHoa = state.selfMenhHoa || Math.floor((state.phapKhieu || 0) / 30);
+  const totalBaseHoa = selfHoa + (state.has121st ? 1 : 0);
+  let baseSelfPalaces = 6;
+  if (totalBaseHoa === 4) baseSelfPalaces = 7;
+  else if (totalBaseHoa >= 5) baseSelfPalaces = 8;
+
+  state.maxThienCung = Math.min(13, baseSelfPalaces + state.absorbedLamps.length);
+  // Tuyệt đối không can thiệp state.realizedThienCung vì Mệnh Đăng là Chân Cung riêng biệt!
 
   saveCultivationState(state);
   return state;
@@ -2261,7 +2282,9 @@ export function manifestDaoAnh(palaceIndex) {
       elementAttr = `${shortName} Thần Thể`;
     } else {
       const selfLocalIdx = (maxThienCung - 1) - idx;
-      const anchor = state.palaceAnchors?.[selfLocalIdx] || state.palaceAnchors?.[idx - lampCount] || state.palaceAnchors?.[idx];
+      const anchor = state.palaceAnchors?.[selfLocalIdx] !== undefined 
+        ? state.palaceAnchors[selfLocalIdx] 
+        : state.palaceAnchors?.[idx - lampCount];
       const artObj = anchor ? ((SUPPRESSING_ARTIFACTS || []).find(a => a.id === anchor.id) || anchor) : null;
       artifactId = anchor?.id || null;
       tier = anchor?.tier || artObj?.tier || 'than_pham';
