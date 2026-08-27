@@ -334,6 +334,13 @@ export const DAO_ANH_LIST = [
     category: 'hon_don',
     tier: 'than_pham',
     image: '/images/dao_anh/van_gioi_quy_nhat.png',
+    evolutionImages: [
+      '/images/dao_anh/van_gioi_quy_nhat.png',
+      '/images/dao_anh/van_gioi_quy_nhat_k2.png',
+      '/images/dao_anh/van_gioi_quy_nhat_k3.png',
+      '/images/dao_anh/van_gioi_quy_nhat_k4.png',
+      '/images/dao_anh/van_gioi_quy_nhat_k5.png',
+    ],
     primaryColor: '#e879f9',
     secondaryColor: '#38bdf8',
     glowColor: 'rgba(232, 121, 249, 0.8)',
@@ -1158,7 +1165,7 @@ export function resolveDaoAnhImage(rawPathOrId) {
   if (!rawPathOrId) return '';
   if (rawPathOrId.startsWith('http') || rawPathOrId.startsWith('data:')) return rawPathOrId;
   const cleanKey = rawPathOrId.split(/[\/\\]/).pop().split('.')[0];
-  return bundledDaoAnh[cleanKey] || '';
+  return bundledDaoAnh[cleanKey] || rawPathOrId;
 }
 
 /**
