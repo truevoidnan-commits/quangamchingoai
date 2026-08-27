@@ -1,98 +1,70 @@
 // =========================================================================
 // ARTIFACT ICON MAPPING
-// Native Vite-bundled image resolution for zero-delay loading & perfect CDN caching.
+// Instant Inlined Data-URIs (0ms load time - Zero HTTP Network Latency)
 // =========================================================================
 
-const iconModules = import.meta.glob('../assets/icons/than_pham/*.jpg', { eager: true, import: 'default' });
-const bundledIcons = {};
+import { BAKED_ICONS } from './bakedAssets';
 
-for (const [filepath, mod] of Object.entries(iconModules)) {
-  const filename = filepath.split(/[\/\\]/).pop().split('.')[0];
-  bundledIcons[filename] = mod;
-}
-
-/** Map of all Thần Phẩm artifact IDs to bundled JPG icons */
+/** Map of all Thần Phẩm artifact IDs to instant Data-URI icons */
 export const THAN_PHAM_AI_ICONS = {
-  tao_hoa_ngoc_diep:            bundledIcons['art_tao_hoa_ngoc_diep'],
-  kim_o_luyen_van_linh:         bundledIcons['art_kim_o_luyen_van_linh'],
-  nguyen_thuy_thai_so_ma_kinh:  bundledIcons['art_nguyen_thuy_thai_so_ma_kinh'],
-  dao_menh_thien_ma_cong:       bundledIcons['art_dao_menh_thien_ma_cong'],
-  ngu_hanh_dai_dong_thien:      bundledIcons['art_ngu_hanh_dai_dong_thien'],
-  mac_sat_tien_phach:           bundledIcons['art_mac_sat_tien_phach'],
-  huyen_hoang_diet_the_bien:    bundledIcons['art_huyen_hoang_diet_the_bien'],
-  am_duong_hon_don_nguyen_can:  bundledIcons['art_am_duong_hon_don_nguyen_can'],
-  luc_dao_luan_hoi_tien_can:    bundledIcons['art_luc_dao_luan_hoi_tien_can'],
-  tam_sinh_luan_hoi_an:         bundledIcons['art_tam_sinh_luan_hoi_an'],
-  tran_nguc_minh_vuong_the:     bundledIcons['art_tran_nguc_minh_vuong_the'],
-  thai_so_than_vuong_the:       bundledIcons['art_thai_so_than_vuong_the'],
-  tien_thien_thanh_the_dao_thai: bundledIcons['art_tien_thien_thanh_the_dao_thai'],
-  hon_don_diet_the_loi_tri:     bundledIcons['art_hon_don_diet_the_loi_tri'],
-  khoi_nguyen_vu_tru_ban_nguyen: bundledIcons['art_khoi_nguyen_vu_tru_ban_nguyen'],
-  tha_hoa_tu_tai_dai_phap:      bundledIcons['art_tha_hoa_tu_tai_dai_phap'],
-  tieu_tuc_menh_thuat:          bundledIcons['art_tieu_tuc_menh_thuat'],
-  con_bang_tien_phap:           bundledIcons['art_con_bang_tien_phap'],
-  can_khon_luong_nghi_ho:       bundledIcons['art_can_khon_luong_nghi_ho'],
-  cuu_kiep_loi_nguc_kiem_phap:  bundledIcons['art_cuu_kiep_loi_nguc_kiem_phap'],
-  van_de_tran_ma_quyen:         bundledIcons['art_van_de_tran_ma_quyen'],
-  nhat_khi_hoa_tam_thanh:       bundledIcons['art_nhat_khi_hoa_tam_thanh'],
-  vo_thuy_vo_chung_vo_vi_than:  bundledIcons['art_vo_thuy_vo_chung_vo_vi_than'],
-  diet_the_loi_viem_dong:       bundledIcons['art_diet_the_loi_viem_dong'],
+  tao_hoa_ngoc_diep:            BAKED_ICONS['art_tao_hoa_ngoc_diep'] || '',
+  kim_o_luyen_van_linh:         BAKED_ICONS['art_kim_o_luyen_van_linh'] || '',
+  nguyen_thuy_thai_so_ma_kinh:  BAKED_ICONS['art_nguyen_thuy_thai_so_ma_kinh'] || '',
+  dao_menh_thien_ma_cong:       BAKED_ICONS['art_dao_menh_thien_ma_cong'] || '',
+  ngu_hanh_dai_dong_thien:      BAKED_ICONS['art_ngu_hanh_dai_dong_thien'] || '',
+  mac_sat_tien_phach:           BAKED_ICONS['art_mac_sat_tien_phach'] || '',
+  huyen_hoang_diet_the_bien:    BAKED_ICONS['art_huyen_hoang_diet_the_bien'] || '',
+  am_duong_hon_don_nguyen_can:  BAKED_ICONS['art_am_duong_hon_don_nguyen_can'] || '',
+  luc_dao_luan_hoi_tien_can:    BAKED_ICONS['art_luc_dao_luan_hoi_tien_can'] || '',
+  tam_sinh_luan_hoi_an:         BAKED_ICONS['art_tam_sinh_luan_hoi_an'] || '',
+  tran_nguc_minh_vuong_the:     BAKED_ICONS['art_tran_nguc_minh_vuong_the'] || '',
+  thai_so_than_vuong_the:       BAKED_ICONS['art_thai_so_than_vuong_the'] || '',
+  tien_thien_thanh_the_dao_thai: BAKED_ICONS['art_tien_thien_thanh_the_dao_thai'] || '',
+  hon_don_diet_the_loi_tri:     BAKED_ICONS['art_hon_don_diet_the_loi_tri'] || '',
+  khoi_nguyen_vu_tru_ban_nguyen: BAKED_ICONS['art_khoi_nguyen_vu_tru_ban_nguyen'] || '',
+  tha_hoa_tu_tai_dai_phap:      BAKED_ICONS['art_tha_hoa_tu_tai_dai_phap'] || '',
+  tieu_tuc_menh_thuat:          BAKED_ICONS['art_tieu_tuc_menh_thuat'] || '',
+  con_bang_tien_phap:           BAKED_ICONS['art_con_bang_tien_phap'] || '',
+  can_khon_luong_nghi_ho:       BAKED_ICONS['art_can_khon_luong_nghi_ho'] || '',
+  cuu_kiep_loi_nguc_kiem_phap:  BAKED_ICONS['art_cuu_kiep_loi_nguc_kiem_phap'] || '',
+  van_de_tran_ma_quyen:         BAKED_ICONS['art_van_de_tran_ma_quyen'] || '',
+  nhat_khi_hoa_tam_thanh:       BAKED_ICONS['art_nhat_khi_hoa_tam_thanh'] || '',
+  vo_thuy_vo_chung_vo_vi_than:  BAKED_ICONS['art_vo_thuy_vo_chung_vo_vi_than'] || '',
+  diet_the_loi_viem_dong:       BAKED_ICONS['art_diet_the_loi_viem_dong'] || '',
 };
 
-/** Map of Thần Phẩm Life Lamp IDs to bundled JPG icons (18 Chí Tôn Mệnh Đăng) */
+/** Map of Thần Phẩm Life Lamp IDs to instant Data-URI icons (18 Chí Tôn Mệnh Đăng) */
 export const LAMP_THAN_PHAM_AI_ICONS = {
-  nguyen_thuy_thien_ma:         bundledIcons['lamp_nguyen_thuy_thien_ma'],
-  hon_don_so_khai:              bundledIcons['lamp_hon_don_so_khai'],
-  hong_mong_bat_diet:           bundledIcons['lamp_hong_mong_bat_diet'],
-  cuu_chuyen_luan_hoi:          bundledIcons['lamp_cuu_chuyen_luan_hoi'],
-  thuong_thuong_loi_kiep:       bundledIcons['lamp_thuong_thuong_loi_kiep'],
-  sang_the_ban_nguyen:          bundledIcons['lamp_sang_the_ban_nguyen'],
-  van_menh_hu_vo:               bundledIcons['lamp_van_menh_hu_vo'],
-  tuc_menh_nhan_qua:            bundledIcons['lamp_tuc_menh_nhan_qua'],
-  thai_co_than_long:            bundledIcons['lamp_thai_co_than_long'],
-  khoi_nguyen_thoi_khong:       bundledIcons['lamp_khoi_nguyen_thoi_khong'],
-  van_gioi_quy_nhat:            bundledIcons['lamp_van_gioi_quy_nhat'],
-  toi_cao_thien_menh:           bundledIcons['lamp_toi_cao_thien_menh'],
-  cuu_khieu_linh_lung:          bundledIcons['lamp_cuu_khieu_linh_lung'],
-  thien_dao_chi_ton:            bundledIcons['lamp_thien_dao_chi_ton'],
-  nguyen_gioi_hon_co:           bundledIcons['lamp_nguyen_gioi_hon_co'],
-  cam_ky_cuc_dao:               bundledIcons['lamp_cam_ky_cuc_dao'],
-  dao_tam_chung_ma:             bundledIcons['lamp_dao_tam_chung_ma'],
-  tan_tien_phe_than:            bundledIcons['lamp_tan_tien_phe_than'],
+  nguyen_thuy_thien_ma:         BAKED_ICONS['lamp_nguyen_thuy_thien_ma'] || '',
+  hon_don_so_khai:              BAKED_ICONS['lamp_hon_don_so_khai'] || '',
+  hong_mong_bat_diet:           BAKED_ICONS['lamp_hong_mong_bat_diet'] || '',
+  cuu_chuyen_luan_hoi:          BAKED_ICONS['lamp_cuu_chuyen_luan_hoi'] || '',
+  thuong_thuong_loi_kiep:       BAKED_ICONS['lamp_thuong_thuong_loi_kiep'] || '',
+  sang_the_ban_nguyen:          BAKED_ICONS['lamp_sang_the_ban_nguyen'] || '',
+  van_menh_hu_vo:               BAKED_ICONS['lamp_van_menh_hu_vo'] || '',
+  tuc_menh_nhan_qua:            BAKED_ICONS['lamp_tuc_menh_nhan_qua'] || '',
+  thai_co_than_long:            BAKED_ICONS['lamp_thai_co_than_long'] || '',
+  khoi_nguyen_thoi_khong:       BAKED_ICONS['lamp_khoi_nguyen_thoi_khong'] || '',
+  van_gioi_quy_nhat:            BAKED_ICONS['lamp_van_gioi_quy_nhat'] || '',
+  toi_cao_thien_menh:           BAKED_ICONS['lamp_toi_cao_thien_menh'] || '',
+  cuu_khieu_linh_lung:          BAKED_ICONS['lamp_cuu_khieu_linh_lung'] || '',
+  thien_dao_chi_ton:            BAKED_ICONS['lamp_thien_dao_chi_ton'] || '',
+  nguyen_gioi_hon_co:           BAKED_ICONS['lamp_nguyen_gioi_hon_co'] || '',
+  cam_ky_cuc_dao:               BAKED_ICONS['lamp_cam_ky_cuc_dao'] || '',
+  dao_tam_chung_ma:             BAKED_ICONS['lamp_dao_tam_chung_ma'] || '',
+  tan_tien_phe_than:            BAKED_ICONS['lamp_tan_tien_phe_than'] || '',
 };
 
 export function getLampImageUrl(lampId) {
-  return LAMP_THAN_PHAM_AI_ICONS[lampId] || bundledIcons['lamp_tan_tien_phe_than'] || '';
+  return LAMP_THAN_PHAM_AI_ICONS[lampId] || BAKED_ICONS['lamp_tan_tien_phe_than'] || '';
 }
 
 export function getArtifactImageUrl(artId) {
-  return THAN_PHAM_AI_ICONS[artId] || bundledIcons['art_tao_hoa_ngoc_diep'] || '';
+  return THAN_PHAM_AI_ICONS[artId] || BAKED_ICONS['art_tao_hoa_ngoc_diep'] || '';
 }
 
-/** Preload all 42 core Thần Phẩm icons into browser memory for instant 0ms rendering */
-let _hasPreloaded = false;
 export function preloadCoreArtifactIcons() {
-  if (typeof window === 'undefined' || _hasPreloaded) return;
-  _hasPreloaded = true;
-
-  const runner = () => {
-    const urls = [
-      ...Object.values(LAMP_THAN_PHAM_AI_ICONS),
-      ...Object.values(THAN_PHAM_AI_ICONS),
-    ].filter(Boolean);
-    
-    urls.forEach(url => {
-      const img = new Image();
-      img.decoding = 'async';
-      img.src = url;
-    });
-  };
-
-  if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(runner, { timeout: 1000 });
-  } else {
-    setTimeout(runner, 100);
-  }
+  // Already baked into JS memory - zero preload needed!
 }
 
 /**

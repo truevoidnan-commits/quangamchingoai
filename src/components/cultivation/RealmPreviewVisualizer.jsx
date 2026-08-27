@@ -22,11 +22,13 @@ import { LAMP_THAN_PHAM_AI_ICONS, getLampImageUrl, getArtifactImageUrl } from '.
 import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhScale } from '../../lib/daoAnhData';
 import styles from './RealmPreviewVisualizer.module.css';
 
-import bgTrucCoGalaxy from '../../assets/images/truc_co_galaxy_bg.jpg';
-import bgGodCosmicEye from '../../assets/images/bg_god_cosmic_eye.jpg';
-import imgHuyetHoGod from '../../assets/images/huyet_ho_god.png';
-import imgLongKinhGod from '../../assets/images/long_kinh_god.png';
-import imgTuTuongWheelFlow from '../../assets/images/tu_tuong_wheel_flow.jpg';
+import { BAKED_BACKGROUNDS } from '../../lib/bakedAssets';
+
+const bgTrucCoGalaxy = BAKED_BACKGROUNDS.truc_co_galaxy_bg;
+const bgGodCosmicEye = BAKED_BACKGROUNDS.bg_god_cosmic_eye;
+const imgHuyetHoGod = BAKED_BACKGROUNDS.huyet_ho_god;
+const imgLongKinhGod = BAKED_BACKGROUNDS.long_kinh_god;
+const imgTuTuongWheelFlow = BAKED_BACKGROUNDS.tu_tuong_wheel_flow;
 
 /* ============================================================
    1. CẤU HÌNH TỨ ĐẠI LIÊN — 4 ĐÓA GÓC (12 PHẨM)
