@@ -568,6 +568,7 @@ export function getCultivationState() {
     }
 
     if (state.realm === 'truc_co') {
+      const maxKhieu120Exp = TRUC_CO_KHIEU_THRESHOLDS[120] || 14568;
       const minThreshold = TRUC_CO_KHIEU_THRESHOLDS[state.phapKhieu || 0] || 0;
       if (state.expCurrentRealm === undefined || state.expCurrentRealm < minThreshold) {
         state.expCurrentRealm = minThreshold;
@@ -581,6 +582,28 @@ export function getCultivationState() {
           if (newSelfHoa > (state.selfMenhHoa || 0)) {
             state.selfMenhHoa = newSelfHoa;
           }
+        }
+      }
+
+      // NẾU ĐÃ MỞ 121 KHIẾU HOẶC ĐẠT 120 KHIẾU VIÊN MÃN (BÌNH CẢNH):
+      // Giữ Tu Vi Trúc Cơ ở mức trần tối đa, toàn bộ Tu Vi dư thừa chuyển sang UẨN TÍCH (storedExp) chờ xả khi đột phá Kim Đan!
+      const trucCoCap = maxKhieu120Exp + (state.has121st ? EXP_FOR_121_ATTEMPT : 0);
+      if (state.phapKhieu >= 121 || state.has121st) {
+        state.phapKhieu = 121;
+        state.has121st = true;
+        state.selfMenhHoa = Math.max(state.selfMenhHoa || 0, 5);
+        state.expCurrentRealm = maxKhieu120Exp;
+        if ((state.totalExp || 0) > trucCoCap) {
+          const excess = state.totalExp - trucCoCap;
+          state.storedExp = (state.storedExp || 0) + excess;
+          state.totalExp = trucCoCap;
+        }
+      } else if (state.phapKhieu >= 120) {
+        state.expCurrentRealm = maxKhieu120Exp;
+        if ((state.totalExp || 0) > trucCoCap) {
+          const excess = state.totalExp - trucCoCap;
+          state.storedExp = (state.storedExp || 0) + excess;
+          state.totalExp = trucCoCap;
         }
       }
     }
@@ -765,8 +788,83 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     }
   }
 
-  // TỔNG TU VI
-  state.totalExp = (state.totalExp || 0) + gainedExp;
+  // Kiểm tra xem nhân vật có đang kẹt ở BÌNH CẢNH của cảnh giới hay không
+  let isAtBottleneck = false;
+  if (state.realm === 'ngung_khi') {
+    const path = state.ngungKhiActivePath === 'phap' ? 'phap' : 'the';
+    if (path === 'the' && (state.ngungKhiTheExp || 0) >= 4500) isAtBottleneck = true;
+    if (path === 'phap' && (state.ngungKhiPhapExp || 0) >= 4500) isAtBottleneck = true;
+  } else if (state.realm === 'truc_co') {
+      const maxExp120 = TRUC_CO_KHIEU_THRESHOLDS[120] || 14568;
+      
+      // 1. ĐANG TRONG QUÁ TRÌNH MỞ 120 PHÁP KHIẾU ĐẦU TIÊN
+      if (state.phapKhieu < 120) {
+        state.expCurrentRealm = (state.expCurrentRealm || 0) + gainedExp;
+        const opened = getOpenedPhapKhieuFromExp(state.expCurrentRealm);
+        if (opened > state.phapKhieu) {
+          state.phapKhieu = Math.min(120, opened);
+          const newSelfHoa = Math.floor(state.phapKhieu / 30);
+          if (newSelfHoa > (state.selfMenhHoa || 0)) {
+            state.selfMenhHoa = newSelfHoa;
+          }
+        }
+
+        // Nếu chạm hoặc vượt 120 khiếu, phần dư nạp vào tích lũy Khiếu 121 hoặc chuyển sang Uẩn Tích
+        if (state.expCurrentRealm >= maxExp120) {
+          const excess = state.expCurrentRealm - maxExp120;
+          state.expCurrentRealm = maxExp120;
+          if (!state.has121st && !state.failed121st) {
+            const needed121 = EXP_FOR_121_ATTEMPT - (state.attemptExp121 || 0);
+            if (excess >= needed121) {
+              state.attemptExp121 = EXP_FOR_121_ATTEMPT;
+              state.storedExp = (state.storedExp || 0) + (excess - needed121);
+            } else {
+              state.attemptExp121 = (state.attemptExp121 || 0) + excess;
+            }
+          } else {
+            state.storedExp = (state.storedExp || 0) + excess;
+          }
+        }
+      } 
+      // 2. ĐÃ MỞ 120 KHIẾU NHƯNG CHƯA MỞ KHIẾU 121 (TÍCH LŨY TU VI XUNG KÍCH KHIẾU 121)
+      else if (state.phapKhieu === 120 && !state.has121st && !state.failed121st) {
+        if ((state.attemptExp121 || 0) < EXP_FOR_121_ATTEMPT) {
+          const needed = EXP_FOR_121_ATTEMPT - (state.attemptExp121 || 0);
+          if (gainedExp >= needed) {
+            state.attemptExp121 = EXP_FOR_121_ATTEMPT;
+            state.storedExp = (state.storedExp || 0) + (gainedExp - needed);
+          } else {
+            state.attemptExp121 = (state.attemptExp121 || 0) + gainedExp;
+          }
+        } else {
+          // Đã đủ điều kiện xung kích 121 mà chưa xung kích -> chuyển vào Uẩn Tích
+          state.storedExp = (state.storedExp || 0) + gainedExp;
+        }
+      } 
+      // 3. ĐÃ MỞ THÀNH CÔNG KHIẾU 121 HOẶC 120 KHIẾU ĐẠI VIÊN MÃN (BÌNH CẢNH TUYỆT ĐỐI)
+      else {
+        state.storedExp = (state.storedExp || 0) + gainedExp;
+        state.logs.unshift({
+          text: `🧘 BÌNH CẢNH TRÚC CƠ ĐẠI VIÊN MÃN! +${gainedExp} Tu Vi đọc truyện đã chuyển hóa thành Uẩn Tích (Hiện có: +${(state.storedExp).toLocaleString()} Tu Vi) chờ giải phóng khi Đột Phá Kim Đan!`,
+          time: Date.now()
+        });
+      }
+    } else if (state.realm === 'kim_dan') {
+    const lampCount = (state.absorbedLamps || []).length;
+    const selfPalacesMax = Math.max(1, (state.maxThienCung || 6) - lampCount);
+    if ((state.realizedThienCung || 0) >= selfPalacesMax) {
+      if ((state.daoAnhExp || 0) >= 10000) isAtBottleneck = true;
+    } else {
+      const targetPalaceExp = getPalaceCost((state.realizedThienCung || 0) + 1);
+      const bottleneckExp = targetPalaceExp - 1;
+      if ((state.currentThienCungExp || 0) >= bottleneckExp) isAtBottleneck = true;
+    }
+  }
+
+  // TỔNG TU VI (Chỉ tăng khi chưa kẹt bình cảnh, nếu kẹt bình cảnh thì TU VI giữ nguyên mức trần và nạp vào Uẩn Tích)
+  if (!isAtBottleneck) {
+    state.totalExp = (state.totalExp || 0) + gainedExp;
+  }
 
   let droppedLamp = null;
   let droppedArtifact = null;
