@@ -110,7 +110,7 @@ export default function DaoAnhAvatarRenderer({
           }}
         >
           <img
-            src={getAssetUrl(getDaoAnhEvolutionImage(daoAnh, currentKiep))}
+            src={getDaoAnhEvolutionImage(daoAnh, currentKiep)}
             alt={daoAnh.name}
             decoding="async"
             onError={() => setImgError(true)}

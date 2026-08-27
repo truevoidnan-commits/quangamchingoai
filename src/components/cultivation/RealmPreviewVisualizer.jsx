@@ -22,6 +22,12 @@ import { LAMP_THAN_PHAM_AI_ICONS, getLampImageUrl, getArtifactImageUrl } from '.
 import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhScale } from '../../lib/daoAnhData';
 import styles from './RealmPreviewVisualizer.module.css';
 
+import bgTrucCoGalaxy from '../../assets/images/truc_co_galaxy_bg.jpg';
+import bgGodCosmicEye from '../../assets/images/bg_god_cosmic_eye.jpg';
+import imgHuyetHoGod from '../../assets/images/huyet_ho_god.png';
+import imgLongKinhGod from '../../assets/images/long_kinh_god.png';
+import imgTuTuongWheelFlow from '../../assets/images/tu_tuong_wheel_flow.jpg';
+
 /* ============================================================
    1. CẤU HÌNH TỨ ĐẠI LIÊN — 4 ĐÓA GÓC (12 PHẨM)
    Đây là danh hiệu/thành tựu cố định, KHÔNG phụ thuộc vật phẩm
@@ -2542,7 +2548,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                   {/* HÌNH ẢNH HUYẾT HỔ CHÂN HỎA TÁCH NỀN TO LỚN (450px x 210px) */}
                   <image
-                    href={getAssetUrl('images/huyet_ho_god.png')}
+                    href={imgHuyetHoGod}
                     x="-225"
                     y="-115"
                     width="450"
@@ -2582,7 +2588,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                   {/* HÌNH ẢNH THÁI CỔ LONG KÌNH CẤM HẢI TÁCH NỀN TO LỚN (470px x 206px) */}
                   <image
-                    href={getAssetUrl('images/long_kinh_god.png')}
+                    href={imgLongKinhGod}
                     x="-235"
                     y="-103"
                     width="470"
@@ -2740,7 +2746,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           borderRadius: 0,
           border: 'none',
           backgroundColor: '#020617',
-          backgroundImage: `radial-gradient(circle at 50% 50%, rgba(2, 6, 23, 0.3) 0%, rgba(2, 6, 23, 0.9) 100%), url('${getAssetUrl('images/truc_co_galaxy_bg.jpg')}')`,
+          backgroundImage: `radial-gradient(circle at 50% 50%, rgba(2, 6, 23, 0.3) 0%, rgba(2, 6, 23, 0.9) 100%), url('${bgTrucCoGalaxy}')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
@@ -3251,7 +3257,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   {/* Vành Khuyên 4 Thần Thú Vẽ Sẵn Sắc Nét — Đã Cắt Bỏ Hoàn Toàn Nền Ngoài & Trong */}
                   <g clipPath="url(#annularRingClip)">
                     <image
-                      href={getAssetUrl('/assets/images/tu_tuong_wheel_flow.jpg')}
+                      href={imgTuTuongWheelFlow}
                       x={cx - 386}
                       y={cy - 386}
                       width={386 * 2}
@@ -3887,7 +3893,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               minHeight: '100%',
               flex: 1,
               backgroundColor: '#0a1020',
-              backgroundImage: `radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08) 0%, rgba(4, 7, 16, 0.15) 60%, rgba(2, 4, 10, 0.45) 100%), url('${getAssetUrl('images/bg_god_cosmic_eye.jpg')}')`,
+              backgroundImage: `radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08) 0%, rgba(4, 7, 16, 0.15) 60%, rgba(2, 4, 10, 0.45) 100%), url('${bgGodCosmicEye}')`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
@@ -5569,7 +5575,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               height: '100%',
               minHeight: '100%',
               flex: 1,
-              background: `#040714 url(${getAssetUrl('images/truc_co_galaxy_bg.jpg')}) center/cover no-repeat`,
+              background: `#040714 url(${bgTrucCoGalaxy}) center/cover no-repeat`,
               border: 'none',
               borderRadius: 0,
               overflow: 'hidden'
@@ -5662,7 +5668,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                 {/* ─── HÌNH NỀN GEN AI CỬU THIÊN TINH HÀ RỰC RỠ ─── */}
                 <image
-                  href={getAssetUrl('images/truc_co_galaxy_bg.jpg')}
+                  href={bgTrucCoGalaxy}
                   x="0"
                   y="0"
                   width="1280"
