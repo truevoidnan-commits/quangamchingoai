@@ -241,6 +241,13 @@ export const DAO_ANH_LIST = [
     category: 'luan_hoi',
     tier: 'than_pham',
     image: '/images/dao_anh/tuc_menh_nhan_qua.png',
+    evolutionImages: [
+      '/images/dao_anh/tuc_menh_nhan_qua.png',
+      '/images/dao_anh/tuc_menh_nhan_qua_k2.png',
+      '/images/dao_anh/tuc_menh_nhan_qua_k3.png',
+      '/images/dao_anh/tuc_menh_nhan_qua_k4.png',
+      '/images/dao_anh/tuc_menh_nhan_qua_k5.png',
+    ],
     primaryColor: '#f43f5e',
     secondaryColor: '#fbbf24',
     glowColor: 'rgba(244, 63, 94, 0.8)',
