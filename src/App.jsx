@@ -17,6 +17,7 @@ import SearchPage from './pages/SearchPage';
 
 import { preloadCoreArtifactIcons } from './lib/artifactIcons';
 import { preloadAllDaoAnhEvolutionImages } from './lib/daoAnhData';
+import { startBackgroundPrefetch } from './lib/backgroundPrefetch';
 
 function ScrollRestorer() {
   const { pathname } = useLocation();
@@ -26,6 +27,7 @@ function ScrollRestorer() {
   useEffect(() => {
     preloadCoreArtifactIcons();
     preloadAllDaoAnhEvolutionImages();
+    startBackgroundPrefetch();
   }, []);
   return null;
 }

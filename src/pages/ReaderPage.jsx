@@ -10,6 +10,7 @@ import BreakthroughModal from '../components/cultivation/BreakthroughModal';
 import TableOfContents from '../components/reader/TableOfContents';
 import ReadingSettings from '../components/reader/ReadingSettings';
 import ScrollToTop from '../components/ui/ScrollToTop';
+import { startBackgroundPrefetch } from '../lib/backgroundPrefetch';
 import styles from './ReaderPage.module.css';
 
 export default function ReaderPage() {
@@ -34,7 +35,12 @@ export default function ReaderPage() {
   const scrollRef = useRef(null);
   const lastScrollY = useRef(0);
 
-      // Load novel + chapters list
+  // Background-fetch all cultivation graphics into persistent cache while reading
+  useEffect(() => {
+    startBackgroundPrefetch();
+  }, []);
+
+  // Load novel + chapters list
   useEffect(() => {
     let isMounted = true;
     (async () => {
