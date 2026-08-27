@@ -272,6 +272,13 @@ export const DAO_ANH_LIST = [
     category: 'than_the',
     tier: 'than_pham',
     image: '/images/dao_anh/thai_co_than_long.png',
+    evolutionImages: [
+      '/images/dao_anh/thai_co_than_long.png',
+      '/images/dao_anh/thai_co_than_long_k2.png',
+      '/images/dao_anh/thai_co_than_long_k3.png',
+      '/images/dao_anh/thai_co_than_long_k4.png',
+      '/images/dao_anh/thai_co_than_long_k5.png',
+    ],
     primaryColor: '#f59e0b',
     secondaryColor: '#ef4444',
     glowColor: 'rgba(245, 158, 11, 0.85)',
