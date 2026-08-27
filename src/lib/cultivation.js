@@ -614,6 +614,28 @@ export function getCultivationState() {
       if ((state.realizedThienCung || 0) > selfPalacesMax) {
         state.realizedThienCung = selfPalacesMax;
       }
+
+      // Xả uẩn tích tích trữ vào Thiên Cung hiện tại hoặc Thai Nghén Đạo Anh
+      if ((state.storedExp || 0) > 0) {
+        if ((state.realizedThienCung || 0) < selfPalacesMax) {
+          const targetExp = getPalaceCost((state.realizedThienCung || 0) + 1);
+          const bottleneck = targetExp - 1;
+          if ((state.currentThienCungExp || 0) < bottleneck) {
+            const canFlush = bottleneck - (state.currentThienCungExp || 0);
+            const flushed = Math.min(canFlush, state.storedExp);
+            state.currentThienCungExp = (state.currentThienCungExp || 0) + flushed;
+            state.storedExp -= flushed;
+          }
+        } else {
+          if ((state.daoAnhExp || 0) < 10000) {
+            const canFlush = 10000 - (state.daoAnhExp || 0);
+            const flushed = Math.min(canFlush, state.storedExp);
+            state.daoAnhExp = (state.daoAnhExp || 0) + flushed;
+            state.currentThienCungExp = state.daoAnhExp;
+            state.storedExp -= flushed;
+          }
+        }
+      }
     }
 
     convertToThienMenhIfInAnhRealm(state);
@@ -1040,7 +1062,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
       const selfPalacesMax = Math.max(1, state.maxThienCung - lampBonusCount);
 
       if (state.realizedThienCung < selfPalacesMax) {
-        const targetPalaceExp = 1000;
+        const targetPalaceExp = getPalaceCost(state.realizedThienCung + 1);
         const bottleneckExp = targetPalaceExp - 1;
         if (state.currentThienCungExp < bottleneckExp) {
           const needed = bottleneckExp - state.currentThienCungExp;
@@ -1056,8 +1078,15 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
       } else {
         const prevDaoAnhExp = state.daoAnhExp || 0;
         if (prevDaoAnhExp < 10000) {
-          state.daoAnhExp = Math.min(10000, prevDaoAnhExp + gainedExp);
-          state.currentThienCungExp = state.daoAnhExp;
+          const needed = 10000 - prevDaoAnhExp;
+          if (gainedExp > needed) {
+            state.daoAnhExp = 10000;
+            state.currentThienCungExp = 10000;
+            state.storedExp = (state.storedExp || 0) + (gainedExp - needed);
+          } else {
+            state.daoAnhExp = prevDaoAnhExp + gainedExp;
+            state.currentThienCungExp = state.daoAnhExp;
+          }
         } else {
           state.storedExp = (state.storedExp || 0) + gainedExp;
         }
@@ -1503,6 +1532,31 @@ export function anchorPalaceWithArtifact(palaceIndex, artifactId) {
   // Hoàn tất 100% Hóa Thực Cung Thật
   state.realizedThienCung += 1;
   state.currentThienCungExp = 0;
+
+  // Tự động xả uẩn tích còn lại vào Thiên Cung tiếp theo hoặc Thai Nghén Đạo Anh
+  const remainingSelfMax = Math.max(1, state.maxThienCung - lampBonusCount);
+  if ((state.storedExp || 0) > 0) {
+    if (state.realizedThienCung < remainingSelfMax) {
+      const nextTargetExp = getPalaceCost(state.realizedThienCung + 1);
+      const nextBottleneck = nextTargetExp - 1;
+      const flushExp = Math.min(nextBottleneck, state.storedExp);
+      state.currentThienCungExp = flushExp;
+      state.storedExp -= flushExp;
+      state.logs.unshift({
+        text: `🌊 UẨN TÍCH PHÁ CẢNH XẢ RA! +${flushExp.toLocaleString()} Tu Vi uẩn tích đã rót vào Thiên Cung #${state.realizedThienCung + 1} (${flushExp}/${nextTargetExp} EXP)!`,
+        time: Date.now(),
+      });
+    } else {
+      const flushExp = Math.min(10000 - (state.daoAnhExp || 0), state.storedExp);
+      state.daoAnhExp = (state.daoAnhExp || 0) + flushExp;
+      state.currentThienCungExp = state.daoAnhExp;
+      state.storedExp -= flushExp;
+      state.logs.unshift({
+        text: `🌊 UẨN TÍCH THAI NGHÉN ĐẠO ANH! +${flushExp.toLocaleString()} Tu Vi uẩn tích đã rót vào Thai Nghén Đạo Anh!`,
+        time: Date.now(),
+      });
+    }
+  }
 
   state.logs.unshift({
     text: `👑 TRẤN CUNG THÀNH CÔNG! Đã dùng [${artObj.name}] trấn áp thành công, khởi sinh [${palaceName}] (100% Cung Thật, +1 Cung chiến lực)!`,
