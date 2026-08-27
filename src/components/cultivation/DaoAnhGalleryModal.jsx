@@ -270,7 +270,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                       <DaoAnhAvatarRenderer
                         daoAnh={da}
                         size={200}
-                        currentKiep={previewKiep}
+                        currentKiep={1}
                         animate={isHovered}
                         showAura={true}
                       />
