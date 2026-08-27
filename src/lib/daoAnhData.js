@@ -1130,7 +1130,13 @@ export function findDaoAnhDefinition(da, state) {
   return DAO_ANH_LIST[0];
 }
 
-import { BAKED_DAO_ANH } from './bakedAssets';
+const daoAnhModules = import.meta.glob('../assets/images/dao_anh/*.png', { eager: true, import: 'default' });
+const bundledDaoAnh = {};
+
+for (const [filepath, mod] of Object.entries(daoAnhModules)) {
+  const filename = filepath.split(/[\/\\]/).pop().split('.')[0];
+  bundledDaoAnh[filename] = mod;
+}
 
 export { getAssetUrl } from './assetHelper';
 
@@ -1138,7 +1144,7 @@ export function resolveDaoAnhImage(rawPathOrId) {
   if (!rawPathOrId) return '';
   if (rawPathOrId.startsWith('http') || rawPathOrId.startsWith('data:')) return rawPathOrId;
   const cleanKey = rawPathOrId.split(/[\/\\]/).pop().split('.')[0];
-  return BAKED_DAO_ANH[cleanKey] || '';
+  return bundledDaoAnh[cleanKey] || '';
 }
 
 /**
