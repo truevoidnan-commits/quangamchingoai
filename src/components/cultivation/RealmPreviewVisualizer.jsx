@@ -1,25 +1,6 @@
 
-export function getAssetUrl(p) {
-  if (!p) return '';
-  if (p.startsWith('http://') || p.startsWith('https://') || p.startsWith('data:')) return p;
-  const cleanPath = p.startsWith('/') ? p.slice(1) : p;
-  
-  if (typeof window !== 'undefined') {
-    const origin = window.location.origin;
-    let path = window.location.pathname;
-    if (path.includes('.')) {
-      path = path.substring(0, path.lastIndexOf('/') + 1);
-    }
-    if (!path.endsWith('/')) {
-      path = path + '/';
-    }
-    path = path.replace(/\/(cultivation|sanctum|novel|add-novel|edit-novel|search)\/?$/, '/');
-    return `${origin}${path}${cleanPath}`;
-  }
-  
-  const base = import.meta.env.BASE_URL || './';
-  return base.endsWith('/') ? `${base}${cleanPath}` : `${base}/${cleanPath}`;
-}
+import { getAssetUrl } from '../../lib/assetHelper';
+export { getAssetUrl };
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useCultivationContext } from '../../context/CultivationContext';

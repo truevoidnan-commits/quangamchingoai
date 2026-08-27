@@ -135,6 +135,8 @@ export default function DaoAnhAvatarRenderer({
           <img
             src={getAssetUrl(getDaoAnhEvolutionImage(daoAnh, currentKiep))}
             alt={daoAnh.name}
+            loading="lazy"
+            decoding="async"
             onError={() => setImgError(true)}
             style={{
               width: '100%',

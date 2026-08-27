@@ -10,7 +10,7 @@
 
 import React from 'react';
 import styles from './ArtifactIcon.module.css';
-import { THAN_PHAM_AI_ICONS, LAMP_THAN_PHAM_AI_ICONS, TIER_COLORS, TIER_GLOW } from '../../lib/artifactIcons';
+import { THAN_PHAM_AI_ICONS, LAMP_THAN_PHAM_AI_ICONS, getLampImageUrl, getArtifactImageUrl, TIER_COLORS, TIER_GLOW } from '../../lib/artifactIcons';
 
 // ─── DEDICATED SVG ART FOR THE 9 THẦN PHẨM ARTIFACTS ──────────────────────
 
@@ -493,16 +493,18 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
     const lampColor = item?.color || '#a855f7';
     const lampGlow  = `rgba(168,85,247,0.6)`;
 
-    if (item?.id && LAMP_THAN_PHAM_AI_ICONS[item.id] && !imgError) {
+    if (item?.id && !imgError) {
       return (
         <span
-          className={`${styles.iconWrapper} ${styles.imgWrapper} ${className}`}
+          className={`${styles.iconWrapper} ${styles.lampWrapper} ${className}`}
           style={{ '--icon-glow': lampGlow, width: size, height: size }}
           title={item?.name || 'Mệnh Đăng'}
         >
           <img
-            src={LAMP_THAN_PHAM_AI_ICONS[item.id]}
+            src={getLampImageUrl(item.id)}
             alt={item?.name || 'Mệnh Đăng'}
+            loading="lazy"
+            decoding="async"
             className={styles.aiImg}
             style={{ width: size, height: size }}
             onError={() => setImgError(true)}
@@ -557,7 +559,7 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
   }
 
   // Thần Phẩm with AI image
-  if (tier === 'than_pham' && item?.id && THAN_PHAM_AI_ICONS[item.id] && !imgError) {
+  if (tier === 'than_pham' && item?.id && !imgError) {
     return (
       <span
         className={`${styles.iconWrapper} ${styles.imgWrapper} ${className}`}
@@ -565,8 +567,10 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
         title={item?.name}
       >
         <img
-          src={THAN_PHAM_AI_ICONS[item.id]}
+          src={getArtifactImageUrl(item.id)}
           alt={item?.name}
+          loading="lazy"
+          decoding="async"
           className={styles.aiImg}
           style={{ width: size, height: size }}
           onError={() => setImgError(true)}

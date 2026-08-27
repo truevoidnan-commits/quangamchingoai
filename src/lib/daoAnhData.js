@@ -1133,27 +1133,7 @@ export function findDaoAnhDefinition(da, state) {
 /**
  * Chuyển đổi đường dẫn tài nguyên tĩnh tương thích với GitHub Pages / Subpath
  */
-export function getAssetUrl(p) {
-  if (!p) return '';
-  if (p.startsWith('http://') || p.startsWith('https://') || p.startsWith('data:')) return p;
-  const cleanPath = p.startsWith('/') ? p.slice(1) : p;
-
-  if (typeof window !== 'undefined') {
-    const origin = window.location.origin;
-    let path = window.location.pathname;
-    if (path.includes('.')) {
-      path = path.substring(0, path.lastIndexOf('/') + 1);
-    }
-    if (!path.endsWith('/')) {
-      path = path + '/';
-    }
-    path = path.replace(/\/(cultivation|sanctum|novel|add-novel|edit-novel|search)\/?$/, '/');
-    return `${origin}${path}${cleanPath}`;
-  }
-
-  const base = import.meta.env?.BASE_URL || './';
-  return base.endsWith('/') ? `${base}${cleanPath}` : `${base}/${cleanPath}`;
-}
+export { getAssetUrl } from './assetHelper';
 
 /**
  * Lấy URL hình ảnh Đạo Ảnh theo tầng Kiếp (Kiếp 1 -> Kiếp 5)

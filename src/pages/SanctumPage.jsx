@@ -457,6 +457,8 @@ export default function SanctumPage() {
                     <img
                       src={imgUrl}
                       alt={lamp.name}
+                      loading="lazy"
+                      decoding="async"
                       className={styles.stageImage}
                       style={{
                         transform: isHovered ? 'scale(1.05)' : 'scale(1)',
@@ -697,6 +699,8 @@ export default function SanctumPage() {
                     <img
                       src={imgUrl}
                       alt={art.name}
+                      loading="lazy"
+                      decoding="async"
                       className={styles.stageImage}
                       style={{
                         transform: isHovered ? 'scale(1.05)' : 'scale(1)',

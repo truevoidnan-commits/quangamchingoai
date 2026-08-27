@@ -368,6 +368,8 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
                       <img
                         src={imgUrl}
                         alt={lamp.name}
+                        loading="lazy"
+                        decoding="async"
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {
                           e.target.style.display = 'none';
@@ -566,6 +568,8 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
                       <img
                         src={imgUrl}
                         alt={art.name}
+                        loading="lazy"
+                        decoding="async"
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {
                           e.target.style.display = 'none';

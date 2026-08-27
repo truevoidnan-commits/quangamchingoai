@@ -3,64 +3,66 @@
 // Maps artifact IDs & life lamp IDs to their custom icon sources.
 // =========================================================================
 
-const baseUrl = (typeof import.meta !== 'undefined' && import.meta?.env?.BASE_URL ? import.meta.env.BASE_URL : '/').replace(/\/$/, '') + '/';
+import { getAssetUrl } from './assetHelper';
 
 /** Map of all Thần Phẩm artifact IDs to AI-generated PNG/JPG icons */
 export const THAN_PHAM_AI_ICONS = {
-  tao_hoa_ngoc_diep:            baseUrl + 'icons/than_pham/art_tao_hoa_ngoc_diep.jpg',
-  kim_o_luyen_van_linh:         baseUrl + 'icons/than_pham/art_kim_o_luyen_van_linh.jpg',
-  nguyen_thuy_thai_so_ma_kinh:  baseUrl + 'icons/than_pham/art_nguyen_thuy_thai_so_ma_kinh.jpg',
-  dao_menh_thien_ma_cong:       baseUrl + 'icons/than_pham/art_dao_menh_thien_ma_cong.jpg',
-  ngu_hanh_dai_dong_thien:      baseUrl + 'icons/than_pham/art_ngu_hanh_dai_dong_thien.jpg',
-  mac_sat_tien_phach:           baseUrl + 'icons/than_pham/art_mac_sat_tien_phach.jpg',
-  huyen_hoang_diet_the_bien:    baseUrl + 'icons/than_pham/art_huyen_hoang_diet_the_bien.jpg',
-  am_duong_hon_don_nguyen_can:  baseUrl + 'icons/than_pham/art_am_duong_hon_don_nguyen_can.jpg',
-  luc_dao_luan_hoi_tien_can:    baseUrl + 'icons/than_pham/art_luc_dao_luan_hoi_tien_can.jpg',
-  tam_sinh_luan_hoi_an:         baseUrl + 'icons/than_pham/art_tam_sinh_luan_hoi_an.jpg',
-  tran_nguc_minh_vuong_the:     baseUrl + 'icons/than_pham/art_tran_nguc_minh_vuong_the.jpg',
-  thai_so_than_vuong_the:       baseUrl + 'icons/than_pham/art_thai_so_than_vuong_the.jpg',
-  tien_thien_thanh_the_dao_thai: baseUrl + 'icons/than_pham/art_tien_thien_thanh_the_dao_thai.jpg',
-  hon_don_diet_the_loi_tri:     baseUrl + 'icons/than_pham/art_hon_don_diet_the_loi_tri.jpg',
-  khoi_nguyen_vu_tru_ban_nguyen: baseUrl + 'icons/than_pham/art_khoi_nguyen_vu_tru_ban_nguyen.jpg',
-  tha_hoa_tu_tai_dai_phap:      baseUrl + 'icons/than_pham/art_tha_hoa_tu_tai_dai_phap.jpg',
-  tieu_tuc_menh_thuat:          baseUrl + 'icons/than_pham/art_tieu_tuc_menh_thuat.jpg',
-  con_bang_tien_phap:           baseUrl + 'icons/than_pham/art_con_bang_tien_phap.jpg',
-  can_khon_luong_nghi_ho:       baseUrl + 'icons/than_pham/art_can_khon_luong_nghi_ho.jpg',
-  cuu_kiep_loi_nguc_kiem_phap:  baseUrl + 'icons/than_pham/art_cuu_kiep_loi_nguc_kiem_phap.jpg',
-  van_de_tran_ma_quyen:         baseUrl + 'icons/than_pham/art_van_de_tran_ma_quyen.jpg',
-  nhat_khi_hoa_tam_thanh:       baseUrl + 'icons/than_pham/art_nhat_khi_hoa_tam_thanh.jpg',
-  vo_thuy_vo_chung_vo_vi_than:  baseUrl + 'icons/than_pham/art_vo_thuy_vo_chung_vo_vi_than.jpg',
-  diet_the_loi_viem_dong:       baseUrl + 'icons/than_pham/art_diet_the_loi_viem_dong.jpg',
+  tao_hoa_ngoc_diep:            'icons/than_pham/art_tao_hoa_ngoc_diep.jpg',
+  kim_o_luyen_van_linh:         'icons/than_pham/art_kim_o_luyen_van_linh.jpg',
+  nguyen_thuy_thai_so_ma_kinh:  'icons/than_pham/art_nguyen_thuy_thai_so_ma_kinh.jpg',
+  dao_menh_thien_ma_cong:       'icons/than_pham/art_dao_menh_thien_ma_cong.jpg',
+  ngu_hanh_dai_dong_thien:      'icons/than_pham/art_ngu_hanh_dai_dong_thien.jpg',
+  mac_sat_tien_phach:           'icons/than_pham/art_mac_sat_tien_phach.jpg',
+  huyen_hoang_diet_the_bien:    'icons/than_pham/art_huyen_hoang_diet_the_bien.jpg',
+  am_duong_hon_don_nguyen_can:  'icons/than_pham/art_am_duong_hon_don_nguyen_can.jpg',
+  luc_dao_luan_hoi_tien_can:    'icons/than_pham/art_luc_dao_luan_hoi_tien_can.jpg',
+  tam_sinh_luan_hoi_an:         'icons/than_pham/art_tam_sinh_luan_hoi_an.jpg',
+  tran_nguc_minh_vuong_the:     'icons/than_pham/art_tran_nguc_minh_vuong_the.jpg',
+  thai_so_than_vuong_the:       'icons/than_pham/art_thai_so_than_vuong_the.jpg',
+  tien_thien_thanh_the_dao_thai: 'icons/than_pham/art_tien_thien_thanh_the_dao_thai.jpg',
+  hon_don_diet_the_loi_tri:     'icons/than_pham/art_hon_don_diet_the_loi_tri.jpg',
+  khoi_nguyen_vu_tru_ban_nguyen: 'icons/than_pham/art_khoi_nguyen_vu_tru_ban_nguyen.jpg',
+  tha_hoa_tu_tai_dai_phap:      'icons/than_pham/art_tha_hoa_tu_tai_dai_phap.jpg',
+  tieu_tuc_menh_thuat:          'icons/than_pham/art_tieu_tuc_menh_thuat.jpg',
+  con_bang_tien_phap:           'icons/than_pham/art_con_bang_tien_phap.jpg',
+  can_khon_luong_nghi_ho:       'icons/than_pham/art_can_khon_luong_nghi_ho.jpg',
+  cuu_kiep_loi_nguc_kiem_phap:  'icons/than_pham/art_cuu_kiep_loi_nguc_kiem_phap.jpg',
+  van_de_tran_ma_quyen:         'icons/than_pham/art_van_de_tran_ma_quyen.jpg',
+  nhat_khi_hoa_tam_thanh:       'icons/than_pham/art_nhat_khi_hoa_tam_thanh.jpg',
+  vo_thuy_vo_chung_vo_vi_than:  'icons/than_pham/art_vo_thuy_vo_chung_vo_vi_than.jpg',
+  diet_the_loi_viem_dong:       'icons/than_pham/art_diet_the_loi_viem_dong.jpg',
 };
 
 /** Map of Thần Phẩm Life Lamp IDs to AI-generated icons (18 Chí Tôn Mệnh Đăng) */
 export const LAMP_THAN_PHAM_AI_ICONS = {
-  nguyen_thuy_thien_ma:         baseUrl + 'icons/than_pham/lamp_nguyen_thuy_thien_ma.jpg',
-  hon_don_so_khai:              baseUrl + 'icons/than_pham/lamp_hon_don_so_khai.jpg',
-  hong_mong_bat_diet:           baseUrl + 'icons/than_pham/lamp_hong_mong_bat_diet.jpg',
-  cuu_chuyen_luan_hoi:          baseUrl + 'icons/than_pham/lamp_cuu_chuyen_luan_hoi.jpg',
-  thuong_thuong_loi_kiep:       baseUrl + 'icons/than_pham/lamp_thuong_thuong_loi_kiep.jpg',
-  sang_the_ban_nguyen:          baseUrl + 'icons/than_pham/lamp_sang_the_ban_nguyen.jpg',
-  van_menh_hu_vo:               baseUrl + 'icons/than_pham/lamp_van_menh_hu_vo.jpg',
-  tuc_menh_nhan_qua:            baseUrl + 'icons/than_pham/lamp_tuc_menh_nhan_qua.jpg',
-  thai_co_than_long:            baseUrl + 'icons/than_pham/lamp_thai_co_than_long.jpg',
-  khoi_nguyen_thoi_khong:       baseUrl + 'icons/than_pham/lamp_khoi_nguyen_thoi_khong.jpg',
-  van_gioi_quy_nhat:            baseUrl + 'icons/than_pham/lamp_van_gioi_quy_nhat.jpg',
-  toi_cao_thien_menh:           baseUrl + 'icons/than_pham/lamp_toi_cao_thien_menh.jpg',
-  cuu_khieu_linh_lung:          baseUrl + 'icons/than_pham/lamp_cuu_khieu_linh_lung.jpg',
-  thien_dao_chi_ton:            baseUrl + 'icons/than_pham/lamp_thien_dao_chi_ton.jpg',
-  nguyen_gioi_hon_co:           baseUrl + 'icons/than_pham/lamp_nguyen_gioi_hon_co.jpg',
-  cam_ky_cuc_dao:               baseUrl + 'icons/than_pham/lamp_cam_ky_cuc_dao.jpg',
-  dao_tam_chung_ma:             baseUrl + 'icons/than_pham/lamp_dao_tam_chung_ma.jpg',
-  tan_tien_phe_than:            baseUrl + 'icons/than_pham/lamp_tan_tien_phe_than.jpg',
+  nguyen_thuy_thien_ma:         'icons/than_pham/lamp_nguyen_thuy_thien_ma.jpg',
+  hon_don_so_khai:              'icons/than_pham/lamp_hon_don_so_khai.jpg',
+  hong_mong_bat_diet:           'icons/than_pham/lamp_hong_mong_bat_diet.jpg',
+  cuu_chuyen_luan_hoi:          'icons/than_pham/lamp_cuu_chuyen_luan_hoi.jpg',
+  thuong_thuong_loi_kiep:       'icons/than_pham/lamp_thuong_thuong_loi_kiep.jpg',
+  sang_the_ban_nguyen:          'icons/than_pham/lamp_sang_the_ban_nguyen.jpg',
+  van_menh_hu_vo:               'icons/than_pham/lamp_van_menh_hu_vo.jpg',
+  tuc_menh_nhan_qua:            'icons/than_pham/lamp_tuc_menh_nhan_qua.jpg',
+  thai_co_than_long:            'icons/than_pham/lamp_thai_co_than_long.jpg',
+  khoi_nguyen_thoi_khong:       'icons/than_pham/lamp_khoi_nguyen_thoi_khong.jpg',
+  van_gioi_quy_nhat:            'icons/than_pham/lamp_van_gioi_quy_nhat.jpg',
+  toi_cao_thien_menh:           'icons/than_pham/lamp_toi_cao_thien_menh.jpg',
+  cuu_khieu_linh_lung:          'icons/than_pham/lamp_cuu_khieu_linh_lung.jpg',
+  thien_dao_chi_ton:            'icons/than_pham/lamp_thien_dao_chi_ton.jpg',
+  nguyen_gioi_hon_co:           'icons/than_pham/lamp_nguyen_gioi_hon_co.jpg',
+  cam_ky_cuc_dao:               'icons/than_pham/lamp_cam_ky_cuc_dao.jpg',
+  dao_tam_chung_ma:             'icons/than_pham/lamp_dao_tam_chung_ma.jpg',
+  tan_tien_phe_than:            'icons/than_pham/lamp_tan_tien_phe_than.jpg',
 };
 
 export function getLampImageUrl(lampId) {
-  return LAMP_THAN_PHAM_AI_ICONS[lampId] || (baseUrl + 'icons/than_pham/lamp_tan_tien_phe_than.jpg');
+  const path = LAMP_THAN_PHAM_AI_ICONS[lampId] || 'icons/than_pham/lamp_tan_tien_phe_than.jpg';
+  return getAssetUrl(path);
 }
 
 export function getArtifactImageUrl(artId) {
-  return THAN_PHAM_AI_ICONS[artId] || (baseUrl + 'icons/than_pham/art_tao_hoa_ngoc_diep.jpg');
+  const path = THAN_PHAM_AI_ICONS[artId] || 'icons/than_pham/art_tao_hoa_ngoc_diep.jpg';
+  return getAssetUrl(path);
 }
 
 
