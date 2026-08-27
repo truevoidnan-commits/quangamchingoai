@@ -33,31 +33,36 @@ export const THAN_PHAM_AI_ICONS = {
   diet_the_loi_viem_dong:       baseUrl + 'icons/than_pham/art_diet_the_loi_viem_dong.jpg',
 };
 
-/** Map of Thần Phẩm Life Lamp IDs to AI-generated icons */
+/** Map of Thần Phẩm Life Lamp IDs to AI-generated icons (18 Chí Tôn Mệnh Đăng) */
 export const LAMP_THAN_PHAM_AI_ICONS = {
-  tan_tien_phe_than:            baseUrl + 'icons/than_pham/lamp_tan_tien_phe_than.jpg',
-  sang_the_ban_nguyen:          baseUrl + 'icons/than_pham/lamp_sang_the_ban_nguyen.jpg',
+  nguyen_thuy_thien_ma:         baseUrl + 'icons/than_pham/lamp_nguyen_thuy_thien_ma.jpg',
   hon_don_so_khai:              baseUrl + 'icons/than_pham/lamp_hon_don_so_khai.jpg',
-  hong_mong_bat_diet:            baseUrl + 'icons/than_pham/lamp_hong_mong_bat_diet.jpg',
-  cuu_chuyen_luan_hoi:           baseUrl + 'icons/than_pham/lamp_cuu_chuyen_luan_hoi.jpg',
+  hong_mong_bat_diet:           baseUrl + 'icons/than_pham/lamp_hong_mong_bat_diet.jpg',
+  cuu_chuyen_luan_hoi:          baseUrl + 'icons/than_pham/lamp_cuu_chuyen_luan_hoi.jpg',
   thuong_thuong_loi_kiep:       baseUrl + 'icons/than_pham/lamp_thuong_thuong_loi_kiep.jpg',
-  thien_dao_trung_phat:         baseUrl + 'icons/than_pham/lamp_thuong_thuong_loi_kiep.jpg',
+  sang_the_ban_nguyen:          baseUrl + 'icons/than_pham/lamp_sang_the_ban_nguyen.jpg',
   van_menh_hu_vo:               baseUrl + 'icons/than_pham/lamp_van_menh_hu_vo.jpg',
-  vo_cuc_ma_ton:                 baseUrl + 'icons/than_pham/lamp_van_menh_hu_vo.jpg',
   tuc_menh_nhan_qua:            baseUrl + 'icons/than_pham/lamp_tuc_menh_nhan_qua.jpg',
-  khai_thien_tich_dia:          baseUrl + 'icons/than_pham/lamp_tuc_menh_nhan_qua.jpg',
   thai_co_than_long:            baseUrl + 'icons/than_pham/lamp_thai_co_than_long.jpg',
   khoi_nguyen_thoi_khong:       baseUrl + 'icons/than_pham/lamp_khoi_nguyen_thoi_khong.jpg',
-  bat_hu_thoi_khong:           baseUrl + 'icons/than_pham/lamp_khoi_nguyen_thoi_khong.jpg',
   van_gioi_quy_nhat:            baseUrl + 'icons/than_pham/lamp_van_gioi_quy_nhat.jpg',
-  toi_cao_thien_menh:          baseUrl + 'icons/than_pham/lamp_toi_cao_thien_menh.jpg',
-  nguyen_thuy_thien_ma:         baseUrl + 'icons/than_pham/lamp_nguyen_thuy_thien_ma.jpg',
+  toi_cao_thien_menh:           baseUrl + 'icons/than_pham/lamp_toi_cao_thien_menh.jpg',
   cuu_khieu_linh_lung:          baseUrl + 'icons/than_pham/lamp_cuu_khieu_linh_lung.jpg',
   thien_dao_chi_ton:            baseUrl + 'icons/than_pham/lamp_thien_dao_chi_ton.jpg',
   nguyen_gioi_hon_co:           baseUrl + 'icons/than_pham/lamp_nguyen_gioi_hon_co.jpg',
   cam_ky_cuc_dao:               baseUrl + 'icons/than_pham/lamp_cam_ky_cuc_dao.jpg',
   dao_tam_chung_ma:             baseUrl + 'icons/than_pham/lamp_dao_tam_chung_ma.jpg',
+  tan_tien_phe_than:            baseUrl + 'icons/than_pham/lamp_tan_tien_phe_than.jpg',
 };
+
+export function getLampImageUrl(lampId) {
+  return LAMP_THAN_PHAM_AI_ICONS[lampId] || (baseUrl + 'icons/than_pham/lamp_tan_tien_phe_than.jpg');
+}
+
+export function getArtifactImageUrl(artId) {
+  return THAN_PHAM_AI_ICONS[artId] || (baseUrl + 'icons/than_pham/art_tao_hoa_ngoc_diep.jpg');
+}
+
 
 /**
  * Returns the icon config for a given artifact/lamp object.

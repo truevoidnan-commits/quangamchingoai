@@ -111,7 +111,6 @@ export default function CultivationModal({ isOpen, onClose }) {
   const artifactCount = (cultivation.inventoryArtifacts || []).length;
   const isNguyenAnhStage = cultivation.realm === 'gia_anh' || cultivation.realm === 'nguyen_anh';
   const isStrictNguyenAnh = cultivation.realm === 'nguyen_anh';
-  const currentTienTinh = cultivation.tienTinh !== undefined ? cultivation.tienTinh : (cultivation.dangDiem || 0);
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title="✦ ĐẠO LỘ TU TIÊN ✦" fullHeight>
@@ -158,8 +157,12 @@ export default function CultivationModal({ isOpen, onClose }) {
             ) : (
               <>
                 <div className={styles.statBox}>
-                  <span className={styles.statLabel}>Số dư Tiên Tinh</span>
-                  <span className={styles.statValCyan}>{currentTienTinh.toLocaleString()} TT</span>
+                  <span className={styles.statLabel}>
+                    {(cultivation.storedExp || 0) > 0 ? 'Uẩn Tích Bình Cảnh' : 'Bảo Hiểm Thần Vật'}
+                  </span>
+                  <span className={styles.statValCyan}>
+                    {(cultivation.storedExp || 0) > 0 ? `+${(cultivation.storedExp).toLocaleString()} Tu Vi` : `${cultivation.pityReadingCycles || 0}/45`}
+                  </span>
                 </div>
                 <div className={styles.statBox}>
                   <span className={styles.statLabel}>Chiến Lực</span>
@@ -672,13 +675,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                     const isAbsorbed = (cultivation.absorbedLamps || []).includes(lamp.id);
                     const isInInventory = (cultivation.inventoryLamps || []).includes(lamp.id);
                     const isOwned = isAbsorbed || isInInventory;
-                    const tierInfo = LAMP_TIERS[lamp.tier] || { name: 'Hạ Phẩm', color: '#e2e8f0', bg: 'rgba(226, 232, 240, 0.1)', border: 'rgba(226, 232, 240, 0.3)', priceExp: 500, priceTM: 50, tienTinh: 2500 };
-
-                    // Tính toán chi phí Tiên Tinh & phần thiếu cần bù
-                    const totalCostTienTinh = tierInfo.tienTinh || tierInfo.dangDiem || (tierInfo.priceExp * 5);
-                    const canCoverWithPoints = currentTienTinh >= totalCostTienTinh;
-                    const deficitExp = Math.max(0, Math.ceil((totalCostTienTinh - currentTienTinh) / 5));
-                    const deficitTM = Math.ceil(deficitExp / 10);
+                    const tierInfo = LAMP_TIERS[lamp.tier] || LAMP_TIERS.than_pham;
 
                     return (
                       <div
@@ -751,7 +748,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                                 : '🏮 Hấp Thụ (+1 Cung)'}
                             </button>
 
-                            {/* Nút Bán Mệnh Đăng lấy Tiên Tinh */}
+                            {/* Nút Luyện Hóa Mệnh Đăng hoàn trả Tu Vi / Thiên Mệnh */}
                             <button
                               className="btn-ghost"
                               style={{
@@ -763,58 +760,31 @@ export default function CultivationModal({ isOpen, onClose }) {
                                 flex: 1,
                               }}
                               onClick={() => {
-                                const isRare = lamp.tier === 'tien_pham' || lamp.tier === 'than_pham';
-                                if (isRare) {
-                                  if (
-                                    !confirm(
-                                      `⚠️ XÁC NHẬN BÁN MỆNH ĐĂNG CAO CẤP:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Nhận lại: +${totalCostTienTinh.toLocaleString()} Tiên Tinh\n\nĐạo hữu có chắc chắn muốn bán chiếc đèn quý hiếm này?`
-                                    )
-                                  ) return;
+                                const rewardDesc = isNguyenAnhStage ? '+50 Thiên Mệnh' : '+3.000 Tu Vi';
+                                if (!confirm(`⚠️ XÁC NHẬN LUYỆN HÓA THẦN ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Nhận lại: ${rewardDesc}\n\nĐạo hữu có chắc chắn muốn phân giải luyện hóa Thần Đăng này?`)) {
+                                  return;
                                 }
-                                triggerAction(() => sellLamp(lamp.id), `Đã bán thành công ${lamp.name}! Nhận +${totalCostTienTinh.toLocaleString()} Tiên Tinh.`);
+                                triggerAction(() => sellLamp(lamp.id), `Đã luyện hóa ${lamp.name}, nhận ${rewardDesc}!`);
                               }}
                             >
-                              💰 Bán (+{totalCostTienTinh.toLocaleString()} TT)
+                              ✨ Luyện Hóa ({isNguyenAnhStage ? '+50 TM' : '+3k'})
                             </button>
                           </div>
                         )}
 
-                        {/* Nút Đổi Mệnh Đăng bằng Tiên Tinh & Đốt Tu Vi bù khi chưa sở hữu */}
+                        {/* Nút Đổi Mệnh Đăng bằng Đốt Tu Vi / Thiên Mệnh khi chưa sở hữu */}
                         {!isOwned && (
                           <div className={styles.lampActions}>
                             <button
                               className={styles.burnExpBtn}
                               onClick={() => {
-                                const paymentMsg = canCoverWithPoints
-                                  ? `Tiêu hao: ${totalCostTienTinh.toLocaleString()} Tiên Tinh (Không tổn hao tu vi)`
-                                  : currentTienTinh > 0
-                                  ? `Tiêu hao: ${currentTienTinh.toLocaleString()} Tiên Tinh + Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} Thiên Mệnh` : `${deficitExp.toLocaleString()} Tu Vi`} bù thiếu`
-                                  : `Tiêu hao: Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} Thiên Mệnh` : `${deficitExp.toLocaleString()} Tu Vi`}`;
-
-                                const consequenceText = canCoverWithPoints
-                                  ? 'An toàn: Đủ Tiên Tinh chi trả, không ảnh hưởng cảnh giới!'
-                                  : cultivation.realm === 'ngung_khi'
-                                  ? 'Cảnh báo: Tu vi bù thiếu có thể làm rơi tầng Ngưng Khí!'
-                                  : cultivation.realm === 'truc_co'
-                                  ? 'Cảnh báo: Tu vi bù thiếu sẽ ngắt bớt Pháp Khiếu (Pháp Khiếu 121 bảo toàn)!'
-                                  : cultivation.realm === 'kim_dan'
-                                  ? 'Cảnh báo: Tu vi bù thiếu sẽ làm Thiên Cung tự thân bị hư hóa (Chân Cung Mệnh Đăng bất tử)!'
-                                  : 'Cảnh báo: Tiêu hao Thiên Mệnh bù thiếu theo tỉ lệ 10:1!';
-
-                                if (
-                                  confirm(
-                                    `✨ NGHỊCH MỆNH HOÁN ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• ${paymentMsg}\n• ${consequenceText}\n\nĐạo hữu có muốn đổi Mệnh Đăng này vào Túi Trữ Vật?`
-                                  )
-                                ) {
+                                const costDesc = isNguyenAnhStage ? '200 Thiên Mệnh' : '10.000 Tu Vi (kèm nguy cơ ngã cảnh/tụt tầng)';
+                                if (confirm(`🔥 NGHỊCH MỆNH HOÁN ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Tiêu hao: Đốt ${costDesc}\n\nĐạo hữu có muốn đổi Mệnh Đăng này vào Túi Trữ Vật?`)) {
                                   triggerAction(() => burnExpForLamp(lamp.id));
                                 }
                               }}
                             >
-                              {canCoverWithPoints
-                                ? `✨ Đổi Đèn (${totalCostTienTinh.toLocaleString()} TT)`
-                                : currentTienTinh > 0
-                                ? `🔥 ${currentTienTinh.toLocaleString()} TT + Đốt ${isNguyenAnhStage ? `${deficitTM.toLocaleString()} TM` : `${deficitExp.toLocaleString()} Tu Vi`}`
-                                : `🔥 Đốt ${isNguyenAnhStage ? `${(tierInfo.priceTM || 50).toLocaleString()} TM` : `${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`} Đổi Đèn`}
+                              🔥 Đổi Đèn (Đốt {isNguyenAnhStage ? '200 TM' : '10.000 Tu Vi'})
                             </button>
                           </div>
                         )}
@@ -912,10 +882,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                     const isAnchored = anchoredIds.includes(art.id);
                     const isInInventory = invCount > 0;
                     const isOwned = isInInventory || isAnchored;
-                    const tierInfo = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
-                    const costTienTinh = tierInfo.tienTinh || tierInfo.dangDiem || (tierInfo.priceExp * 5);
-                    const canCover = currentTienTinh >= costTienTinh;
-                    const deficitExp = Math.max(0, Math.ceil((costTienTinh - currentTienTinh) / 5));
+                    const tierInfo = LAMP_TIERS[art.tier] || LAMP_TIERS.than_pham;
 
                     return (
                       <div
@@ -978,7 +945,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                                 </button>
                               )}
 
-                              {/* Nút Bán lấy Tiên Tinh */}
+                              {/* Nút Luyện Hóa lấy Tu Vi / Thiên Mệnh */}
                               <button
                                 className="btn-ghost"
                                 style={{
@@ -990,16 +957,14 @@ export default function CultivationModal({ isOpen, onClose }) {
                                   flex: 1,
                                 }}
                                 onClick={() => {
-                                  const isRare = art.tier === 'tien_pham' || art.tier === 'than_pham';
-                                  if (isRare) {
-                                    if (!confirm(`⚠️ XÁC NHẬN BÁN BẢO VẬT CAO CẤP:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name}\n• Nhận lại: +${costTienTinh.toLocaleString()} Tiên Tinh\n\nBạn có chắc chắn muốn bán vật phẩm quý hiếm này?`)) {
-                                      return;
-                                    }
+                                  const rewardDesc = isNguyenAnhStage ? '+50 Thiên Mệnh' : '+3.000 Tu Vi';
+                                  if (!confirm(`⚠️ XÁC NHẬN LUYỆN HÓA THẦN VẬT:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name}\n• Nhận lại: ${rewardDesc}\n\nBạn có chắc chắn muốn phân giải luyện hóa vật phẩm này?`)) {
+                                    return;
                                   }
-                                  triggerAction(() => sellArtifact(art.id), `Đã bán ${art.name}, nhận +${costTienTinh.toLocaleString()} Tiên Tinh!`);
+                                  triggerAction(() => sellArtifact(art.id), `Đã luyện hóa ${art.name}, nhận ${rewardDesc}!`);
                                 }}
                               >
-                                💰 Bán (+{costTienTinh.toLocaleString()} TT)
+                                ✨ Luyện Hóa ({isNguyenAnhStage ? '+50 TM' : '+3k'})
                               </button>
                             </>
                           ) : isAnchored ? (
@@ -1011,22 +976,13 @@ export default function CultivationModal({ isOpen, onClose }) {
                             <button
                               className={styles.burnExpBtn}
                               onClick={() => {
-                                const paymentMsg = canCover
-                                  ? `Tiêu hao: ${costTienTinh.toLocaleString()} Tiên Tinh`
-                                  : currentTienTinh > 0
-                                  ? `Tiêu hao: ${currentTienTinh.toLocaleString()} TT + Đốt ${deficitExp.toLocaleString()} Tu Vi bù thiếu`
-                                  : `Tiêu hao: Đốt ${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi`;
-
-                                if (confirm(`ĐỔI VẬT TRẤN ÁP:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name} (${art.type})\n• ${paymentMsg}\n\nĐạo hữu có muốn đổi bảo vật này vào Túi Trữ Vật?`)) {
+                                const costDesc = isNguyenAnhStage ? '200 Thiên Mệnh' : '10.000 Tu Vi (kèm nguy cơ ngã cảnh/tụt tầng)';
+                                if (confirm(`🔥 NGHỊCH THIÊN HOÁN BẢO:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name} (${art.type})\n• Tiêu hao: Đốt ${costDesc}\n\nĐạo hữu có muốn đổi bảo vật này vào Túi Trữ Vật?`)) {
                                   triggerAction(() => buyArtifact(art.id));
                                 }
                               }}
                             >
-                              {canCover
-                                ? `✨ Đổi Bảo Vật (${costTienTinh.toLocaleString()} TT)`
-                                : currentTienTinh > 0
-                                ? `🔥 ${currentTienTinh.toLocaleString()} TT + Đốt ${deficitExp.toLocaleString()} Tu Vi`
-                                : `🔥 Đốt ${(tierInfo.priceExp || 500).toLocaleString()} Tu Vi Đổi`}
+                              🔥 Đổi Bảo Vật (Đốt {isNguyenAnhStage ? '200 TM' : '10.000 Tu Vi'})
                             </button>
                           )}
                         </div>

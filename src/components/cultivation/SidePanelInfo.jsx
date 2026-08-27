@@ -240,11 +240,13 @@ export default function SidePanelInfo() {
 
         <div style={{ width: 1, height: 24, background: 'linear-gradient(to bottom, transparent, rgba(34, 195, 240, 0.35), transparent)' }} />
 
-        {/* 3. Tiên Tinh */}
+        {/* 3. Bảo Hiểm / Uẩn Tích */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', textAlign: 'center', flex: 1 }}>
-          <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: 'var(--text-muted)', textTransform: 'uppercase' }}>TIÊN TINH</span>
-          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 13.5, fontWeight: 800, color: 'var(--color-kim)' }}>
-            {(cultivation?.tienTinh || 0).toLocaleString()} TT
+          <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+            {(cultivation?.storedExp || 0) > 0 ? 'UẨN TÍCH' : 'BẢO HIỂM'}
+          </span>
+          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 13.5, fontWeight: 800, color: (cultivation?.storedExp || 0) > 0 ? '#f59e0b' : '#ef4444' }}>
+            {(cultivation?.storedExp || 0) > 0 ? `+${(cultivation.storedExp).toLocaleString()}` : `${cultivation?.pityReadingCycles || 0}/45`}
           </span>
         </div>
       </div>

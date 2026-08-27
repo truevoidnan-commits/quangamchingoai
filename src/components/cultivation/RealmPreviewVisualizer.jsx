@@ -36,7 +36,7 @@ import {
   TIER_BASE_THIEN_MENH_REWARDS
 } from '../../lib/cultivation';
 import ArtifactIcon from './ArtifactIcon';
-import { LAMP_THAN_PHAM_AI_ICONS } from '../../lib/artifactIcons';
+import { LAMP_THAN_PHAM_AI_ICONS, getLampImageUrl, getArtifactImageUrl } from '../../lib/artifactIcons';
 import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhScale } from '../../lib/daoAnhData';
 import styles from './RealmPreviewVisualizer.module.css';
 
@@ -6538,8 +6538,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             position: 'fixed',
             inset: 0,
             zIndex: 9999,
-            background: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(10px)',
+            background: 'rgba(5, 10, 20, 0.88)',
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -6549,115 +6550,133 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         >
           <div 
             style={{
-              background: 'linear-gradient(180deg, #0f172a 0%, #020617 100%)',
-              border: '1.5px solid var(--color-kim)',
-              borderRadius: 16,
-              maxWidth: 460,
+              background: 'radial-gradient(circle at 50% -10%, #1e153b 0%, #0c0f24 50%, #030712 100%)',
+              border: '1.5px solid rgba(239, 68, 68, 0.45)',
+              borderRadius: 18,
+              maxWidth: 540,
               width: '100%',
-              maxHeight: '82vh',
+              maxHeight: '84vh',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0 0 35px rgba(251, 191, 36, 0.35)'
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(239, 68, 68, 0.25)',
+              fontFamily: "'Noto Serif', serif"
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div style={{
-              padding: '14px 18px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              padding: '14px 20px',
+              borderBottom: '1px solid rgba(239, 68, 68, 0.25)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: 'rgba(255, 204, 0, 0.05)'
+              background: 'linear-gradient(90deg, rgba(239, 68, 68, 0.15) 0%, transparent 100%)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 20 }}>🏮</span>
-                <h3 style={{ margin: 0, fontSize: 15, color: 'var(--color-kim)', fontWeight: 800 }}>
-                  {selectedSlot === 4 ? 'KHẢM NẠP MỆNH ĐĂNG CỰC CẢNH' : `KHẢM NẠP MỆNH ĐĂNG (VỊ TRÍ #${(selectedSlot ?? 0) + 1})`}
-                </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 24, filter: 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.6))' }}>🏮</span>
+                <div>
+                  <h3 style={{
+                    margin: 0,
+                    fontSize: 16,
+                    fontWeight: 900,
+                    background: 'linear-gradient(135deg, #fecaca 0%, #ef4444 50%, #f87171 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    letterSpacing: 0.8
+                  }}>
+                    {selectedSlot === 4 ? 'KHẢM NẠP MỆNH ĐĂNG CỰC CẢNH' : `KHẢM NẠP MỆNH ĐĂNG (VỊ TRÍ #${(selectedSlot ?? 0) + 1})`}
+                  </h3>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>
+                    18 Thần Phẩm Mệnh Đăng Cổ Hoàng Thượng Cổ
+                  </div>
+                </div>
               </div>
               <button 
                 onClick={() => setLampModalOpen(false)}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  color: '#fff',
-                  width: 28,
-                  height: 28,
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#cbd5e1',
+                  width: 30,
+                  height: 30,
                   borderRadius: '50%',
                   fontSize: 14,
                   fontWeight: 700,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease'
                 }}
               >
                 ✕
               </button>
             </div>
 
-            {/* Filter Tier Tabs */}
-            <div style={{
-              display: 'flex',
-              gap: 6,
-              padding: '10px 14px',
-              overflowX: 'auto',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-              background: 'rgba(10, 16, 26, 0.6)'
-            }}>
-              {['all', 'ha_pham', 'trung_pham', 'thuong_pham', 'cuc_pham', 'tien_pham', 'than_pham'].map(tier => (
-                <button
-                  key={tier}
-                  onClick={() => setLampFilterTier(tier)}
-                  style={{
-                    padding: '4px 10px',
-                    borderRadius: 12,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    border: lampFilterTier === tier ? '1.2px solid var(--color-kim)' : '1px solid rgba(255,255,255,0.1)',
-                    background: lampFilterTier === tier ? 'rgba(251, 191, 36, 0.2)' : 'rgba(255,255,255,0.03)',
-                    color: lampFilterTier === tier ? 'var(--color-kim)' : 'var(--text-sub)'
-                  }}
-                >
-                  {tier === 'all' ? 'Tất cả' : (LAMP_TIERS[tier]?.name || tier)}
-                </button>
-              ))}
-            </div>
+            {/* Quick Status / Filter Bar */}
+            {(() => {
+              const ownedLampIds = Array.from(new Set([...(cultivation?.absorbedLamps || []), ...(cultivation?.inventoryLamps || [])]));
+              const unequippedInBag = (cultivation?.inventoryLamps || []).filter(id => !absorbedLamps.includes(id));
+
+              return (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 16px',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  fontSize: 11.5,
+                  color: '#94a3b8'
+                }}>
+                  <div>
+                    Sở hữu: <strong style={{ color: '#fca5a5' }}>{ownedLampIds.length}/18</strong> Thần Đăng
+                    {unequippedInBag.length > 0 && (
+                      <span style={{ marginLeft: 8, color: '#4ade80' }}>
+                        (Có {unequippedInBag.length} đèn sẵn sàng khảm)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Lamp List */}
             <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {/* Option to unequip if slot is filled */}
+              {/* Option to unequip if current slot is filled */}
               {selectedSlot !== null && absorbedLamps[selectedSlot] && (
                 <div style={{
                   padding: '10px 14px',
-                  borderRadius: 10,
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: 12,
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between'
+                  justifyContent: 'space-between',
+                  gap: 10
                 }}>
-                  <span style={{ fontSize: 12, color: '#fca5a5' }}>
-                    Đang khảm: <strong>{LIFE_LAMPS.find(l => l.id === absorbedLamps[selectedSlot])?.name || absorbedLamps[selectedSlot]}</strong>
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>⚡</span>
+                    <span style={{ fontSize: 12, color: '#fca5a5' }}>
+                      Đang khảm tại vị trí này: <strong style={{ color: '#fff' }}>{LIFE_LAMPS.find(l => l.id === absorbedLamps[selectedSlot])?.name || absorbedLamps[selectedSlot]}</strong>
+                    </span>
+                  </div>
                   <button
                     onClick={() => {
                       if (absorbLamp) absorbLamp(absorbedLamps[selectedSlot]);
                       setLampModalOpen(false);
                     }}
                     style={{
-                      padding: '4px 12px',
-                      borderRadius: 6,
-                      background: '#ef4444',
-                      color: '#fff',
-                      border: 'none',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      cursor: 'pointer'
+                      padding: '5px 12px',
+                      borderRadius: 8,
+                      background: 'rgba(239, 68, 68, 0.25)',
+                      border: '1px solid #ef4444',
+                      color: '#fecaca',
+                      fontSize: 11.5,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
                     }}
                   >
                     Tháo Ra
@@ -6668,63 +6687,164 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               {(() => {
                 const ownedLampIds = Array.from(new Set([...(cultivation?.absorbedLamps || []), ...(cultivation?.inventoryLamps || [])]));
                 const ownedList = LIFE_LAMPS.filter(l => ownedLampIds.includes(l.id));
-                const filteredList = ownedList.filter(lamp => lampFilterTier === 'all' || lamp.tier === lampFilterTier);
 
-                if (filteredList.length === 0) {
+                if (ownedList.length === 0) {
                   return (
-                    <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                      <div style={{ fontSize: 36, marginBottom: 8 }}>🏮</div>
-                      <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--color-kim)', marginBottom: 6 }}>
-                        {ownedList.length === 0 
-                          ? 'Chưa sở hữu Mệnh Đăng nào' 
-                          : `Không có Mệnh Đăng phẩm ${LAMP_TIERS[lampFilterTier]?.name || lampFilterTier} trong Túi Đồ`}
+                    <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                      <div style={{ fontSize: 42, marginBottom: 10 }}>🏮</div>
+                      <div style={{ fontSize: 14.5, fontWeight: 800, color: '#fca5a5', marginBottom: 6 }}>
+                        Túi Trữ Vật Chưa Có Mệnh Đăng
                       </div>
-                      <p style={{ fontSize: 11.5, margin: '0', lineHeight: 1.6, color: 'var(--text-sub)' }}>
-                        Đạo hữu hãy tích lũy tu vi khi đọc truyện để rơi cơ duyên hoặc vào <strong>Tàng Bảo Điện</strong> để sở hữu Mệnh Đăng.
+                      <p style={{ fontSize: 12, margin: '0 0 16px', lineHeight: 1.6, color: '#64748b' }}>
+                        Đạo hữu hãy đọc thêm chương truyện để ngộ ra cơ duyên hoặc tiến vào <strong>Tàng Bảo Điện</strong> để nghịch mệnh hoán đăng.
                       </p>
+                      <button
+                        onClick={() => {
+                          setLampModalOpen(false);
+                          if (setSanctumOpen) setSanctumOpen(true);
+                        }}
+                        style={{
+                          padding: '8px 18px',
+                          borderRadius: 10,
+                          fontSize: 12.5,
+                          fontWeight: 800,
+                          background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                          border: 'none',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          boxShadow: '0 0 16px rgba(239, 68, 68, 0.4)'
+                        }}
+                      >
+                        🏛️ Mở Tàng Bảo Điện
+                      </button>
                     </div>
                   );
                 }
 
-                return filteredList.map(lamp => {
+                // Sắp xếp: Các đèn có thể khảm lên đầu, sau đó đến đèn đang khảm
+                const sortedList = [...ownedList].sort((a, b) => {
+                  const aInThis = selectedSlot !== null && absorbedLamps[selectedSlot] === a.id;
+                  const bInThis = selectedSlot !== null && absorbedLamps[selectedSlot] === b.id;
+                  if (aInThis) return -1;
+                  if (bInThis) return 1;
+                  const aAbsorbed = absorbedLamps.includes(a.id);
+                  const bAbsorbed = absorbedLamps.includes(b.id);
+                  if (!aAbsorbed && bAbsorbed) return -1;
+                  if (aAbsorbed && !bAbsorbed) return 1;
+                  return 0;
+                });
+
+                return sortedList.map(lamp => {
                   const isEquippedInThisSlot = selectedSlot !== null && absorbedLamps[selectedSlot] === lamp.id;
                   const isEquippedElsewhere = absorbedLamps.includes(lamp.id) && !isEquippedInThisSlot;
-                  const tierInfo = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
+                  const imgUrl = getLampImageUrl(lamp.id);
 
                   return (
                     <div
                       key={lamp.id}
                       style={{
                         padding: '10px 14px',
-                        borderRadius: 10,
-                        background: isEquippedInThisSlot ? 'rgba(251, 191, 36, 0.12)' : 'rgba(255, 255, 255, 0.04)',
-                        border: isEquippedInThisSlot ? '1.5px solid var(--color-kim)' : '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: 14,
+                        background: isEquippedInThisSlot 
+                          ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(15, 23, 42, 0.8) 100%)' 
+                          : 'rgba(255, 255, 255, 0.04)',
+                        border: isEquippedInThisSlot ? '1.5px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.1)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        gap: 10
+                        gap: 12,
+                        transition: 'all 0.2s ease',
+                        boxShadow: isEquippedInThisSlot ? '0 0 16px rgba(239, 68, 68, 0.25)' : 'none'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                        <ArtifactIcon item={lamp} isLamp={true} size={38} />
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 800, color: tierInfo.color || '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {/* Left: Square 1:1 AI artwork preview */}
+                      <div style={{
+                        width: 54,
+                        height: 54,
+                        aspectRatio: '1 / 1',
+                        borderRadius: 10,
+                        overflow: 'hidden',
+                        position: 'relative',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        background: '#0a0a14',
+                        flexShrink: 0,
+                        boxShadow: '0 0 10px rgba(0,0,0,0.5)'
+                      }}>
+                        <img
+                          src={imgUrl}
+                          alt={lamp.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentNode.innerHTML = `<div style="font-size: 28px; display:flex; align-items:center; justify-content:center; height:100%;">🏮</div>`;
+                          }}
+                        />
+                      </div>
+
+                      {/* Middle: Details */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                          <span style={{
+                            fontSize: 8.5,
+                            fontWeight: 900,
+                            padding: '1.5px 5px',
+                            borderRadius: 4,
+                            background: 'rgba(239, 68, 68, 0.25)',
+                            border: '1px solid rgba(239, 68, 68, 0.6)',
+                            color: '#fca5a5'
+                          }}>
+                            THẦN PHẨM
+                          </span>
+                          <div style={{
+                            fontSize: 13.5,
+                            fontWeight: 800,
+                            color: '#fecaca',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
                             {lamp.name}
                           </div>
-                          <div style={{ fontSize: 10.5, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {tierInfo.name} · {lamp.quote || 'Mệnh Đăng Cổ Hoàng'}
-                          </div>
+                        </div>
+
+                        <div style={{
+                          fontSize: 11,
+                          color: '#94a3b8',
+                          lineHeight: 1.3,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {lamp.poem ? `"${lamp.poem}"` : lamp.desc}
                         </div>
                       </div>
 
+                      {/* Right: Actions */}
                       <div style={{ flexShrink: 0 }}>
                         {isEquippedInThisSlot ? (
-                          <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-kim)', padding: '4px 8px', borderRadius: 6, background: 'rgba(251,191,36,0.15)' }}>
-                            Đang Khảm
+                          <span style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            color: '#4ade80',
+                            padding: '5px 10px',
+                            borderRadius: 8,
+                            background: 'rgba(34, 197, 94, 0.12)',
+                            border: '1px solid rgba(34, 197, 94, 0.3)',
+                            display: 'inline-block'
+                          }}>
+                            ✓ Đang Khảm
                           </span>
                         ) : isEquippedElsewhere ? (
-                          <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
-                            Đã khảm
+                          <span style={{
+                            fontSize: 10.5,
+                            color: '#64748b',
+                            padding: '4px 8px',
+                            borderRadius: 6,
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            display: 'inline-block'
+                          }}>
+                            Đã khảm vị trí khác
                           </span>
                         ) : (
                           <button
@@ -6734,15 +6854,16 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                               setLampModalOpen(false);
                             }}
                             style={{
-                              padding: '5px 12px',
+                              padding: '6px 14px',
                               borderRadius: 8,
-                              background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
-                              color: '#000',
+                              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                              color: '#fff',
                               border: 'none',
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontWeight: 800,
                               cursor: 'pointer',
-                              boxShadow: '0 0 10px rgba(251, 191, 36, 0.3)'
+                              boxShadow: '0 0 12px rgba(239, 68, 68, 0.4)',
+                              transition: 'all 0.2s ease'
                             }}
                           >
                             Khảm Nạp

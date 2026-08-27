@@ -1,87 +1,30 @@
 import React, { useState } from 'react';
 import { useCultivationContext } from '../context/CultivationContext';
-import { LIFE_LAMPS, SUPPRESSING_ARTIFACTS, LAMP_TIERS, getLampPalaceName, getCombatPowerDisplay } from '../lib/cultivation';
-import ArtifactIcon from '../components/cultivation/ArtifactIcon';
+import { LIFE_LAMPS, SUPPRESSING_ARTIFACTS, getPalaceNameFromArtifact, getCombatPowerDisplay } from '../lib/cultivation';
+import { getLampImageUrl, getArtifactImageUrl } from '../lib/artifactIcons';
 import { useNavigate } from 'react-router-dom';
+import DaoAnhGalleryModal from '../components/cultivation/DaoAnhGalleryModal';
+import styles from './SanctumPage.module.css';
 
-function SvgLotusLamp({ size = 26 }) {
+function SvgLotusLamp({ size = 22 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" style={{ filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.7))' }}>
-      {/* Top hook & ring */}
-      <circle cx="24" cy="5" r="3" stroke="#fbbf24" strokeWidth="1.5" fill="none" />
-      <path d="M24 8 V11" stroke="#fbbf24" strokeWidth="2" />
-      {/* Top Canopy Roof */}
-      <path d="M12 14 C16 11 32 11 36 14 L33 17 H15 Z" fill="#fbbf24" opacity="0.9" />
-      {/* Lantern Body Cage & Flame Glow */}
-      <path d="M16 17 C13 24 13 30 16 34 H32 C35 30 35 24 32 17 Z" fill="url(#lampGlowGrad)" stroke="#f59e0b" strokeWidth="1.5" />
-      {/* Inner Eternal Flame */}
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" style={{ filter: 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.7))', flexShrink: 0 }}>
+      <circle cx="24" cy="5" r="3" stroke="#ef4444" strokeWidth="1.5" fill="none" />
+      <path d="M24 8 V11" stroke="#ef4444" strokeWidth="2" />
+      <path d="M12 14 C16 11 32 11 36 14 L33 17 H15 Z" fill="#ef4444" opacity="0.9" />
+      <path d="M16 17 C13 24 13 30 16 34 H32 C35 30 35 24 32 17 Z" fill="url(#lampGlowGradRed)" stroke="#dc2626" strokeWidth="1.5" />
       <path d="M24 20 C22 23 21 26 24 29 C27 26 26 23 24 20 Z" fill="#ffffff" filter="drop-shadow(0 0 4px #ff3fd5)" />
-      {/* Bottom Lotus Base Petals */}
-      <path d="M14 34 C12 37 14 41 24 42 C34 41 36 37 34 34 Z" fill="#d97706" />
-      <path d="M18 35 C20 39 28 39 30 35" stroke="#fbbf24" strokeWidth="1.5" fill="none" />
-      {/* Tassels */}
-      <path d="M24 42 V47 M22 47 H26" stroke="#fbbf24" strokeWidth="1.5" />
+      <path d="M14 34 C12 37 14 41 24 42 C34 41 36 37 34 34 Z" fill="#b91c1c" />
+      <path d="M18 35 C20 39 28 39 30 35" stroke="#ef4444" strokeWidth="1.5" fill="none" />
+      <path d="M24 42 V47 M22 47 H26" stroke="#ef4444" strokeWidth="1.5" />
       <defs>
-        <radialGradient id="lampGlowGrad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#fef08a" stopOpacity="0.9" />
-          <stop offset="60%" stopColor="#f59e0b" stopOpacity="0.6" />
-          <stop offset="100%" stopColor="#b45309" stopOpacity="0.2" />
+        <radialGradient id="lampGlowGradRed" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#fecaca" stopOpacity="0.9" />
+          <stop offset="60%" stopColor="#ef4444" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="#7f1d1d" stopOpacity="0.2" />
         </radialGradient>
       </defs>
     </svg>
-  );
-}
-
-// Nút chọn / bỏ chọn vật phẩm (thiết kế chuẩn chống lệch viền, chống vỡ layout trên Safari / Mobile)
-function SelectCheckButton({ isSelected, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        cursor: 'pointer',
-        padding: '4px 8px',
-        borderRadius: 7,
-        background: isSelected ? 'rgba(239, 68, 68, 0.22)' : 'rgba(255, 255, 255, 0.06)',
-        border: `1.5px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.2)'}`,
-        flexShrink: 0,
-        outline: 'none',
-        lineHeight: 1,
-        transition: 'all 0.15s ease'
-      }}
-      title={isSelected ? 'Bỏ chọn' : 'Chọn để bán'}
-    >
-      <span style={{
-        width: 13,
-        height: 13,
-        borderRadius: 3,
-        border: `1.5px solid ${isSelected ? '#ef4444' : 'rgba(255, 255, 255, 0.5)'}`,
-        background: isSelected ? '#ef4444' : 'transparent',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 9.5,
-        color: '#fff',
-        fontWeight: 900,
-        flexShrink: 0
-      }}>
-        {isSelected ? '✓' : ''}
-      </span>
-      <span style={{
-        fontSize: 11,
-        color: isSelected ? '#f87171' : 'var(--text-muted)',
-        fontWeight: 700,
-        whiteSpace: 'nowrap'
-      }}>
-        {isSelected ? 'Đã chọn' : 'Chọn'}
-      </span>
-    </button>
   );
 }
 
@@ -95,1301 +38,771 @@ export default function SanctumPage() {
     sellArtifact,
     sellMultipleItems,
     buyArtifact,
-    gainReadingExp 
   } = useCultivationContext();
 
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('lamps'); // 'lamps' | 'artifacts' | 'inventory'
-  const [inventorySubTab, setInventorySubTab] = useState('lamps'); // 'lamps' | 'artifacts'
-  const [lampFilterTier, setLampFilterTier] = useState('owned'); // 'owned' | 'ha_pham' | ...
-  const [artifactFilterTier, setArtifactFilterTier] = useState('owned'); // 'owned' | 'ha_pham' | ...
-  const [selectedLamps, setSelectedLamps] = useState([]);
-  const [selectedArtifacts, setSelectedArtifacts] = useState([]);
+  const [activeTab, setActiveTab] = useState('lamps'); // 'lamps' | 'artifacts'
+  const [lampFilter, setLampFilter] = useState('all'); // 'all' | 'equipped' | 'bag' | 'unowned'
+  const [artifactFilter, setArtifactFilter] = useState('all'); // 'all' | 'equipped' | 'bag' | 'unowned'
+  const [hoveredCardId, setHoveredCardId] = useState(null);
+  const [isDaoAnhModalOpen, setIsDaoAnhModalOpen] = useState(false);
 
-  const currentRealm = cultivation?.realm || 'truc_co';
+  const isNguyenAnhStage = cultivation?.realm === 'gia_anh' || cultivation?.realm === 'nguyen_anh';
   const exp = cultivation?.totalExp || cultivation?.expCurrentRealm || 0;
-  const is121Unlocked = cultivation?.has121st || false;
-  const maxLamps = is121Unlocked ? 5 : 4;
+  const storedExp = cultivation?.storedExp || 0;
+  const totalThienMenh = cultivation?.totalThienMenh || 0;
   const absorbedLamps = cultivation?.absorbedLamps || [];
   const inventoryLamps = cultivation?.inventoryLamps || [];
   const palaceAnchors = cultivation?.palaceAnchors || {};
   const inventoryArtifacts = cultivation?.inventoryArtifacts || [];
   const anchoredIds = Object.values(palaceAnchors).map(a => a?.id || a).filter(Boolean);
   const unanchoredArtifacts = inventoryArtifacts.filter(id => !anchoredIds.includes(id));
+  const pityReadingCycles = cultivation?.pityReadingCycles || 0;
 
-  const TIER_WEIGHT = {
-    than_pham: 6,
-    tien_pham: 5,
-    cuc_pham: 4,
-    thuong_pham: 3,
-    trung_pham: 2,
-    ha_pham: 1,
-  };
-
-  const TIER_ORDER = ['owned', 'than_pham', 'tien_pham', 'cuc_pham', 'thuong_pham', 'trung_pham', 'ha_pham'];
-
-  // Helper kiểm tra vật phẩm quý hiếm cần hỏi lại xác nhận
-  const shouldConfirm = (tier) => tier === 'tien_pham' || tier === 'than_pham';
-
-  // Danh sách Mệnh Đăng sở hữu vs Danh sách hiển thị theo bộ lọc (sắp xếp Thần -> Hạ)
-  const ownedLampIds = Array.from(new Set([...absorbedLamps, ...inventoryLamps]));
-  const ownedLampsList = LIFE_LAMPS.filter(l => ownedLampIds.includes(l.id))
-    .sort((a, b) => (TIER_WEIGHT[b.tier] || 0) - (TIER_WEIGHT[a.tier] || 0));
-  const displayedLamps = lampFilterTier === 'owned'
-    ? ownedLampsList
-    : LIFE_LAMPS.filter(l => l.tier === lampFilterTier);
-
-  // Danh sách Bảo Vật sở hữu vs Danh sách hiển thị theo bộ lọc (sắp xếp Thần -> Hạ)
-  const ownedArtifactIds = Array.from(new Set([...anchoredIds, ...inventoryArtifacts]));
-  const ownedArtifactsList = SUPPRESSING_ARTIFACTS.filter(a => ownedArtifactIds.includes(a.id))
-    .sort((a, b) => (TIER_WEIGHT[b.tier] || 0) - (TIER_WEIGHT[a.tier] || 0));
-  const displayedArtifacts = artifactFilterTier === 'owned'
-    ? ownedArtifactsList
-    : SUPPRESSING_ARTIFACTS.filter(a => a.tier === artifactFilterTier);
-
-  // Danh sách trong Túi Trữ Vật sắp xếp theo phẩm chất từ cao xuống thấp (Thần -> Tiên -> Cực -> Thượng -> Trung -> Hạ)
-  const sortedInventoryLamps = [...inventoryLamps].sort((idA, idB) => {
-    const lampA = LIFE_LAMPS.find(l => l.id === idA);
-    const lampB = LIFE_LAMPS.find(l => l.id === idB);
-    return (TIER_WEIGHT[lampB?.tier] || 0) - (TIER_WEIGHT[lampA?.tier] || 0);
+  // Lọc Mệnh Đăng theo danh mục thiết thực
+  const displayedLamps = LIFE_LAMPS.filter(l => {
+    const isEquipped = absorbedLamps.includes(l.id);
+    const isInBag = inventoryLamps.includes(l.id);
+    if (lampFilter === 'equipped') return isEquipped;
+    if (lampFilter === 'bag') return isInBag;
+    if (lampFilter === 'unowned') return !isEquipped && !isInBag;
+    return true;
   });
 
-  const sortedUnanchoredArtifacts = [...unanchoredArtifacts].sort((idA, idB) => {
-    const artA = SUPPRESSING_ARTIFACTS.find(a => a.id === idA);
-    const artB = SUPPRESSING_ARTIFACTS.find(a => a.id === idB);
-    return (TIER_WEIGHT[artB?.tier] || 0) - (TIER_WEIGHT[artA?.tier] || 0);
+  // Lọc Bảo Vật theo danh mục thiết thực
+  const displayedArtifacts = SUPPRESSING_ARTIFACTS.filter(a => {
+    const isEquipped = anchoredIds.includes(a.id);
+    const isInBag = unanchoredArtifacts.includes(a.id);
+    if (artifactFilter === 'equipped') return isEquipped;
+    if (artifactFilter === 'bag') return isInBag;
+    if (artifactFilter === 'unowned') return !isEquipped && !isInBag;
+    return true;
   });
 
-  // Chiến lực thực tế đồng bộ 100% với hệ thống
   const calculatedCombatPower = getCombatPowerDisplay(cultivation);
 
-  // Xử lý bán lẻ Mệnh Đăng (Hạ-Cực bán ngay, Tiên-Thần hỏi lại)
-  const handleSellSingleLamp = (lamp) => {
-    const tierInfo = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
-    const priceTT = tierInfo.tienTinh || Math.floor(tierInfo.priceExp / 5);
-    if (shouldConfirm(lamp.tier)) {
-      if (!window.confirm(`⚠️ CẢNH BÁO MỆNH ĐĂNG CAO CẤP!\n\nĐạo hữu có CHẮC CHẮN muốn bán [${tierInfo.name}] ${lamp.name} để nhận +${priceTT.toLocaleString()} Tiên Tinh không?`)) {
-        return;
-      }
+  // Xử lý Luyện Hóa lẻ Mệnh Đăng
+  const handleRefineSingleLamp = (lamp) => {
+    const rewardDesc = isNguyenAnhStage ? '+50 Thiên Mệnh' : '+3.000 Tu Vi';
+    if (!window.confirm(`⚠️ XÁC NHẬN LUYỆN HÓA THẦN ĐĂNG:\n\n• Thần Đăng: [Thần Phẩm] ${lamp.name}\n• Nhận lại: ${rewardDesc}\n\nĐạo hữu có chắc chắn muốn phân giải luyện hóa Thần Đăng này không?`)) {
+      return;
     }
     try {
       sellLamp(lamp.id);
-      setSelectedLamps(prev => prev.filter(id => id !== lamp.id));
     } catch (e) {
-      alert(e.message || 'Không thể bán.');
+      alert(e.message || 'Không thể luyện hóa.');
     }
   };
 
-  // Xử lý bán lẻ Bảo Vật (Hạ-Cực bán ngay, Tiên-Thần hỏi lại)
-  const handleSellSingleArtifact = (art) => {
-    const tierInfo = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
-    const priceTT = tierInfo.tienTinh || Math.floor(tierInfo.priceExp / 5);
-    if (shouldConfirm(art.tier)) {
-      if (!window.confirm(`⚠️ CẢNH BÁO BẢO VẬT CAO CẤP!\n\nĐạo hữu có CHẮC CHẮN muốn bán [${tierInfo.name}] ${art.name} để nhận +${priceTT.toLocaleString()} Tiên Tinh không?`)) {
-        return;
-      }
+  // Xử lý Luyện Hóa lẻ Bảo Vật
+  const handleRefineSingleArtifact = (art) => {
+    const rewardDesc = isNguyenAnhStage ? '+50 Thiên Mệnh' : '+3.000 Tu Vi';
+    if (!window.confirm(`⚠️ XÁC NHẬN LUYỆN HÓA THẦN VẬT:\n\n• Thần Vật: [Thần Phẩm] ${art.name}\n• Nhận lại: ${rewardDesc}\n\nĐạo hữu có chắc chắn muốn phân giải luyện hóa Thần Vật này không?`)) {
+      return;
     }
     try {
       sellArtifact(art.id);
-      setSelectedArtifacts(prev => prev.filter(id => id !== art.id));
     } catch (e) {
-      alert(e.message || 'Không thể bán.');
+      alert(e.message || 'Không thể luyện hóa.');
     }
   };
 
-  // Toggle chọn đèn / bảo vật
-  const toggleSelectLamp = (lampId) => {
-    setSelectedLamps(prev => 
-      prev.includes(lampId) ? prev.filter(id => id !== lampId) : [...prev, lampId]
-    );
-  };
-
-  const toggleSelectArtifact = (artId) => {
-    setSelectedArtifacts(prev => 
-      prev.includes(artId) ? prev.filter(id => id !== artId) : [...prev, artId]
-    );
-  };
-
-  // Chọn nhanh phẩm Hạ -> Cực (Loại trừ Tiên/Thần)
-  const selectNormalLamps = () => {
-    const normalInBag = inventoryLamps.filter(id => {
-      const l = LIFE_LAMPS.find(item => item.id === id);
-      return l && !shouldConfirm(l.tier);
-    });
-    setSelectedLamps(normalInBag);
-  };
-
-  const selectNormalArtifacts = () => {
-    const normalInBag = unanchoredArtifacts.filter(id => {
-      const a = SUPPRESSING_ARTIFACTS.find(item => item.id === id);
-      return a && !shouldConfirm(a.tier);
-    });
-    setSelectedArtifacts(normalInBag);
-  };
-
-  // Tính tổng Tiên Tinh và kiểm tra vật phẩm hiếm khi bán hàng loạt
-  const selectedLampsList = selectedLamps.map(id => LIFE_LAMPS.find(l => l.id === id)).filter(Boolean);
-  const selectedArtsList = selectedArtifacts.map(id => SUPPRESSING_ARTIFACTS.find(a => a.id === id)).filter(Boolean);
-  const allSelectedItems = [...selectedLampsList, ...selectedArtsList];
-  const totalSelectedCount = allSelectedItems.length;
-
-  let totalSelectedTT = 0;
-  const rareSelectedItems = [];
-  allSelectedItems.forEach(item => {
-    const t = LAMP_TIERS[item.tier] || LAMP_TIERS.ha_pham;
-    totalSelectedTT += (t.tienTinh || Math.floor(t.priceExp / 5));
-    if (shouldConfirm(item.tier)) {
-      rareSelectedItems.push({ name: item.name, tierName: t.name });
+  // Xử lý Luyện Hóa Nhanh toàn bộ đồ thừa trong túi
+  const handleQuickRefineAllBag = () => {
+    const totalCount = inventoryLamps.length + unanchoredArtifacts.length;
+    if (totalCount === 0) {
+      alert('Túi trữ vật không có Thần Vật dư thừa để luyện hóa.');
+      return;
     }
-  });
-
-  // Bán hàng loạt các mục đã chọn
-  const handleBatchSell = () => {
-    if (totalSelectedCount === 0) return;
-
-    if (rareSelectedItems.length > 0) {
-      const rareListStr = rareSelectedItems.map(r => `• [${r.tierName}] ${r.name}`).join('\n');
-      const confirmMsg = `⚠️ CẢNH BÁO BẢO VẬT CAO CẤP!\n\nTrong danh sách ${totalSelectedCount} vật phẩm bạn chọn, CÓ CHỨA ${rareSelectedItems.length} vật phẩm quý hiếm [Tiên Phẩm / Thần Phẩm]:\n\n${rareListStr}\n\nĐạo hữu có CHẮC CHẮN muốn bán tất cả để nhận +${totalSelectedTT.toLocaleString()} Tiên Tinh không?`;
-      if (!window.confirm(confirmMsg)) {
-        return;
-      }
+    const gainDesc = isNguyenAnhStage ? `+${totalCount * 50} Lực Thiên Mệnh` : `+${(totalCount * 3000).toLocaleString()} Tu Vi`;
+    if (!window.confirm(`⚡ LUYỆN HÓA TOÀN BỘ ĐỒ THỪA TRONG TÚI:\n\n• Số lượng: ${inventoryLamps.length} Thần Đăng + ${unanchoredArtifacts.length} Thần Vật\n• Hoàn trả: ${gainDesc}\n\nĐạo hữu có muốn luyện hóa ngay toàn bộ?`)) {
+      return;
     }
-    // Nếu chỉ có Hạ, Trung, Thượng, Cực -> Bán ngay không hỏi lại
-
     try {
-      if (sellMultipleItems) {
-        sellMultipleItems({ lampIds: selectedLamps, artifactIds: selectedArtifacts });
-      } else {
-        selectedLamps.forEach(id => sellLamp(id));
-        selectedArtifacts.forEach(id => sellArtifact(id));
-      }
-      setSelectedLamps([]);
-      setSelectedArtifacts([]);
-    } catch (err) {
-      alert(err.message || 'Lỗi khi bán hàng loạt.');
+      sellMultipleItems({ lampIds: inventoryLamps, artifactIds: unanchoredArtifacts });
+    } catch (e) {
+      alert(e.message || 'Luyện hóa thất bại.');
     }
   };
 
-  // Chuyển Tab/Bộ lọc và xóa lựa chọn để thanh bán không bị tồn đọng
-  const handleSwitchTab = (tab) => {
-    setActiveTab(tab);
-    setSelectedLamps([]);
-    setSelectedArtifacts([]);
+  // Xử lý Đổi Mệnh Đăng bằng cách Đốt Tu Vi / Thiên Mệnh
+  const handleBuyLampWithExp = (lamp) => {
+    const costDesc = isNguyenAnhStage ? '200 Lực Thiên Mệnh' : '10.000 Tu Vi (kèm nguy cơ ngã cảnh/tụt tầng)';
+    if (!window.confirm(`🔥 NGHỊCH MỆNH HOÁN ĐĂNG (ĐỐT TU VI):\n\n• Thần Đăng: [Thần Phẩm] ${lamp.name}\n• Tiêu hao: Đốt ${costDesc}\n\n⚠️ Đốt tu vi có thể khiến đạo hữu bị ngã cảnh hoặc thoái hóa Thiên Cung/Pháp Khiếu! Có muốn tiếp tục?`)) {
+      return;
+    }
+    try {
+      buyLamp(lamp.id);
+    } catch (e) {
+      alert(e.message || 'Không thể đổi Mệnh Đăng.');
+    }
   };
 
-  const handleSwitchLampFilter = (tier) => {
-    setLampFilterTier(tier);
-    setSelectedLamps([]);
+  // Xử lý Đổi Bảo Vật bằng cách Đốt Tu Vi / Thiên Mệnh
+  const handleBuyArtifactWithExp = (art) => {
+    const costDesc = isNguyenAnhStage ? '200 Lực Thiên Mệnh' : '10.000 Tu Vi (kèm nguy cơ ngã cảnh/tụt tầng)';
+    if (!window.confirm(`🔥 NGHỊCH THIÊN HOÁN BẢO (ĐỐT TU VI):\n\n• Thần Vật: [Thần Phẩm] ${art.name}\n• Tiêu hao: Đốt ${costDesc}\n\n⚠️ Đốt tu vi có thể khiến đạo hữu bị ngã cảnh hoặc thoái hóa Thiên Cung/Pháp Khiếu! Có muốn tiếp tục?`)) {
+      return;
+    }
+    try {
+      buyArtifact(art.id);
+    } catch (e) {
+      alert(e.message || 'Không thể đổi Thần Vật.');
+    }
   };
 
-  const handleSwitchArtifactFilter = (tier) => {
-    setArtifactFilterTier(tier);
-    setSelectedArtifacts([]);
-  };
-
-  const handleSwitchInventorySubTab = (subTab) => {
-    setInventorySubTab(subTab);
-    setSelectedLamps([]);
-    setSelectedArtifacts([]);
-  };
+  const totalBagItemsCount = inventoryLamps.length + unanchoredArtifacts.length;
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      width: '100vw',
-      background: 'radial-gradient(circle at 50% 20%, rgba(34, 195, 240, 0.08) 0%, rgba(16, 25, 39, 0.98) 60%, #0a0f18 100%)',
-      color: '#f0f6fc',
-      fontFamily: "'Noto Serif', serif",
-      display: 'flex',
-      flexDirection: 'column',
-      boxSizing: 'border-box'
-    }}>
-      
-      {/* 1. TOP NAVIGATION HEADER */}
-      <div className="sanctum-header-wrapper">
-        <div className="sanctum-header-left">
-          <button
-            onClick={() => navigate('/cultivation', { replace: true })}
-            className="sanctum-back-btn"
-          >
-            <span>←</span>
-            <span className="sanctum-back-text">QUAY LẠI</span>
+    <div className={styles.sanctumContainer}>
+      {/* TOP BANNER & NAVIGATION */}
+      <div className={styles.topBanner}>
+        <div className={styles.bannerLeft}>
+          <button onClick={() => navigate(-1)} className={styles.backBtn}>
+            ← Quay lại
           </button>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <span style={{ fontSize: 20 }}>🏛️</span>
-            <div style={{ minWidth: 0 }}>
-              <h1 className="sanctum-header-title">
-                TÀNG BẢO ĐIỆN
-              </h1>
-              <span className="sanctum-header-sub">
-                Mệnh Đăng, Bảo Vật & Túi Đồ
-              </span>
-            </div>
+          <div>
+            <h1 className={styles.pageTitle}>
+              🏛️ TÀNG BẢO ĐIỆN · BẢO KHỐ THẦN VẬT
+            </h1>
+            <p className={styles.pageSubtitle}>
+              18 Thần Phẩm Mệnh Đăng & 24 Thần Phẩm Trấn Cung Bảo Vật độc bản thượng cổ
+            </p>
           </div>
         </div>
 
-        {/* Right: Quick HUD Stats */}
-        <div className="sanctum-header-stats">
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 8.5, color: 'var(--text-muted)', fontWeight: 700 }}>TU VI</div>
-            <div style={{ fontSize: 11.5, color: 'var(--color-kim)', fontWeight: 800 }}>{exp.toLocaleString()}</div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button
+            onClick={() => setIsDaoAnhModalOpen(true)}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 10,
+              fontSize: 12.5,
+              fontWeight: 800,
+              cursor: 'pointer',
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(180, 83, 9, 0.15) 100%)',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              color: '#fde047',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              transition: 'all 0.2s ease',
+              boxShadow: '0 0 12px rgba(245, 158, 11, 0.2)',
+            }}
+          >
+            📜 Đạo Anh Đồ Lục
+          </button>
+
+          {totalBagItemsCount > 0 && (
+            <button
+              onClick={handleQuickRefineAllBag}
+              style={{
+                padding: '8px 14px',
+                borderRadius: 10,
+                fontSize: 12.5,
+                fontWeight: 800,
+                cursor: 'pointer',
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                border: 'none',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: '0 0 16px rgba(239, 68, 68, 0.4)',
+              }}
+              title="Luyện hóa toàn bộ Thần Vật đang nằm trong túi trữ vật"
+            >
+              ⚡ Luyện Hóa Nhanh ({totalBagItemsCount})
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* STATS OVERVIEW CARDS (3 Ô TINH GỌN, THIẾT THỰC) */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+        gap: 14,
+        marginBottom: 24,
+      }}>
+        {/* Ô 1: Tu Vi / Thiên Mệnh & Uẩn Tích Bình Cảnh */}
+        <div className={styles.statCard} style={{ borderColor: 'rgba(56, 189, 248, 0.35)' }}>
+          <div className={styles.statCardLabel} style={{ color: '#94a3b8' }}>
+            {isNguyenAnhStage ? 'LỰC THIÊN MỆNH HIỆN CÓ' : 'TU VI HIỆN CÓ'}
           </div>
-          <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 8.5, color: 'var(--text-muted)', fontWeight: 700 }}>CHIẾN LỰC</div>
-            <div style={{ fontSize: 11.5, color: 'var(--accent-cyan-bright, #22c3f0)', fontWeight: 800 }}>{calculatedCombatPower}</div>
+          <div className={styles.statCardValue} style={{ color: '#38bdf8' }}>
+            {isNguyenAnhStage ? `${totalThienMenh.toLocaleString()} TM` : `${exp.toLocaleString()} Tu Vi`}
           </div>
-          <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 8.5, color: 'var(--text-muted)', fontWeight: 700 }}>TIÊN TINH</div>
-            <div style={{ fontSize: 11.5, color: 'var(--color-kim)', fontWeight: 800 }}>{(cultivation?.tienTinh || 0).toLocaleString()}</div>
+          {storedExp > 0 ? (
+            <div style={{ fontSize: 11.5, color: '#f59e0b', marginTop: 4, fontWeight: 700 }}>
+              🌊 Uẩn tích bình cảnh: +{storedExp.toLocaleString()} (Tự xả khi phá cảnh)
+            </div>
+          ) : (
+            <div className={styles.statCardSub}>
+              Đọc sách để tích lũy chân nguyên
+            </div>
+          )}
+        </div>
+
+        {/* Ô 2: Bảo Hiểm Pity Rơi Thần Vật */}
+        <div className={styles.statCard} style={{ borderColor: 'rgba(239, 68, 68, 0.35)' }}>
+          <div className={styles.statCardLabel} style={{ color: '#fca5a5' }}>
+            CƠ CHẾ BẢO HIỂM (PITY)
+          </div>
+          <div className={styles.statCardValue} style={{ color: '#ef4444' }}>
+            {pityReadingCycles} / 45 chu kỳ
+          </div>
+          <div className={styles.statCardSub}>
+            {pityReadingCycles >= 45 ? '✨ Chu kỳ tiếp theo 100% ra Thần Vật!' : `Còn ${45 - pityReadingCycles} chu kỳ đọc nữa`}
+          </div>
+        </div>
+
+        {/* Ô 3: Tổng Chiến Lực Toàn Thân */}
+        <div className={styles.statCard} style={{ borderColor: 'rgba(251, 191, 36, 0.35)' }}>
+          <div className={styles.statCardLabel} style={{ color: '#fde68a' }}>
+            TỔNG CHIẾN LỰC TOÀN THÂN
+          </div>
+          <div className={styles.statCardValue} style={{ color: '#fbbf24' }}>
+            {calculatedCombatPower}
+          </div>
+          <div className={styles.statCardSub}>
+            Gia trì từ Cảnh Giới, Mệnh Đăng & Cung Thật
           </div>
         </div>
       </div>
 
-      {/* 2. TAB SWITCHER BAR */}
-      <div className="sanctum-tabs-container">
+      {/* NAVIGATION TABS (2 TAB CHÍNH TỐI THƯỢNG) */}
+      <div className={styles.navTabs}>
         <button
-          onClick={() => handleSwitchTab('lamps')}
+          onClick={() => setActiveTab('lamps')}
+          className={styles.tabBtn}
           style={{
-            padding: '12px 24px',
-            borderRadius: '10px 10px 0 0',
-            fontSize: 14,
-            fontWeight: 800,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
             background: activeTab === 'lamps' 
-              ? 'linear-gradient(180deg, rgba(255, 204, 0, 0.2) 0%, rgba(16, 25, 39, 0.9) 100%)' 
-              : 'transparent',
-            border: activeTab === 'lamps' ? '1.5px solid var(--color-kim)' : '1px solid transparent',
-            borderBottom: activeTab === 'lamps' ? '2px solid transparent' : 'none',
-            color: activeTab === 'lamps' ? 'var(--color-kim)' : 'var(--text-sub)',
-            transition: 'all 0.2s ease'
+              ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(185, 28, 28, 0.15) 100%)' 
+              : 'rgba(255, 255, 255, 0.04)',
+            border: activeTab === 'lamps' ? '1.5px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.1)',
+            color: activeTab === 'lamps' ? '#f87171' : '#94a3b8',
+            boxShadow: activeTab === 'lamps' ? '0 0 16px rgba(239, 68, 68, 0.3)' : 'none',
           }}
         >
-          <span>🏮 TẾ ĐÀN MỆNH ĐĂNG</span>
+          <SvgLotusLamp size={18} />
+          <span>MỆNH ĐĂNG THẦN PHẨM (18)</span>
+          <span className={styles.tabCountBadge}>
+            {absorbedLamps.length}/18 Đã khảm
+          </span>
         </button>
 
         <button
-          onClick={() => handleSwitchTab('artifacts')}
+          onClick={() => setActiveTab('artifacts')}
+          className={styles.tabBtn}
           style={{
-            padding: '12px 24px',
-            borderRadius: '10px 10px 0 0',
-            fontSize: 14,
-            fontWeight: 800,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
             background: activeTab === 'artifacts' 
-              ? 'linear-gradient(180deg, rgba(34, 195, 240, 0.2) 0%, rgba(16, 25, 39, 0.9) 100%)' 
-              : 'transparent',
-            border: activeTab === 'artifacts' ? '1.5px solid var(--accent-cyan-bright, #22c3f0)' : '1px solid transparent',
-            borderBottom: activeTab === 'artifacts' ? '2px solid transparent' : 'none',
-            color: activeTab === 'artifacts' ? 'var(--accent-cyan-bright, #22c3f0)' : 'var(--text-sub)',
-            transition: 'all 0.2s ease'
+              ? 'linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(3, 105, 161, 0.15) 100%)' 
+              : 'rgba(255, 255, 255, 0.04)',
+            border: activeTab === 'artifacts' ? '1.5px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.1)',
+            color: activeTab === 'artifacts' ? '#38bdf8' : '#94a3b8',
+            boxShadow: activeTab === 'artifacts' ? '0 0 16px rgba(56, 189, 248, 0.3)' : 'none',
           }}
         >
-          <span>🛡️ BẢO KHỐ VẬT TRẤN ÁP</span>
-        </button>
-
-        <button
-          onClick={() => handleSwitchTab('inventory')}
-          style={{
-            padding: '12px 24px',
-            borderRadius: '10px 10px 0 0',
-            fontSize: 14,
-            fontWeight: 800,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            background: activeTab === 'inventory' 
-              ? 'linear-gradient(180deg, rgba(168, 85, 247, 0.2) 0%, rgba(16, 25, 39, 0.9) 100%)' 
-              : 'transparent',
-            border: activeTab === 'inventory' ? '1.5px solid var(--color-cuc-canh, #ff3fd5)' : '1px solid transparent',
-            borderBottom: activeTab === 'inventory' ? '2px solid transparent' : 'none',
-            color: activeTab === 'inventory' ? 'var(--color-cuc-canh, #ff3fd5)' : 'var(--text-sub)',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <span>🎒 TÚI TRỮ VẬT SỞ HỮU</span>
-          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: 'rgba(0,0,0,0.5)', color: '#fff' }}>
-            {inventoryLamps.length + unanchoredArtifacts.length}
+          <span>🛡️ VẬT TRẤN ÁP THẦN PHẨM (24)</span>
+          <span className={styles.tabCountBadge}>
+            {anchoredIds.length}/24 Đã khảm
           </span>
         </button>
       </div>
 
-      {/* 3. MAIN TAB CONTENT AREA */}
-      <div className="sanctum-content-area">
-
-        {/* TAB 1: TẾ ĐÀN 72 MỆNH ĐĂNG */}
-        {activeTab === 'lamps' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            
-            {/* Đài Sen Bát Quái Bản Mệnh */}
-            <div className="sanctum-altar-box">
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <SvgLotusLamp size={26} />
-                  <h3 style={{ margin: 0, color: 'var(--color-kim)', fontSize: 16, fontWeight: 800, letterSpacing: 0.5 }}>
-                    ĐÀI SEN BẢN MỆNH
-                  </h3>
-                </div>
-                <p style={{ margin: '6px 0 0 0', fontSize: 12.5, color: 'var(--text-sub)', lineHeight: 1.5 }}>
-                  Mỗi ngọn mệnh đăng đều được hình thành từ huyết mạch của các vị{' '}
-                  <strong style={{ color: '#fbbf24', textShadow: '0 0 10px rgba(251,191,36,0.6)', fontWeight: 800, letterSpacing: '0.5px' }}>
-                    Cổ Hoàng
-                  </strong>
-                  ,{' '}
-                  <strong style={{ color: '#ff3fd5', textShadow: '0 0 10px rgba(255,63,213,0.6)', fontWeight: 800, letterSpacing: '0.5px' }}>
-                    Chúa Tể
-                  </strong>
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', gap: 14 }}>
-                {Array.from({ length: maxLamps }).map((_, idx) => {
-                  const lampId = absorbedLamps[idx];
-                  const lampObj = lampId ? LIFE_LAMPS.find(l => l.id === lampId) : null;
-                  const isCucCanh = idx === 4;
-
-                  return (
-                    <div
-                      key={idx}
-                      style={{
-                        width: 60,
-                        height: 60,
-                        borderRadius: 12,
-                        border: `1.5px ${lampObj ? 'solid' : 'dashed'} ${
-                          lampObj 
-                            ? (LAMP_TIERS[lampObj.tier]?.border || 'var(--color-kim)') 
-                            : isCucCanh 
-                              ? 'var(--color-cuc-canh, #ff3fd5)' 
-                              : 'rgba(255, 204, 0, 0.4)'
-                        }`,
-                        background: lampObj ? (LAMP_TIERS[lampObj.tier]?.bg || 'rgba(255, 204, 0, 0.1)') : 'rgba(0, 0, 0, 0.4)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: lampObj ? `0 0 12px ${LAMP_TIERS[lampObj.tier]?.border || 'var(--color-kim)'}` : 'none'
-                      }}
-                      title={lampObj ? `${lampObj.name} (${LAMP_TIERS[lampObj.tier]?.name})` : `Slot #${idx + 1}`}
-                    >
-                      {lampObj ? (
-                        <ArtifactIcon item={lampObj} isLamp={true} size={42} />
-                      ) : (
-                        <span style={{ fontSize: 20, color: isCucCanh ? '#ff3fd5' : 'rgba(255, 204, 0, 0.4)' }}>
-                          {isCucCanh ? '🔮' : '+'}
-                        </span>
-                      )}
-                      <span style={{ fontSize: 8.5, color: lampObj ? 'var(--color-kim)' : 'var(--text-muted)', fontWeight: 700, marginTop: 1 }}>
-                        {isCucCanh ? 'Cực Cảnh' : `Đèn #${idx + 1}`}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Filter Bar (Mục Lục Toàn Cảnh) */}
-            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-              {TIER_ORDER.map(tKey => {
-                const isOwnedTab = tKey === 'owned';
-                const label = isOwnedTab ? `Đã Sở Hữu (${ownedLampsList.length})` : (LAMP_TIERS[tKey]?.name || tKey);
-
-                return (
-                  <button
-                    key={tKey}
-                    onClick={() => handleSwitchLampFilter(tKey)}
-                    style={{
-                      padding: '6px 18px',
-                      borderRadius: 20,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      background: lampFilterTier === tKey ? 'var(--color-kim)' : 'rgba(255, 255, 255, 0.05)',
-                      color: lampFilterTier === tKey ? '#000' : 'var(--text-sub)',
-                      border: 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Thanh công cụ Chọn nhiều bán hàng loạt Mệnh Đăng (khi ở tab Đã sở hữu) */}
-            {lampFilterTier === 'owned' && inventoryLamps.length > 0 && (
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10,
-                padding: '10px 16px',
-                background: 'rgba(255, 204, 0, 0.06)',
-                border: '1px solid rgba(255, 204, 0, 0.25)',
-                borderRadius: 12
-              }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--color-kim)' }}>
-                    ⚡ Chọn Nhiều Bán (Túi: {inventoryLamps.length} Đèn):
-                  </span>
-                  <button
-                    onClick={selectNormalLamps}
-                    style={{
-                      padding: '5px 12px',
-                      borderRadius: 8,
-                      fontSize: 11.5,
-                      fontWeight: 700,
-                      background: 'rgba(16, 185, 129, 0.2)',
-                      color: '#10b981',
-                      border: '1px solid rgba(16, 185, 129, 0.4)',
-                      cursor: 'pointer'
-                    }}
-                    title="Chọn tất cả Mệnh Đăng phẩm Hạ, Trung, Thượng, Cực trong túi để bán nhanh không cần hỏi lại"
-                  >
-                    ⚡ Chọn tất cả phẩm Hạ → Cực ({inventoryLamps.filter(id => {
-                      const l = LIFE_LAMPS.find(item => item.id === id);
-                      return l && !shouldConfirm(l.tier);
-                    }).length})
-                  </button>
-                  <button
-                    onClick={() => setSelectedLamps([...inventoryLamps])}
-                    style={{
-                      padding: '5px 12px',
-                      borderRadius: 8,
-                      fontSize: 11.5,
-                      fontWeight: 600,
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      color: '#fff',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Chọn tất cả ({inventoryLamps.length})
-                  </button>
-                  {selectedLamps.length > 0 && (
-                    <button
-                      onClick={() => setSelectedLamps([])}
-                      style={{
-                        padding: '5px 10px',
-                        borderRadius: 8,
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        background: 'rgba(239, 68, 68, 0.15)',
-                        color: '#f87171',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Bỏ chọn ({selectedLamps.length})
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Lamp Showcase Grid */}
-            {displayedLamps.length === 0 ? (
-              <div style={{ padding: 40, borderRadius: 14, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', textAlign: 'center', fontSize: 13 }}>
-                Không có Mệnh Đăng nào trong mục này. Hãy đọc thêm chương truyện để thu thập Mệnh Đăng!
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 18 }}>
-                {displayedLamps.map(lamp => {
-                  const isAbsorbed = absorbedLamps.includes(lamp.id);
-                  const isOwnedInBag = inventoryLamps.includes(lamp.id);
-                  const isOwned = isAbsorbed || isOwnedInBag;
-                  const tierInfo = LAMP_TIERS[lamp.tier] || LAMP_TIERS.ha_pham;
-                  const priceTT = tierInfo.tienTinh || Math.floor((tierInfo.priceExp || 100) / 10);
-                  const isSelected = selectedLamps.includes(lamp.id);
-
-                  return (
-                    <div 
-                      key={lamp.id}
-                      style={{
-                        background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 25, 39, 0.85)',
-                        border: `1.5px solid ${isAbsorbed ? 'var(--color-kim)' : isSelected ? '#ef4444' : isOwned ? tierInfo.border : 'rgba(255, 255, 255, 0.1)'}`,
-                        borderRadius: 14,
-                        padding: 16,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        gap: 10,
-                        opacity: isOwned ? 1 : 0.75,
-                        boxShadow: isAbsorbed ? '0 0 16px rgba(255, 204, 0, 0.25)' : isSelected ? '0 0 14px rgba(239, 68, 68, 0.25)' : 'none',
-                        position: 'relative'
-                      }}
-                    >
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
-                        <div style={{ width: 50, height: 50, background: tierInfo.bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <ArtifactIcon item={lamp} isLamp={true} size={46} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ color: tierInfo.color, fontWeight: 800, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lamp.name}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tierInfo.name} · {lamp.shortName}</div>
-                        </div>
-
-                        {/* Checkbox chọn nhiều bán khi ở trong túi */}
-                        {isOwnedInBag && (
-                          <SelectCheckButton 
-                            isSelected={isSelected} 
-                            onClick={() => toggleSelectLamp(lamp.id)} 
-                          />
-                        )}
-                      </div>
-
-                      <div style={{ fontSize: 12, color: 'var(--text-sub)', fontStyle: 'italic', lineHeight: 1.5 }}>
-                        "{lamp.poem || lamp.desc}"
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                        <span style={{ fontSize: 11.5, color: 'var(--color-kim)', fontWeight: 700 }}>{priceTT.toLocaleString()} Tiên Tinh</span>
-                        
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          {isAbsorbed ? (
-                            <span style={{ fontSize: 11.5, color: 'var(--color-kim)', fontWeight: 800 }}>✦ ĐÃ KHẢM NẠP</span>
-                          ) : isOwnedInBag ? (
-                            <>
-                              <button
-                                disabled={absorbedLamps.length >= maxLamps}
-                                onClick={() => {
-                                  try {
-                                    absorbLamp(lamp.id);
-                                  } catch (err) {
-                                    alert(err.message || 'Không thể dung hợp.');
-                                  }
-                                }}
-                                style={{
-                                  padding: '6px 14px',
-                                  borderRadius: 6,
-                                  fontSize: 12,
-                                  fontWeight: 700,
-                                  background: absorbedLamps.length < maxLamps ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' : 'rgba(255, 255, 255, 0.08)',
-                                  color: absorbedLamps.length < maxLamps ? '#000' : 'var(--text-muted)',
-                                  border: 'none',
-                                  cursor: absorbedLamps.length < maxLamps ? 'pointer' : 'not-allowed'
-                                }}
-                              >
-                                Khảm Nạp
-                              </button>
-
-                              {sellLamp && (
-                                <button
-                                  onClick={() => handleSellSingleLamp(lamp)}
-                                  style={{
-                                    padding: '6px 12px',
-                                    borderRadius: 6,
-                                    fontSize: 11.5,
-                                    fontWeight: 600,
-                                    background: 'rgba(239, 68, 68, 0.15)',
-                                    color: '#f87171',
-                                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                                    cursor: 'pointer'
-                                  }}
-                                  title={shouldConfirm(lamp.tier) ? 'Bán Mệnh Đăng (Hỏi xác nhận)' : 'Bán Mệnh Đăng (Bán ngay)'}
-                                >
-                                  Bán (+{priceTT.toLocaleString()} TT)
-                                </button>
-                              )}
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                const priceTT = tierInfo.tienTinh || Math.floor(tierInfo.priceExp / 5);
-                                const userTT = cultivation?.tienTinh || 0;
-                                let confirmMsg = `Đạo hữu có muốn dùng ${priceTT.toLocaleString()} Tiên Tinh để ngưng tụ [${lamp.name}] vào Túi Trữ Vật không?`;
-                                if (userTT < priceTT) {
-                                  const deficitTT = priceTT - userTT;
-                                  const deficitExp = deficitTT * 5;
-                                  confirmMsg = `Đạo hữu đang có ${userTT.toLocaleString()} TT (thiếu ${deficitTT.toLocaleString()} TT).\n\n⚠️ Đạo hữu có muốn dùng hết ${userTT.toLocaleString()} TT và ĐỐT BÙ ${deficitExp.toLocaleString()} Tu Vi (tỉ lệ 1 TT = 5 Tu Vi) để đổi [${lamp.name}] không?`;
-                                }
-                                if (window.confirm(confirmMsg)) {
-                                  try {
-                                    buyLamp(lamp.id);
-                                  } catch (e) {
-                                    alert(e.message || 'Không thể đổi Mệnh Đăng.');
-                                  }
-                                }
-                              }}
-                              style={{
-                                padding: '5px 12px',
-                                borderRadius: 6,
-                                fontSize: 11,
-                                fontWeight: 700,
-                                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.3) 100%)',
-                                color: 'var(--color-kim)',
-                                border: '1px solid rgba(251, 191, 36, 0.5)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4
-                              }}
-                            >
-                              <span>✨ Đổi</span>
-                              <span style={{ fontSize: 10, opacity: 0.85 }}>({(tierInfo.tienTinh || Math.floor(tierInfo.priceExp / 5)).toLocaleString()} TT)</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 2: BẢO KHỐ VẬT TRẤN ÁP */}
-        {activeTab === 'artifacts' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            
-            {/* Filter Bar (Mục Lục Toàn Cảnh) */}
-            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-              {TIER_ORDER.map(tKey => {
-                const isOwnedTab = tKey === 'owned';
-                const label = isOwnedTab ? `Đã Sở Hữu (${ownedArtifactsList.length})` : (LAMP_TIERS[tKey]?.name || tKey);
-
-                return (
-                  <button
-                    key={tKey}
-                    onClick={() => handleSwitchArtifactFilter(tKey)}
-                    style={{
-                      padding: '6px 18px',
-                      borderRadius: 20,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      background: artifactFilterTier === tKey ? 'var(--accent-cyan-bright, #22c3f0)' : 'rgba(255, 255, 255, 0.05)',
-                      color: artifactFilterTier === tKey ? '#000' : 'var(--text-sub)',
-                      border: 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Thanh công cụ Chọn nhiều bán hàng loạt Bảo Vật Trấn Áp (khi ở tab Đã sở hữu) */}
-            {artifactFilterTier === 'owned' && unanchoredArtifacts.length > 0 && (
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10,
-                padding: '10px 16px',
-                background: 'rgba(34, 195, 240, 0.06)',
-                border: '1px solid rgba(34, 195, 240, 0.25)',
-                borderRadius: 12
-              }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent-cyan-bright, #22c3f0)' }}>
-                    ⚡ Chọn Nhiều Bán (Túi: {unanchoredArtifacts.length} Bảo Vật):
-                  </span>
-                  <button
-                    onClick={selectNormalArtifacts}
-                    style={{
-                      padding: '5px 12px',
-                      borderRadius: 8,
-                      fontSize: 11.5,
-                      fontWeight: 700,
-                      background: 'rgba(16, 185, 129, 0.2)',
-                      color: '#10b981',
-                      border: '1px solid rgba(16, 185, 129, 0.4)',
-                      cursor: 'pointer'
-                    }}
-                    title="Chọn tất cả Bảo Vật phẩm Hạ, Trung, Thượng, Cực trong túi để bán nhanh không cần hỏi lại"
-                  >
-                    ⚡ Chọn tất cả phẩm Hạ → Cực ({unanchoredArtifacts.filter(id => {
-                      const a = SUPPRESSING_ARTIFACTS.find(item => item.id === id);
-                      return a && !shouldConfirm(a.tier);
-                    }).length})
-                  </button>
-                  <button
-                    onClick={() => setSelectedArtifacts([...unanchoredArtifacts])}
-                    style={{
-                      padding: '5px 12px',
-                      borderRadius: 8,
-                      fontSize: 11.5,
-                      fontWeight: 600,
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      color: '#fff',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Chọn tất cả ({unanchoredArtifacts.length})
-                  </button>
-                  {selectedArtifacts.length > 0 && (
-                    <button
-                      onClick={() => setSelectedArtifacts([])}
-                      style={{
-                        padding: '5px 10px',
-                        borderRadius: 8,
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        background: 'rgba(239, 68, 68, 0.15)',
-                        color: '#f87171',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Bỏ chọn ({selectedArtifacts.length})
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Artifact Showcase Grid */}
-            {displayedArtifacts.length === 0 ? (
-              <div style={{ padding: 40, borderRadius: 14, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', textAlign: 'center', fontSize: 13 }}>
-                Không có Bảo Vật Trấn Áp nào trong mục này. Hãy đọc thêm chương truyện để thu thập Bảo Vật!
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 18 }}>
-                {displayedArtifacts.map(art => {
-                  const isAnchored = Object.values(palaceAnchors).some(anc => anc.id === art.id);
-                  const isOwnedInBag = inventoryArtifacts.includes(art.id) && !isAnchored;
-                  const isOwned = isAnchored || isOwnedInBag;
-                  const tierInfo = LAMP_TIERS[art.tier] || LAMP_TIERS.ha_pham;
-                  const priceTT = tierInfo.tienTinh || Math.floor((tierInfo.priceExp || 100) / 10);
-                  const isSelected = selectedArtifacts.includes(art.id);
-
-                  return (
-                    <div 
-                      key={art.id}
-                      style={{
-                        background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 25, 39, 0.85)',
-                        border: `1.5px solid ${isAnchored ? 'var(--color-kim)' : isSelected ? '#ef4444' : isOwnedInBag ? 'var(--accent-cyan-bright, #22c3f0)' : tierInfo.border}`,
-                        borderRadius: 14,
-                        padding: 16,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        gap: 10,
-                        opacity: isOwned ? 1 : 0.75,
-                        boxShadow: isAnchored ? '0 0 16px rgba(255, 204, 0, 0.25)' : isSelected ? '0 0 14px rgba(239, 68, 68, 0.25)' : 'none',
-                        position: 'relative'
-                      }}
-                    >
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
-                        <ArtifactIcon item={art} size={50} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ color: tierInfo.color, fontWeight: 800, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{art.name}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tierInfo.name} · {art.type || 'Trấn Áp'}</div>
-                        </div>
-
-                        {/* Checkbox chọn nhiều bán khi ở trong túi */}
-                        {isOwnedInBag && (
-                          <SelectCheckButton 
-                            isSelected={isSelected} 
-                            onClick={() => toggleSelectArtifact(art.id)} 
-                          />
-                        )}
-                      </div>
-
-                      <div style={{ fontSize: 12, color: 'var(--text-sub)', lineHeight: 1.5 }}>
-                        {art.desc}
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                        <span style={{ fontSize: 11, color: 'var(--color-kim)', fontStyle: 'italic' }}>"{art.poem}"</span>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          {isAnchored ? (
-                            <span style={{ fontSize: 11.5, color: 'var(--color-kim)', fontWeight: 800 }}>✦ ĐÃ TRẤN CUNG</span>
-                          ) : isOwnedInBag ? (
-                            <>
-                              <span style={{ fontSize: 11.5, color: 'var(--accent-cyan-bright, #22c3f0)', fontWeight: 700 }}>✓ TRONG TÚI</span>
-                              {sellArtifact && (
-                                <button
-                                  onClick={() => handleSellSingleArtifact(art)}
-                                  style={{
-                                    padding: '6px 12px',
-                                    borderRadius: 6,
-                                    fontSize: 11.5,
-                                    fontWeight: 600,
-                                    background: 'rgba(239, 68, 68, 0.15)',
-                                    color: '#f87171',
-                                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                                    cursor: 'pointer'
-                                  }}
-                                  title={shouldConfirm(art.tier) ? 'Bán Bảo Vật (Hỏi xác nhận)' : 'Bán Bảo Vật (Bán ngay)'}
-                                >
-                                  Bán (+{priceTT.toLocaleString()} TT)
-                                </button>
-                              )}
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                const priceTT = tierInfo.tienTinh || Math.floor(tierInfo.priceExp / 5);
-                                const userTT = cultivation?.tienTinh || 0;
-                                let confirmMsg = `Đạo hữu có muốn dùng ${priceTT.toLocaleString()} Tiên Tinh để ngưng tụ [${art.name}] vào Túi Trữ Vật không?`;
-                                if (userTT < priceTT) {
-                                  const deficitTT = priceTT - userTT;
-                                  const deficitExp = deficitTT * 5;
-                                  confirmMsg = `Đạo hữu đang có ${userTT.toLocaleString()} TT (thiếu ${deficitTT.toLocaleString()} TT).\n\n⚠️ Đạo hữu có muốn dùng hết ${userTT.toLocaleString()} TT và ĐỐT BÙ ${deficitExp.toLocaleString()} Tu Vi (tỉ lệ 1 TT = 5 Tu Vi) để đổi [${art.name}] không?`;
-                                }
-                                if (window.confirm(confirmMsg)) {
-                                  try {
-                                    buyArtifact(art.id);
-                                  } catch (e) {
-                                    alert(e.message || 'Không thể đổi Bảo Vật.');
-                                  }
-                                }
-                              }}
-                              style={{
-                                padding: '5px 12px',
-                                borderRadius: 6,
-                                fontSize: 11,
-                                fontWeight: 700,
-                                background: 'linear-gradient(135deg, rgba(34, 195, 240, 0.2) 0%, rgba(14, 116, 144, 0.3) 100%)',
-                                color: 'var(--accent-cyan-bright, #22c3f0)',
-                                border: '1px solid rgba(34, 195, 240, 0.5)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4
-                              }}
-                            >
-                              <span>✨ Đổi</span>
-                              <span style={{ fontSize: 10, opacity: 0.85 }}>({(tierInfo.tienTinh || Math.floor(tierInfo.priceExp / 5)).toLocaleString()} TT)</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 3: TÚI TRỮ VẬT SỞ HỮU */}
-        {activeTab === 'inventory' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            
-            {/* Sub-Tab Navigation Bar (Chuyển đổi 2 trang Túi Đồ) */}
-            <div style={{
-              display: 'flex',
-              gap: 12,
-              background: 'rgba(0, 0, 0, 0.35)',
-              padding: '6px 8px',
-              borderRadius: 12,
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              width: 'fit-content',
-              flexWrap: 'wrap'
-            }}>
-              <button
-                onClick={() => handleSwitchInventorySubTab('lamps')}
-                style={{
-                  padding: '8px 20px',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: inventorySubTab === 'lamps' 
-                    ? 'linear-gradient(135deg, rgba(255, 204, 0, 0.25) 0%, rgba(245, 158, 11, 0.35) 100%)' 
-                    : 'transparent',
-                  color: inventorySubTab === 'lamps' ? 'var(--color-kim)' : 'var(--text-sub)',
-                  border: inventorySubTab === 'lamps' ? '1px solid rgba(255, 204, 0, 0.5)' : '1px solid transparent',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span>🏮 MỆNH ĐĂNG TRONG TÚI</span>
-                <span style={{ 
-                  fontSize: 11, 
-                  padding: '2px 7px', 
-                  borderRadius: 10, 
-                  background: inventorySubTab === 'lamps' ? 'rgba(255, 204, 0, 0.3)' : 'rgba(255,255,255,0.08)', 
-                  color: '#fff' 
-                }}>
-                  {inventoryLamps.length}
-                </span>
-              </button>
-
-              <button
-                onClick={() => handleSwitchInventorySubTab('artifacts')}
-                style={{
-                  padding: '8px 20px',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: inventorySubTab === 'artifacts' 
-                    ? 'linear-gradient(135deg, rgba(34, 195, 240, 0.25) 0%, rgba(14, 116, 144, 0.35) 100%)' 
-                    : 'transparent',
-                  color: inventorySubTab === 'artifacts' ? 'var(--accent-cyan-bright, #22c3f0)' : 'var(--text-sub)',
-                  border: inventorySubTab === 'artifacts' ? '1px solid rgba(34, 195, 240, 0.5)' : '1px solid transparent',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span>🛡️ VẬT TRẤN ÁP SẴN SÀNG</span>
-                <span style={{ 
-                  fontSize: 11, 
-                  padding: '2px 7px', 
-                  borderRadius: 10, 
-                  background: inventorySubTab === 'artifacts' ? 'rgba(34, 195, 240, 0.3)' : 'rgba(255,255,255,0.08)', 
-                  color: '#fff' 
-                }}>
-                  {unanchoredArtifacts.length}
-                </span>
-              </button>
-            </div>
-
-            {/* TRANG 1: MỆNH ĐĂNG TRONG TÚI */}
-            {inventorySubTab === 'lamps' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                  <h3 style={{ color: 'var(--color-kim)', fontSize: 15, fontWeight: 800, margin: 0 }}>
-                    🏮 DANH SÁCH MỆNH ĐĂNG TRONG TÚI TRỮ VẬT ({inventoryLamps.length})
-                  </h3>
-                  {inventoryLamps.length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <button
-                        onClick={selectNormalLamps}
-                        style={{
-                          padding: '5px 12px',
-                          borderRadius: 6,
-                          fontSize: 11.5,
-                          fontWeight: 700,
-                          background: 'rgba(16, 185, 129, 0.15)',
-                          color: '#10b981',
-                          border: '1px solid rgba(16, 185, 129, 0.3)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ⚡ Chọn Hạ → Cực
-                      </button>
-                      <button
-                        onClick={() => setSelectedLamps([...inventoryLamps])}
-                        style={{
-                          padding: '5px 12px',
-                          borderRadius: 6,
-                          fontSize: 11.5,
-                          fontWeight: 600,
-                          background: 'rgba(255, 255, 255, 0.06)',
-                          color: '#fff',
-                          border: '1px solid rgba(255, 255, 255, 0.12)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Chọn tất cả
-                      </button>
-                      {selectedLamps.length > 0 && (
-                        <button
-                          onClick={() => setSelectedLamps([])}
-                          style={{
-                            padding: '5px 10px',
-                            borderRadius: 6,
-                            fontSize: 11.5,
-                            fontWeight: 600,
-                            background: 'rgba(239, 68, 68, 0.15)',
-                            color: '#f87171',
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Bỏ chọn ({selectedLamps.length})
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {inventoryLamps.length === 0 ? (
-                  <div style={{ padding: 40, borderRadius: 14, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>
-                    Túi trữ vật chưa có Mệnh Đăng nào. Hãy ngộ đạo 60s hoặc đọc truyện để nhận Mệnh Đăng!
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                    {sortedInventoryLamps.map(lampId => {
-                      const lobj = LIFE_LAMPS.find(l => l.id === lampId);
-                      if (!lobj) return null;
-                      const tierInfo = LAMP_TIERS[lobj.tier] || LAMP_TIERS.ha_pham;
-                      const priceTT = tierInfo.tienTinh || Math.floor((tierInfo.priceExp || 100) / 10);
-                      const isSelected = selectedLamps.includes(lampId);
-
-                      return (
-                        <div 
-                          key={lampId} 
-                          style={{ 
-                            padding: 14, 
-                            borderRadius: 10, 
-                            background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'rgba(0,0,0,0.4)', 
-                            border: `1px solid ${isSelected ? '#ef4444' : 'rgba(255, 204, 0, 0.3)'}`, 
-                            display: 'flex', 
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: 10
-                          }}
-                        >
-                          <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
-                            <div style={{ width: 44, height: 44, borderRadius: 8, background: tierInfo?.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <ArtifactIcon item={lobj} isLamp={true} size={40} />
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ color: tierInfo?.color || '#ffcc00', fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lobj.name}</div>
-                              <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{tierInfo.name} · +{priceTT.toLocaleString()} TT</div>
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-                            <SelectCheckButton 
-                              isSelected={isSelected} 
-                              onClick={() => toggleSelectLamp(lampId)} 
-                            />
-
-                            {sellLamp && (
-                              <button
-                                onClick={() => handleSellSingleLamp(lobj)}
-                                style={{
-                                  padding: '4px 8px',
-                                  borderRadius: 6,
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  background: 'rgba(239, 68, 68, 0.15)',
-                                  color: '#f87171',
-                                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Bán
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* TRANG 2: VẬT TRẤN ÁP SẴN SÀNG */}
-            {inventorySubTab === 'artifacts' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                  <h3 style={{ color: 'var(--accent-cyan-bright, #22c3f0)', fontSize: 15, fontWeight: 800, margin: 0 }}>
-                    🛡️ DANH SÁCH VẬT TRẤN ÁP SẴN SÀNG ({unanchoredArtifacts.length})
-                  </h3>
-                  {unanchoredArtifacts.length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <button
-                        onClick={selectNormalArtifacts}
-                        style={{
-                          padding: '5px 12px',
-                          borderRadius: 6,
-                          fontSize: 11.5,
-                          fontWeight: 700,
-                          background: 'rgba(16, 185, 129, 0.15)',
-                          color: '#10b981',
-                          border: '1px solid rgba(16, 185, 129, 0.3)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ⚡ Chọn Hạ → Cực
-                      </button>
-                      <button
-                        onClick={() => setSelectedArtifacts([...unanchoredArtifacts])}
-                        style={{
-                          padding: '5px 12px',
-                          borderRadius: 6,
-                          fontSize: 11.5,
-                          fontWeight: 600,
-                          background: 'rgba(255, 255, 255, 0.06)',
-                          color: '#fff',
-                          border: '1px solid rgba(255, 255, 255, 0.12)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Chọn tất cả
-                      </button>
-                      {selectedArtifacts.length > 0 && (
-                        <button
-                          onClick={() => setSelectedArtifacts([])}
-                          style={{
-                            padding: '5px 10px',
-                            borderRadius: 6,
-                            fontSize: 11.5,
-                            fontWeight: 600,
-                            background: 'rgba(239, 68, 68, 0.15)',
-                            color: '#f87171',
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Bỏ chọn ({selectedArtifacts.length})
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {unanchoredArtifacts.length === 0 ? (
-                  <div style={{ padding: 40, borderRadius: 14, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>
-                    Túi trữ vật chưa có vật trấn áp nào sẵn sàng. Hãy đọc thêm chương truyện để nhặt hoặc đổi bằng Tiên Tinh!
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                    {sortedUnanchoredArtifacts.map(artId => {
-                      const artObj = SUPPRESSING_ARTIFACTS.find(a => a.id === artId);
-                      if (!artObj) return null;
-                      const tierInfo = LAMP_TIERS[artObj.tier] || LAMP_TIERS.ha_pham;
-                      const priceTT = tierInfo.tienTinh || Math.floor((tierInfo.priceExp || 100) / 10);
-                      const isSelected = selectedArtifacts.includes(artId);
-
-                      return (
-                        <div 
-                          key={artId} 
-                          style={{ 
-                            padding: 14, 
-                            borderRadius: 10, 
-                            background: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'rgba(0,0,0,0.4)', 
-                            border: `1px solid ${isSelected ? '#ef4444' : 'rgba(34, 195, 240, 0.35)'}`, 
-                            display: 'flex', 
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: 10
-                          }}
-                        >
-                          <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
-                            <ArtifactIcon item={artObj} size={46} />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ color: tierInfo?.color || '#38bdf8', fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{artObj.name}</div>
-                              <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{tierInfo?.name} · +{priceTT.toLocaleString()} TT</div>
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-                            <SelectCheckButton 
-                              isSelected={isSelected} 
-                              onClick={() => toggleSelectArtifact(artId)} 
-                            />
-
-                            {sellArtifact && (
-                              <button
-                                onClick={() => handleSellSingleArtifact(artObj)}
-                                style={{
-                                  padding: '4px 8px',
-                                  borderRadius: 6,
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  background: 'rgba(239, 68, 68, 0.15)',
-                                  color: '#f87171',
-                                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Bán
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-          </div>
-        )}
-
-      </div>
-
-      {/* FLOATING ACTION BAR FOR BATCH SELL (SLIM & RESPONSIVE) */}
-      {totalSelectedCount > 0 && (
-        <div style={{
-          position: 'fixed',
-          bottom: 16,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 999,
-          background: 'linear-gradient(135deg, rgba(20, 29, 45, 0.98) 0%, rgba(10, 16, 26, 0.99) 100%)',
-          border: '1.5px solid var(--color-kim)',
-          boxShadow: '0 8px 28px rgba(0, 0, 0, 0.85), 0 0 16px rgba(255, 204, 0, 0.3)',
-          borderRadius: 14,
-          padding: '8px 14px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-          backdropFilter: 'blur(12px)',
-          width: 'calc(100% - 24px)',
-          maxWidth: 460,
-          boxSizing: 'border-box',
-          animation: 'slideUp 0.2s ease'
-        }}>
-          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-            <div style={{ fontSize: 12.5, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              Đã chọn: <span style={{ color: 'var(--color-kim)' }}>{totalSelectedCount}</span> mục
-            </div>
-            <div style={{ fontSize: 11.5, color: 'var(--color-kim)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-              +{totalSelectedTT.toLocaleString()} Tiên Tinh
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+      {/* TAB 1: MỆNH ĐĂNG THẦN PHẨM */}
+      {activeTab === 'lamps' && (
+        <div>
+          {/* Sub-filters thiết thực */}
+          <div className={styles.subFilterRow}>
             <button
-              onClick={handleBatchSell}
+              onClick={() => setLampFilter('all')}
+              className={styles.subFilterBtn}
               style={{
-                padding: '7px 14px',
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 800,
-                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                background: lampFilter === 'all' ? '#ef4444' : 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(239,68,68,0.4)',
                 color: '#fff',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 3px 10px rgba(239, 68, 68, 0.4)',
-                whiteSpace: 'nowrap'
               }}
             >
-              💰 Bán ({totalSelectedCount})
+              Tất Cả (18)
             </button>
-
             <button
-              onClick={() => {
-                setSelectedLamps([]);
-                setSelectedArtifacts([]);
-              }}
+              onClick={() => setLampFilter('equipped')}
+              className={styles.subFilterBtn}
               style={{
-                padding: '7px 10px',
-                borderRadius: 8,
-                fontSize: 11.5,
-                fontWeight: 600,
-                background: 'rgba(255, 255, 255, 0.08)',
-                color: 'var(--text-sub)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                background: lampFilter === 'equipped' ? '#ef4444' : 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(239,68,68,0.4)',
+                color: '#fff',
               }}
             >
-              ✕ Bỏ
+              Đã Khảm Nạm ({absorbedLamps.length})
             </button>
+            <button
+              onClick={() => setLampFilter('bag')}
+              className={styles.subFilterBtn}
+              style={{
+                background: lampFilter === 'bag' ? '#f59e0b' : 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(245,158,11,0.4)',
+                color: lampFilter === 'bag' ? '#000' : '#fff',
+              }}
+            >
+              Trong Túi ({inventoryLamps.length})
+            </button>
+            <button
+              onClick={() => setLampFilter('unowned')}
+              className={styles.subFilterBtn}
+              style={{
+                background: lampFilter === 'unowned' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#cbd5e1',
+              }}
+            >
+              Chưa Sở Hữu ({18 - absorbedLamps.length - inventoryLamps.length})
+            </button>
+          </div>
+
+          <div className={styles.cardsGrid}>
+            {displayedLamps.map(lamp => {
+              const isAbsorbed = absorbedLamps.includes(lamp.id);
+              const isInBag = inventoryLamps.includes(lamp.id);
+              const isHovered = hoveredCardId === lamp.id;
+              const imgUrl = getLampImageUrl(lamp.id);
+
+              return (
+                <div
+                  key={lamp.id}
+                  onMouseEnter={() => setHoveredCardId(lamp.id)}
+                  onMouseLeave={() => setHoveredCardId(null)}
+                  className={styles.itemCard}
+                  style={{
+                    border: `1.5px solid ${isAbsorbed ? '#ef4444' : isInBag ? '#f59e0b' : 'rgba(239, 68, 68, 0.35)'}`,
+                    boxShadow: isAbsorbed 
+                      ? '0 12px 32px rgba(239, 68, 68, 0.35), 0 0 20px rgba(239, 68, 68, 0.2)' 
+                      : isHovered 
+                        ? '0 16px 36px rgba(0, 0, 0, 0.75), 0 0 24px rgba(239, 68, 68, 0.3)' 
+                        : '0 6px 20px rgba(0, 0, 0, 0.45)',
+                    transform: isHovered ? 'translateY(-6px) scale(1.015)' : 'none',
+                  }}
+                >
+                  {/* Background Glow */}
+                  <div 
+                    className={styles.cardGlowBg}
+                    style={{
+                      background: 'radial-gradient(circle at 50% 35%, rgba(239, 68, 68, 0.2) 0%, transparent 72%)',
+                    }} 
+                  />
+
+                  {/* Header Badges */}
+                  <div className={styles.cardHeaderBadges}>
+                    <span 
+                      className={styles.tierBadge}
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.35) 0%, rgba(185, 28, 28, 0.2) 100%)',
+                        border: '1px solid rgba(239, 68, 68, 0.7)',
+                        color: '#fca5a5',
+                        boxShadow: '0 0 8px rgba(239, 68, 68, 0.3)',
+                      }}
+                    >
+                      ✦ THẦN PHẨM ✦
+                    </span>
+
+                    {isAbsorbed && (
+                      <span 
+                        className={styles.statusBadge}
+                        style={{
+                          background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                          color: '#fff',
+                          boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)',
+                        }}
+                      >
+                        🔥 ĐÃ HẤP THỤ
+                      </span>
+                    )}
+
+                    {isInBag && (
+                      <span 
+                        className={styles.statusBadge}
+                        style={{
+                          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                          color: '#000',
+                        }}
+                      >
+                        📦 TRONG TÚI
+                      </span>
+                    )}
+
+                    {!isAbsorbed && !isInBag && (
+                      <span 
+                        className={styles.statusBadge}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          color: '#94a3b8',
+                        }}
+                      >
+                        Chưa Sở Hữu
+                      </span>
+                    )}
+                  </div>
+
+                  {/* SQUARE AI ARTWORK STAGE (1:1 ASPECT RATIO - HIỂN THỊ TOÀN VẸN 100%) */}
+                  <div 
+                    className={styles.stageWrap}
+                    style={{
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8), 0 0 16px rgba(239, 68, 68, 0.25)',
+                    }}
+                  >
+                    <img
+                      src={imgUrl}
+                      alt={lamp.name}
+                      className={styles.stageImage}
+                      style={{
+                        transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentNode.innerHTML = `<div style="font-size: 54px;">${lamp.icon || '🏮'}</div>`;
+                      }}
+                    />
+                    <div className={styles.stageOverlayGradient} />
+                  </div>
+
+                  {/* Details */}
+                  <div className={styles.cardContent}>
+                    <div>
+                      <h3 
+                        className={styles.cardTitle}
+                        style={{
+                          color: '#fecaca',
+                          textShadow: '0 0 10px rgba(239, 68, 68, 0.4)',
+                        }}
+                      >
+                        {lamp.name}
+                      </h3>
+                      <div className={styles.cardTypeTag} style={{ color: '#f87171' }}>
+                        ✦ MỆNH ĐĂNG BẢN NGUYÊN ✦
+                      </div>
+
+                      <p className={styles.cardDesc}>
+                        {lamp.desc}
+                      </p>
+
+                      {lamp.poem && (
+                        <div className={styles.cardPoem} style={{ color: '#fbbf24' }}>
+                          "{lamp.poem}"
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className={styles.cardFooter}>
+                      {isAbsorbed ? (
+                        <div className={styles.equippedStatus}>
+                          ✓ Đã khảm nạm
+                        </div>
+                      ) : isInBag ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              try { absorbLamp(lamp.id); } catch (e) { alert(e.message); }
+                            }}
+                            className={styles.actionBtnPrimary}
+                            style={{
+                              flex: 1.2,
+                              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                              color: '#fff',
+                              boxShadow: '0 0 12px rgba(239,68,68,0.4)',
+                            }}
+                          >
+                            Hấp Thụ
+                          </button>
+                          <button
+                            onClick={() => handleRefineSingleLamp(lamp)}
+                            className={styles.actionBtnSecondary}
+                            style={{ flex: 1 }}
+                            title="Luyện hóa nhận +3.000 Tu Vi"
+                          >
+                            Luyện Hóa
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => handleBuyLampWithExp(lamp)}
+                          className={styles.burnExpBtn}
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(239,68,68,0.35) 0%, rgba(185,28,28,0.2) 100%)',
+                            border: '1px solid #ef4444',
+                            color: '#fecaca',
+                            boxShadow: '0 0 10px rgba(239,68,68,0.2)',
+                          }}
+                        >
+                          🔥 Đổi Đèn (Đốt {isNguyenAnhStage ? '200 TM' : '10k Tu Vi'})
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
+      {/* TAB 2: VẬT TRẤN ÁP THẦN PHẨM */}
+      {activeTab === 'artifacts' && (
+        <div>
+          {/* Sub-filters thiết thực */}
+          <div className={styles.subFilterRow}>
+            <button
+              onClick={() => setArtifactFilter('all')}
+              className={styles.subFilterBtn}
+              style={{
+                background: artifactFilter === 'all' ? '#38bdf8' : 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(56,189,248,0.4)',
+                color: '#fff',
+              }}
+            >
+              Tất Cả (24)
+            </button>
+            <button
+              onClick={() => setArtifactFilter('equipped')}
+              className={styles.subFilterBtn}
+              style={{
+                background: artifactFilter === 'equipped' ? '#38bdf8' : 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(56,189,248,0.4)',
+                color: '#fff',
+              }}
+            >
+              Đã Khảm Nạm ({anchoredIds.length})
+            </button>
+            <button
+              onClick={() => setArtifactFilter('bag')}
+              className={styles.subFilterBtn}
+              style={{
+                background: artifactFilter === 'bag' ? '#f59e0b' : 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(245,158,11,0.4)',
+                color: artifactFilter === 'bag' ? '#000' : '#fff',
+              }}
+            >
+              Trong Túi ({unanchoredArtifacts.length})
+            </button>
+            <button
+              onClick={() => setArtifactFilter('unowned')}
+              className={styles.subFilterBtn}
+              style={{
+                background: artifactFilter === 'unowned' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#cbd5e1',
+              }}
+            >
+              Chưa Sở Hữu ({24 - anchoredIds.length - unanchoredArtifacts.length})
+            </button>
+          </div>
+
+          <div className={styles.cardsGrid}>
+            {displayedArtifacts.map(art => {
+              const isAnchored = anchoredIds.includes(art.id);
+              const isInBag = unanchoredArtifacts.includes(art.id);
+              const palaceName = getPalaceNameFromArtifact(art);
+              const isHovered = hoveredCardId === art.id;
+              const imgUrl = getArtifactImageUrl(art.id);
+
+              return (
+                <div
+                  key={art.id}
+                  onMouseEnter={() => setHoveredCardId(art.id)}
+                  onMouseLeave={() => setHoveredCardId(null)}
+                  className={styles.itemCard}
+                  style={{
+                    border: `1.5px solid ${isAnchored ? '#38bdf8' : isInBag ? '#f59e0b' : 'rgba(56, 189, 248, 0.35)'}`,
+                    boxShadow: isAnchored 
+                      ? '0 12px 32px rgba(56, 189, 248, 0.35), 0 0 20px rgba(56, 189, 248, 0.2)' 
+                      : isHovered 
+                        ? '0 16px 36px rgba(0, 0, 0, 0.75), 0 0 24px rgba(56, 189, 248, 0.3)' 
+                        : '0 6px 20px rgba(0, 0, 0, 0.45)',
+                    transform: isHovered ? 'translateY(-6px) scale(1.015)' : 'none',
+                  }}
+                >
+                  {/* Background Glow */}
+                  <div 
+                    className={styles.cardGlowBg}
+                    style={{
+                      background: 'radial-gradient(circle at 50% 35%, rgba(56, 189, 248, 0.2) 0%, transparent 72%)',
+                    }} 
+                  />
+
+                  {/* Header Badges */}
+                  <div className={styles.cardHeaderBadges}>
+                    <span 
+                      className={styles.tierBadge}
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.35) 0%, rgba(3, 105, 161, 0.2) 100%)',
+                        border: '1px solid rgba(56, 189, 248, 0.7)',
+                        color: '#7dd3fc',
+                        boxShadow: '0 0 8px rgba(56, 189, 248, 0.3)',
+                      }}
+                    >
+                      ✦ {art.type || 'THẦN VẬT'} ✦
+                    </span>
+
+                    {isAnchored && (
+                      <span 
+                        className={styles.statusBadge}
+                        style={{
+                          background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)',
+                          color: '#000',
+                          boxShadow: '0 0 10px rgba(56, 189, 248, 0.5)',
+                        }}
+                      >
+                        🏛️ ĐÃ TRẤN CUNG
+                      </span>
+                    )}
+
+                    {isInBag && (
+                      <span 
+                        className={styles.statusBadge}
+                        style={{
+                          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                          color: '#000',
+                        }}
+                      >
+                        📦 TRONG TÚI
+                      </span>
+                    )}
+
+                    {!isAnchored && !isInBag && (
+                      <span 
+                        className={styles.statusBadge}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          color: '#94a3b8',
+                        }}
+                      >
+                        Chưa Sở Hữu
+                      </span>
+                    )}
+                  </div>
+
+                  {/* SQUARE AI ARTWORK STAGE (1:1 ASPECT RATIO - HIỂN THỊ TOÀN VẸN 100%) */}
+                  <div 
+                    className={styles.stageWrap}
+                    style={{
+                      border: '1px solid rgba(56, 189, 248, 0.4)',
+                      boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8), 0 0 16px rgba(56, 189, 248, 0.25)',
+                    }}
+                  >
+                    <img
+                      src={imgUrl}
+                      alt={art.name}
+                      className={styles.stageImage}
+                      style={{
+                        transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentNode.innerHTML = `<div style="font-size: 54px;">${art.icon || '🏛️'}</div>`;
+                      }}
+                    />
+                    <div className={styles.stageOverlayGradient} />
+                  </div>
+
+                  {/* Details */}
+                  <div className={styles.cardContent}>
+                    <div>
+                      <h3 
+                        className={styles.cardTitle}
+                        style={{
+                          color: '#e0f2fe',
+                          textShadow: '0 0 10px rgba(56, 189, 248, 0.4)',
+                        }}
+                      >
+                        {art.name}
+                      </h3>
+                      <div className={styles.cardTypeTag} style={{ color: '#38bdf8' }}>
+                        🏛️ Khởi sinh: [{palaceName}]
+                      </div>
+
+                      <p className={styles.cardDesc}>
+                        {art.desc}
+                      </p>
+
+                      {art.poem && (
+                        <div className={styles.cardPoem} style={{ color: '#fde047' }}>
+                          "{art.poem}"
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className={styles.cardFooter}>
+                      {isAnchored ? (
+                        <div className={styles.equippedStatus}>
+                          ✓ Đã khảm nạm
+                        </div>
+                      ) : isInBag ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              if (cultivation?.realm !== 'kim_dan') {
+                                alert('Chỉ tu sĩ Kim Đan Kỳ mới có thể khảm nạm Trấn Áp Thiên Cung!');
+                                return;
+                              }
+                              try {
+                                anchorPalace(cultivation.realizedThienCung || 0, art.id);
+                              } catch (e) {
+                                alert(e.message);
+                              }
+                            }}
+                            className={styles.actionBtnPrimary}
+                            style={{
+                              flex: 1.2,
+                              background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)',
+                              color: '#000',
+                              boxShadow: '0 0 12px rgba(56,189,248,0.4)',
+                            }}
+                          >
+                            Khảm Nạm
+                          </button>
+                          <button
+                            onClick={() => handleRefineSingleArtifact(art)}
+                            className={styles.actionBtnSecondary}
+                            style={{ flex: 1 }}
+                            title="Luyện hóa nhận +3.000 Tu Vi"
+                          >
+                            Luyện Hóa
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => handleBuyArtifactWithExp(art)}
+                          className={styles.burnExpBtn}
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(56,189,248,0.35) 0%, rgba(3,105,161,0.2) 100%)',
+                            border: '1px solid #38bdf8',
+                            color: '#e0f2fe',
+                            boxShadow: '0 0 10px rgba(56,189,248,0.2)',
+                          }}
+                        >
+                          🔥 Đổi Bảo Vật (Đốt {isNguyenAnhStage ? '200 TM' : '10k Tu Vi'})
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL TRA CỨU ĐẠO ANH ĐỒ LỤC */}
+      <DaoAnhGalleryModal
+        isOpen={isDaoAnhModalOpen}
+        onClose={() => setIsDaoAnhModalOpen(false)}
+      />
     </div>
   );
 }
