@@ -119,6 +119,9 @@ export default function DaoAnhAvatarRenderer({
               height: '100%',
               objectFit: 'contain',
               userSelect: 'none',
+              imageRendering: '-webkit-optimize-contrast',
+              transform: 'translateZ(0)',
+              backfaceVisibility: 'hidden',
               filter: showAura ? `drop-shadow(0 0 10px ${glow})` : 'none',
             }}
           />
