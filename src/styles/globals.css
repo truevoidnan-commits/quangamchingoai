@@ -86,6 +86,7 @@ html {
   font-size: 16px;
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
 }
 
 body {
@@ -105,6 +106,7 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  touch-action: manipulation;
 }
 
 #root {
@@ -140,6 +142,7 @@ a {
   color: var(--accent-cyan);
   text-decoration: none;
   transition: color var(--transition-fast);
+  touch-action: manipulation;
 }
 a:hover {
   color: var(--accent-cyan-bright);
@@ -148,7 +151,7 @@ a:hover {
 /* --- Inputs & Textareas --- */
 input, textarea, select {
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 16px; /* 16px prevents iOS Safari & mobile browsers from auto-zooming on focus */
   background: var(--bg-elevated);
   color: var(--text-primary);
   border: 1px solid var(--border-subtle);
@@ -157,6 +160,7 @@ input, textarea, select {
   outline: none;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   width: 100%;
+  touch-action: manipulation;
 }
 input:focus, textarea:focus, select:focus {
   border-color: var(--accent-cyan);
@@ -169,6 +173,12 @@ textarea {
   resize: vertical;
   min-height: 200px;
   line-height: 1.7;
+}
+
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important; /* Enforce 16px minimum on mobile devices */
+  }
 }
 
 /* --- Buttons --- */
@@ -188,6 +198,7 @@ button {
   white-space: nowrap;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .btn-primary {

@@ -139,7 +139,7 @@
   min-height: 320px;
   resize: vertical;
   font-family: var(--font-serif);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.75;
 }
 .textarea:focus {
@@ -290,7 +290,7 @@
 .customOrderInput {
   width: 90px;
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: 16px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-cyan);
   border-radius: var(--radius-sm);
@@ -499,7 +499,7 @@
 }
 
 .filterInput {
-  font-size: 12px;
+  font-size: 16px;
   padding: 4px 10px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);

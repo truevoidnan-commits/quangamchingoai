@@ -189,7 +189,7 @@
   padding-right: 36px;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  font-size: 14px;
+  font-size: 16px;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 .novelSearchInput:focus {
@@ -460,14 +460,14 @@
   background: transparent;
   border: none;
   color: var(--text-primary);
-  font-size: 12.5px;
+  font-size: 16px;
   padding: 7px 0;
   outline: none;
   font-family: inherit;
 }
 .jumpInput::placeholder {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .jumpClearBtn {
