@@ -142,13 +142,6 @@ export default function NovelCard({
         ) : (
           <DefaultCover title={novel.title} />
         )}
-
-        {/* Hidden badge on cover if in vault */}
-        {novel.isHidden && (
-          <div className={styles.cardHiddenBadge}>
-            🔒 ẨN
-          </div>
-        )}
       </div>
 
       {/* Info */}

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { nanoid } from '../lib/nanoid';
 import { saveNovel, saveChaptersBulk } from '../lib/db';
 import { addToLibrary } from '../lib/storage';
-import { parseNovelFile, analyzeChapterSequence } from '../lib/chapterParser';
+import { parseNovelFile, resizeCoverImage, analyzeChapterSequence } from '../lib/chapterParser';
 import Footer from '../components/layout/Footer';
 import ImageCropperModal from '../components/ui/ImageCropperModal';
 import styles from './AddNovelPage.module.css';
@@ -28,26 +28,22 @@ export default function AddNovelPage() {
   const [rawImageForCrop, setRawImageForCrop] = useState('');
   const fileRef = useRef(null);
 
-  const handleCoverFile = (e) => {
+  const handleCoverFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setRawImageForCrop(reader.result);
-      setCropModalOpen(true);
-    };
-    reader.onerror = () => {
-      setParseError('Không thể đọc file ảnh.');
-    };
-    reader.readAsDataURL(file);
-    // Reset file input value so user can re-upload same file if desired
-    e.target.value = '';
+    try {
+      const resized = await resizeCoverImage(file);
+      setCoverPreview(resized);
+      setCoverUrl(resized);
+    } catch {
+      setParseError('Không thể đọc ảnh bìa.');
+    }
   };
 
   const handleCoverUrl = () => {
     if (!coverUrlInput.trim()) return;
-    setRawImageForCrop(coverUrlInput.trim());
-    setCropModalOpen(true);
+    setCoverPreview(coverUrlInput.trim());
+    setCoverUrl(coverUrlInput.trim());
   };
 
   const handleCroppedCover = (croppedDataUrl) => {

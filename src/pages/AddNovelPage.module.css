@@ -141,12 +141,13 @@
 }
 
 .coverPreview {
-  width: 135px;
-  height: 180px; /* 3:4 ratio */
+  max-width: 140px;
+  height: auto;
   border-radius: var(--radius-md);
-  object-fit: cover;
+  object-fit: contain;
   border: 1px solid var(--border-cyan);
   box-shadow: var(--glow-cyan-sm);
+  display: block;
 }
 
 .previewActions {

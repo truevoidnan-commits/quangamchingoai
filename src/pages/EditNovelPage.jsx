@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getNovel, saveNovel } from '../lib/db';
 import { updateLibraryItem } from '../lib/storage';
+import { resizeCoverImage } from '../lib/chapterParser';
 import Footer from '../components/layout/Footer';
 import ImageCropperModal from '../components/ui/ImageCropperModal';
 import styles from './AddNovelPage.module.css'; // Reuse same styles
@@ -35,25 +36,22 @@ export default function EditNovelPage() {
     })();
   }, [novelId]);
 
-  const handleCoverFile = (e) => {
+  const handleCoverFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setRawImageForCrop(reader.result);
-      setCropModalOpen(true);
-    };
-    reader.onerror = () => {
-      setError('Không thể đọc file ảnh.');
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    try {
+      const resized = await resizeCoverImage(file);
+      setCoverPreview(resized);
+      setCoverUrl(resized);
+    } catch {
+      setError('Không thể đọc ảnh bìa.');
+    }
   };
 
   const handleCoverUrl = () => {
     if (!coverUrlInput.trim()) return;
-    setRawImageForCrop(coverUrlInput.trim());
-    setCropModalOpen(true);
+    setCoverPreview(coverUrlInput.trim());
+    setCoverUrl(coverUrlInput.trim());
   };
 
   const handleCroppedCover = (croppedDataUrl) => {
