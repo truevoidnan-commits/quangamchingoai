@@ -1,5 +1,5 @@
 import React from 'react';
-import { getDaoAnhEvolutionImage, getDaoAnhScale, getAssetUrl } from '../../lib/daoAnhData';
+import { getDaoAnhEvolutionImage, getDaoAnhScale, getDaoAnhTransformStyle, getAssetUrl } from '../../lib/daoAnhData';
 
 /**
  * DAO ANH AVATAR RENDERER
@@ -36,10 +36,10 @@ export default function DaoAnhAvatarRenderer({
   const isMaxKiep = currentKiep >= 5;
   const [imgError, setImgError] = React.useState(false);
 
-  // Reset imgError if daoAnh.image changes
+  // Reset imgError if daoAnh or currentKiep changes
   React.useEffect(() => {
     setImgError(false);
-  }, [daoAnh?.image]);
+  }, [daoAnh?.id, daoAnh?.image, currentKiep]);
 
   const hasAiImage = Boolean(daoAnh.image) && !imgError;
 
@@ -110,6 +110,7 @@ export default function DaoAnhAvatarRenderer({
           }}
         >
           <img
+            key={`${daoAnh.id || 'da'}_kiep_${currentKiep}`}
             src={getDaoAnhEvolutionImage(daoAnh, currentKiep)}
             alt={daoAnh.name}
             decoding="async"
@@ -120,59 +121,13 @@ export default function DaoAnhAvatarRenderer({
               objectFit: 'contain',
               userSelect: 'none',
               imageRendering: '-webkit-optimize-contrast',
-              transform: 'translateZ(0)',
+              transform: getDaoAnhTransformStyle(daoAnh, currentKiep),
+              transformOrigin: 'center center',
               backfaceVisibility: 'hidden',
+              pointerEvents: 'none',
               filter: showAura ? `drop-shadow(0 0 10px ${glow})` : 'none',
             }}
           />
-        </div>
-
-        {/* 3. CHI TIẾT ĐƠN GIẢN: 5 HẠT TINH THẠCH BÁO TẦNG KIẾP Ở DƯỚI ĐÁY */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '2%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: Math.max(3, size * 0.035),
-            padding: '2px 8px',
-            borderRadius: 12,
-            background: 'rgba(5, 10, 20, 0.75)',
-            border: '0.8px solid rgba(255, 255, 255, 0.12)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 3,
-            boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
-          }}
-          title={isMaxKiep ? 'Đạo Anh Đại Viên Mãn (5/5 Kiếp)' : `Đang ở Kiếp ${Math.max(1, currentKiep)}/5`}
-        >
-          {[1, 2, 3, 4, 5].map((kNum) => {
-            const isReached = currentKiep >= kNum;
-            const isCurrent = currentKiep === kNum - 1 && !isMaxKiep;
-
-            return (
-              <div
-                key={`k-indicator-${kNum}`}
-                style={{
-                  width: Math.max(5, size * 0.05),
-                  height: Math.max(5, size * 0.05),
-                  transform: 'rotate(45deg)',
-                  borderRadius: 1,
-                  background: isReached
-                    ? (isMaxKiep ? 'linear-gradient(135deg, #fde047 0%, #f59e0b 100%)' : '#fde047')
-                    : (isCurrent ? 'rgba(56, 189, 248, 0.6)' : 'rgba(255, 255, 255, 0.18)'),
-                  border: isReached
-                    ? '0.6px solid #ffffff'
-                    : (isCurrent ? '0.6px solid #38bdf8' : '0.6px solid rgba(255, 255, 255, 0.25)'),
-                  boxShadow: isReached
-                    ? '0 0 6px rgba(253, 224, 71, 0.8)'
-                    : (isCurrent ? '0 0 5px rgba(56, 189, 248, 0.7)' : 'none'),
-                  transition: 'all 0.3s ease',
-                }}
-              />
-            );
-          })}
         </div>
 
         {/* 4. HIỂN THỊ TÊN ĐẠO ANH NẾU YÊU CẦU */}

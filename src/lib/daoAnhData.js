@@ -1321,6 +1321,8 @@ export function preloadAllDaoAnhEvolutionImages() {
  * Danh sách ID các Đạo Ảnh có dáng nghiêng/xòe cần phóng to kích thước
  */
 export const DAO_ANH_ENLARGED_IDS = new Set([
+  'da_cuu_khieu_linh_lung',
+  'cuu_khieu_linh_lung',
   'da_van_gioi_quy_nhat',
   'van_gioi_quy_nhat',
   'da_khoi_nguyen_vu_tru_ban_nguyen',
@@ -1381,5 +1383,106 @@ export function getDaoAnhScale(daoAnhDef) {
     return 1.32; // Tăng ~32% kích thước
   }
   return 1;
+}
+
+/**
+ * Cấu hình Transform (scale, x, y) động theo từng Kiếp cho Đạo Ảnh thí điểm
+ */
+export const DAO_ANH_CUSTOM_TRANSFORMS = {
+  huyen_hoang_diet_the_bien: {
+    0: { scale: 1.24, x: 0, y: 0 },
+    1: { scale: 1.24, x: 0, y: 0 },
+    2: { scale: 1.08, x: 0, y: 0 },
+    3: { scale: 1.24, x: 0, y: 0 },
+    4: { scale: 1.48, x: 0, y: 0 },
+    5: { scale: 1.65, x: 0, y: 0 },
+  },
+  da_huyen_hoang_diet_the_bien: {
+    0: { scale: 1.24, x: 0, y: 0 },
+    1: { scale: 1.24, x: 0, y: 0 },
+    2: { scale: 1.08, x: 0, y: 0 },
+    3: { scale: 1.24, x: 0, y: 0 },
+    4: { scale: 1.48, x: 0, y: 0 },
+    5: { scale: 1.65, x: 0, y: 0 },
+  },
+  ngu_hanh_dai_dong_thien: {
+    0: { scale: 1.25, x: 0, y: 0 },
+    1: { scale: 1.25, x: 0, y: 0 },
+    2: { scale: 1.25, x: 0, y: 0 },
+    3: { scale: 1.25, x: 0, y: 0 },
+    4: { scale: 1.25, x: 0, y: 0 },
+    5: { scale: 1.40, x: 0, y: 0 },
+  },
+  da_ngu_hanh_dai_dong_thien: {
+    0: { scale: 1.25, x: 0, y: 0 },
+    1: { scale: 1.25, x: 0, y: 0 },
+    2: { scale: 1.25, x: 0, y: 0 },
+    3: { scale: 1.25, x: 0, y: 0 },
+    4: { scale: 1.25, x: 0, y: 0 },
+    5: { scale: 1.40, x: 0, y: 0 },
+  },
+  am_duong_hon_don_nguyen_can: {
+    0: { scale: 1.19, x: -10, y: 0 },
+    1: { scale: 1.19, x: -10, y: 0 },
+    2: { scale: 1.32, x: -10, y: 0 },
+    3: { scale: 1.32, x: -10, y: 0 },
+    4: { scale: 1.32, x: -10, y: 0 },
+    5: { scale: 1.53, x: -10, y: 0 },
+  },
+  da_am_duong_hon_don_nguyen_can: {
+    0: { scale: 1.19, x: -10, y: 0 },
+    1: { scale: 1.19, x: -10, y: 0 },
+    2: { scale: 1.32, x: -10, y: 0 },
+    3: { scale: 1.32, x: -10, y: 0 },
+    4: { scale: 1.32, x: -10, y: 0 },
+    5: { scale: 1.53, x: -10, y: 0 },
+  },
+  luc_dao_luan_hoi_tien_can: {
+    0: { scale: 1.25, x: 0, y: 0 },
+    1: { scale: 1.25, x: 0, y: 0 },
+    2: { scale: 1.25, x: 0, y: 0 },
+    3: { scale: 1.25, x: 0, y: 0 },
+    4: { scale: 1.25, x: 0, y: 0 },
+    5: { scale: 1.45, x: 0, y: 0 },
+  },
+  da_luc_dao_luan_hoi_tien_can: {
+    0: { scale: 1.25, x: 0, y: 0 },
+    1: { scale: 1.25, x: 0, y: 0 },
+    2: { scale: 1.25, x: 0, y: 0 },
+    3: { scale: 1.25, x: 0, y: 0 },
+    4: { scale: 1.25, x: 0, y: 0 },
+    5: { scale: 1.45, x: 0, y: 0 },
+  },
+  mac_sat_tien_phach: {
+    0: { scale: 1.28, x: 0, y: 0 },
+    1: { scale: 1.28, x: 0, y: 0 },
+    2: { scale: 1.28, x: 0, y: 0 },
+    3: { scale: 1.28, x: 0, y: 0 },
+    4: { scale: 1.42, x: 0, y: 0 },
+    5: { scale: 1.55, x: 0, y: 0 },
+  },
+  da_mac_sat_tien_phach: {
+    0: { scale: 1.28, x: 0, y: 0 },
+    1: { scale: 1.28, x: 0, y: 0 },
+    2: { scale: 1.28, x: 0, y: 0 },
+    3: { scale: 1.28, x: 0, y: 0 },
+    4: { scale: 1.42, x: 0, y: 0 },
+    5: { scale: 1.55, x: 0, y: 0 },
+  },
+};
+
+export function getDaoAnhTransformStyle(daoAnhDef, currentKiep = 1) {
+  if (!daoAnhDef) return 'translateZ(0)';
+  const id = daoAnhDef.id || '';
+  const sourceId = daoAnhDef.sourceId || '';
+  const cfg = DAO_ANH_CUSTOM_TRANSFORMS[id] || DAO_ANH_CUSTOM_TRANSFORMS[sourceId];
+  if (cfg) {
+    const kCfg = cfg[currentKiep] || cfg[1] || { scale: 1, x: 0, y: 0 };
+    const s = kCfg.scale ?? 1;
+    const x = kCfg.x ?? 0;
+    const y = kCfg.y ?? 0;
+    return `translate3d(${x}px, ${y}px, 0) scale(${s})`;
+  }
+  return 'translateZ(0)';
 }
 

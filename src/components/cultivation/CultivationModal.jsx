@@ -54,6 +54,7 @@ export default function CultivationModal({ isOpen, onClose }) {
   const [actionMsg, setActionMsg] = useState('');
   const [breakthroughData, setBreakthroughData] = useState(null);
   const [tribulationModalData, setTribulationModalData] = useState(null);
+  const [previewKiepMap, setPreviewKiepMap] = useState({});
 
   const handleSingleTribulation = (daoAnhId) => {
     try {
@@ -1081,7 +1082,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           <DaoAnhAvatarRenderer
                             daoAnh={daoAnhDef}
                             size={56}
-                            currentKiep={da.currentKiep || 0}
+                            currentKiep={previewKiepMap[da.id] !== undefined ? previewKiepMap[da.id] : (da.currentKiep || 0)}
                             animate={true}
                             showAura={true}
                           />
@@ -1091,24 +1092,42 @@ export default function CultivationModal({ isOpen, onClose }) {
                             {formatDaoAnhTitle(da.name)}
                           </h4>
                           <span className={styles.daoAnhBadge} style={{ color: daTheme.color }}>
-                            [{tierInfo.name}] · {da.element || 'Thần Thể'} · Kiếp {da.currentKiep}/5 ({da.currentKiep} Anh)
+                            [{tierInfo.name}] · {da.element || 'Thần Thể'} · Kiếp {previewKiepMap[da.id] !== undefined ? previewKiepMap[da.id] : da.currentKiep}/5 ({da.currentKiep} Anh)
                             {daTheme.isLamp && ' · 🏮 Chân Hỏa'}
                           </span>
                         </div>
                       </div>
 
-                      {/* Kiep Indicators (Icons without ugly text) */}
+                      {/* Kiep Indicators (Icons without ugly text - Clickable for Instant Preview) */}
                       <div className={styles.kiepRingsRow}>
-                        {[1, 2, 3, 4, 5].map(k => (
-                          <div
-                            key={k}
-                            className={`${styles.kiepDot} ${da.currentKiep >= k ? styles.kiepPassed : ''}`}
-                            style={da.currentKiep >= k ? { borderColor: daTheme.color, background: daTheme.color, color: '#000' } : {}}
-                            title={`Kiếp thứ ${k}`}
-                          >
-                            <span>{da.currentKiep >= k ? '⚡' : '◦'}</span>
-                          </div>
-                        ))}
+                        {[1, 2, 3, 4, 5].map(k => {
+                          const activeK = previewKiepMap[da.id] !== undefined ? previewKiepMap[da.id] : (da.currentKiep || 0);
+                          const isSelected = activeK === k;
+                          const isPassed = da.currentKiep >= k;
+                          return (
+                            <div
+                              key={k}
+                              className={`${styles.kiepDot} ${isPassed ? styles.kiepPassed : ''}`}
+                              style={{
+                                ...(isPassed ? { borderColor: daTheme.color, background: daTheme.color, color: '#000' } : {}),
+                                cursor: 'pointer',
+                                outline: isSelected ? `2px solid #38bdf8` : 'none',
+                                outlineOffset: 2,
+                                transform: isSelected ? 'scale(1.2)' : 'none',
+                                transition: 'all 0.15s ease',
+                              }}
+                              title={`Xem hình ảnh Kiếp ${k}`}
+                              onClick={() => {
+                                setPreviewKiepMap(prev => ({
+                                  ...prev,
+                                  [da.id]: prev[da.id] === k ? (da.currentKiep || 0) : k
+                                }));
+                              }}
+                            >
+                              <span>{isPassed ? '⚡' : '◦'}</span>
+                            </div>
+                          );
+                        })}
                       </div>
 
                       {da.currentKiep < 5 ? (
