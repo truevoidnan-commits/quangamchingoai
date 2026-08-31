@@ -19,7 +19,7 @@ import {
 } from '../../lib/cultivation';
 import ArtifactIcon from './ArtifactIcon';
 import { LAMP_THAN_PHAM_AI_ICONS, getLampImageUrl, getArtifactImageUrl } from '../../lib/artifactIcons';
-import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getSanctumDaoAnhScale } from '../../lib/daoAnhData';
+import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhTransformConfig } from '../../lib/daoAnhData';
 import styles from './RealmPreviewVisualizer.module.css';
 
 import bgTrucCoGalaxy from '../../assets/images/truc_co_galaxy_bg.jpg';
@@ -5806,7 +5806,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   })();
 
                   const scale = (pos.scale || 1.0) * 1.30;
-                  const canvasScaleFactor = getSanctumDaoAnhScale(daoAnhDef);
+                  const transCfg = getDaoAnhTransformConfig(daoAnhDef, currentKiep);
 
                   return (
                     <g key={`na-palace-group-${i}`}>
@@ -5829,7 +5829,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             opacity={isReady80 ? 0.45 : (isHovered ? 0.38 : 0.22)}
                           />
 
-                          <g transform={`scale(${scale * canvasScaleFactor})`}>
+                          <g transform={`scale(${scale})`}>
                             {/* 1. HÌNH ẢNH GEN AI ĐẠO ANH HOẶC PHÁP TƯỚNG BẢN NGUYÊN (PHÓNG TO 144x144) */}
                             <g>
                               {daoAnhDef?.image ? (
@@ -5885,23 +5885,25 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                     />
                                   )}
 
-                                  {/* Hình ảnh Chibi Tiên Thai Gen AI Cắt Nền Trong Suốt (144x144) */}
-                                  <image
-                                    href={getAssetUrl(getDaoAnhEvolutionImage(daoAnhDef, currentKiep))}
-                                    x="-72"
-                                    y="-76"
-                                    width="144"
-                                    height="144"
-                                    preserveAspectRatio="xMidYMid meet"
-                                    style={{
-                                      filter: isReady80
-                                        ? 'drop-shadow(0 0 16px #f0abfc)'
-                                        : isMaxKiep
-                                        ? 'drop-shadow(0 0 16px #fde047)'
-                                        : `drop-shadow(0 0 14px ${daoAnhDef.glowColor || arch.color || '#fbbf24'})`,
-                                      pointerEvents: 'none',
-                                    }}
-                                  />
+                                  {/* Hình ảnh Chibi Tiên Thai Gen AI Cắt Nền Trong Suốt (Đồng bộ tỉ lệ Scale & Toạ độ theo từng Kiếp) */}
+                                  <g transform={`translate(${transCfg.x}, ${transCfg.y}) scale(${transCfg.scale})`}>
+                                    <image
+                                      href={getAssetUrl(getDaoAnhEvolutionImage(daoAnhDef, currentKiep))}
+                                      x="-72"
+                                      y="-76"
+                                      width="144"
+                                      height="144"
+                                      preserveAspectRatio="xMidYMid meet"
+                                      style={{
+                                        filter: isReady80
+                                          ? 'drop-shadow(0 0 16px #f0abfc)'
+                                          : isMaxKiep
+                                          ? 'drop-shadow(0 0 16px #fde047)'
+                                          : `drop-shadow(0 0 14px ${daoAnhDef.glowColor || arch.color || '#fbbf24'})`,
+                                        pointerEvents: 'none',
+                                      }}
+                                    />
+                                  </g>
                                 </g>
                               ) : (
                                 <g transform="scale(1.5)">

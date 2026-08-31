@@ -1728,3 +1728,19 @@ export function getDaoAnhTransformStyle(daoAnhDef, currentKiep = 1) {
   return 'translateZ(0)';
 }
 
+export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1) {
+  if (!daoAnhDef) return { scale: 1, x: 0, y: 0 };
+  const id = daoAnhDef.id || '';
+  const sourceId = daoAnhDef.sourceId || '';
+  const cfg = DAO_ANH_CUSTOM_TRANSFORMS[id] || DAO_ANH_CUSTOM_TRANSFORMS[sourceId];
+  if (cfg) {
+    const kCfg = cfg[currentKiep] || cfg[1] || { scale: 1, x: 0, y: 0 };
+    return {
+      scale: kCfg.scale ?? 1,
+      x: kCfg.x ?? 0,
+      y: kCfg.y ?? 0,
+    };
+  }
+  return { scale: 1, x: 0, y: 0 };
+}
+
