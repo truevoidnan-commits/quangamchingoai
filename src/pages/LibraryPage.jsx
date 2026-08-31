@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import NovelCard from '../components/ui/NovelCard';
 import Footer from '../components/layout/Footer';
 import VaultLockModal from '../components/vault/VaultLockModal';
@@ -9,6 +9,11 @@ import {
   hideNovel,
   unhideNovel,
   hasVaultPassword,
+  isVaultSessionUnlocked,
+  setVaultSessionUnlocked,
+  isVaultModeActive,
+  setVaultModeActive,
+  lockVaultSession,
 } from '../lib/storage';
 import { deleteNovelDB } from '../lib/db';
 import { sampleNovel, sampleCatalogEntry, sampleChapters } from '../lib/sampleData';
@@ -19,6 +24,8 @@ import styles from './LibraryPage.module.css';
 
 export default function LibraryPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedVault = searchParams.get('vault') === '1';
   const { displayName } = useCultivation();
   const [allNovels, setAllNovels] = useState([]);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
@@ -26,9 +33,12 @@ export default function LibraryPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(null); // novel to confirm delete
   const [seeded, setSeeded] = useState(false);
 
-  // Hidden Vault States
-  const [isVaultMode, setIsVaultMode] = useState(false);
-  const [isVaultUnlocked, setIsVaultUnlocked] = useState(false);
+  // Hidden Vault States (persisted across session so going back doesn't lock)
+  const [isVaultUnlocked, setIsVaultUnlocked] = useState(() => isVaultSessionUnlocked());
+  const [isVaultMode, setIsVaultMode] = useState(() => {
+    if (!isVaultSessionUnlocked()) return false;
+    return requestedVault || isVaultModeActive();
+  });
   const [vaultModalOpen, setVaultModalOpen] = useState(false);
   const [vaultModalMode, setVaultModalMode] = useState('unlock'); // 'unlock' | 'set' | 'change' | 'first_hide'
   const [novelToHidePending, setNovelToHidePending] = useState(null);
@@ -103,11 +113,13 @@ export default function LibraryPage() {
   const handleToggleVaultAccess = () => {
     if (isVaultMode) {
       setIsVaultMode(false);
+      setVaultModeActive(false);
       return;
     }
 
     if (isVaultUnlocked) {
       setIsVaultMode(true);
+      setVaultModeActive(true);
       return;
     }
 
@@ -121,6 +133,7 @@ export default function LibraryPage() {
 
   const handleVaultSuccess = () => {
     setIsVaultUnlocked(true);
+    setVaultSessionUnlocked(true);
     setVaultModalOpen(false);
 
     if (vaultModalMode === 'first_hide' && novelToHidePending) {
@@ -132,14 +145,16 @@ export default function LibraryPage() {
       showToast('Đã đổi mật khẩu Mật Thất thành công ✨');
     } else {
       setIsVaultMode(true);
+      setVaultModeActive(true);
       showToast('Đã mở khóa Tàng Kinh Mật Thất 🔓');
     }
   };
 
   const handleLockVault = () => {
+    lockVaultSession();
     setIsVaultUnlocked(false);
     setIsVaultMode(false);
-    showToast('Đã khóa Mật Thất 🔒');
+    showToast('Đã đóng & khóa Mật Thất 🔒');
   };
 
   const handleChangePassword = () => {
@@ -260,8 +275,22 @@ export default function LibraryPage() {
             ☰
           </button>
 
-          {/* Add novel button (only shown in regular library) */}
-          {!isVaultMode && (
+          {/* Add novel button */}
+          {isVaultMode ? (
+            <button
+              className={`btn-gold ${styles.vaultAddBtn}`}
+              style={{
+                background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
+                color: '#ffffff',
+                border: '1px solid rgba(216, 180, 254, 0.4)',
+                boxShadow: '0 0 12px rgba(168, 85, 247, 0.45)',
+              }}
+              onClick={() => navigate('/add-novel?vault=1')}
+              id="btn-add-novel-vault"
+            >
+              + Thêm vào Mật Thất
+            </button>
+          ) : (
             <button
               className={`btn-primary ${styles.addBtn} animate-neon-pulse`}
               onClick={() => navigate('/add-novel')}
@@ -278,7 +307,7 @@ export default function LibraryPage() {
         {filteredList.length === 0 && !search && (
           <EmptyState
             isVault={isVaultMode}
-            onAdd={() => navigate('/add-novel')}
+            onAdd={() => navigate(isVaultMode ? '/add-novel?vault=1' : '/add-novel')}
           />
         )}
 
@@ -362,8 +391,21 @@ function EmptyState({ isVault, onAdd }) {
         <div className={styles.emptyIcon}>🔒</div>
         <h2 className={styles.emptyTitle}>Mật Thất trống</h2>
         <p className={styles.emptyDesc}>
-          Chưa có truyện nào trong Mật Thất. Bạn có thể nhấn giữ (hoặc nhấp chuột phải) bất kỳ truyện nào ở Thư Viện Chính và chọn "Ẩn truyện" để chuyển vào đây.
+          Chưa có truyện nào trong Mật Thất. Bạn có thể nhấn giữ (hoặc nhấp chuột phải) bất kỳ truyện nào ở Thư Viện Chính để ẩn vào đây, hoặc thêm truyện mới trực tiếp.
         </p>
+        <button
+          className="btn-gold"
+          style={{
+            background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
+            color: '#ffffff',
+            marginTop: 12,
+            boxShadow: '0 0 14px rgba(168, 85, 247, 0.45)',
+          }}
+          onClick={onAdd}
+          id="empty-add-vault-novel"
+        >
+          + Thêm truyện vào Mật Thất
+        </button>
       </div>
     );
   }

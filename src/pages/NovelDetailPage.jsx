@@ -165,8 +165,17 @@ export default function NovelDetailPage() {
 
         <div className={styles.heroContent}>
           {/* Back */}
-          <button className={`btn-ghost ${styles.backBtn}`} onClick={() => navigate('/')}>
-            ← Thư viện
+          <button
+            className={`btn-ghost ${styles.backBtn}`}
+            onClick={() => {
+              if (novel?.isHidden) {
+                navigate('/?vault=1');
+              } else {
+                navigate('/');
+              }
+            }}
+          >
+            {novel?.isHidden ? '← Mật Thất' : '← Thư viện'}
           </button>
 
           <div className={styles.heroMain}>

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { nanoid } from '../lib/nanoid';
 import { saveNovel, saveChaptersBulk } from '../lib/db';
 import { addToLibrary } from '../lib/storage';
@@ -11,6 +11,8 @@ export { analyzeChapterSequence };
 
 export default function AddNovelPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isVaultParam = searchParams.get('vault') === '1';
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [coverPreview, setCoverPreview] = useState('');
@@ -114,6 +116,7 @@ export default function AddNovelPage() {
         title: novel.title,
         coverUrl: novel.coverUrl,
         chapterCount: parsedChapters.length,
+        isHidden: isVaultParam,
       });
 
       navigate(`/novel/${novelId}`);
@@ -132,7 +135,9 @@ export default function AddNovelPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <button className="btn-ghost" onClick={() => navigate(-1)}>← Quay lại</button>
-        <h1 className={styles.pageTitle}>Thêm truyện mới</h1>
+        <h1 className={styles.pageTitle}>
+          {isVaultParam ? 'Thêm truyện vào Mật Thất 🔒' : 'Thêm truyện mới'}
+        </h1>
       </div>
 
       <div className={styles.form}>

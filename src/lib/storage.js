@@ -56,6 +56,53 @@ export function changeVaultPassword(oldPassword, newPassword, newHint = '') {
   return { success: true, message: 'Đổi mật khẩu thành công' };
 }
 
+// ---- Hidden Vault Session & Active Mode ----
+const VAULT_SESSION_KEY = 'tcl_vault_unlocked_session';
+const VAULT_ACTIVE_TAB_KEY = 'tcl_vault_active_tab';
+
+export function isVaultSessionUnlocked() {
+  try {
+    return sessionStorage.getItem(VAULT_SESSION_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setVaultSessionUnlocked(unlocked) {
+  try {
+    if (unlocked) {
+      sessionStorage.setItem(VAULT_SESSION_KEY, '1');
+    } else {
+      sessionStorage.removeItem(VAULT_SESSION_KEY);
+    }
+  } catch {}
+}
+
+export function isVaultModeActive() {
+  try {
+    return sessionStorage.getItem(VAULT_ACTIVE_TAB_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setVaultModeActive(active) {
+  try {
+    if (active) {
+      sessionStorage.setItem(VAULT_ACTIVE_TAB_KEY, '1');
+    } else {
+      sessionStorage.removeItem(VAULT_ACTIVE_TAB_KEY);
+    }
+  } catch {}
+}
+
+export function lockVaultSession() {
+  try {
+    sessionStorage.removeItem(VAULT_SESSION_KEY);
+    sessionStorage.removeItem(VAULT_ACTIVE_TAB_KEY);
+  } catch {}
+}
+
 export function getVaultHint() {
   return localStorage.getItem(VAULT_HINT_KEY) || '';
 }
