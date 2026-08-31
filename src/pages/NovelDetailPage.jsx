@@ -68,23 +68,6 @@ export default function NovelDetailPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, activeNovelId]);
 
-  // Tự động cuộn đến chương đang đọc dở khi vào trang thông tin truyện
-  useEffect(() => {
-    if (!loading && chapters.length > 0) {
-      const prog = getReadingProgress(activeNovelId);
-      if (prog?.chapterId) {
-        const scrollToLastRead = () => {
-          const el = document.getElementById(`chapter-item-${prog.chapterId}`);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        };
-        const timer = setTimeout(scrollToLastRead, 250);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [loading, chapters.length, activeNovelId]);
-
   if (loading) return <LoadingState />;
   if (!novel) return <NotFoundState />;
 
@@ -208,9 +191,24 @@ export default function NovelDetailPage() {
                   onClick={handleRead}
                   id="btn-read-novel"
                   disabled={chapters.length === 0}
+                  title={progress.chapterId && resumeChapter ? `Đọc tiếp: ${resumeChapter.title}` : 'Bắt đầu đọc từ chương đầu'}
                 >
-                  {progress.chapterId ? '⟳ Đọc tiếp' : '▶ Bắt đầu đọc'}
+                  {progress.chapterId && resumeChapter ? (
+                    <span>⟳ Đọc tiếp: <strong>{resumeChapter.title.length > 28 ? resumeChapter.title.slice(0, 28) + '...' : resumeChapter.title}</strong></span>
+                  ) : (
+                    <span>▶ Bắt đầu đọc (Chương 1)</span>
+                  )}
                 </button>
+                {progress.chapterId && (
+                  <button
+                    className="btn-ghost"
+                    onClick={() => navigate(`/novel/${activeNovelId}/read/${chapters[0]?.id}`)}
+                    title="Đọc lại từ chương 1"
+                    id="btn-read-from-start"
+                  >
+                    ⏮️ Đọc từ đầu
+                  </button>
+                )}
                 <button
                   className="btn-ghost"
                   onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}
