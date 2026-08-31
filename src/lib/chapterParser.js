@@ -9,24 +9,35 @@ import JSZip from 'jszip';
 import { normalizeVietnamese, formatChapterContent, capFirstLetters } from './textFixer';
 
 /**
- * Kiểm tra mạch số thứ tự chương: phát hiện nhảy số (+2, +3...), trùng số hoặc lùi số (-1, -2...)
+ * Trích xuất số chương từ tiêu đề (dùng chung cho cả existing và parsed chapters)
  */
-export function analyzeChapterSequence(chapters) {
-  if (!chapters || chapters.length < 2) return { anomalies: [], isPerfect: true };
+function extractChapterNum(title) {
+  if (!title) return null;
+  const m = title.match(/(?:chương|chuong|chapter|chap|đệ|thu)\s+(\d+)/i) || title.match(/^(\d+)\b/);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return isNaN(n) ? null : n;
+}
+
+/**
+ * Kiểm tra mạch số thứ tự chương: phát hiện nhảy số (+2, +3...), trùng số hoặc lùi số (-1, -2...)
+ * @param {Array} chapters - Danh sách chương mới (từ file upload)
+ * @param {Array} existingChapters - Danh sách chương đã có trong DB (tuỳ chọn, để kiểm tra ranh giới)
+ */
+export function analyzeChapterSequence(chapters, existingChapters = []) {
+  if (!chapters || chapters.length === 0) return { anomalies: [], isPerfect: true };
 
   const anomalies = [];
   let prevNum = null;
   let prevTitle = '';
 
+  // ── Bước 1: Kiểm tra nội bộ batch upload ──
   for (let i = 0; i < chapters.length; i++) {
     const ch = chapters[i];
     if (ch.isExtra) continue;
 
-    const m = ch.title?.match(/(?:chương|chuong|chapter|chap|đệ|thu)\s+(\d+)/i) || ch.title?.match(/^(\d+)\b/);
-    if (!m) continue;
-
-    const currentNum = parseInt(m[1], 10);
-    if (isNaN(currentNum)) continue;
+    const currentNum = extractChapterNum(ch.title);
+    if (currentNum === null) continue;
 
     if (prevNum !== null) {
       const diff = currentNum - prevNum;
@@ -74,6 +85,83 @@ export function analyzeChapterSequence(chapters) {
 
     prevNum = currentNum;
     prevTitle = ch.title;
+  }
+
+  // ── Bước 2: Kiểm tra ranh giới DB ↔ file mới ──
+  if (existingChapters && existingChapters.length > 0) {
+    // Tìm số chương cuối cùng trong DB (bỏ qua ngoại truyện)
+    let lastExistingNum = null;
+    let lastExistingTitle = '';
+    for (let i = existingChapters.length - 1; i >= 0; i--) {
+      const ch = existingChapters[i];
+      if (ch.isExtra) continue;
+      const num = extractChapterNum(ch.title);
+      if (num !== null) {
+        lastExistingNum = num;
+        lastExistingTitle = ch.title;
+        break;
+      }
+    }
+
+    // Tìm số chương đầu tiên trong file mới (bỏ qua ngoại truyện)
+    let firstNewNum = null;
+    let firstNewTitle = '';
+    for (let i = 0; i < chapters.length; i++) {
+      const ch = chapters[i];
+      if (ch.isExtra) continue;
+      const num = extractChapterNum(ch.title);
+      if (num !== null) {
+        firstNewNum = num;
+        firstNewTitle = ch.title;
+        break;
+      }
+    }
+
+    if (lastExistingNum !== null && firstNewNum !== null) {
+      const diff = firstNewNum - lastExistingNum;
+      if (diff > 1) {
+        const missingCount = diff - 1;
+        const missingText = diff === 2
+          ? `Chương ${lastExistingNum + 1}`
+          : `Chương ${lastExistingNum + 1} ➔ Chương ${firstNewNum - 1}`;
+        // Chèn vào đầu vì đây là lỗi quan trọng nhất (ranh giới với DB)
+        anomalies.unshift({
+          type: 'gap_with_existing',
+          fromNum: lastExistingNum,
+          toNum: firstNewNum,
+          fromTitle: lastExistingTitle,
+          toTitle: firstNewTitle,
+          diff,
+          index: 0,
+          missingCount,
+          missingText,
+          message: `⛔ Khoảng trống với truyện đang có: Chương ${lastExistingNum} (cuối DB) ➔ Chương ${firstNewNum} (file mới) — Nhảy +${diff}, nghi vấn thiếu ${missingCount} chương: ${missingText}`,
+        });
+      } else if (diff === 0) {
+        anomalies.unshift({
+          type: 'duplicate_with_existing',
+          fromNum: lastExistingNum,
+          toNum: firstNewNum,
+          fromTitle: lastExistingTitle,
+          toTitle: firstNewTitle,
+          diff,
+          index: 0,
+          message: `⛔ Trùng chương với DB: Chương ${lastExistingNum} đã tồn tại trong truyện — file mới bắt đầu cũng từ Chương ${firstNewNum}`,
+        });
+      } else if (diff < 0) {
+        anomalies.unshift({
+          type: 'overlap_with_existing',
+          fromNum: lastExistingNum,
+          toNum: firstNewNum,
+          fromTitle: lastExistingTitle,
+          toTitle: firstNewTitle,
+          diff,
+          index: 0,
+          message: `⚠️ File mới bắt đầu từ Chương ${firstNewNum} trong khi truyện đã có đến Chương ${lastExistingNum} — sẽ ghi đè hoặc chèn chéo`,
+        });
+      }
+      // diff === 1: hoàn toàn liền mạch, không cần cảnh báo
+    }
   }
 
   return {
@@ -150,7 +238,7 @@ export function matchHoangCoHeader(line) {
   }
 
   // Hỗ trợ Phiên ngoại dạng "Phiên ngoại X - tên" nếu có
-  const extraMatch = trimmed.match(/^\s*(phiên\s*ngoại|phien\s*ngoai|ngoại\s*truyện|ngoai\s*truyen)\s*(\d+)?\s*[-–—]\s*(.*)$/i);
+  const extraMatch = trimmed.match(/^\s*(phiên\s*ngoại|phien\\s*ngoai|ngoại\s*truyện|ngoai\\s*truyen)\s*(\d+)?\s*[-–—]\s*(.*)$/i);
   if (extraMatch) {
     const num = extraMatch[2] ? ' ' + extraMatch[2] : '';
     const rawName = (extraMatch[3] || '').trim().replace(/^[-–—:\s]+/, '');
@@ -163,66 +251,50 @@ export function matchHoangCoHeader(line) {
 }
 
 /**
- * Thử khớp một dòng với tiêu đề chương (dành cho các bộ truyện thông thường)
+ * Thử khớp một dòng với tiêu đề chương.
+ * CHỈ NHẬN 3 DẠNG:
+ *   1. "Chương X[: tên chương]"        — X là chữ số Arab, dấu : tùy chọn
+ *   2. "Thứ/Đệ X chương[: tên chương]" — X là chữ số Arab, dấu : tùy chọn
+ *   3. "Phiên ngoại X[: tên chương]"   — X là chữ số Arab (bắt buộc có số), dấu : tùy chọn, liệt vào ngoại truyện
  */
 export function tryMatchChapterHeader(line) {
   const trimmed = line ? line.trim() : '';
   if (!trimmed || trimmed.length > MAX_HEADER_LEN) return null;
 
-  // Tránh câu hội thoại bắt đầu bằng ngoặc kép hoặc gạch thoại
-  if (/^["'“‘«—\-]/.test(trimmed) && !/^—\s*chương/i.test(trimmed)) return null;
-
-  // 1. Phiên ngoại
-  let m = trimmed.match(extraRe);
+  // 1. "Chương X" / "Chương X : tên" / "Chương X: tên"
+  let m = trimmed.match(/^(?:chương|chuong)\s+(\d+(?:[.\-]\d+)?)\s*:?\s*(.*)$/i);
   if (m) {
-    const key = normalizeVietnamese(m[1].toLowerCase()).replace(/\s+/g, " ");
-    const label = EXTRA_LABEL[key] || m[1];
-    const num = m[2] ? " " + m[2] : "";
-    const name = normalizeVietnamese((m[4] || "").trim()).replace(/^[:\s\-–—_.~·:：．、/]+/, '');
-    const title = label + num + (name ? ": " + name : "");
-    return { label, num: (m[2] || "").trim(), name, title: capFirstLetters(title), extra: true };
-  }
-
-  // 2. Special format có cặp số (x. y)
-  m = trimmed.match(specialRe);
-  if (m) {
-    const label = CHAP_LABEL[m[2].toLowerCase()] || "Chương";
     const num = m[1].trim();
-    const name = normalizeVietnamese((m[3] || "").trim()).replace(/^[:\s\-–—_.~·:：．、/]+/, '');
-    const title = label + " " + num + (name ? ": " + name : "");
-    return { label, num, name, title: capFirstLetters(title), extra: false };
+    const rawName = m[2].trim();
+    const name = normalizeVietnamese(rawName).replace(/^[:\s\-–—_.]+/, '');
+    const title = 'Chương ' + num + (name ? ': ' + name : '');
+    return { label: 'Chương', num, name, title: capFirstLetters(title), extra: false };
   }
 
-  // 3. Đệ X chương / Thứ X chương
-  m = trimmed.match(deThuRe);
+  // 2. "Thứ X chương" / "Đệ X chương"
+  m = trimmed.match(/^(?:thứ|thu|đệ|de)\s+(\d+(?:[.\-]\d+)?)\s+(?:chương|chuong)\s*:?\s*(.*)$/i);
   if (m) {
-    const label = CHAP_LABEL[m[2].toLowerCase()] || "Chương";
     const num = m[1].trim();
-    const sep = m[3] || '';
-    const rawName = (m[4] || "").trim();
-    // Nếu không có dấu phân cách mà nối ngay bằng hư từ -> là câu văn thường
-    if (!sep.trim() && STOP_WORDS.test(rawName)) return null;
-    const name = normalizeVietnamese(rawName).replace(/^[:\s\-–—_.~·:：．、/]+/, '');
-    const title = label + " " + num + (name ? ": " + name : "");
-    return { label, num, name, title: capFirstLetters(title), extra: false };
+    const rawName = m[2].trim();
+    const name = normalizeVietnamese(rawName).replace(/^[:\s\-–—_.]+/, '');
+    const title = 'Chương ' + num + (name ? ': ' + name : '');
+    return { label: 'Chương', num, name, title: capFirstLetters(title), extra: false };
   }
 
-  // 4. Chương X, Chương X., Chương X:, Chương X -
-  m = trimmed.match(chapRe);
+  // 3. "Phiên ngoại X" / "Phiên ngoại X : tên" (bắt buộc phải có số X)
+  m = trimmed.match(/^(?:phiên\s*ngoại|phien\s*ngoai)\s+(\d+(?:[.\-]\d+)?)\s*:?\s*(.*)$/i);
   if (m) {
-    const label = CHAP_LABEL[m[1].toLowerCase()] || "Chương";
-    const num = m[2].trim();
-    const sep = m[3] || '';
-    const rawName = (m[4] || "").trim();
-    // Nếu không có dấu phân cách mà nối ngay bằng hư từ -> là câu văn thường
-    if (!sep.trim() && STOP_WORDS.test(rawName)) return null;
-    const name = normalizeVietnamese(rawName).replace(/^[:\s\-–—_.~·:：．、/]+/, '');
-    const title = label + " " + num + (name ? ": " + name : "");
-    return { label, num, name, title: capFirstLetters(title), extra: false };
+    const num = m[1].trim();
+    const rawName = m[2].trim();
+    const name = normalizeVietnamese(rawName).replace(/^[:\s\-–—_.]+/, '');
+    const title = 'Phiên ngoại ' + num + (name ? ': ' + name : '');
+    return { label: 'Phiên ngoại', num, name, title: capFirstLetters(title), extra: true };
   }
 
   return null;
 }
+
+
 
 /**
  * Xử lý đường dẫn tương đối trong zip của file EPUB

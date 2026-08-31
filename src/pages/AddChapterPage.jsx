@@ -322,8 +322,8 @@ export default function AddChapterPage() {
     }
   };
 
-  // Sequence check for parsed batch chapters
-  const sequenceAnalysis = analyzeChapterSequence(parsedChapters);
+  // Sequence check for parsed batch chapters (also checks gap vs existing DB chapters)
+  const sequenceAnalysis = analyzeChapterSequence(parsedChapters, existingChapters);
 
   // Filtered preview chapters
   const filteredChapters = parsedChapters.filter((ch, i) => {
@@ -587,6 +587,28 @@ export default function AddChapterPage() {
               </div>
             </div>
 
+            {/* Cảnh báo khi order bị lệch so với số chương thực tế */}
+            {existingChapters.length > 0 && nextDefaultOrder > existingChapters.length && (
+              <div style={{
+                marginTop: 0,
+                marginBottom: 4,
+                padding: '8px 14px',
+                background: 'rgba(234,179,8,0.10)',
+                border: '1px solid rgba(234,179,8,0.4)',
+                borderRadius: 8,
+                fontSize: 13,
+                color: '#fbbf24',
+                lineHeight: 1.6,
+              }}>
+                ⚠️ <strong>Phát hiện lệch thứ tự:</strong> Truyện có{' '}
+                <strong>{existingChapters.length}</strong> chương nhưng thứ tự (order) cuối cùng là{' '}
+                <strong>#{nextDefaultOrder - 1}</strong> — lệch{' '}
+                <strong>{nextDefaultOrder - existingChapters.length}</strong> vị trí.
+                {' '}Chương mới sẽ được gán thứ tự <strong>#{nextDefaultOrder}</strong> thay vì #{existingChapters.length}.
+                {' '}Hãy kiểm tra lại thứ tự các chương trong trang quản lý truyện.
+              </div>
+            )}
+
             {/* Parsing State */}
             {parsing && (
               <div className={styles.parsingIndicator}>
@@ -661,7 +683,7 @@ export default function AddChapterPage() {
                   </div>
                 ) : (
                   <div className={styles.perfectSequenceBox}>
-                    <span>✨ <strong>Thứ tự số chương liền mạch 100%</strong>: Các chương tăng tiến liên tục (+1) không có nhảy số hay thiếu chương.</span>
+                    <span>✨ <strong>Thứ tự số chương liền mạch 100%</strong>: Các chương tăng tiến liên tục (+1){existingChapters.length > 0 ? ', kể cả tại điểm nối với truyện đang có' : ''} — không có nhảy số hay thiếu chương.</span>
                   </div>
                 )}
 
