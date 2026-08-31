@@ -87,7 +87,9 @@ function MainLayout() {
           <Route path="/novel/:novelId/chapter/:chapterId" element={<ReaderPage />} />
           <Route path="/add-novel" element={<AddNovelPage />} />
           <Route path="/edit-novel/:id" element={<EditNovelPage />} />
+          <Route path="/edit-novel/:novelId" element={<EditNovelPage />} />
           <Route path="/novel/:id/edit" element={<EditNovelPage />} />
+          <Route path="/novel/:novelId/edit" element={<EditNovelPage />} />
           <Route path="/novel/:id/add-chapter" element={<AddChapterPage />} />
           <Route path="/novel/:novelId/add-chapter" element={<AddChapterPage />} />
           <Route path="/novel/:novelId/edit-chapter/:chapterId" element={<AddChapterPage />} />

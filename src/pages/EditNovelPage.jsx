@@ -7,7 +7,8 @@ import Footer from '../components/layout/Footer';
 import styles from './AddNovelPage.module.css'; // Reuse same styles
 
 export default function EditNovelPage() {
-  const { novelId } = useParams();
+  const { id, novelId: rawNovelId } = useParams();
+  const novelId = rawNovelId || id;
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -20,6 +21,7 @@ export default function EditNovelPage() {
   const fileRef = useRef(null);
 
   useEffect(() => {
+    if (!novelId) return;
     (async () => {
       const novel = await getNovel(novelId);
       if (novel) {
@@ -51,11 +53,13 @@ export default function EditNovelPage() {
 
   const handleSave = async () => {
     if (!title.trim()) { alert('Vui lòng nhập tên truyện.'); return; }
+    if (!novelId) { alert('Không tìm thấy thông tin truyện để sửa.'); return; }
     setSaving(true);
     try {
       const existing = await getNovel(novelId);
       const updated = {
-        ...existing,
+        ...(existing || {}),
+        id: novelId,
         title: title.trim(),
         description: description.trim(),
         coverUrl,
