@@ -816,9 +816,9 @@ export async function parseNovelFile(file) {
 }
 
 /**
- * Resize ảnh bìa về kích thước chuẩn (300x400)
+ * Resize ảnh bìa về kích thước chuẩn sắc nét HD (tối đa 900x1200), giữ độ nét cao và không bị nhòe trên mobile
  */
-export function resizeCoverImage(file, maxWidth = 300, maxHeight = 400) {
+export function resizeCoverImage(file, maxWidth = 900, maxHeight = 1200) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -836,8 +836,12 @@ export function resizeCoverImage(file, maxWidth = 300, maxHeight = 400) {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
+        if (ctx) {
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, width, height);
+        }
+        resolve(canvas.toDataURL('image/jpeg', 0.92));
       };
       img.onerror = reject;
       img.src = e.target.result;

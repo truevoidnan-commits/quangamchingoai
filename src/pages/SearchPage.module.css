@@ -104,7 +104,8 @@
 .thumb {
   width: 48px;
   height: 64px;
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--bg-elevated);
   border-radius: var(--radius-sm);
   flex-shrink: 0;
 }

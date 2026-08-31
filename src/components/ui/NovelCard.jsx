@@ -138,12 +138,13 @@ export default function NovelCard({
       {/* Cover */}
       <div className={styles.cover}>
         {novel.coverUrl ? (
-          <img src={novel.coverUrl} alt={novel.title} loading="lazy" />
+          <>
+            <img src={novel.coverUrl} alt="" className={styles.coverBlurBg} aria-hidden="true" />
+            <img src={novel.coverUrl} alt={novel.title} className={styles.coverImg} loading="lazy" />
+          </>
         ) : (
           <DefaultCover title={novel.title} />
         )}
-        {/* Gradient overlay */}
-        <div className={styles.coverOverlay} />
 
         {/* Hidden badge on cover if in vault */}
         {novel.isHidden && (

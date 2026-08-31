@@ -32,30 +32,33 @@
   width: 100%;
   padding-top: 133.33%; /* 3:4 ratio */
   overflow: hidden;
+  background: var(--bg-surface);
 }
 
-.cover img {
+.coverBlurBg {
+  position: absolute;
+  inset: -12px;
+  width: calc(100% + 24px);
+  height: calc(100% + 24px);
+  object-fit: cover;
+  filter: blur(14px) brightness(0.65);
+  opacity: 0.55;
+  pointer-events: none;
+  transform: scale(1.1);
+}
+
+.coverImg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  transition: transform 0.4s ease;
+  object-fit: contain; /* Full image visible, zero cropping! */
+  transition: transform 0.3s ease;
+  z-index: 1;
 }
 
-.card:hover .cover img {
-  transform: scale(1.05);
-}
-
-.coverOverlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    transparent 55%,
-    rgba(16, 25, 39, 0.75) 80%,
-    rgba(16, 25, 39, 0.95) 100%
-  );
+.card:hover .coverImg {
+  transform: scale(1.03);
 }
 
 /* Default cover (no image) */
@@ -264,12 +267,16 @@
   overflow: hidden;
   flex-shrink: 0;
   position: relative;
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .listCover img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .listInfo {
