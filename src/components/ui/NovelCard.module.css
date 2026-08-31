@@ -28,78 +28,37 @@
   box-shadow: var(--glow-cyan);
 }
 
-/* Cover: 3D Floating Book Showcase (Cách 3 - Bìa Sách Nổi 3D) */
+/* Cover: Adaptive Natural Aspect Ratio (Cách 1 - Full 100% không thanh chắn) */
 .cover {
   position: relative;
   width: 100%;
-  height: 205px;
-  background: radial-gradient(circle at 50% 55%, rgba(34, 195, 240, 0.09) 0%, rgba(16, 25, 39, 0.6) 70%, transparent 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 14px 10px 10px;
-  perspective: 800px;
   overflow: hidden;
+  background: var(--bg-surface);
+  line-height: 0;
+  display: block;
 }
 
-.coverStageBackdrop {
-  position: absolute;
-  bottom: 8px;
-  width: 70%;
-  height: 12px;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.7) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
-  filter: blur(4px);
-  transition: transform var(--transition-base), opacity var(--transition-base);
+.coverImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  transition: transform 0.35s ease;
 }
 
-.coverBook {
-  position: relative;
-  max-width: 100%;
-  max-height: 100%;
-  height: 100%;
-  width: auto;
-  object-fit: contain;
-  border-radius: 6px;
-  box-shadow: 
-    0 8px 22px -3px rgba(0, 0, 0, 0.75),
-    0 2px 6px rgba(0, 0, 0, 0.4),
-    0 0 14px rgba(34, 195, 240, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-  transform-origin: center bottom;
-  z-index: 1;
-}
-
-.card:hover .coverBook {
-  transform: translateY(-8px) scale(1.05);
-  box-shadow: 
-    0 16px 28px -4px rgba(0, 0, 0, 0.85),
-    0 4px 10px rgba(0, 0, 0, 0.6),
-    0 0 22px rgba(34, 195, 240, 0.45);
-  border-color: rgba(34, 195, 240, 0.45);
-}
-
-.card:hover .coverStageBackdrop {
-  transform: scale(1.2);
-  opacity: 0.85;
+.card:hover .coverImg {
+  transform: scale(1.03);
 }
 
 /* Default cover (no image) */
 .defaultCover {
-  width: 110px;
-  height: 155px;
-  border-radius: 6px;
+  width: 100%;
+  aspect-ratio: 3/4;
   background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
-  border: 1px solid rgba(255, 204, 0, 0.3);
-  box-shadow: 0 8px 20px -3px rgba(0, 0, 0, 0.75);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  z-index: 1;
+  gap: 12px;
 }
 
 .defaultChar {

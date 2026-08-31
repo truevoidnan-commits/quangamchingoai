@@ -135,11 +135,10 @@ export default function NovelCard({
       tabIndex={0}
       aria-label={`Đọc ${novel.title}`}
     >
-      {/* Cover (3D Floating Book Showcase) */}
+      {/* Cover */}
       <div className={styles.cover}>
-        <div className={styles.coverStageBackdrop} />
         {novel.coverUrl ? (
-          <img src={novel.coverUrl} alt={novel.title} className={styles.coverBook} loading="lazy" />
+          <img src={novel.coverUrl} alt={novel.title} className={styles.coverImg} loading="lazy" />
         ) : (
           <DefaultCover title={novel.title} />
         )}
