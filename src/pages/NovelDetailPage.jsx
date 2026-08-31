@@ -68,13 +68,6 @@ export default function NovelDetailPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, activeNovelId]);
 
-  if (loading) return <LoadingState />;
-  if (!novel) return <NotFoundState />;
-
-  const progress = getReadingProgress(activeNovelId);
-  const mainChapters = chapters.filter(c => !c.isExtra);
-  const extraChapters = chapters.filter(c => c.isExtra);
-
   // Tìm kiếm chương thông minh đa chiến lược
   const findTargetChapter = useCallback((query) => {
     if (!query || !query.trim() || chapters.length === 0) return null;
@@ -126,6 +119,13 @@ export default function NovelDetailPage() {
       doScrollToChapter(matchedJumpChapter.id);
     }
   };
+
+  if (loading) return <LoadingState />;
+  if (!novel) return <NotFoundState />;
+
+  const progress = getReadingProgress(activeNovelId);
+  const mainChapters = chapters.filter(c => !c.isExtra);
+  const extraChapters = chapters.filter(c => c.isExtra);
 
   // Find resume chapter
   const resumeChapter = progress.chapterId
