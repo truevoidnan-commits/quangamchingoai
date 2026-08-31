@@ -75,33 +75,55 @@ export default function NovelDetailPage() {
   const mainChapters = chapters.filter(c => !c.isExtra);
   const extraChapters = chapters.filter(c => c.isExtra);
 
-  // Xử lý nhảy nhanh đến số chương mong muốn
-  const handleJumpToChapter = (val) => {
-    setJumpInput(val);
-    if (!val.trim()) {
-      setHighlightedChapterId(null);
-      return;
-    }
-    const num = parseInt(val.trim(), 10);
-    if (isNaN(num)) return;
+  // Tìm kiếm chương thông minh đa chiến lược
+  const findTargetChapter = useCallback((query) => {
+    if (!query || !query.trim() || chapters.length === 0) return null;
+    const cleanQuery = query.trim().toLowerCase();
 
-    // Tìm theo số thứ tự chương hoặc tên chương
-    let found = chapters.find(c => {
-      const m = c.title.match(/(?:chương|ch\.|hồi|c)\s*(\d+)/i);
-      if (m && parseInt(m[1], 10) === num) return true;
-      return false;
-    });
+    // 1. Nếu có chứa số (ví dụ: '483', 'chương 483', 'thứ 483', 'hồi 483', 'ngoại truyện 2')
+    const numberMatch = cleanQuery.match(/(\d+)/);
+    if (numberMatch) {
+      const num = parseInt(numberMatch[1], 10);
 
-    if (!found && num >= 1 && num <= chapters.length) {
-      found = chapters[num - 1];
-    }
+      // 1.1 Khớp chính xác số chương theo các mẫu tiêu đề chuẩn
+      const exactTitleMatch = chapters.find(c => {
+        const titleLower = c.title.toLowerCase();
+        const m = titleLower.match(/(?:chương|thứ|đệ|phiên ngoại|ngoại truyện|hồi|quyển|ch\.|c)\s*(\d+)/i)
+               || titleLower.match(/^(\d+)(?:[\s.:\-]|$)/);
+        if (m && parseInt(m[1], 10) === num) return true;
+        return false;
+      });
+      if (exactTitleMatch) return exactTitleMatch;
 
-    if (found) {
-      setHighlightedChapterId(found.id);
-      const el = document.getElementById(`chapter-item-${found.id}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // 1.2 Nếu tìm theo số thứ tự (1-based index)
+      if (num >= 1 && num <= chapters.length) {
+        return chapters[num - 1];
       }
+    }
+
+    // 2. Tìm theo từ khóa trong tiêu đề (ví dụ "kết cục", "ngoại truyện")
+    const textMatch = chapters.find(c => c.title.toLowerCase().includes(cleanQuery));
+    if (textMatch) return textMatch;
+
+    return null;
+  }, [chapters]);
+
+  // Cuộn mượt đến chương chỉ định và làm nổi bật
+  const doScrollToChapter = useCallback((chId) => {
+    if (!chId) return;
+    setHighlightedChapterId(chId);
+    const el = document.getElementById(`chapter-item-${chId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, []);
+
+  const matchedJumpChapter = jumpInput.trim() ? findTargetChapter(jumpInput) : null;
+
+  const handleJumpSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (matchedJumpChapter) {
+      doScrollToChapter(matchedJumpChapter.id);
     }
   };
 
@@ -287,31 +309,72 @@ export default function NovelDetailPage() {
           )}
         </div>
 
-        {/* Ô Nhảy Nhanh Đến Số Chương */}
+        {/* Ô Nhảy Nhanh Đến Số Chương / Tên Chương */}
         {!isSearchActive && chapters.length > 0 && (
-          <div className={styles.jumpBarWrap}>
-            <span className={styles.jumpIcon}>⚡</span>
-            <input
-              type="number"
-              min="1"
-              max={chapters.length}
-              value={jumpInput}
-              onChange={e => handleJumpToChapter(e.target.value)}
-              placeholder={`Nhập số chương để nhảy đến (1 - ${chapters.length})...`}
-              className={styles.jumpInput}
-              id="jump-to-chapter-input"
-            />
-            {jumpInput && (
+          <div className={styles.jumpSection}>
+            <form className={styles.jumpBarWrap} onSubmit={handleJumpSubmit}>
+              <span className={styles.jumpIcon}>⚡</span>
+              <input
+                type="text"
+                value={jumpInput}
+                onChange={e => setJumpInput(e.target.value)}
+                placeholder={`Nhập số chương hoặc tên chương để nhảy đến (1 - ${chapters.length})...`}
+                className={styles.jumpInput}
+                id="jump-to-chapter-input"
+              />
+              {jumpInput && (
+                <button
+                  type="button"
+                  className={styles.jumpClearBtn}
+                  onClick={() => {
+                    setJumpInput('');
+                    setHighlightedChapterId(null);
+                  }}
+                  title="Xóa tìm kiếm"
+                >
+                  ✕
+                </button>
+              )}
               <button
-                className={styles.jumpClearBtn}
-                onClick={() => {
-                  setJumpInput('');
-                  setHighlightedChapterId(null);
-                }}
-                title="Xóa"
+                type="submit"
+                className={styles.jumpSubmitBtn}
+                disabled={!matchedJumpChapter}
               >
-                ✕
+                Nhảy tới ↵
               </button>
+            </form>
+
+            {/* Live Result Feedback Banner */}
+            {jumpInput.trim() && (
+              <div className={styles.jumpResultBar}>
+                {matchedJumpChapter ? (
+                  <>
+                    <span className={styles.jumpFoundLabel}>
+                      ✓ Khớp: <strong>{matchedJumpChapter.title}</strong>
+                    </span>
+                    <div className={styles.jumpResultBtns}>
+                      <button
+                        type="button"
+                        className={styles.jumpGoBtn}
+                        onClick={() => doScrollToChapter(matchedJumpChapter.id)}
+                      >
+                        📍 Cuộn tới
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.jumpReadNowBtn}
+                        onClick={() => navigate(`/novel/${activeNovelId}/read/${matchedJumpChapter.id}`)}
+                      >
+                        ▶ Đọc luôn
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <span className={styles.jumpNotFoundLabel}>
+                    ⚠️ Không tìm thấy chương phù hợp với "{jumpInput}" (Tổng số: {chapters.length} chương)
+                  </span>
+                )}
+              </div>
             )}
           </div>
         )}
