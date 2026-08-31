@@ -6182,7 +6182,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                           <circle r="62" fill="none" stroke={modalDaoAnhDef?.secondaryColor || modalArch.glow} strokeWidth="0.8" opacity="0.5" style={{ transformOrigin: '0 0', animation: 'haloSpinReverse 45s linear infinite', willChange: 'transform' }} />
 
                           {modalDaoAnhDef?.image ? (
-                            <g style={{ willChange: 'transform', animation: 'spiritBreathing 3.6s ease-in-out infinite alternate', transform: `scale(${getDaoAnhScale(modalDaoAnhDef)})`, transformOrigin: '0 0' }}>
+                            <g style={{ willChange: 'transform', animation: 'spiritBreathing 3.6s ease-in-out infinite alternate', transform: 'scale(1)', transformOrigin: '0 0' }}>
                               <image
                                 href={getAssetUrl(getDaoAnhEvolutionImage(modalDaoAnhDef, curKiep))}
                                 x="-56"

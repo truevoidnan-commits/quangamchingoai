@@ -1374,6 +1374,11 @@ export const DAO_ANH_ENLARGED_IDS = new Set([
 /**
  * Lấy tỉ lệ phóng to (scale factor) của Đạo Ảnh
  */
+export function getDaoAnhScale(daoAnhDef) {
+  if (!daoAnhDef) return 1;
+  return 1;
+}
+
 /**
  * Bảng tỉ lệ cân bằng kích thước Đạo Ảnh NGOÀI SẢNH NGUYÊN ANH (Sanctum Matrix)
  * Đảm bảo tất cả 13 Đạo Ảnh ở Sảnh có kích thước thân thể chibi hoàn toàn đồng đều ngang nhau

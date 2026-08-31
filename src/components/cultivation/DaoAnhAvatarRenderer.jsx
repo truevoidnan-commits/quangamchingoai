@@ -100,8 +100,8 @@ export default function DaoAnhAvatarRenderer({
         {/* 2. HÌNH ẢNH ĐẠO ANH TO RÕ - TRUNG TÂM TRIỂN LÃM */}
         <div
           style={{
-            width: `${Math.min(132, 94 * getDaoAnhScale(daoAnh))}%`,
-            height: `${Math.min(132, 94 * getDaoAnhScale(daoAnh))}%`,
+            width: '94%',
+            height: '94%',
             position: 'relative',
             display: 'flex',
             alignItems: 'center',
