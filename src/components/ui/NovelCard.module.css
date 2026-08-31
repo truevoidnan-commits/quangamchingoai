@@ -28,31 +28,32 @@
   box-shadow: var(--glow-cyan);
 }
 
-/* Cover: Adaptive Natural Aspect Ratio (Cách 1 - Full 100% không thanh chắn) */
+/* Cover: Standard 3:4 aspect ratio (Đồng đều 100%, không so le) */
 .cover {
   position: relative;
   width: 100%;
+  padding-top: 133.33%; /* 3:4 ratio */
   overflow: hidden;
   background: var(--bg-surface);
-  line-height: 0;
-  display: block;
 }
 
 .coverImg {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: auto;
-  display: block;
+  height: 100%;
+  object-fit: cover;
   transition: transform 0.35s ease;
 }
 
 .card:hover .coverImg {
-  transform: scale(1.03);
+  transform: scale(1.04);
 }
 
 /* Default cover (no image) */
 .defaultCover {
-  width: 100%;
-  aspect-ratio: 3/4;
+  position: absolute;
+  inset: 0;
   background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
   display: flex;
   flex-direction: column;

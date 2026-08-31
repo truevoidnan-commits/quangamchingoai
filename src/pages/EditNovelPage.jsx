@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getNovel, saveNovel } from '../lib/db';
 import { updateLibraryItem } from '../lib/storage';
-import { resizeCoverImage } from '../lib/chapterParser';
 import Footer from '../components/layout/Footer';
+import ImageCropperModal from '../components/ui/ImageCropperModal';
 import styles from './AddNovelPage.module.css'; // Reuse same styles
 
 export default function EditNovelPage() {
@@ -18,6 +18,8 @@ export default function EditNovelPage() {
   const [coverTab, setCoverTab] = useState('upload');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [rawImageForCrop, setRawImageForCrop] = useState('');
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -33,22 +35,30 @@ export default function EditNovelPage() {
     })();
   }, [novelId]);
 
-  const handleCoverFile = async (e) => {
+  const handleCoverFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      const resized = await resizeCoverImage(file);
-      setCoverPreview(resized);
-      setCoverUrl(resized);
-    } catch {
-      setError('Không thể đọc ảnh bìa.');
-    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRawImageForCrop(reader.result);
+      setCropModalOpen(true);
+    };
+    reader.onerror = () => {
+      setError('Không thể đọc file ảnh.');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleCoverUrl = () => {
     if (!coverUrlInput.trim()) return;
-    setCoverPreview(coverUrlInput.trim());
-    setCoverUrl(coverUrlInput.trim());
+    setRawImageForCrop(coverUrlInput.trim());
+    setCropModalOpen(true);
+  };
+
+  const handleCroppedCover = (croppedDataUrl) => {
+    setCoverPreview(croppedDataUrl);
+    setCoverUrl(croppedDataUrl);
   };
 
   const handleSave = async () => {
@@ -78,7 +88,7 @@ export default function EditNovelPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <button className="btn-ghost" onClick={() => navigate(-1)}>← Quay lại</button>
-        <h1 className={styles.pageTitle}>Sửa truyện</h1>
+        <h1 className={styles.pageTitle}>Sửa thông tin truyện</h1>
       </div>
 
       <div className={styles.form}>
@@ -103,7 +113,30 @@ export default function EditNovelPage() {
             <div className={styles.dropZone} onClick={() => fileRef.current?.click()}>
               <input ref={fileRef} type="file" accept="image/*" onChange={handleCoverFile} style={{ display: 'none' }} />
               {coverPreview ? (
-                <img src={coverPreview} alt="Preview" className={styles.coverPreview} />
+                <div className={styles.previewContainer} onClick={e => e.stopPropagation()}>
+                  <img src={coverPreview} alt="Preview" className={styles.coverPreview} />
+                  <div className={styles.previewActions}>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      style={{ fontSize: 12, padding: '4px 10px' }}
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      🔄 Đổi ảnh
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      style={{ fontSize: 12, padding: '4px 10px', color: 'var(--accent-cyan)' }}
+                      onClick={() => {
+                        setRawImageForCrop(coverPreview);
+                        setCropModalOpen(true);
+                      }}
+                    >
+                      ✂️ Căn chỉnh lại
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div className={styles.dropPlaceholder}><span>🖼️</span><span>Nhấn để chọn ảnh bìa</span></div>
               )}
@@ -113,9 +146,22 @@ export default function EditNovelPage() {
           {coverTab === 'url' && (
             <div className={styles.urlRow}>
               <input type="url" value={coverUrlInput} onChange={e => setCoverUrlInput(e.target.value)} placeholder="https://..." className={styles.input} />
-              <button type="button" className="btn-ghost" onClick={handleCoverUrl}>Xem trước</button>
+              <button type="button" className="btn-ghost" onClick={handleCoverUrl}>✂️ Cắt & Căn chỉnh</button>
               {coverPreview && coverTab === 'url' && (
-                <img src={coverPreview} alt="Preview" className={styles.coverPreviewSmall} onError={() => setCoverPreview('')} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <img src={coverPreview} alt="Preview" className={styles.coverPreviewSmall} onError={() => setCoverPreview('')} />
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    style={{ fontSize: 11, padding: '2px 8px' }}
+                    onClick={() => {
+                      setRawImageForCrop(coverPreview);
+                      setCropModalOpen(true);
+                    }}
+                  >
+                    ✂️ Chỉnh lại
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -132,6 +178,15 @@ export default function EditNovelPage() {
       </div>
 
       <Footer />
+
+      {/* Image Cropper Modal */}
+      {cropModalOpen && (
+        <ImageCropperModal
+          imageSrc={rawImageForCrop}
+          onCrop={handleCroppedCover}
+          onClose={() => setCropModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { nanoid } from '../lib/nanoid';
 import { saveNovel, saveChaptersBulk } from '../lib/db';
 import { addToLibrary } from '../lib/storage';
-import { parseNovelFile, resizeCoverImage, analyzeChapterSequence } from '../lib/chapterParser';
+import { parseNovelFile, analyzeChapterSequence } from '../lib/chapterParser';
 import Footer from '../components/layout/Footer';
+import ImageCropperModal from '../components/ui/ImageCropperModal';
 import styles from './AddNovelPage.module.css';
 
 export { analyzeChapterSequence };
@@ -23,24 +24,35 @@ export default function AddNovelPage() {
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [rawImageForCrop, setRawImageForCrop] = useState('');
   const fileRef = useRef(null);
 
-  const handleCoverFile = async (e) => {
+  const handleCoverFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      const resized = await resizeCoverImage(file);
-      setCoverPreview(resized);
-      setCoverUrl(resized);
-    } catch {
-      setParseError('Không thể đọc ảnh bìa.');
-    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRawImageForCrop(reader.result);
+      setCropModalOpen(true);
+    };
+    reader.onerror = () => {
+      setParseError('Không thể đọc file ảnh.');
+    };
+    reader.readAsDataURL(file);
+    // Reset file input value so user can re-upload same file if desired
+    e.target.value = '';
   };
 
   const handleCoverUrl = () => {
     if (!coverUrlInput.trim()) return;
-    setCoverPreview(coverUrlInput.trim());
-    setCoverUrl(coverUrlInput.trim());
+    setRawImageForCrop(coverUrlInput.trim());
+    setCropModalOpen(true);
+  };
+
+  const handleCroppedCover = (croppedDataUrl) => {
+    setCoverPreview(croppedDataUrl);
+    setCoverUrl(croppedDataUrl);
   };
 
   const handleFileUpload = useCallback(async (e) => {
@@ -208,12 +220,35 @@ export default function AddNovelPage() {
                 id="cover-file-input"
               />
               {coverPreview && coverTab === 'upload' ? (
-                <img src={coverPreview} alt="Preview bìa" className={styles.coverPreview} />
+                <div className={styles.previewContainer} onClick={e => e.stopPropagation()}>
+                  <img src={coverPreview} alt="Preview bìa" className={styles.coverPreview} />
+                  <div className={styles.previewActions}>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      style={{ fontSize: 12, padding: '4px 10px' }}
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      🔄 Đổi ảnh khác
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      style={{ fontSize: 12, padding: '4px 10px', color: 'var(--accent-cyan)' }}
+                      onClick={() => {
+                        setRawImageForCrop(coverPreview);
+                        setCropModalOpen(true);
+                      }}
+                    >
+                      ✂️ Căn chỉnh lại
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div className={styles.dropPlaceholder}>
                   <span>🖼️</span>
                   <span>Nhấn hoặc kéo thả ảnh vào đây</span>
-                  <span className={styles.dropHint}>JPG, PNG, WebP — tự động resize về 300×400</span>
+                  <span className={styles.dropHint}>Tự động mở bộ căn chỉnh khung chuẩn 3:4</span>
                 </div>
               )}
             </div>
@@ -230,10 +265,23 @@ export default function AddNovelPage() {
                 id="cover-url-input"
               />
               <button type="button" className="btn-ghost" onClick={handleCoverUrl}>
-                Xem trước
+                ✂️ Cắt & Căn chỉnh
               </button>
               {coverPreview && coverTab === 'url' && (
-                <img src={coverPreview} alt="Preview" className={styles.coverPreviewSmall} onError={() => { setCoverPreview(''); setParseError('URL ảnh không hợp lệ.'); }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <img src={coverPreview} alt="Preview" className={styles.coverPreviewSmall} onError={() => { setCoverPreview(''); setParseError('URL ảnh không hợp lệ.'); }} />
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    style={{ fontSize: 11, padding: '2px 8px' }}
+                    onClick={() => {
+                      setRawImageForCrop(coverPreview);
+                      setCropModalOpen(true);
+                    }}
+                  >
+                    ✂️ Chỉnh lại
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -342,6 +390,15 @@ export default function AddNovelPage() {
       </div>
 
       <Footer />
+
+      {/* Image Cropper Modal */}
+      {cropModalOpen && (
+        <ImageCropperModal
+          imageSrc={rawImageForCrop}
+          onCrop={handleCroppedCover}
+          onClose={() => setCropModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
