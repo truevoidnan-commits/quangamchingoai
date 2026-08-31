@@ -1,4 +1,4 @@
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getNovel, getChapters, deleteChapterDB, searchChapters } from '../lib/db';
 import { getReadingProgress, updateLibraryItem } from '../lib/storage';
