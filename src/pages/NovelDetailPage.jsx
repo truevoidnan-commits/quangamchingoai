@@ -185,44 +185,72 @@ export default function NovelDetailPage() {
                 )}
               </p>
 
-              <div className={styles.heroActions}>
-                <button
-                  className={`btn-gold ${styles.readBtn}`}
-                  onClick={handleRead}
-                  id="btn-read-novel"
-                  disabled={chapters.length === 0}
-                  title={progress.chapterId && resumeChapter ? `Đọc tiếp: ${resumeChapter.title}` : 'Bắt đầu đọc từ chương đầu'}
-                >
-                  {progress.chapterId && resumeChapter ? (
-                    <span>⟳ Đọc tiếp: <strong>{resumeChapter.title.length > 28 ? resumeChapter.title.slice(0, 28) + '...' : resumeChapter.title}</strong></span>
-                  ) : (
-                    <span>▶ Bắt đầu đọc (Chương 1)</span>
-                  )}
-                </button>
-                {progress.chapterId && (
+              {/* Reading Progress Action Card */}
+              {progress.chapterId && resumeChapter ? (
+                <div className={styles.progressCard}>
+                  <div className={styles.progressCardHeader}>
+                    <span className={styles.progressTag}>📍 TIẾP TỤC ĐỌC</span>
+                    <span className={styles.progressHint}>Đang dừng tại:</span>
+                  </div>
+                  <div className={styles.progressChapterTitle}>
+                    {resumeChapter.title}
+                  </div>
+                  <div className={styles.progressActions}>
+                    <button
+                      className={`btn-gold ${styles.mainReadBtn}`}
+                      onClick={handleRead}
+                      id="btn-read-novel"
+                    >
+                      ▶ Đọc tiếp ngay
+                    </button>
+                    <button
+                      className="btn-ghost"
+                      onClick={() => navigate(`/novel/${activeNovelId}/read/${chapters[0]?.id}`)}
+                      title="Đọc lại từ chương 1"
+                      id="btn-read-from-start"
+                    >
+                      ⏮️ Đọc từ đầu
+                    </button>
+                    <button
+                      className="btn-ghost"
+                      onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}
+                      id="btn-add-chapter-detail"
+                    >
+                      + Thêm chương
+                    </button>
+                    <button
+                      className="btn-ghost"
+                      onClick={() => navigate(`/novel/${activeNovelId}/edit`)}
+                    >
+                      ✏️ Sửa truyện
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.heroActions}>
+                  <button
+                    className={`btn-gold ${styles.readBtn}`}
+                    onClick={handleRead}
+                    id="btn-read-novel"
+                    disabled={chapters.length === 0}
+                  >
+                    ▶ Bắt đầu đọc (Chương 1)
+                  </button>
                   <button
                     className="btn-ghost"
-                    onClick={() => navigate(`/novel/${activeNovelId}/read/${chapters[0]?.id}`)}
-                    title="Đọc lại từ chương 1"
-                    id="btn-read-from-start"
+                    onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}
+                    id="btn-add-chapter-detail"
                   >
-                    ⏮️ Đọc từ đầu
+                    + Thêm chương
                   </button>
-                )}
-                <button
-                  className="btn-ghost"
-                  onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}
-                  id="btn-add-chapter-detail"
-                >
-                  + Thêm chương
-                </button>
-                <button
-                  className="btn-ghost"
-                  onClick={() => navigate(`/novel/${activeNovelId}/edit`)}
-                >
-                  ✏️ Sửa truyện
-                </button>
-              </div>
+                  <button
+                    className="btn-ghost"
+                    onClick={() => navigate(`/novel/${activeNovelId}/edit`)}
+                  >
+                    ✏️ Sửa truyện
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
