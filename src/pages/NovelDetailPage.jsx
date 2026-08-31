@@ -182,10 +182,7 @@ export default function NovelDetailPage() {
             {/* Cover */}
             <div className={styles.coverWrap}>
               {novel.coverUrl ? (
-                <>
-                  <img src={novel.coverUrl} alt="" className={styles.coverBlurBg} aria-hidden="true" />
-                  <img src={novel.coverUrl} alt={novel.title} className={styles.cover} />
-                </>
+                <img src={novel.coverUrl} alt={novel.title} className={styles.cover} />
               ) : (
                 <div className={styles.coverDefault}>
                   <span className={styles.coverChar}>{novel.title.charAt(0)}</span>

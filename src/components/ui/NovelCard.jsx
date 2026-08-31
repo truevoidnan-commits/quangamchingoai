@@ -138,10 +138,7 @@ export default function NovelCard({
       {/* Cover */}
       <div className={styles.cover}>
         {novel.coverUrl ? (
-          <>
-            <img src={novel.coverUrl} alt="" className={styles.coverBlurBg} aria-hidden="true" />
-            <img src={novel.coverUrl} alt={novel.title} className={styles.coverImg} loading="lazy" />
-          </>
+          <img src={novel.coverUrl} alt={novel.title} className={styles.coverImg} loading="lazy" />
         ) : (
           <DefaultCover title={novel.title} />
         )}
