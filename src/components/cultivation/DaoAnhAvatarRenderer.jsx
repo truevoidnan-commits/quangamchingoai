@@ -1,5 +1,5 @@
 import React from 'react';
-import { getDaoAnhEvolutionImage, getDaoAnhScale, getDaoAnhTransformStyle, getAssetUrl } from '../../lib/daoAnhData';
+import { getDaoAnhEvolutionImage, getAssetUrl } from '../../lib/daoAnhData';
 
 /**
  * DAO ANH AVATAR RENDERER
@@ -121,7 +121,7 @@ export default function DaoAnhAvatarRenderer({
               objectFit: 'contain',
               userSelect: 'none',
               imageRendering: '-webkit-optimize-contrast',
-              transform: getDaoAnhTransformStyle(daoAnh, currentKiep),
+              transform: 'none',
               transformOrigin: 'center center',
               backfaceVisibility: 'hidden',
               pointerEvents: 'none',

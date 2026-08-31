@@ -1374,15 +1374,49 @@ export const DAO_ANH_ENLARGED_IDS = new Set([
 /**
  * Lấy tỉ lệ phóng to (scale factor) của Đạo Ảnh
  */
-export function getDaoAnhScale(daoAnhDef) {
-  if (!daoAnhDef) return 1;
-  if (typeof daoAnhDef.avatarScale === 'number') return daoAnhDef.avatarScale;
+/**
+ * Bảng tỉ lệ cân bằng kích thước Đạo Ảnh NGOÀI SẢNH NGUYÊN ANH (Sanctum Matrix)
+ * Đảm bảo tất cả 13 Đạo Ảnh ở Sảnh có kích thước thân thể chibi hoàn toàn đồng đều ngang nhau
+ */
+export const SANCTUM_DAO_ANH_SCALES = {
+  // 1. Nhóm bị nhỏ do có thần thú / vòng luân xa / cánh lửa lớn bao quanh (phóng to để cân bằng)
+  da_mac_sat_tien_phach: 1.48,
+  mac_sat_tien_phach: 1.48,
+  da_thai_so_than_vuong_the: 1.42,
+  thai_so_than_vuong_the: 1.42,
+  da_thai_co_than_long: 1.40,
+  thai_co_than_long: 1.40,
+  da_kim_o_luyen_van_linh: 1.38,
+  kim_o_luyen_van_linh: 1.38,
+  da_cam_ky_cuc_dao: 1.35,
+  cam_ky_cuc_dao: 1.35,
+  da_van_gioi_quy_nhat: 1.35,
+  van_gioi_quy_nhat: 1.35,
+  da_khoi_nguyen_vu_tru_ban_nguyen: 1.35,
+  khoi_nguyen_vu_tru_ban_nguyen: 1.35,
+  da_hon_don_diet_the_loi_tri: 1.36,
+  hon_don_diet_the_loi_tri: 1.36,
+
+  // 2. Nhóm đã to sẵn (thân thể thẳng đứng, chiếm trọn khung hình -> giữ nguyên tỉ lệ 1.0)
+  da_hong_mong_bat_diet: 1.0,
+  hong_mong_bat_diet: 1.0,
+  da_tieu_tuc_menh_thuat: 1.0,
+  tieu_tuc_menh_thuat: 1.0,
+  da_nguyen_thuy_thien_ma: 1.0,
+  nguyen_thuy_thien_ma: 1.0,
+  da_dao_tam_chung_ma: 1.05,
+  dao_tam_chung_ma: 1.05,
+  da_tan_tien_phe_than: 1.05,
+  tan_tien_phe_than: 1.05,
+};
+
+export function getSanctumDaoAnhScale(daoAnhDef) {
+  if (!daoAnhDef) return 1.18;
   const id = daoAnhDef.id || '';
   const sourceId = daoAnhDef.sourceId || '';
-  if (DAO_ANH_ENLARGED_IDS.has(id) || DAO_ANH_ENLARGED_IDS.has(sourceId)) {
-    return 1.32; // Tăng ~32% kích thước
-  }
-  return 1;
+  if (SANCTUM_DAO_ANH_SCALES[id] !== undefined) return SANCTUM_DAO_ANH_SCALES[id];
+  if (SANCTUM_DAO_ANH_SCALES[sourceId] !== undefined) return SANCTUM_DAO_ANH_SCALES[sourceId];
+  return 1.20; // Mặc định nhóm trung bình
 }
 
 /**
@@ -1394,32 +1428,64 @@ export const DAO_ANH_CUSTOM_TRANSFORMS = {
     1: { scale: 1.24, x: 0, y: 0 },
     2: { scale: 1.08, x: 0, y: 0 },
     3: { scale: 1.24, x: 0, y: 0 },
-    4: { scale: 1.48, x: 0, y: 0 },
-    5: { scale: 1.65, x: 0, y: 0 },
+    4: { scale: 1.60, x: 0, y: 0 },
+    5: { scale: 1.78, x: 0, y: 0 },
   },
   da_huyen_hoang_diet_the_bien: {
     0: { scale: 1.24, x: 0, y: 0 },
     1: { scale: 1.24, x: 0, y: 0 },
     2: { scale: 1.08, x: 0, y: 0 },
     3: { scale: 1.24, x: 0, y: 0 },
-    4: { scale: 1.48, x: 0, y: 0 },
-    5: { scale: 1.65, x: 0, y: 0 },
+    4: { scale: 1.60, x: 0, y: 0 },
+    5: { scale: 1.78, x: 0, y: 0 },
+  },
+  nguyen_gioi_hon_co: {
+    0: { scale: 1.43, x: 0, y: 0 },
+    1: { scale: 1.43, x: 0, y: 0 },
+    2: { scale: 1.34, x: 0, y: 0 },
+    3: { scale: 1.34, x: 0, y: 0 },
+    4: { scale: 1.43, x: 0, y: 0 },
+    5: { scale: 1.72, x: 0, y: 0 },
+  },
+  da_nguyen_gioi_hon_co: {
+    0: { scale: 1.43, x: 0, y: 0 },
+    1: { scale: 1.43, x: 0, y: 0 },
+    2: { scale: 1.34, x: 0, y: 0 },
+    3: { scale: 1.34, x: 0, y: 0 },
+    4: { scale: 1.43, x: 0, y: 0 },
+    5: { scale: 1.72, x: 0, y: 0 },
+  },
+  cam_ky_cuc_dao: {
+    0: { scale: 0.99, x: -20, y: -20 },
+    1: { scale: 0.99, x: -20, y: -20 },
+    2: { scale: 1.17, x: 0, y: -20 },
+    3: { scale: 1.44, x: 0, y: -20 },
+    4: { scale: 1.32, x: 0, y: -20 },
+    5: { scale: 1.56, x: 0, y: -20 },
+  },
+  da_cam_ky_cuc_dao: {
+    0: { scale: 0.99, x: -20, y: -20 },
+    1: { scale: 0.99, x: -20, y: -20 },
+    2: { scale: 1.17, x: 0, y: -20 },
+    3: { scale: 1.44, x: 0, y: -20 },
+    4: { scale: 1.32, x: 0, y: -20 },
+    5: { scale: 1.56, x: 0, y: -20 },
   },
   ngu_hanh_dai_dong_thien: {
     0: { scale: 1.25, x: 0, y: 0 },
     1: { scale: 1.25, x: 0, y: 0 },
     2: { scale: 1.25, x: 0, y: 0 },
     3: { scale: 1.25, x: 0, y: 0 },
-    4: { scale: 1.25, x: 0, y: 0 },
-    5: { scale: 1.40, x: 0, y: 0 },
+    4: { scale: 1.35, x: 0, y: 0 },
+    5: { scale: 1.51, x: 0, y: 0 },
   },
   da_ngu_hanh_dai_dong_thien: {
     0: { scale: 1.25, x: 0, y: 0 },
     1: { scale: 1.25, x: 0, y: 0 },
     2: { scale: 1.25, x: 0, y: 0 },
     3: { scale: 1.25, x: 0, y: 0 },
-    4: { scale: 1.25, x: 0, y: 0 },
-    5: { scale: 1.40, x: 0, y: 0 },
+    4: { scale: 1.35, x: 0, y: 0 },
+    5: { scale: 1.51, x: 0, y: 0 },
   },
   am_duong_hon_don_nguyen_can: {
     0: { scale: 1.19, x: -10, y: 0 },
@@ -1458,16 +1524,16 @@ export const DAO_ANH_CUSTOM_TRANSFORMS = {
     1: { scale: 1.38, x: 0, y: 0 },
     2: { scale: 1.38, x: 0, y: 0 },
     3: { scale: 1.38, x: 0, y: 0 },
-    4: { scale: 1.53, x: 0, y: 0 },
-    5: { scale: 1.67, x: 0, y: 0 },
+    4: { scale: 1.65, x: 0, y: 0 },
+    5: { scale: 1.80, x: 0, y: 0 },
   },
   da_mac_sat_tien_phach: {
     0: { scale: 1.38, x: 0, y: 0 },
     1: { scale: 1.38, x: 0, y: 0 },
     2: { scale: 1.38, x: 0, y: 0 },
     3: { scale: 1.38, x: 0, y: 0 },
-    4: { scale: 1.53, x: 0, y: 0 },
-    5: { scale: 1.67, x: 0, y: 0 },
+    4: { scale: 1.65, x: 0, y: 0 },
+    5: { scale: 1.80, x: 0, y: 0 },
   },
   tam_sinh_luan_hoi_an: {
     0: { scale: 1.10, x: 0, y: 0 },
@@ -1500,6 +1566,150 @@ export const DAO_ANH_CUSTOM_TRANSFORMS = {
     3: { scale: 1.30, x: 0, y: 0 },
     4: { scale: 1.30, x: 0, y: 0 },
     5: { scale: 1.52, x: 0, y: 0 },
+  },
+  tan_tien_phe_than: {
+    0: { scale: 1.09, x: 0, y: -20 },
+    1: { scale: 1.09, x: 0, y: -20 },
+    2: { scale: 1.09, x: 0, y: -20 },
+    3: { scale: 1.09, x: 0, y: -20 },
+    4: { scale: 1.55, x: 0, y: -20 },
+    5: { scale: 1.55, x: 0, y: 0 },
+  },
+  da_tan_tien_phe_than: {
+    0: { scale: 1.09, x: 0, y: -20 },
+    1: { scale: 1.09, x: 0, y: -20 },
+    2: { scale: 1.09, x: 0, y: -20 },
+    3: { scale: 1.09, x: 0, y: -20 },
+    4: { scale: 1.55, x: 0, y: -20 },
+    5: { scale: 1.55, x: 0, y: 0 },
+  },
+  tao_hoa_ngoc_diep: {
+    0: { scale: 1.19, x: 0, y: 0 },
+    1: { scale: 1.19, x: 0, y: 0 },
+    2: { scale: 1.19, x: 0, y: 0 },
+    3: { scale: 1.19, x: 0, y: 0 },
+    4: { scale: 1.56, x: 0, y: 0 },
+    5: { scale: 1.81, x: 0, y: 0 },
+  },
+  da_tao_hoa_ngoc_diep: {
+    0: { scale: 1.19, x: 0, y: 0 },
+    1: { scale: 1.19, x: 0, y: 0 },
+    2: { scale: 1.19, x: 0, y: 0 },
+    3: { scale: 1.19, x: 0, y: 0 },
+    4: { scale: 1.56, x: 0, y: 0 },
+    5: { scale: 1.81, x: 0, y: 0 },
+  },
+  dao_tam_chung_ma: {
+    0: { scale: 1.19, x: 0, y: -20 },
+    1: { scale: 1.19, x: 0, y: -20 },
+    2: { scale: 1.19, x: 0, y: -20 },
+    3: { scale: 1.19, x: 0, y: -20 },
+    4: { scale: 1.25, x: 0, y: -20 },
+    5: { scale: 1.67, x: 0, y: 0 },
+  },
+  da_dao_tam_chung_ma: {
+    0: { scale: 1.19, x: 0, y: -20 },
+    1: { scale: 1.19, x: 0, y: -20 },
+    2: { scale: 1.19, x: 0, y: -20 },
+    3: { scale: 1.19, x: 0, y: -20 },
+    4: { scale: 1.25, x: 0, y: -20 },
+    5: { scale: 1.67, x: 0, y: 0 },
+  },
+  kim_o_luyen_van_linh: {
+    0: { scale: 1.19, x: 0, y: 0 },
+    1: { scale: 1.19, x: 0, y: 0 },
+    2: { scale: 1.19, x: 0, y: 0 },
+    3: { scale: 1.19, x: 0, y: 0 },
+    4: { scale: 1.35, x: 0, y: 0 },
+    5: { scale: 1.45, x: 0, y: 0 },
+  },
+  da_kim_o_luyen_van_linh: {
+    0: { scale: 1.19, x: 0, y: 0 },
+    1: { scale: 1.19, x: 0, y: 0 },
+    2: { scale: 1.19, x: 0, y: 0 },
+    3: { scale: 1.19, x: 0, y: 0 },
+    4: { scale: 1.35, x: 0, y: 0 },
+    5: { scale: 1.45, x: 0, y: 0 },
+  },
+  tran_nguc_minh_vuong_the: {
+    0: { scale: 1.05, x: 0, y: 0 },
+    1: { scale: 1.05, x: 0, y: 0 },
+    2: { scale: 1.05, x: 0, y: 0 },
+    3: { scale: 1.05, x: 0, y: 0 },
+    4: { scale: 1.25, x: 0, y: 0 },
+    5: { scale: 1.57, x: 0, y: 0 },
+  },
+  da_tran_nguc_minh_vuong_the: {
+    0: { scale: 1.05, x: 0, y: 0 },
+    1: { scale: 1.05, x: 0, y: 0 },
+    2: { scale: 1.05, x: 0, y: 0 },
+    3: { scale: 1.05, x: 0, y: 0 },
+    4: { scale: 1.25, x: 0, y: 0 },
+    5: { scale: 1.57, x: 0, y: 0 },
+  },
+  thien_dao_chi_ton: {
+    0: { scale: 1.08, x: 0, y: -20 },
+    1: { scale: 1.08, x: 0, y: -20 },
+    2: { scale: 1.15, x: 0, y: -20 },
+    3: { scale: 1.15, x: 0, y: -20 },
+    4: { scale: 1.25, x: 0, y: -20 },
+    5: { scale: 1.86, x: 0, y: 0 },
+  },
+  da_thien_dao_chi_ton: {
+    0: { scale: 1.08, x: 0, y: -20 },
+    1: { scale: 1.08, x: 0, y: -20 },
+    2: { scale: 1.15, x: 0, y: -20 },
+    3: { scale: 1.15, x: 0, y: -20 },
+    4: { scale: 1.25, x: 0, y: -20 },
+    5: { scale: 1.86, x: 0, y: 0 },
+  },
+  toi_cao_thien_menh: {
+    0: { scale: 1.00, x: 0, y: 0 },
+    1: { scale: 1.00, x: 0, y: 0 },
+    2: { scale: 1.08, x: 0, y: 0 },
+    3: { scale: 1.15, x: -30, y: 0 },
+    4: { scale: 1.44, x: 0, y: 0 },
+    5: { scale: 1.62, x: 0, y: 0 },
+  },
+  da_toi_cao_thien_menh: {
+    0: { scale: 1.00, x: 0, y: 0 },
+    1: { scale: 1.00, x: 0, y: 0 },
+    2: { scale: 1.08, x: 0, y: 0 },
+    3: { scale: 1.15, x: -30, y: 0 },
+    4: { scale: 1.44, x: 0, y: 0 },
+    5: { scale: 1.62, x: 0, y: 0 },
+  },
+  cuu_khieu_linh_lung: {
+    0: { scale: 1.00, x: 0, y: 0 },
+    1: { scale: 1.00, x: 0, y: 0 },
+    2: { scale: 1.00, x: 0, y: 0 },
+    3: { scale: 1.25, x: 0, y: 0 },
+    4: { scale: 1.50, x: 0, y: 0 },
+    5: { scale: 1.50, x: 0, y: 0 },
+  },
+  da_cuu_khieu_linh_lung: {
+    0: { scale: 1.00, x: 0, y: 0 },
+    1: { scale: 1.00, x: 0, y: 0 },
+    2: { scale: 1.00, x: 0, y: 0 },
+    3: { scale: 1.25, x: 0, y: 0 },
+    4: { scale: 1.50, x: 0, y: 0 },
+    5: { scale: 1.50, x: 0, y: 0 },
+  },
+  dao_menh_thien_ma_cong: {
+    0: { scale: 0.95, x: 0, y: -20 },
+    1: { scale: 0.95, x: 0, y: -20 },
+    2: { scale: 0.95, x: 0, y: -20 },
+    3: { scale: 1.25, x: 0, y: -20 },
+    4: { scale: 1.25, x: 0, y: -20 },
+    5: { scale: 1.55, x: 0, y: -20 },
+  },
+  da_dao_menh_thien_ma_cong: {
+    0: { scale: 0.95, x: 0, y: -20 },
+    1: { scale: 0.95, x: 0, y: -20 },
+    2: { scale: 0.95, x: 0, y: -20 },
+    3: { scale: 1.25, x: 0, y: -20 },
+    4: { scale: 1.25, x: 0, y: -20 },
+    5: { scale: 1.55, x: 0, y: -20 },
   },
 };
 

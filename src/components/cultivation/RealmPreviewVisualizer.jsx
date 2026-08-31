@@ -19,7 +19,7 @@ import {
 } from '../../lib/cultivation';
 import ArtifactIcon from './ArtifactIcon';
 import { LAMP_THAN_PHAM_AI_ICONS, getLampImageUrl, getArtifactImageUrl } from '../../lib/artifactIcons';
-import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhScale } from '../../lib/daoAnhData';
+import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getSanctumDaoAnhScale } from '../../lib/daoAnhData';
 import styles from './RealmPreviewVisualizer.module.css';
 
 import bgTrucCoGalaxy from '../../assets/images/truc_co_galaxy_bg.jpg';
@@ -5806,7 +5806,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   })();
 
                   const scale = (pos.scale || 1.0) * 1.30;
-                  const canvasScaleFactor = getDaoAnhScale(daoAnhDef) > 1 ? 1.08 : 1.0;
+                  const canvasScaleFactor = getSanctumDaoAnhScale(daoAnhDef);
 
                   return (
                     <g key={`na-palace-group-${i}`}>
