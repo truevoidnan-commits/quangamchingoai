@@ -1187,26 +1187,115 @@ function applyExpBurn(state, deficitExp = 10000) {
     }
     return { deficitExp: 0, deficitTM };
   } else {
-    const costExp = 10000;
-    if ((state.totalExp || 0) < costExp) {
-      throw new Error(`Không đủ tài nguyên! Cần 10.000 Tu Vi.`);
+    const costExp = deficitExp;
+    const totalAvailableExp = (state.totalExp || 0) + (state.storedExp || 0);
+    if (totalAvailableExp < costExp) {
+      throw new Error(`Không đủ tài nguyên! Cần ${costExp.toLocaleString()} Tu Vi (Hiện có: ${totalAvailableExp.toLocaleString()} EXP).`);
     }
 
-    state.totalExp = Math.max(0, state.totalExp - costExp);
+    // 1. Trừ vào UẨN TÍCH (storedExp) trước nếu có
+    let remainingCost = costExp;
+    if ((state.storedExp || 0) > 0) {
+      const deductStored = Math.min(state.storedExp, remainingCost);
+      state.storedExp -= deductStored;
+      remainingCost -= deductStored;
+    }
 
-    if (state.realm === 'ngung_khi') {
-      state.expCurrentRealm = Math.max(0, (state.expCurrentRealm || 0) - costExp);
-      if (state.ngungKhiActivePath === 'the') {
-        state.ngungKhiTheExp = Math.max(0, (state.ngungKhiTheExp || 0) - costExp);
+    // 2. Trừ vào Tổng Tu Vi (totalExp)
+    if (remainingCost > 0) {
+      state.totalExp = Math.max(0, (state.totalExp || 0) - remainingCost);
+    }
+
+    // 3. THỰC HIỆN NGÃ CẢNH / THOÁI HÓA PHÁP KHIẾU / THIÊN CUNG THEO TỪNG CẢNH GIỚI
+    if (state.realm === 'truc_co') {
+      state.expCurrentRealm = Math.max(0, (state.expCurrentRealm || 0) - remainingCost);
+      
+      // Khi thiêu đốt tu vi Trúc Cơ: Pháp Khiếu 121 lập tức sụp đổ
+      state.has121st = false;
+      state.attemptExp121 = 0;
+
+      // Tính lại số Pháp Khiếu còn trụ lại
+      const newOpened = getOpenedPhapKhieuFromExp(state.expCurrentRealm);
+      state.phapKhieu = newOpened;
+      state.selfMenhHoa = Math.floor(newOpened / 30);
+
+      // Nếu toàn bộ Pháp Khiếu bị tiêu biến (expCurrentRealm <= 0 hoặc phapKhieu === 0)
+      if (state.expCurrentRealm <= 0 || newOpened === 0) {
+        state.realm = 'ngung_khi';
+        state.expCurrentRealm = 4500;
+        state.phapKhieu = 0;
+        state.selfMenhHoa = 0;
+        state.has121st = false;
+        state.ngungKhiLevel = 10;
+        state.ngungKhiTheExp = 4500;
+        state.ngungKhiPhapExp = 4500;
+        state.readyBreakthroughTrucCo = true;
+        state.logs.unshift({
+          text: '☠️ ĐẠO CƠ SỤP ĐỔ · NGÃ CẢNH XUỐNG NGƯNG KHÍ KỲ! Thiêu đốt cạn kiệt tu vi khiến toàn bộ 120 Pháp Khiếu đóng kín, thoái hóa về Ngưng Khí Viên Mãn!',
+          time: Date.now()
+        });
       } else {
-        state.ngungKhiPhapExp = Math.max(0, (state.ngungKhiPhapExp || 0) - costExp);
+        state.logs.unshift({
+          text: `⚠️ THIÊU ĐỐT TU VI · ĐẠO CƠ THOÁI HÓA (NGÃ CẢNH)! Pháp Khiếu thoái lui về ${newOpened}/120 khiếu, Mệnh Hỏa tự thân giảm xuống ${state.selfMenhHoa} Hỏa!`,
+          time: Date.now()
+        });
       }
-    } else if (state.realm === 'truc_co') {
-      state.expCurrentRealm = Math.max(0, (state.expCurrentRealm || 0) - costExp);
-      state.phapKhieu = Math.min(120, getOpenedPhapKhieuFromExp(state.expCurrentRealm));
+    } else if (state.realm === 'ngung_khi') {
+      state.expCurrentRealm = Math.max(0, (state.expCurrentRealm || 0) - remainingCost);
+      if (state.ngungKhiActivePath === 'the') {
+        state.ngungKhiTheExp = Math.max(0, (state.ngungKhiTheExp || 0) - remainingCost);
+      } else {
+        state.ngungKhiPhapExp = Math.max(0, (state.ngungKhiPhapExp || 0) - remainingCost);
+      }
+      for (let lvl = 10; lvl >= 1; lvl--) {
+        if ((state.ngungKhiActivePath === 'the' ? state.ngungKhiTheExp : state.ngungKhiPhapExp) >= (NGUNG_KHI_THRESHOLDS[lvl - 1] || 0)) {
+          if (state.ngungKhiActivePath === 'the') state.ngungKhiTheLevel = lvl;
+          else state.ngungKhiPhapLevel = lvl;
+          break;
+        }
+      }
+      state.ngungKhiLevel = Math.max(state.ngungKhiTheLevel || 1, state.ngungKhiPhapLevel || 1);
+      if ((state.ngungKhiTheExp || 0) < 4500 && (state.ngungKhiPhapExp || 0) < 4500) {
+        state.readyBreakthroughTrucCo = false;
+      }
+      state.logs.unshift({
+        text: `⚠️ THIÊU ĐỐT TU VI · KHÍ HẢI THOÁI TẦNG! Ngưng Khí Kỳ tụt xuống Tầng ${state.ngungKhiLevel}/10!`,
+        time: Date.now()
+      });
     } else if (state.realm === 'kim_dan') {
-      state.currentThienCungExp = Math.max(0, (state.currentThienCungExp || 0) - costExp);
+      if ((state.currentThienCungExp || 0) >= remainingCost) {
+        state.currentThienCungExp -= remainingCost;
+      } else {
+        let deficit = remainingCost - (state.currentThienCungExp || 0);
+        state.currentThienCungExp = 0;
+        
+        while (deficit > 0 && (state.realizedThienCung || 0) > 0) {
+          const palaceCost = getPalaceCost(state.realizedThienCung);
+          if (deficit >= palaceCost) {
+            deficit -= palaceCost;
+            state.realizedThienCung -= 1;
+          } else {
+            state.realizedThienCung -= 1;
+            state.currentThienCungExp = palaceCost - deficit;
+            deficit = 0;
+          }
+        }
+        
+        // Nếu mất hết Cung Thật và linh lực cạn kiệt -> Ngã cảnh về Trúc Cơ
+        if (deficit > 0 && (state.realizedThienCung || 0) === 0) {
+          state.realm = 'truc_co';
+          state.expCurrentRealm = Math.max(0, (TRUC_CO_KHIEU_THRESHOLDS[120] || 14568) - deficit);
+          state.phapKhieu = getOpenedPhapKhieuFromExp(state.expCurrentRealm);
+          state.selfMenhHoa = Math.floor(state.phapKhieu / 30);
+          state.has121st = false;
+          state.logs.unshift({
+            text: '☠️ KIM ĐAN VỠ NÁT · NGÃ CẢNH XUỐNG TRÚC CƠ KỲ! Thiêu đốt quá mức khiến toàn bộ Thiên Cung sụp đổ, thoái hóa về Trúc Cơ Kỳ!',
+            time: Date.now()
+          });
+        }
+      }
     }
+
     return { deficitExp: costExp, deficitTM: 0 };
   }
 }
