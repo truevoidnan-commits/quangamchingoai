@@ -5100,9 +5100,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         })() : null;
 
         const naCanvasWidth = isMobile ? 720 : 1280;
-        const naCanvasHeight = isMobile ? 1440 : 960;
+        const naCanvasHeight = isMobile ? 1140 : 960;
         const naCenterX = isMobile ? 360 : 640;
-        const naCenterY = isMobile ? 720 : 480;
+        const naCenterY = isMobile ? 570 : 480;
 
         // 13 VỊ TRÍ TỔ ONG KIM CƯƠNG (3 - 2 - 3 - 2 - 3): HÀNG 3 DÃN RỘNG KHOẢNG CÁCH RA 2 MÉP (490PX MỖI BÊN)
         const desktop13Positions = [
@@ -5122,19 +5122,19 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         ];
 
         const mobile13Positions = [
-          { id: 'pos_0',  x: 360, y: 720, isCenter: true, scale: 1.08, nw: 180 }, // Index 0: TÂM
-          { id: 'pos_1',  x: 360, y: 150, scale: 1.00, nw: 170 },                 // Index 1: ĐỈNH GIỮA (Cách mép trên 150px)
-          { id: 'pos_2',  x: 230, y: 435, scale: 1.00, nw: 165 },                 // Index 2: HÀNG 2 TRONG-TRÁI
-          { id: 'pos_3',  x: 105, y: 720, scale: 1.00, nw: 165 },                 // Index 3: HÀNG 3 CỰC-TRÁI
-          { id: 'pos_4',  x: 120, y: 1290, scale: 1.00, nw: 165 },                // Index 4: GÓC DƯỚI-TRÁI (Cách mép dưới 150px)
-          { id: 'pos_5',  x: 600, y: 150, scale: 1.00, nw: 165 },                 // Index 5: GÓC TRÊN-PHẢI (Cách mép trên 150px)
-          { id: 'pos_6',  x: 230, y: 1005, scale: 1.00, nw: 165 },                // Index 6: HÀNG 4 TRONG-TRÁI
-          { id: 'pos_7',  x: 600, y: 1290, scale: 1.00, nw: 165 },                // Index 7: GÓC DƯỚI-PHẢI (Cách mép dưới 150px)
-          { id: 'pos_8',  x: 360, y: 1290, scale: 1.00, nw: 170 },                // Index 8: ĐÁY GIỮA (Cách mép dưới 150px)
-          { id: 'pos_9',  x: 490, y: 435, scale: 1.00, nw: 165 },                 // Index 9: HÀNG 2 TRONG-PHẢI
-          { id: 'pos_10', x: 120, y: 150, scale: 1.00, nw: 165 },                 // Index 10: GÓC TRÊN-TRÁI (Cách mép trên 150px)
-          { id: 'pos_11', x: 490, y: 1005, scale: 1.00, nw: 165 },                // Index 11: HÀNG 4 TRONG-PHẢI
-          { id: 'pos_12', x: 615, y: 720, scale: 1.00, nw: 165 },                 // Index 12: HÀNG 3 CỰC-PHẢI
+          { id: 'pos_0',  x: 360, y: 570, isCenter: true, scale: 1.05, nw: 180 }, // Index 0: TÂM (Tối Cao Tọa Trấn)
+          { id: 'pos_1',  x: 360, y: 110, scale: 0.90, nw: 170 },                 // Index 1: ĐỈNH GIỮA
+          { id: 'pos_2',  x: 225, y: 340, scale: 0.90, nw: 165 },                 // Index 2: HÀNG 2 TRONG-TRÁI
+          { id: 'pos_3',  x: 95,  y: 570, scale: 0.90, nw: 165 },                 // Index 3: HÀNG 3 CỰC-TRÁI (Dạt rộng sang mép)
+          { id: 'pos_4',  x: 95,  y: 1030, scale: 0.90, nw: 165 },                // Index 4: GÓC DƯỚI-TRÁI (Dạt rộng sang mép)
+          { id: 'pos_5',  x: 625, y: 110, scale: 0.90, nw: 165 },                 // Index 5: GÓC TRÊN-PHẢI (Dạt rộng sang mép)
+          { id: 'pos_6',  x: 225, y: 800, scale: 0.90, nw: 165 },                 // Index 6: HÀNG 4 TRONG-TRÁI
+          { id: 'pos_7',  x: 625, y: 1030, scale: 0.90, nw: 165 },                // Index 7: GÓC DƯỚI-PHẢI (Dạt rộng sang mép)
+          { id: 'pos_8',  x: 360, y: 1030, scale: 0.90, nw: 170 },                // Index 8: ĐÁY GIỮA
+          { id: 'pos_9',  x: 495, y: 340, scale: 0.90, nw: 165 },                 // Index 9: HÀNG 2 TRONG-PHẢI
+          { id: 'pos_10', x: 95,  y: 110, scale: 0.90, nw: 165 },                 // Index 10: GÓC TRÊN-TRÁI (Dạt rộng sang mép)
+          { id: 'pos_11', x: 495, y: 800, scale: 0.90, nw: 165 },                 // Index 11: HÀNG 4 TRONG-PHẢI
+          { id: 'pos_12', x: 625, y: 570, scale: 0.90, nw: 165 },                 // Index 12: HÀNG 3 CỰC-PHẢI (Dạt rộng sang mép)
         ];
 
         const palaceCoordinates = isMobile ? mobile13Positions : desktop13Positions;
@@ -5713,14 +5713,14 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   {/* Đường Linh Mạch Cực Biên & Trục Trận */}
                   <path
                     d={isMobile ? `
-                      M 120,150 L 360,150 L 600,150
-                      M 120,1290 L 360,1290 L 600,1290
-                      M 360,150 L 360,1290
-                      M 105,720 L 615,720
-                      M 120,150 L 230,435 L 105,720 L 230,1005 L 120,1290
-                      M 600,150 L 490,435 L 615,720 L 490,1005 L 600,1290
-                      M 360,150 L 230,435 L 360,720 L 490,435 L 360,150
-                      M 360,1290 L 230,1005 L 360,720 L 490,1005 L 360,1290
+                      M 95,110 L 360,110 L 625,110
+                      M 95,1030 L 360,1030 L 625,1030
+                      M 360,110 L 360,1030
+                      M 95,570 L 625,570
+                      M 95,110 L 225,340 L 95,570 L 225,800 L 95,1030
+                      M 625,110 L 495,340 L 625,570 L 495,800 L 625,1030
+                      M 360,110 L 225,340 L 360,570 L 495,340 L 360,110
+                      M 360,1030 L 225,800 L 360,570 L 495,800 L 360,1030
                     ` : `
                       M 150,80 L 640,80 L 1130,80
                       M 150,870 L 640,870 L 1130,870
@@ -5741,7 +5741,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <circle
                     cx={naCenterX}
                     cy={naCenterY}
-                    r={isMobile ? 260 : 260}
+                    r={isMobile ? 220 : 260}
                     fill="none"
                     stroke="rgba(251, 191, 36, 0.18)"
                     strokeWidth="1.2"
@@ -5751,7 +5751,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <circle
                     cx={naCenterX}
                     cy={naCenterY}
-                    r={isMobile ? 520 : 490}
+                    r={isMobile ? 440 : 490}
                     fill="none"
                     stroke="rgba(192, 132, 252, 0.15)"
                     strokeWidth="1.2"
