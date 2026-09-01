@@ -143,78 +143,18 @@ export default function CultivationWorkspace() {
         </button>
       </div>
 
-      {/* 2. CENTER COLUMN: Celestial Array Visualizer */}
+      {/* 2. CENTER COLUMN: Celestial Array Visualizer (100% Tối Giản & Tràn Viền Tuyệt Đối) */}
       <div className={`cultivation-col-center ${mobileTab === 'visualizer' ? 'mobile-show' : ''}`}>
-        {/* Workspace Top Header */}
-        <div className="cultivation-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexShrink: 1 }}>
-            <span 
-              className="mobile-back-icon"
-              onClick={handleSmartBack}
-              style={{ cursor: 'pointer', fontSize: 16, color: 'var(--accent-cyan)', padding: '4px 6px', flexShrink: 0 }}
-              title="Quay lại Thư Viện"
-            >
-              ←
-            </span>
-            <h1 style={{ margin: 0, fontSize: 'clamp(12px, 3.5vw, 18px)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              <span className="desktop-header-title">
-                {activeView === 'ngung_khi' && '💭 KHÍ HẢI NGƯNG KHÍ'}
-                {activeView === 'truc_co' && '🔥 TRÚC CƠ TINH ĐỒ'}
-                {activeView === 'kim_dan' && '🏛️ THIÊN CUNG KIM ĐAN'}
-                {(activeView === 'nguyen_anh' || activeView === 'gia_anh') && '👑 ĐẠO ANH THẦN THỂ'}
-              </span>
-              <span className="mobile-header-title">
-                {activeView === 'ngung_khi' && '💭 NGƯNG KHÍ'}
-                {activeView === 'truc_co' && '🔥 TRÚC CƠ'}
-                {activeView === 'kim_dan' && '🏛️ KIM ĐAN'}
-                {(activeView === 'nguyen_anh' || activeView === 'gia_anh') && '👑 NGUYÊN ANH'}
-              </span>
-            </h1>
-          </div>
+        {/* Nút Quay Lại Thư Viện Nổi Siêu Nhỏ Gọn (Chỉ có icon mũi tên) */}
+        <button
+          className="floating-back-library-btn"
+          onClick={handleSmartBack}
+          title="Quay lại Thư Viện"
+        >
+          <span className="floating-back-arrow">←</span>
+        </button>
 
-          {/* Top Right Header Elements */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-            <button
-              onClick={() => navigate('/sanctum')}
-              className="cultivation-header-sanctum-btn"
-              style={{
-                padding: '4px 8px',
-                borderRadius: 20,
-                background: 'linear-gradient(135deg, rgba(255, 204, 0, 0.16) 0%, rgba(34, 195, 240, 0.12) 100%)',
-                border: '1.2px solid var(--color-kim)',
-                color: 'var(--color-kim)',
-                fontSize: 10.5,
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 3,
-                boxShadow: '0 0 8px rgba(255, 204, 0, 0.2)',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap'
-              }}
-              title="Mở Tàng Bảo Điện trưng bày toàn cảnh Mệnh Đăng & 13 Thiên Cung"
-            >
-              <span>🏛️ Điện</span>
-            </button>
-
-            <span style={{
-              fontFamily: "'Noto Serif', serif",
-              fontSize: 10.5,
-              fontWeight: 800,
-              color: 'var(--color-kim)',
-              background: 'rgba(255, 204, 0, 0.1)',
-              padding: '3px 8px',
-              borderRadius: 20,
-              border: '1px solid rgba(255, 204, 0, 0.3)',
-              whiteSpace: 'nowrap'
-            }}>
-              🪐 {getRealmDisplayName({ ...cultivation, realm: activeView || currentRealm })}
-            </span>
-          </div>
-        </div>
-
-        {/* Dynamic Canvas Container */}
+        {/* Dynamic Canvas Container (100% Chiều Cao Sạch Sẽ) */}
         <div 
           className="cultivation-canvas-container" 
           style={{ 
