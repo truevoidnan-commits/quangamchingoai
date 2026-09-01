@@ -1657,7 +1657,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
   const [thunderStrikeActive, setThunderStrikeActive] = useState(null);
   const [isBreakthroughAnim, setIsBreakthroughAnim] = useState(false);
   const [isSwapMode, setIsSwapMode] = useState(false);
-  const [swapSelectedDaoAnh, setSwapSelectedDaoAnh] = useState(null);
+  const [swapSelectedIdx, setSwapSelectedIdx] = useState(null);
   const [swapNotice, setSwapNotice] = useState('');
 
   // Chế độ Tinh Đồ: 'luc_dai' (6 Chòm sao gốc) hoặc 'tu_tuong' (Tứ Tượng Thần Thú)
@@ -5098,10 +5098,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         const totalThienMenh = cultivation?.totalThienMenh || 0;
         const maxKiepCount = existingDaoAnhs.filter(d => (d.currentKiep || 0) >= 5).length;
         const focusedDaoAnhObj = focusedDaoAnhId !== null ? (() => {
-          const match = existingDaoAnhs.find(d => d.id === focusedDaoAnhId || d.palaceIndex === focusedDaoAnhId);
-          if (match) return match;
-          const idx = typeof focusedDaoAnhId === 'number' ? focusedDaoAnhId : 0;
-          return { palaceIndex: idx, id: focusedDaoAnhId };
+          const match = existingDaoAnhs.find(d => d.id === focusedDaoAnhId) || (typeof focusedDaoAnhId === 'number' ? existingDaoAnhs[focusedDaoAnhId] : null);
+          return match || existingDaoAnhs[0] || null;
         })() : null;
 
         const naCanvasWidth = isMobile ? 720 : 1280;
@@ -5677,7 +5675,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             <button
               onClick={() => {
                 setIsSwapMode(prev => !prev);
-                setSwapSelectedDaoAnh(null);
+                setSwapSelectedIdx(null);
                 setSwapNotice('');
               }}
               title={isSwapMode ? "Đang bật hoán vị (Bấm để tắt)" : "Hoán đổi vị trí Đạo Anh"}
@@ -5734,7 +5732,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 pointerEvents: 'none',
                 animation: 'fadeIn 0.2s ease-out'
               }}>
-                {swapNotice || (swapSelectedDaoAnh ? `👉 Chọn Đạo Anh thứ 2 để đổi vị trí!` : '👉 Nhấp Đạo Anh thứ 1 muốn đổi vị trí')}
+                {swapNotice || (swapSelectedIdx !== null ? `👉 Chọn Đạo Anh thứ 2 để đổi vị trí!` : '👉 Nhấp Đạo Anh thứ 1 muốn đổi vị trí')}
               </div>
             )}
 
@@ -5898,8 +5896,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                 {/* ─── QUẦN THỂ ĐẠO ANH BẢN NGUYÊN TỌA TRẤN THEO ĐÚNG SỐ THIÊN CUNG THỰC TẾ ─── */}
                 {existingDaoAnhs.map((daoAnh, idx) => {
-                  const palaceIdx = daoAnh.palaceIndex !== undefined ? daoAnh.palaceIndex : idx;
-                  const pos = palaceCoordinates[palaceIdx] || palaceCoordinates[idx] || palaceCoordinates[0];
+                  const pos = palaceCoordinates[idx] || palaceCoordinates[0];
                   const currentKiep = daoAnh.currentKiep || 0;
                   const isMaxKiep = currentKiep >= 5;
                   const expPercent = Math.min(100, Math.floor(((daoAnh.currentExp || 0) / (daoAnh.maxExp || KIEP_EXP_REQUIREMENTS[currentKiep] || 5000)) * 100));
@@ -5910,43 +5907,37 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   const nodeScale = (pos.scale || 1.0) * 1.30;
                   const transCfg = getDaoAnhTransformConfig(daoAnhDef, currentKiep);
                   
-                  const isSelectedForSwap = isSwapMode && swapSelectedDaoAnh && (
-                    swapSelectedDaoAnh.id === daoAnh.id || 
-                    (swapSelectedDaoAnh.palaceIndex !== undefined && swapSelectedDaoAnh.palaceIndex === palaceIdx)
-                  );
+                  const isSelectedForSwap = isSwapMode && swapSelectedIdx !== null && swapSelectedIdx === idx;
 
                   const handleNodeClick = () => {
                     if (isSwapMode) {
-                      if (!swapSelectedDaoAnh) {
-                        setSwapSelectedDaoAnh(daoAnh);
+                      if (swapSelectedIdx === null) {
+                        setSwapSelectedIdx(idx);
                         setSwapNotice(`Đã chọn [${daoAnhDef?.name || daoAnh.name || 'Đạo Anh'}]. Hãy chọn Đạo Anh thứ 2 để đổi vị trí!`);
-                      } else if (
-                        swapSelectedDaoAnh.id === daoAnh.id || 
-                        (swapSelectedDaoAnh.palaceIndex !== undefined && swapSelectedDaoAnh.palaceIndex === palaceIdx)
-                      ) {
+                      } else if (swapSelectedIdx === idx) {
                         // Click lại chính nó -> Hủy chọn
-                        setSwapSelectedDaoAnh(null);
+                        setSwapSelectedIdx(null);
                         setSwapNotice('Đã hủy chọn.');
                       } else {
-                        // Tiến hành hoán đổi vị trí
+                        // Tiến hành hoán đổi vị trí theo array index
                         try {
-                          const id1 = swapSelectedDaoAnh.id !== undefined ? swapSelectedDaoAnh.id : swapSelectedDaoAnh.palaceIndex;
-                          const id2 = daoAnh.id !== undefined ? daoAnh.id : daoAnh.palaceIndex;
-                          swapDaoAnhPositions(id1, id2);
-                          setSwapNotice(`✨ Đã đổi vị trí giữa [${swapSelectedDaoAnh.name || 'Đạo Anh 1'}] và [${daoAnhDef?.name || daoAnh.name || 'Đạo Anh 2'}]!`);
+                          const nameA = findDaoAnhDefinition(existingDaoAnhs[swapSelectedIdx], cultivation)?.name || existingDaoAnhs[swapSelectedIdx]?.name || 'Đạo Anh 1';
+                          const nameB = daoAnhDef?.name || daoAnh.name || 'Đạo Anh 2';
+                          swapDaoAnhPositions(swapSelectedIdx, idx);
+                          setSwapNotice(`✨ Đã đổi vị trí giữa [${nameA}] và [${nameB}]!`);
                         } catch (err) {
                           setSwapNotice(err.message || 'Lỗi hoán đổi vị trí.');
                         }
-                        setSwapSelectedDaoAnh(null);
+                        setSwapSelectedIdx(null);
                       }
                     } else {
-                      setFocusedDaoAnhId(daoAnh.id || daoAnh.palaceIndex);
+                      setFocusedDaoAnhId(daoAnh.id !== undefined ? daoAnh.id : idx);
                     }
                   };
 
                   return (
                     <g
-                      key={`palace-dao-anh-node-${palaceIdx}`}
+                      key={`palace-dao-anh-node-${daoAnh.id || idx}`}
                       onClick={handleNodeClick}
                       style={{ cursor: 'pointer' }}
                     >
@@ -6041,7 +6032,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
             {/* 3. MODAL XEM CẬN CẢNH ĐẠO ANH (FOCUS DETAIL MODAL SIÊU SANG TRỌNG) */}
             {focusedDaoAnhObj && (() => {
-              const matchedDaoAnh = existingDaoAnhs.find(d => d.id === focusedDaoAnhId || d.palaceIndex === focusedDaoAnhObj.palaceIndex) || focusedDaoAnhObj;
+              const matchedDaoAnh = focusedDaoAnhObj;
               const curKiep = matchedDaoAnh.currentKiep || 0;
               const isMax = curKiep >= 5;
               const curExp = matchedDaoAnh.currentExp !== undefined ? matchedDaoAnh.currentExp : (matchedDaoAnh.currentThienMenh || 0);

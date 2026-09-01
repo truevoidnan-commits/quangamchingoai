@@ -2237,7 +2237,6 @@ export function injectExpToThaiNghen(palaceIndex, expAmount = 10000) {
     addExp = Math.min(needed, Math.min(expAmount, availableExp));
     state.totalExp -= addExp;
   }
-
   state.daoAnhProgress[palaceIndex] = currentProgress + addExp;
 
   state.logs.unshift({
@@ -2453,8 +2452,20 @@ export function swapDaoAnhPositions(idOrIndex1, idOrIndex2) {
     throw new Error('Cần tối thiểu 2 Đạo Anh để hoán đổi vị trí.');
   }
 
-  const idx1 = state.daoAnhs.findIndex(d => d.id === idOrIndex1 || d.palaceIndex === idOrIndex1);
-  const idx2 = state.daoAnhs.findIndex(d => d.id === idOrIndex2 || d.palaceIndex === idOrIndex2);
+  let idx1 = -1;
+  let idx2 = -1;
+
+  if (typeof idOrIndex1 === 'number' && idOrIndex1 >= 0 && idOrIndex1 < state.daoAnhs.length) {
+    idx1 = idOrIndex1;
+  } else {
+    idx1 = state.daoAnhs.findIndex(d => d.id === idOrIndex1 || d.palaceIndex === idOrIndex1);
+  }
+
+  if (typeof idOrIndex2 === 'number' && idOrIndex2 >= 0 && idOrIndex2 < state.daoAnhs.length) {
+    idx2 = idOrIndex2;
+  } else {
+    idx2 = state.daoAnhs.findIndex(d => d.id === idOrIndex2 || d.palaceIndex === idOrIndex2);
+  }
 
   if (idx1 === -1 || idx2 === -1) {
     throw new Error('Không tìm thấy Đạo Anh cần hoán đổi vị trí.');
@@ -2462,19 +2473,13 @@ export function swapDaoAnhPositions(idOrIndex1, idOrIndex2) {
 
   if (idx1 === idx2) return state;
 
-  // Hoán đổi palaceIndex nếu có
-  const p1 = state.daoAnhs[idx1].palaceIndex;
-  const p2 = state.daoAnhs[idx2].palaceIndex;
-  state.daoAnhs[idx1].palaceIndex = p2 !== undefined ? p2 : idx2;
-  state.daoAnhs[idx2].palaceIndex = p1 !== undefined ? p1 : idx1;
+  const name1 = state.daoAnhs[idx1].name || 'Đạo Anh 1';
+  const name2 = state.daoAnhs[idx2].name || 'Đạo Anh 2';
 
-  // Hoán đổi thứ tự trong mảng
+  // Hoán đổi vị trí hiển thị trong mảng state.daoAnhs
   const temp = state.daoAnhs[idx1];
   state.daoAnhs[idx1] = state.daoAnhs[idx2];
   state.daoAnhs[idx2] = temp;
-
-  const name1 = state.daoAnhs[idx2].name || 'Đạo Anh 1';
-  const name2 = state.daoAnhs[idx1].name || 'Đạo Anh 2';
 
   state.logs.unshift({
     text: `🔄 HOÁN ĐỔI TRẬN VỊ! Đã chuyển đổi vị trí giữa ${name1} và ${name2} trong Đạo Anh Thần Trận.`,
