@@ -2136,19 +2136,6 @@ export function breakthroughToTrucCo() {
     });
   }
 
-  // Xả storedExp nếu có
-  if ((state.storedExp || 0) > 0) {
-    const expToFlush = state.storedExp;
-    state.storedExp = 0;
-    state.expCurrentRealm = (state.expCurrentRealm || 0) + expToFlush;
-    state.phapKhieu = Math.min(120, getOpenedPhapKhieuFromExp(state.expCurrentRealm));
-    state.selfMenhHoa = Math.floor(state.phapKhieu / 30);
-    state.logs.unshift({
-      text: `🌊 UẨN TÍCH PHÁ CẢNH XẢ RA! +${expToFlush.toLocaleString()} Tu Vi uẩn tích từ bình cảnh Ngưng Khí đã xả vào Trúc Cơ, khai mở ${state.phapKhieu}/120 Pháp Khiếu!`,
-      time: Date.now(),
-    });
-  }
-
   saveCultivationState(state);
   return state;
 }
@@ -2343,14 +2330,9 @@ export function injectExpToThaiNghen(palaceIndex, expAmount = 10000) {
   });
 
   saveCultivationState(state);
-  return {
-    state,
-    progress: state.daoAnhProgress[palaceIndex],
-    message: state.daoAnhProgress[palaceIndex] >= EXP_PER_DAO_ANH 
-      ? `✨ Đã tích lũy đủ 10.000 Tu Vi linh lực! Đạo Anh đã sẵn sàng Khai Sinh!`
-      : `✨ Đã tích lũy +${addExp.toLocaleString()} Tu Vi thai nghén Đạo Anh (${state.daoAnhProgress[palaceIndex].toLocaleString()}/10.000 Tu Vi)!`,
-  };
+  return state;
 }
+
 
 /**
  * Helper: Xác định Phẩm Cấp của Đạo Anh dựa theo Mệnh Đăng hoặc Vật Trấn Áp nguồn gốc
@@ -2536,12 +2518,50 @@ export function injectExpToDaoAnh(daoAnhId, amount = 1000) {
   if (!state.isKimDanTrialV2) {
     state.totalExp -= actualInject;
   }
-
   da.currentExp = curExp + actualInject;
   da.currentThienMenh = da.currentExp; // Đồng bộ tương thích ngược
 
   state.logs.unshift({
     text: `Đã nạp +${actualInject.toLocaleString()} Tu Vi linh lực vào ${da.name} (${da.currentExp}/${da.maxExp}).`,
+    time: Date.now(),
+  });
+
+  saveCultivationState(state);
+  return state;
+}
+
+
+export function swapDaoAnhPositions(idOrIndex1, idOrIndex2) {
+  const state = getCultivationState();
+  if (!state.daoAnhs || state.daoAnhs.length < 2) {
+    throw new Error('Cần tối thiểu 2 Đạo Anh để hoán đổi vị trí.');
+  }
+
+  const idx1 = state.daoAnhs.findIndex(d => d.id === idOrIndex1 || d.palaceIndex === idOrIndex1);
+  const idx2 = state.daoAnhs.findIndex(d => d.id === idOrIndex2 || d.palaceIndex === idOrIndex2);
+
+  if (idx1 === -1 || idx2 === -1) {
+    throw new Error('Không tìm thấy Đạo Anh cần hoán đổi vị trí.');
+  }
+
+  if (idx1 === idx2) return state;
+
+  // Hoán đổi palaceIndex nếu có
+  const p1 = state.daoAnhs[idx1].palaceIndex;
+  const p2 = state.daoAnhs[idx2].palaceIndex;
+  state.daoAnhs[idx1].palaceIndex = p2 !== undefined ? p2 : idx2;
+  state.daoAnhs[idx2].palaceIndex = p1 !== undefined ? p1 : idx1;
+
+  // Hoán đổi thứ tự trong mảng
+  const temp = state.daoAnhs[idx1];
+  state.daoAnhs[idx1] = state.daoAnhs[idx2];
+  state.daoAnhs[idx2] = temp;
+
+  const name1 = state.daoAnhs[idx2].name || 'Đạo Anh 1';
+  const name2 = state.daoAnhs[idx1].name || 'Đạo Anh 2';
+
+  state.logs.unshift({
+    text: `🔄 HOÁN ĐỔI TRẬN VỊ! Đã chuyển đổi vị trí giữa ${name1} và ${name2} trong Đạo Anh Thần Trận.`,
     time: Date.now(),
   });
 

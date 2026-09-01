@@ -15,7 +15,8 @@ import {
   calculateDaoAnhTribulationReward,
   getDaoAnhTierKey,
   KIEP_EXP_REQUIREMENTS,
-  TIER_BASE_THIEN_MENH_REWARDS
+  TIER_BASE_THIEN_MENH_REWARDS,
+  swapDaoAnhPositions
 } from '../../lib/cultivation';
 import ArtifactIcon from './ArtifactIcon';
 import { LAMP_THAN_PHAM_AI_ICONS, getLampImageUrl, getArtifactImageUrl } from '../../lib/artifactIcons';
@@ -1655,6 +1656,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
   const [hoveredDaoAnh, setHoveredDaoAnh] = useState(null);
   const [thunderStrikeActive, setThunderStrikeActive] = useState(null);
   const [isBreakthroughAnim, setIsBreakthroughAnim] = useState(false);
+  const [isSwapMode, setIsSwapMode] = useState(false);
+  const [swapSelectedDaoAnh, setSwapSelectedDaoAnh] = useState(null);
+  const [swapNotice, setSwapNotice] = useState('');
 
   // Chế độ Tinh Đồ: 'luc_dai' (6 Chòm sao gốc) hoặc 'tu_tuong' (Tứ Tượng Thần Thú)
   // Mặc định ở cổng 5173 là 'luc_dai' (an toàn 100%), ở cổng 3000 hoặc khi bấm nút là 'tu_tuong'
@@ -5105,7 +5109,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         const naCenterX = isMobile ? 360 : 640;
         const naCenterY = isMobile ? 570 : 480;
 
-        // 13 VỊ TRÍ TỔ ONG KIM CƯƠNG (3 - 2 - 3 - 2 - 3): HÀNG 3 DÃN RỘNG KHOẢNG CÁCH RA 2 MÉP (490PX MỖI BÊN)
         const desktop13Positions = [
           { id: 'pos_0',  x: 640,  y: 480, isCenter: true, scale: 1.28, nw: 240 }, // Index 0: TÂM (Bản Mệnh Tối Cao Tọa Trấn Trung Xu)
           { id: 'pos_1',  x: 640,  y: 80,  scale: 1.22, nw: 230 },                 // Index 1: ĐỈNH GIỮA (Hàng 1 - Tinh Thần Đạo Anh)
@@ -5138,7 +5141,72 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           { id: 'pos_12', x: 625, y: 570, scale: 0.90, nw: 165 },                 // Index 12: HÀNG 3 CỰC-PHẢI (Dạt rộng sang mép)
         ];
 
-        const palaceCoordinates = isMobile ? mobile13Positions : desktop13Positions;
+        // HÀM TẠO BỐ CỤC TRẬN PHÁP ĐỐI XỨNG CÂN BẰNG TỰ ĐỘNG CHO MỌI SỐ LƯỢNG N TỪ 6 ĐẾN 13
+        const getDaoAnhMatrixLayout = (count, isMob) => {
+          const cx = isMob ? 360 : 640;
+          const cy = isMob ? 570 : 480;
+          const centerNode = { id: 'pos_0', x: cx, y: cy, isCenter: true, scale: isMob ? 1.05 : 1.28, nw: isMob ? 180 : 240 };
+
+          if (count <= 1) return [centerNode];
+
+          // 13 Đạo Anh (Đầy Đủ 13 Cung - Ma Trận Kim Cương)
+          if (count === 13) {
+            return isMob ? mobile13Positions : desktop13Positions;
+          }
+
+          // 11 Đạo Anh (1 Tâm + 10 Cung Đối Xứng Tuyệt Đối - 2 Trục Trực Giao & 4 Góc)
+          if (count === 11) {
+            if (!isMob) {
+              return [
+                centerNode,                                                  // 0: TÂM (640, 480)
+                { id: 'pos_1',  x: 640,  y: 90,  scale: 1.22, nw: 230 },     // 1: Đỉnh Bắc (640, 90)
+                { id: 'pos_2',  x: 410,  y: 290, scale: 1.22, nw: 220 },     // 2: Vòng Trong Trên-Trái
+                { id: 'pos_3',  x: 870,  y: 290, scale: 1.22, nw: 220 },     // 3: Vòng Trong Trên-Phải
+                { id: 'pos_4',  x: 160,  y: 220, scale: 1.22, nw: 220 },     // 4: Góc Ngoài Tây-Bắc (160, 220)
+                { id: 'pos_5',  x: 1120, y: 220, scale: 1.22, nw: 220 },     // 5: Góc Ngoài Đông-Bắc (1120, 220)
+                { id: 'pos_6',  x: 410,  y: 670, scale: 1.22, nw: 220 },     // 6: Vòng Trong Dưới-Trái
+                { id: 'pos_7',  x: 870,  y: 670, scale: 1.22, nw: 220 },     // 7: Vòng Trong Dưới-Phải
+                { id: 'pos_8',  x: 640,  y: 870, scale: 1.22, nw: 230 },     // 8: Đáy Nam (640, 870)
+                { id: 'pos_9',  x: 160,  y: 740, scale: 1.22, nw: 220 },     // 9: Góc Ngoài Tây-Nam (160, 740)
+                { id: 'pos_10', x: 1120, y: 740, scale: 1.22, nw: 220 },     // 10: Góc Ngoài Đông-Nam (1120, 740)
+              ];
+            } else {
+              return [
+                centerNode,                                                  // 0: TÂM (360, 570)
+                { id: 'pos_1',  x: 360, y: 110,  scale: 0.90, nw: 170 },     // 1: Đỉnh
+                { id: 'pos_2',  x: 140, y: 260,  scale: 0.90, nw: 165 },     // 2: Hàng 2 Trái
+                { id: 'pos_3',  x: 580, y: 260,  scale: 0.90, nw: 165 },     // 3: Hàng 2 Phải
+                { id: 'pos_4',  x: 230, y: 410,  scale: 0.90, nw: 165 },     // 4: Hàng 3 Trái
+                { id: 'pos_5',  x: 490, y: 410,  scale: 0.90, nw: 165 },     // 5: Hàng 3 Phải
+                { id: 'pos_6',  x: 230, y: 730,  scale: 0.90, nw: 165 },     // 6: Hàng 4 Trái
+                { id: 'pos_7',  x: 490, y: 730,  scale: 0.90, nw: 165 },     // 7: Hàng 4 Phải
+                { id: 'pos_8',  x: 140, y: 880,  scale: 0.90, nw: 165 },     // 8: Hàng 5 Trái
+                { id: 'pos_9',  x: 580, y: 880,  scale: 0.90, nw: 165 },     // 9: Hàng 5 Phải
+                { id: 'pos_10', x: 360, y: 1030, scale: 0.90, nw: 170 },     // 10: Đáy
+              ];
+            }
+          }
+
+          // Mọi số lượng N khác (6, 7, 8, 9, 10, 12): Tự động tính Elip đối xứng cách đều
+          const surrounding = count - 1;
+          const rx = isMob ? 260 : 470;
+          const ry = isMob ? 450 : 370;
+          const res = [centerNode];
+          for (let i = 0; i < surrounding; i++) {
+            const angle = -Math.PI / 2 + (i * 2 * Math.PI) / surrounding;
+            res.push({
+              id: `pos_${i + 1}`,
+              x: Math.round(cx + rx * Math.cos(angle)),
+              y: Math.round(cy + ry * Math.sin(angle)),
+              scale: isMob ? 0.90 : 1.22,
+              nw: isMob ? 165 : 220
+            });
+          }
+          return res;
+        };
+
+        const currentDaoAnhCount = existingDaoAnhs.length || 11;
+        const palaceCoordinates = getDaoAnhMatrixLayout(currentDaoAnhCount, isMobile);
 
         // MAPPING ẢNH GEN AI CHO MỆNH ĐĂNG & VẬT TRẤN ÁP
         const lampGenMap = {
@@ -5158,22 +5226,37 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         };
 
         const artGenMap = {
-          'hong_mong_khi': getAssetUrl('icons/than_pham/hong_mong_tu_khi.jpg'),
-          'van_menh_chau': getAssetUrl('icons/than_pham/van_menh_chau.jpg'),
-          'hon_don_so_khai': getAssetUrl('icons/than_pham/hon_don_so_khai.jpg'),
-          'ngoc_diep': getAssetUrl('icons/than_pham/ngoc_diep.jpg'),
-          'bat_hu_dinh': getAssetUrl('icons/than_pham/bat_hu_dinh.jpg'),
-          'thien_dao_an': getAssetUrl('icons/than_pham/so_tam_quyet.jpg'),
-          'hu_vo_ban_nguyen': getAssetUrl('icons/than_pham/hu_vo_tich_diet.jpg'),
-          'khoi_nguyen_moc': getAssetUrl('icons/than_pham/the_gioi_moc.jpg'),
-          'luan_hoi_ban': getAssetUrl('icons/than_pham/luan_hoi_chan_kinh.jpg'),
-          'tuc_menh_toa': getAssetUrl('icons/than_pham/tuc_menh_toa.jpg'),
-          'thuong_thuong_kiem': getAssetUrl('icons/than_pham/phat_thien_kiem.jpg'),
-          'dai_la_chuong': getAssetUrl('icons/than_pham/thien_cuong_chuong.jpg'),
-          'thoi_khong_chau': getAssetUrl('icons/than_pham/thoi_khong_chau.jpg'),
-          'van_co_long_to': getAssetUrl('icons/than_pham/van_co_long_to.jpg'),
-          'sang_the_quang': getAssetUrl('icons/than_pham/sang_the_quang.jpg'),
-          'dai_dao_tieu_dao': getAssetUrl('icons/than_pham/tieu_dao_thien.jpg'),
+          'am_duong_hon_don_nguyen_can': getAssetUrl('icons/than_pham/art_am_duong_hon_don_nguyen_can.jpg'),
+          'cam_ky_cuc_dao': getAssetUrl('icons/than_pham/art_cam_ky_cuc_dao.jpg'),
+          'con_bang_tien_phap': getAssetUrl('icons/than_pham/art_con_bang_tien_phap.jpg'),
+          'cuu_kiep_loi_nguc_kiem_phap': getAssetUrl('icons/than_pham/art_cuu_kiep_loi_nguc_kiem_phap.jpg'),
+          'dao_menh_thien_ma_cong': getAssetUrl('icons/than_pham/art_dao_menh_thien_ma_cong.jpg'),
+          'dao_tam_chung_ma': getAssetUrl('icons/than_pham/art_dao_tam_chung_ma.jpg'),
+          'diet_the_loi_viem_dong': getAssetUrl('icons/than_pham/art_diet_the_loi_viem_dong.jpg'),
+          'hon_don_diet_the_loi_tri': getAssetUrl('icons/than_pham/art_hon_don_diet_the_loi_tri.jpg'),
+          'hong_tran_ngung_vong_anh_hao_nguyet': getAssetUrl('icons/than_pham/art_hong_tran_ngung_vong_anh_hao_nguyet.jpg'),
+          'huyen_hoang_diet_the_bien': getAssetUrl('icons/than_pham/art_huyen_hoang_diet_the_bien.jpg'),
+          'kim_o_luyen_van_linh': getAssetUrl('icons/than_pham/art_kim_o_luyen_van_linh.jpg'),
+          'luc_dao_luan_hoi_tien_can': getAssetUrl('icons/than_pham/art_luc_dao_luan_hoi_tien_can.jpg'),
+          'mac_sat_tien_phach': getAssetUrl('icons/than_pham/art_mac_sat_tien_phach.jpg'),
+          'ngu_hanh_dai_dong_thien': getAssetUrl('icons/than_pham/art_ngu_hanh_dai_dong_thien.jpg'),
+          'nguyen_gioi_hon_co': getAssetUrl('icons/than_pham/art_nguyen_gioi_hon_co.jpg'),
+          'nguyen_thuy_thai_so_ma_kinh': getAssetUrl('icons/than_pham/art_nguyen_thuy_thai_so_ma_kinh.jpg'),
+          'nhat_khi_hoa_tam_thanh': getAssetUrl('icons/than_pham/art_nhat_khi_hoa_tam_thanh.jpg'),
+          'tam_sinh_luan_hoi_an': getAssetUrl('icons/than_pham/art_tam_sinh_luan_hoi_an.jpg'),
+          'tan_tien_phe_than': getAssetUrl('icons/than_pham/art_tan_tien_phe_than.jpg'),
+          'tao_hoa_ngoc_diep': getAssetUrl('icons/than_pham/art_tao_hoa_ngoc_diep.jpg'),
+          'tha_hoa_tu_tai_dai_phap': getAssetUrl('icons/than_pham/art_tha_hoa_tu_tai_dai_phap.jpg'),
+          'thai_so_than_vuong_the': getAssetUrl('icons/than_pham/art_thai_so_than_vuong_the.jpg'),
+          'thao_tu_kiem_quyet': getAssetUrl('icons/than_pham/art_thao_tu_kiem_quyet.jpg'),
+          'thien_dao_chi_ton': getAssetUrl('icons/than_pham/art_thien_dao_chi_ton.jpg'),
+          'tieu_tuc_menh_thuat': getAssetUrl('icons/than_pham/art_tieu_tuc_menh_thuat.jpg'),
+          'tien_thien_thanh_the_dao_thai': getAssetUrl('icons/than_pham/art_tien_thien_thanh_the_dao_thai.jpg'),
+          'toi_cao_thien_menh': getAssetUrl('icons/than_pham/art_toi_cao_thien_menh.jpg'),
+          'tran_nguc_minh_vuong_the': getAssetUrl('icons/than_pham/art_tran_nguc_minh_vuong_the.jpg'),
+          'trung_dong': getAssetUrl('icons/than_pham/art_trung_dong.jpg'),
+          'van_gioi_quy_nhat': getAssetUrl('icons/than_pham/art_van_gioi_quy_nhat.jpg'),
+          'vo_thuy_vo_chung_vo_vi_than': getAssetUrl('icons/than_pham/art_vo_thuy_vo_chung_vo_vi_than.jpg'),
         };
 
         const getTierConfig = (tier) => {
@@ -5590,7 +5673,72 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             backgroundColor: '#020617',
             userSelect: 'none'
           }}>
-            {/* KHUNG CANVAS SVG VŨ TRỤ THỨC HẢI & 13 ĐẠO ANH */}
+            {/* Nút Hoán Đổi Trận Vị Siêu Nhỏ Gọn (Kích thước & phong cách chuẩn bằng nút ra thư viện) */}
+            <button
+              onClick={() => {
+                setIsSwapMode(prev => !prev);
+                setSwapSelectedDaoAnh(null);
+                setSwapNotice('');
+              }}
+              title={isSwapMode ? "Đang bật hoán vị (Bấm để tắt)" : "Hoán đổi vị trí Đạo Anh"}
+              style={{
+                position: 'absolute',
+                top: isMobile ? 10 : 14,
+                left: isMobile ? 48 : 56,
+                zIndex: 50,
+                width: isMobile ? 30 : 34,
+                height: isMobile ? 30 : 34,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: isMobile ? 13 : 15,
+                cursor: 'pointer',
+                border: isSwapMode ? '1.5px solid #fde047' : '1px solid rgba(56, 189, 248, 0.4)',
+                background: isSwapMode 
+                  ? 'rgba(234, 179, 8, 0.35)' 
+                  : 'rgba(8, 14, 28, 0.75)',
+                color: isSwapMode ? '#fef08a' : '#38bdf8',
+                backdropFilter: 'blur(8px)',
+                boxShadow: isSwapMode 
+                  ? '0 0 16px rgba(253, 224, 71, 0.6), 0 4px 12px rgba(0,0,0,0.5)' 
+                  : '0 4px 16px rgba(0, 0, 0, 0.4), 0 0 10px rgba(56, 189, 248, 0.2)',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                userSelect: 'none',
+                padding: 0,
+              }}
+            >
+              <span style={{ transform: isSwapMode ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }}>
+                🔄
+              </span>
+            </button>
+
+            {/* Banner Hướng Dẫn Tinh Tế ở Đỉnh Giữa (Chỉ hiện khi bật hoán đổi) */}
+            {isSwapMode && (
+              <div style={{
+                position: 'absolute',
+                top: isMobile ? 10 : 14,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 49,
+                background: 'rgba(15, 23, 42, 0.92)',
+                border: '1px solid rgba(253, 224, 71, 0.8)',
+                borderRadius: 20,
+                padding: '4px 14px',
+                color: '#fef08a',
+                fontSize: isMobile ? 11 : 12,
+                fontWeight: 700,
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 0 16px rgba(253, 224, 71, 0.25)',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                animation: 'fadeIn 0.2s ease-out'
+              }}>
+                {swapNotice || (swapSelectedDaoAnh ? `👉 Chọn Đạo Anh thứ 2 để đổi vị trí!` : '👉 Nhấp Đạo Anh thứ 1 muốn đổi vị trí')}
+              </div>
+            )}
+
+            {/* KHUNG CANVAS SVG VŨ TRỤ THỨC HẢI & CÁC ĐẠO ANH */}
             <div style={{
               position: 'relative',
               width: '100%',
@@ -5709,34 +5857,21 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   style={{ mixBlendMode: 'screen' }}
                 />
 
-                {/* Hệ Thống Linh Mạch Ma Trận Tổ Ong Kim Cương 3-2-3-2-3 */}
+                {/* Hệ Thống Linh Mạch Nối Giữa Các Đạo Anh Trong Trận Đồ */}
                 <g opacity="0.85">
-                  {/* Đường Linh Mạch Cực Biên & Trục Trận */}
-                  <path
-                    d={isMobile ? `
-                      M 95,110 L 360,110 L 625,110
-                      M 95,1030 L 360,1030 L 625,1030
-                      M 360,110 L 360,1030
-                      M 95,570 L 625,570
-                      M 95,110 L 225,340 L 95,570 L 225,800 L 95,1030
-                      M 625,110 L 495,340 L 625,570 L 495,800 L 625,1030
-                      M 360,110 L 225,340 L 360,570 L 495,340 L 360,110
-                      M 360,1030 L 225,800 L 360,570 L 495,800 L 360,1030
-                    ` : `
-                      M 150,80 L 640,80 L 1130,80
-                      M 150,870 L 640,870 L 1130,870
-                      M 640,80 L 640,870
-                      M 150,480 L 1130,480
-                      M 150,80 L 390,280 L 150,480 L 390,680 L 150,870
-                      M 1130,80 L 890,280 L 1130,480 L 890,680 L 1130,870
-                      M 640,80 L 390,280 L 640,480 L 890,280 L 640,80
-                      M 640,870 L 390,680 L 640,480 L 890,680 L 640,870
-                    `}
-                    fill="none"
-                    stroke="rgba(56, 189, 248, 0.2)"
-                    strokeWidth="1.2"
-                    strokeDasharray="4 6"
-                  />
+                  {/* Đường linh mạch nối từ Tâm ra các vị trí xung quanh */}
+                  {palaceCoordinates.slice(1).map((pos, pIdx) => (
+                    <line
+                      key={`matrix-link-${pIdx}`}
+                      x1={naCenterX}
+                      y1={naCenterY}
+                      x2={pos.x}
+                      y2={pos.y}
+                      stroke="rgba(56, 189, 248, 0.22)"
+                      strokeWidth="1.2"
+                      strokeDasharray="4 6"
+                    />
+                  ))}
 
                   {/* Vòng Trận Đồ Hoàng Kim Trung Xu */}
                   <circle
@@ -5774,12 +5909,45 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   const daoAnhDef = findDaoAnhDefinition(daoAnh, cultivation);
                   const nodeScale = (pos.scale || 1.0) * 1.30;
                   const transCfg = getDaoAnhTransformConfig(daoAnhDef, currentKiep);
-                  const floatTransform = `translate(0, ${Math.sin(Date.now() / 1000 + palaceIdx) * 5})`;
                   
+                  const isSelectedForSwap = isSwapMode && swapSelectedDaoAnh && (
+                    swapSelectedDaoAnh.id === daoAnh.id || 
+                    (swapSelectedDaoAnh.palaceIndex !== undefined && swapSelectedDaoAnh.palaceIndex === palaceIdx)
+                  );
+
+                  const handleNodeClick = () => {
+                    if (isSwapMode) {
+                      if (!swapSelectedDaoAnh) {
+                        setSwapSelectedDaoAnh(daoAnh);
+                        setSwapNotice(`Đã chọn [${daoAnhDef?.name || daoAnh.name || 'Đạo Anh'}]. Hãy chọn Đạo Anh thứ 2 để đổi vị trí!`);
+                      } else if (
+                        swapSelectedDaoAnh.id === daoAnh.id || 
+                        (swapSelectedDaoAnh.palaceIndex !== undefined && swapSelectedDaoAnh.palaceIndex === palaceIdx)
+                      ) {
+                        // Click lại chính nó -> Hủy chọn
+                        setSwapSelectedDaoAnh(null);
+                        setSwapNotice('Đã hủy chọn.');
+                      } else {
+                        // Tiến hành hoán đổi vị trí
+                        try {
+                          const id1 = swapSelectedDaoAnh.id !== undefined ? swapSelectedDaoAnh.id : swapSelectedDaoAnh.palaceIndex;
+                          const id2 = daoAnh.id !== undefined ? daoAnh.id : daoAnh.palaceIndex;
+                          swapDaoAnhPositions(id1, id2);
+                          setSwapNotice(`✨ Đã đổi vị trí giữa [${swapSelectedDaoAnh.name || 'Đạo Anh 1'}] và [${daoAnhDef?.name || daoAnh.name || 'Đạo Anh 2'}]!`);
+                        } catch (err) {
+                          setSwapNotice(err.message || 'Lỗi hoán đổi vị trí.');
+                        }
+                        setSwapSelectedDaoAnh(null);
+                      }
+                    } else {
+                      setFocusedDaoAnhId(daoAnh.id || daoAnh.palaceIndex);
+                    }
+                  };
+
                   return (
                     <g
                       key={`palace-dao-anh-node-${palaceIdx}`}
-                      onClick={() => setFocusedDaoAnhId(daoAnh.id || daoAnh.palaceIndex)}
+                      onClick={handleNodeClick}
                       style={{ cursor: 'pointer' }}
                     >
                       {/* Tooltip Chuẩn Phương Án D cho Sảnh Ngoài */}
@@ -5794,9 +5962,44 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             cy="28"
                             rx={74 * nodeScale}
                             ry={24 * nodeScale}
-                            fill={daoAnhDef?.primaryColor || arch.color}
-                            opacity={isReady80 ? 0.45 : 0.22}
+                            fill={isSelectedForSwap ? '#fde047' : (daoAnhDef?.primaryColor || arch.color)}
+                            opacity={isSelectedForSwap ? 0.75 : (isReady80 ? 0.45 : 0.22)}
                           />
+
+                          {/* Hiệu ứng Đang Chọn Hoán Đổi Trận Vị */}
+                          {isSelectedForSwap && (
+                            <g>
+                              <circle
+                                r={80 * (pos.scale || 1.0)}
+                                fill="none"
+                                stroke="#fde047"
+                                strokeWidth="2.5"
+                                strokeDasharray="8 6"
+                                style={{ animation: 'haloSpinSlow 3s linear infinite', filter: 'drop-shadow(0 0 12px #fde047)' }}
+                              />
+                              <rect
+                                x="-52"
+                                y="-105"
+                                width="104"
+                                height="22"
+                                rx="11"
+                                fill="rgba(253, 224, 71, 0.95)"
+                                stroke="#b45309"
+                                strokeWidth="1"
+                              />
+                              <text
+                                x="0"
+                                y="-90"
+                                textAnchor="middle"
+                                fill="#0f172a"
+                                fontSize="11"
+                                fontWeight="900"
+                                letterSpacing="0.5"
+                              >
+                                ⚡ ĐANG CHỌN
+                              </text>
+                            </g>
+                          )}
 
                           <g transform={`scale(${nodeScale})`}>
                             {/* 1. HIỂN THỊ ĐẠO ẢNH PHÁP THÂN HOÀNG KIM / CHIBI GEN AI (CHUẨN 144x144) */}
@@ -5811,11 +6014,13 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                     height="144"
                                     preserveAspectRatio="xMidYMid meet"
                                     style={{
-                                      filter: isMaxKiep
+                                      filter: isSelectedForSwap
+                                        ? 'drop-shadow(0 0 20px #fde047)'
+                                        : (isMaxKiep
                                         ? 'drop-shadow(0 0 16px #fde047)'
                                         : isReady80
                                         ? 'drop-shadow(0 0 16px #f0abfc)'
-                                        : `drop-shadow(0 0 14px ${daoAnhDef.glowColor || arch.color || '#fbbf24'})`,
+                                        : `drop-shadow(0 0 14px ${daoAnhDef.glowColor || arch.color || '#fbbf24'})`),
                                     }}
                                   />
                                 </g>
