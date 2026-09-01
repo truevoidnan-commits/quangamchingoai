@@ -123,11 +123,11 @@ export const EXP_PER_THIEN_CUNG = 2000; // Giữ để tương thích ngược
 export const EXP_PER_DAO_ANH = 10000; // 10.000 Tu Vi để thai nghén hoàn tất 1 Đạo Anh vào Thiên Cung Thật
 
 export const KIEP_EXP_REQUIREMENTS = [
-  50,   // Kiếp 1: 50 Thiên Mệnh
-  120,  // Kiếp 2: 120 Thiên Mệnh
-  250,  // Kiếp 3: 250 Thiên Mệnh
-  400,  // Kiếp 4: 400 Thiên Mệnh
-  500,  // Kiếp 5: 500 Thiên Mệnh
+  5000,   // Kiếp 1: 5.000 Tu Vi
+  12000,  // Kiếp 2: 12.000 Tu Vi
+  25000,  // Kiếp 3: 25.000 Tu Vi
+  40000,  // Kiếp 4: 40.000 Tu Vi
+  50000,  // Kiếp 5: 50.000 Tu Vi (Đại Viên Mãn)
 ];
 
 // Phần thưởng Lực Thiên Mệnh cơ bản khi Đạo Anh vượt kiếp thành công

@@ -6218,7 +6218,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                               cursor: 'pointer'
                             }}
                           >
-                            ⚡ Quán Chú 1.000 Thiên Mệnh
+                            ⚡ Quán Chú 1.000 Tu Vi
                           </button>
 
                           {canTribulate && (
