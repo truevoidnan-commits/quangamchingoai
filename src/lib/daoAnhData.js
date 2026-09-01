@@ -1288,7 +1288,8 @@ for (const [filepath, mod] of Object.entries(daoAnhModules)) {
   bundledDaoAnh[filename] = mod;
 }
 
-export { getAssetUrl } from './assetHelper';
+import { getAssetUrl } from './assetHelper';
+export { getAssetUrl };
 
 export function resolveDaoAnhImage(rawPathOrId) {
   if (!rawPathOrId) return '';
