@@ -5786,37 +5786,45 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                       <title>{`${daoAnhDef?.name || arch.name} [Kiếp ${currentKiep}/5 · ${isMaxKiep ? 'Đại Viên Mãn' : (isReady80 ? `Sẵn sàng độ kiếp ${expPercent}%` : `${expPercent}% Linh Lực`)}]`}</title>
 
                       <g transform={`translate(${pos.x}, ${pos.y})`}>
-                        <g transform={`scale(${nodeScale})`}>
-                          <g transform={floatTransform} style={{ willChange: 'transform' }}>
-                            
-                            {/* 1. HIỂN THỊ ĐẠO ẢNH PHÁP THÂN HOÀNG KIM / CHIBI GEN AI */}
+                        <g style={{ animation: 'spiritBreathing 3.6s ease-in-out infinite alternate', animationDelay: `${idx * 0.35}s`, willChange: 'transform' }}>
+                          
+                          {/* Vầng hào quang nền */}
+                          <ellipse
+                            cx="0"
+                            cy="28"
+                            rx={74 * nodeScale}
+                            ry={24 * nodeScale}
+                            fill={daoAnhDef?.primaryColor || arch.color}
+                            opacity={isReady80 ? 0.45 : 0.22}
+                          />
+
+                          <g transform={`scale(${nodeScale})`}>
+                            {/* 1. HIỂN THỊ ĐẠO ẢNH PHÁP THÂN HOÀNG KIM / CHIBI GEN AI (CHUẨN 144x144) */}
                             <g>
                               {daoAnhDef?.image ? (
-                                <g style={{ willChange: 'transform', animation: 'spiritBreathing 3.6s ease-in-out infinite alternate', transform: 'scale(1)', transformOrigin: '0 0' }}>
+                                <g transform={`translate(${transCfg.x || 0}, ${transCfg.y || 0}) scale(${transCfg.scale || 1})`}>
                                   <image
                                     href={getAssetUrl(getDaoAnhEvolutionImage(daoAnhDef, currentKiep))}
-                                    x={-48 + (transCfg.x || 0)}
-                                    y={-48 + (transCfg.y || 0)}
-                                    width={96 * (transCfg.scale || 1)}
-                                    height={96 * (transCfg.scale || 1)}
+                                    x="-72"
+                                    y="-76"
+                                    width="144"
+                                    height="144"
                                     preserveAspectRatio="xMidYMid meet"
                                     style={{
-                                      transformOrigin: '0 0',
                                       filter: isMaxKiep
                                         ? 'drop-shadow(0 0 16px #fde047)'
                                         : isReady80
                                         ? 'drop-shadow(0 0 16px #f0abfc)'
-                                        : `drop-shadow(0 0 12px ${daoAnhDef.glowColor || arch.color || '#fbbf24'})`,
+                                        : `drop-shadow(0 0 14px ${daoAnhDef.glowColor || arch.color || '#fbbf24'})`,
                                     }}
                                   />
                                 </g>
                               ) : (
-                                <g transform="scale(1.15)">
+                                <g transform="scale(1.5)">
                                   {renderDetailedPrimordialAvatar(arch, currentKiep, isMaxKiep, isReady80, false)}
                                 </g>
                               )}
                             </g>
-
                           </g>
                         </g>
                       </g>
