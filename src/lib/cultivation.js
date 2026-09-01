@@ -561,8 +561,28 @@ export function getCultivationState() {
       if (!state.ngungKhiPhapLevel) state.ngungKhiPhapLevel = 10;
     }
 
+    // NHẬN DIỆN VÀ KHÔI PHỤC CĂN CƠ KHIẾU 121 (hasEverUnlocked121):
+    // 1. Đã có 5 Mệnh Đăng trở lên (chỉ có thể hấp thụ khi mở 121)
+    // 2. has121st hoặc phapKhieu >= 121
+    // 3. selfMenhHoa >= 5
+    // 4. hasEverUnlocked121 đã là true
+    const hasPast121 = Boolean(
+      state.hasEverUnlocked121 ||
+      state.has121st ||
+      (state.phapKhieu || 0) >= 121 ||
+      (state.absorbedLamps || []).length >= 5 ||
+      (state.selfMenhHoa || 0) >= 5
+    );
+
+    if (hasPast121) {
+      state.hasEverUnlocked121 = true;
+      state.failed121st = false; // Xóa bỏ mọi cờ thất bại do phiên bản cũ
+    }
+
     if (state.has121st || state.phapKhieu >= 121) {
       state.has121st = true;
+      state.phapKhieu = 121;
+      state.hasEverUnlocked121 = true;
       state.selfMenhHoa = Math.max(state.selfMenhHoa || 0, 5);
     }
 
