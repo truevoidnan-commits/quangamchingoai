@@ -846,15 +846,28 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
           }
         }
 
-        // Nếu chạm hoặc vượt 120 khiếu, phần dư nạp vào tích lũy Khiếu 121 hoặc chuyển sang Uẩn Tích
+        // Nếu chạm hoặc vượt 120 khiếu, phần dư nạp vào Khiếu 121
         if (state.expCurrentRealm >= maxExp120) {
           const excess = state.expCurrentRealm - maxExp120;
           state.expCurrentRealm = maxExp120;
-          if (!state.has121st && !state.failed121st) {
+          
+          if (!state.has121st) {
             const needed121 = EXP_FOR_121_ATTEMPT - (state.attemptExp121 || 0);
             if (excess >= needed121) {
               state.attemptExp121 = EXP_FOR_121_ATTEMPT;
-              state.storedExp = (state.storedExp || 0) + (excess - needed121);
+              const rem = excess - needed121;
+              
+              // NẾU ĐÃ TỪNG MỞ 121 TRƯỚC ĐÓ -> TỰ ĐỘNG BẬT LẠI 121 NGAY
+              if (state.hasEverUnlocked121) {
+                state.has121st = true;
+                state.phapKhieu = 121;
+                state.selfMenhHoa = 5;
+                state.logs.unshift({
+                  text: '⚡ TÁI THỨC TỈNH PHÁP KHIẾU 121! Đã tích lũy đủ 800 Tu Vi, Pháp Khiếu 121 tự động thức tỉnh trở lại (+1 Hỏa Tự Thân)!',
+                  time: Date.now()
+                });
+              }
+              state.storedExp = (state.storedExp || 0) + rem;
             } else {
               state.attemptExp121 = (state.attemptExp121 || 0) + excess;
             }
@@ -863,26 +876,43 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
           }
         }
       } 
-      // 2. ĐÃ MỞ 120 KHIẾU NHƯNG CHƯA MỞ KHIẾU 121 (TÍCH LŨY TU VI XUNG KÍCH KHIẾU 121)
-      else if (state.phapKhieu === 120 && !state.has121st && !state.failed121st) {
+      // 2. ĐÃ MỞ 120 KHIẾU NHƯNG CHƯA BẬT KHIẾU 121
+      else if (state.phapKhieu === 120 && !state.has121st) {
         if ((state.attemptExp121 || 0) < EXP_FOR_121_ATTEMPT) {
           const needed = EXP_FOR_121_ATTEMPT - (state.attemptExp121 || 0);
           if (gainedExp >= needed) {
             state.attemptExp121 = EXP_FOR_121_ATTEMPT;
-            state.storedExp = (state.storedExp || 0) + (gainedExp - needed);
+            const rem = gainedExp - needed;
+            
+            // NẾU ĐÃ TỪNG MỞ 121 -> TỰ ĐỘNG BẬT LẠI 121 NGAY
+            if (state.hasEverUnlocked121) {
+              state.has121st = true;
+              state.phapKhieu = 121;
+              state.selfMenhHoa = 5;
+              state.logs.unshift({
+                text: '⚡ TÁI THỨC TỈNH PHÁP KHIẾU 121! Đã tích lũy đủ 800 Tu Vi, Pháp Khiếu 121 tự động thức tỉnh trở lại (+1 Hỏa Tự Thân)!',
+                time: Date.now()
+              });
+            }
+            state.storedExp = (state.storedExp || 0) + rem;
           } else {
             state.attemptExp121 = (state.attemptExp121 || 0) + gainedExp;
           }
         } else {
-          // Đã đủ điều kiện xung kích 121 mà chưa xung kích -> chuyển vào Uẩn Tích
+          // Đã đủ 800 Tu Vi
+          if (state.hasEverUnlocked121) {
+            state.has121st = true;
+            state.phapKhieu = 121;
+            state.selfMenhHoa = 5;
+          }
           state.storedExp = (state.storedExp || 0) + gainedExp;
         }
       } 
-      // 3. ĐÃ MỞ THÀNH CÔNG KHIẾU 121 HOẶC 120 KHIẾU ĐẠI VIÊN MÃN (BÌNH CẢNH TUYỆT ĐỐI)
+      // 3. ĐÃ Ở TRẠNG THÁI CỰC CẢNH 121 (BÌNH CẢNH VIÊN MÃN)
       else {
         state.storedExp = (state.storedExp || 0) + gainedExp;
         state.logs.unshift({
-          text: `🧘 BÌNH CẢNH TRÚC CƠ ĐẠI VIÊN MÃN! +${gainedExp} Tu Vi đọc truyện đã chuyển hóa thành Uẩn Tích (Hiện có: +${(state.storedExp).toLocaleString()} Tu Vi) chờ giải phóng khi Đột Phá Kim Đan!`,
+          text: `🧘 BÌNH CẢNH TRÚC CƠ ĐẠI VIÊN MÃN! +${gainedExp} Tu Vi đã nạp vào Uẩn Tích (Hiện có: +${(state.storedExp).toLocaleString()} Tu Vi) chờ Đột Phá Kim Đan!`,
           time: Date.now()
         });
       }
