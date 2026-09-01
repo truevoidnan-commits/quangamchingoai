@@ -406,7 +406,8 @@ const DEFAULT_STATE = {
   // Trúc cơ
   phapKhieu: 0, // 0 to 120
   selfMenhHoa: 0, // 0 to 4 (tự thân từ 120 khiếu)
-  has121st: false, // Pháp khiếu 121
+  has121st: false,
+  hasEverUnlocked121: false, // Pháp khiếu 121
   failed121st: false, // Đã xung kích thất bại (vĩnh viễn không mở được nữa)
   attemptExp121: 0,
 
@@ -2144,6 +2145,20 @@ export function unlockNextPhapKhieu() {
  */
 export function attemptUnlock121st() {
   const state = getCultivationState();
+
+  // NẾU ĐÃ TỪNG MỞ KHIẾU 121 TRƯỚC ĐÓ (NGÃ CẢNH TU LẠI): 100% TÁI KHAI MỞ THÀNH CÔNG KHÔNG CẦN XUNG KÍCH
+  if (state.hasEverUnlocked121) {
+    state.has121st = true;
+    state.hasEverUnlocked121 = true;
+    state.failed121st = false;
+    state.phapKhieu = 121;
+    state.selfMenhHoa = 5;
+    state.attemptExp121 = EXP_FOR_121_ATTEMPT;
+    const msg = '⚡ TÁI KHAI PHÁP KHIẾU 121 THÀNH CÔNG!\n\n"Căn cơ Cực Cảnh Sinh Tử tái sinh, Pháp Khiếu 121 bừng sáng, Hỗn Độn Thanh Liên thức tỉnh (+1 Hỏa Tự Thân)!"';
+    state.logs.unshift({ text: msg, time: Date.now() });
+    saveCultivationState(state);
+    return { state, isSuccess: true, message: msg };
+  }
 
   if (state.failed121st) {
     throw new Error('Bạn đã xung kích thất bại trước đó. Căn cơ pháp khiếu đã đóng kín, vĩnh viễn không thể mở Pháp Khiếu thứ 121 nữa!');

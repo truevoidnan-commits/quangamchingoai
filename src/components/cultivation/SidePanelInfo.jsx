@@ -803,7 +803,7 @@ export default function SidePanelInfo() {
                   }}
                 >
                   <span>⚡</span>
-                  <span>XUNG KÍCH CỰC CẢNH SINH TỬ</span>
+                  <span>{cultivation?.hasEverUnlocked121 ? 'TÁI KHAI PHÁP KHIẾU 121 (100% THÀNH CÔNG)' : 'XUNG KÍCH CỰC CẢNH SINH TỬ'}</span>
                 </button>
               )
             )}
