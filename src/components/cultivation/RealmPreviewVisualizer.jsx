@@ -5099,8 +5099,13 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           return { palaceIndex: idx, id: focusedDaoAnhId };
         })() : null;
 
+        const naCanvasWidth = isMobile ? 720 : 1280;
+        const naCanvasHeight = isMobile ? 1220 : 960;
+        const naCenterX = isMobile ? 360 : 640;
+        const naCenterY = isMobile ? 610 : 480;
+
         // 13 VỊ TRÍ TỔ ONG KIM CƯƠNG (3 - 2 - 3 - 2 - 3): HÀNG 3 DÃN RỘNG KHOẢNG CÁCH RA 2 MÉP (490PX MỖI BÊN)
-        const standard13Positions = [
+        const desktop13Positions = [
           { id: 'pos_0',  x: 640,  y: 480, isCenter: true, scale: 1.28, nw: 240 }, // Index 0: TÂM (Bản Mệnh Tối Cao Tọa Trấn Trung Xu)
           { id: 'pos_1',  x: 640,  y: 80,  scale: 1.22, nw: 230 },                 // Index 1: ĐỈNH GIỮA (Hàng 1 - Tinh Thần Đạo Anh)
           { id: 'pos_2',  x: 390,  y: 280, scale: 1.22, nw: 220 },                 // Index 2: HÀNG 2 TRONG-TRÁI (Thái Cổ Kim Long - x:390)
@@ -5116,7 +5121,23 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           { id: 'pos_12', x: 1130, y: 480, scale: 1.22, nw: 220 },                 // Index 12: HÀNG 3 CỰC-PHẢI (Dãn Ra x:1130)
         ];
 
-        const palaceCoordinates = standard13Positions;
+        const mobile13Positions = [
+          { id: 'pos_0',  x: 360, y: 610, isCenter: true, scale: 1.24, nw: 180 }, // Index 0: TÂM
+          { id: 'pos_1',  x: 360, y: 115, scale: 1.16, nw: 170 },                 // Index 1: ĐỈNH GIỮA
+          { id: 'pos_2',  x: 230, y: 360, scale: 1.16, nw: 165 },                 // Index 2: HÀNG 2 TRONG-TRÁI
+          { id: 'pos_3',  x: 105, y: 610, scale: 1.16, nw: 165 },                 // Index 3: HÀNG 3 CỰC-TRÁI
+          { id: 'pos_4',  x: 120, y: 1100, scale: 1.16, nw: 165 },                // Index 4: GÓC DƯỚI-TRÁI
+          { id: 'pos_5',  x: 600, y: 115, scale: 1.16, nw: 165 },                 // Index 5: GÓC TRÊN-PHẢI
+          { id: 'pos_6',  x: 230, y: 860, scale: 1.16, nw: 165 },                 // Index 6: HÀNG 4 TRONG-TRÁI
+          { id: 'pos_7',  x: 600, y: 1100, scale: 1.16, nw: 165 },                // Index 7: GÓC DƯỚI-PHẢI
+          { id: 'pos_8',  x: 360, y: 1100, scale: 1.16, nw: 170 },                // Index 8: ĐÁY GIỮA
+          { id: 'pos_9',  x: 490, y: 360, scale: 1.16, nw: 165 },                 // Index 9: HÀNG 2 TRONG-PHẢI
+          { id: 'pos_10', x: 120, y: 115, scale: 1.16, nw: 165 },                 // Index 10: GÓC TRÊN-TRÁI
+          { id: 'pos_11', x: 490, y: 860, scale: 1.16, nw: 165 },                 // Index 11: HÀNG 4 TRONG-PHẢI
+          { id: 'pos_12', x: 615, y: 610, scale: 1.16, nw: 165 },                 // Index 12: HÀNG 3 CỰC-PHẢI
+        ];
+
+        const palaceCoordinates = isMobile ? mobile13Positions : desktop13Positions;
 
         // MAPPING ẢNH GEN AI CHO MỆNH ĐĂNG & VẬT TRẤN ÁP
         const lampGenMap = {
@@ -5581,7 +5602,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               overflow: 'hidden'
             }}>
               <svg
-                viewBox="0 0 1280 960"
+                viewBox={`0 0 ${naCanvasWidth} ${naCanvasHeight}`}
                 preserveAspectRatio="xMidYMid meet"
                 style={{
                   position: 'absolute',
@@ -5671,8 +5692,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   href={bgTrucCoGalaxy}
                   x="0"
                   y="0"
-                  width="1280"
-                  height="960"
+                  width={naCanvasWidth}
+                  height={naCanvasHeight}
                   preserveAspectRatio="xMidYMid slice"
                   opacity="0.9"
                 />
@@ -5681,8 +5702,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 <rect
                   x="0"
                   y="0"
-                  width="1280"
-                  height="960"
+                  width={naCanvasWidth}
+                  height={naCanvasHeight}
                   fill="url(#celestialSanctumGlow)"
                   style={{ mixBlendMode: 'screen' }}
                 />
@@ -5691,7 +5712,16 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 <g opacity="0.85">
                   {/* Đường Linh Mạch Cực Biên & Trục Trận */}
                   <path
-                    d={`
+                    d={isMobile ? `
+                      M 120,115 L 360,115 L 600,115
+                      M 120,1100 L 360,1100 L 600,1100
+                      M 360,115 L 360,1100
+                      M 105,610 L 615,610
+                      M 120,115 L 230,360 L 105,610 L 230,860 L 120,1100
+                      M 600,115 L 490,360 L 615,610 L 490,860 L 600,1100
+                      M 360,115 L 230,360 L 360,610 L 490,360 L 360,115
+                      M 360,1100 L 230,860 L 360,610 L 490,860 L 360,1100
+                    ` : `
                       M 150,80 L 640,80 L 1130,80
                       M 150,870 L 640,870 L 1130,870
                       M 640,80 L 640,870
@@ -5709,24 +5739,24 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                   {/* Vòng Trận Đồ Hoàng Kim Trung Xu */}
                   <circle
-                    cx="640"
-                    cy="480"
-                    r="260"
+                    cx={naCenterX}
+                    cy={naCenterY}
+                    r={isMobile ? 220 : 260}
                     fill="none"
                     stroke="rgba(251, 191, 36, 0.18)"
                     strokeWidth="1.2"
                     strokeDasharray="8 10"
-                    style={{ transformOrigin: '640px 480px', animation: 'haloSpinSlow 120s linear infinite', willChange: 'transform' }}
+                    style={{ transformOrigin: `${naCenterX}px ${naCenterY}px`, animation: 'haloSpinSlow 120s linear infinite', willChange: 'transform' }}
                   />
                   <circle
-                    cx="640"
-                    cy="480"
-                    r="490"
+                    cx={naCenterX}
+                    cy={naCenterY}
+                    r={isMobile ? 440 : 490}
                     fill="none"
                     stroke="rgba(192, 132, 252, 0.15)"
                     strokeWidth="1.2"
                     strokeDasharray="12 14"
-                    style={{ transformOrigin: '640px 480px', animation: 'haloSpinReverse 160s linear infinite', willChange: 'transform' }}
+                    style={{ transformOrigin: `${naCenterX}px ${naCenterY}px`, animation: 'haloSpinReverse 160s linear infinite', willChange: 'transform' }}
                   />
                 </g>
 
