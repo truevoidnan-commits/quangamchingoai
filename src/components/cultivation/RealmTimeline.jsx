@@ -82,7 +82,7 @@ export default function RealmTimeline() {
           {currentRealm === 'gia_anh' ? 'GIẢ ANH KỲ' : 'NGUYÊN ANH KỲ'}
         </h3>
         <p>
-          {isNguyenAnh ? '✦ 13 Đạo Anh Trận' : 'Cửu Thiên Đạo Anh'}
+          {isNguyenAnh ? `✦ ${cultivation?.daoAnhs?.length || 11} Đạo Anh Trận` : 'Cửu Thiên Đạo Anh'}
         </p>
       </div>
 

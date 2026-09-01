@@ -5761,9 +5761,10 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   />
                 </g>
 
-                {/* ─── QUẦN THỂ 13 PHÁP TƯỚNG ĐẠO ANH BẢN NGUYÊN TỌA TRẤN ─── */}
-                {palaceCoordinates.map((pos, palaceIdx) => {
-                  const daoAnh = existingDaoAnhs.find(d => d.palaceIndex === palaceIdx) || { palaceIndex: palaceIdx, currentKiep: 0, currentExp: 0 };
+                {/* ─── QUẦN THỂ ĐẠO ANH BẢN NGUYÊN TỌA TRẤN THEO ĐÚNG SỐ THIÊN CUNG THỰC TẾ ─── */}
+                {existingDaoAnhs.map((daoAnh, idx) => {
+                  const palaceIdx = daoAnh.palaceIndex !== undefined ? daoAnh.palaceIndex : idx;
+                  const pos = palaceCoordinates[palaceIdx] || palaceCoordinates[idx] || palaceCoordinates[0];
                   const currentKiep = daoAnh.currentKiep || 0;
                   const isMaxKiep = currentKiep >= 5;
                   const expPercent = Math.min(100, Math.floor(((daoAnh.currentExp || 0) / (daoAnh.maxExp || KIEP_EXP_REQUIREMENTS[currentKiep] || 5000)) * 100));
