@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Hệ thống Tu Vi, Chiến Lực & Thất Thập Nhị Huyền Môn Mệnh Đăng (72 Mệnh Đăng) – Thiên Cơ Lâu
  *
  * CHIẾN LỰC THEO TỪNG CẢNH GIỚI:
@@ -371,19 +371,17 @@ export const SUPPRESSING_ARTIFACTS = [
   { id: 'thai_so_than_vuong_the', name: 'Thái Sơ Thần Vương Thể', shortName: 'Thần Vương Thể', tier: 'than_pham', type: 'Thần Vương Đạo Thể', icon: '👑', color: '#ef4444', desc: 'Thần thể tối thượng của Thần Vương thời Thái Sơ, mỗi bước đi chấn động mười phương tinh không.', poem: 'Thái sơ thần vương, ngạo thị chư thiên.' },
   { id: 'tien_thien_thanh_the_dao_thai', name: 'Tiên Thiên Thánh Thể Đạo Thai', shortName: 'Thánh Thể Đạo Thai', tier: 'than_pham', type: 'Vô Địch Thể Chất', icon: '✨', color: '#ef4444', desc: 'Sự kết hợp hoàn mỹ giữa Hoang Cổ Thánh Thể và Tiên Thiên Đạo Thai, thể chất vô địch vạn cổ xưng tôn.', poem: 'Thánh thể đạo thai, vạn cổ vô song.' },
   { id: 'hon_don_diet_the_loi_tri', name: 'Hỗn Độn Diệt Thế Lôi Trì', shortName: 'Diệt Thế Lôi Trì', tier: 'than_pham', type: 'Hỗn Độn Thần Khí', icon: '⚡', color: '#ef4444', desc: 'Bể sấm sét diệt thế sinh ra từ hỗn độn, tôi luyện thiên cung đạt tới cảnh giới kim cương bất hoại.', poem: 'Hỗn độn lôi trì, thối luyện thần khu.' },
-  { id: 'khoi_nguyen_vu_tru_ban_nguyen', name: 'Khởi Nguyên Vũ Trụ Bản Nguyên', shortName: 'Vũ Trụ Bản Nguyên', tier: 'than_pham', type: 'Đại Đạo Bản Nguyên', icon: '🌌', color: '#ef4444', desc: 'Khối năng lượng bản nguyên đầu tiên của vũ trụ sơ khai, nâng đỡ toàn bộ lầu các thiên cung.', poem: 'Khởi nguyên bản nguyên, diễn sinh vạn giới.' },
+  { id: 'thao_tu_kiem_quyet', name: 'Thảo Tự Kiếm Quyết', shortName: 'Thảo Tự Kiếm', tier: 'than_pham', type: 'Thái Cổ Cửu Bí Kiếm Quyết', icon: '⚔️', color: '#ef4444', desc: 'Một ngọn cỏ chém rách nhật nguyệt tinh thần, kiếm ý chí cao tuyệt thế có thể bổ đôi chư thiên vũ trụ.', poem: 'Nhất thảo trảm tinh thần, kiếm ý phá cửu thiên.' },
   { id: 'tha_hoa_tu_tai_dai_phap', name: 'Tha Hóa Tự Tại Đại Pháp', shortName: 'Tha Hóa Tự Tại', tier: 'than_pham', type: 'Vô Thượng Tiên Công', icon: '📜', color: '#ef4444', desc: 'Đại pháp cái thế biến hóa vạn cổ thời không, hóa ra vô số phân thân chân thân bảo vệ đạo quả.', poem: 'Tha hóa tự tại, tha hóa vạn cổ.' },
   { id: 'tieu_tuc_menh_thuat', name: 'Tiểu Túc Mệnh Thuật', shortName: 'Túc Mệnh Thuật', tier: 'than_pham', type: 'Nghịch Thiên Bí Pháp', icon: '⛓️', color: '#ef4444', desc: 'Bí thuật tối cao thiêu đốt thọ nguyên để triệu hoán lực lượng túc mệnh vĩ đại, cắt đứt mọi gông cùm.', poem: 'Túc mệnh sở hướng, vạn pháp quy phục.' },
   { id: 'con_bang_tien_phap', name: 'Côn Bằng Tiên Pháp', shortName: 'Côn Bằng Pháp', tier: 'than_pham', type: 'Thập Hung Tuyệt Kỹ', icon: '🦅', color: '#ef4444', desc: 'Tiên pháp của Thái Cổ Thập Hung Côn Bằng, chưởng khống cực hạn âm dương và tốc độ vô địch thiên hạ.', poem: 'Côn bằng giương cánh, xé toạc cửu thiên.' },
-  { id: 'can_khon_luong_nghi_ho', name: 'Càn Khôn Lưỡng Nghi Hồ', shortName: 'Lưỡng Nghi Hồ', tier: 'than_pham', type: 'Tiên Thiên Thần Hồ', icon: '🍶', color: '#ef4444', desc: 'Hồ lô càn khôn thu nạp hai khí âm dương đất trời, chuyển hóa thành linh dịch cửu chuyển ôn dưỡng Kim Đan.', poem: 'Càn khôn lưỡng nghi, thâu tẫn càn khôn.' },
+  { id: 'trung_dong', name: 'Trùng Đồng', shortName: 'Trùng Đồng', tier: 'than_pham', type: 'Thái Cổ Thần Mâu', icon: '👁️', color: '#ef4444', desc: 'Thần nhãn song đồng thái cổ khai thiên tích địa, nhìn thấu bản nguyên đại đạo và diễn sinh thế giới thần quang.', poem: 'Trùng đồng khai thiên, khai tịch thế giới.' },
   { id: 'cuu_kiep_loi_nguc_kiem_phap', name: 'Cửu Kiếp Lôi Ngục Kiếm Pháp', shortName: 'Lôi Ngục Kiếm Pháp', tier: 'than_pham', type: 'Sát Phạt Kiếm Quyết', icon: '⚔️', color: '#ef4444', desc: 'Kiếm pháp triệu hoán chín tầng ngục lôi đình, trảm diệt sinh cơ và phong tỏa hoàn toàn kẻ địch.', poem: 'Cửu kiếp lôi ngục, kiếm trảm thần ma.' },
-  { id: 'van_de_tran_ma_quyen', name: 'Vạn Đế Trấn Ma Quyền', shortName: 'Trấn Ma Quyền', tier: 'than_pham', type: 'Chí Tôn Quyền Pháp', icon: '👊', color: '#ef4444', desc: 'Quyền pháp mang uy thế hợp nhất của vạn vị cổ đế, một quyền xuất ra thiên băng địa liệt, ma thần tan biến.', poem: 'Vạn đế hợp lực, nhất quyền trấn ma.' },
+  { id: 'hong_tran_ngung_vong_anh_hao_nguyet', name: 'Hồng Trần Ngưng Vọng Ánh Hạo Nguyệt', shortName: 'Hồng Trần Hạo Nguyệt', tier: 'than_pham', type: 'Vô Thượng Dị Tượng', icon: '🌕', color: '#ef4444', desc: 'Dị tượng vô thượng hồng trần ngưng vọng trăng sáng rực rỡ, ánh trăng chiếu rọi thế gian xua tan mọi ma chướng cõi phàm.', poem: 'Hồng trần ngưng vọng, hạo nguyệt chiếu chư thiên.' },
   { id: 'nhat_khi_hoa_tam_thanh', name: 'Nhất Khí Hóa Tam Thanh', shortName: 'Tam Thanh Quyết', tier: 'than_pham', type: 'Đạo Môn Đỉnh Cao Thần Thông', icon: '🪷', color: '#ef4444', desc: 'Thần thông tối cao của Đạo Môn, một luồng chân khí phân hóa thành ba đạo thân tương đương bản thể.', poem: 'Nhất khí hóa tam thanh, vạn cổ duy ngã tôn.' },
   { id: 'vo_thuy_vo_chung_vo_vi_than', name: 'Vô Thủy Vô Chung Vô Vi Thân', shortName: 'Vô Thủy Vô Chung', tier: 'than_pham', type: 'Vĩnh Hằng Bất Hủ Đạo Thể', icon: '🛡️', color: '#ef4444', desc: 'Thân xác bất tử không có điểm bắt đầu cũng không có điểm kết thúc, miễn nhiễm tuyệt đối mọi đòn sát phạt.', poem: 'Vô thủy vô chung, vĩnh hằng bất diệt.' },
   { id: 'diet_the_loi_viem_dong', name: 'Diệt Thế Lôi Viêm Đồng', shortName: 'Lôi Viêm Đồng', tier: 'than_pham', type: 'Thần Thông Cực Hạn Nhãn Đồng', icon: '👁️', color: '#ef4444', desc: 'Đồng tử thần thoại ngưng tụ lôi đình và ngọn lửa diệt thế, một ánh nhìn thiêu rụi hư không và cấm chế.', poem: 'Lôi viêm đồng tử, chiếu rọi chư thiên.' },
-];
-
-const DEFAULT_STATE = {
+];const DEFAULT_STATE = {
   totalExp: 0,
   expCurrentRealm: 0,
   chaptersReadCount: 0,
@@ -1526,13 +1524,13 @@ export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = 
     'thai_so_than_vuong_the': 'Thái Sơ Thần Vương Cung',
     'tien_thien_thanh_the_dao_thai': 'Thánh Thể Đạo Thai Cung',
     'hon_don_diet_the_loi_tri': 'Diệt Thế Lôi Trì Cung',
-    'khoi_nguyen_vu_tru_ban_nguyen': 'Khởi Nguyên Vũ Trụ Cung',
+    'thao_tu_kiem_quyet': 'Thảo Tự Kiếm Cung',
     'tha_hoa_tu_tai_dai_phap': 'Tha Hóa Tự Tại Cung',
     'tieu_tuc_menh_thuat': 'Tiểu Túc Mệnh Cung',
     'con_bang_tien_phap': 'Côn Bằng Tiên Cung',
-    'can_khon_luong_nghi_ho': 'Càn Khôn Lưỡng Nghi Cung',
+    'trung_dong': 'Trùng Đồng Cung',
     'cuu_kiep_loi_nguc_kiem_phap': 'Cửu Kiếp Lôi Ngục Cung',
-    'van_de_tran_ma_quyen': 'Vạn Đế Trấn Ma Cung',
+    'hong_tran_ngung_vong_anh_hao_nguyet': 'Hồng Trần Hạo Nguyệt Cung',
     'nhat_khi_hoa_tam_thanh': 'Nhất Khí Tam Thanh Cung',
     'vo_thuy_vo_chung_vo_vi_than': 'Vô Thủy Vô Chung Cung',
     'diet_the_loi_viem_dong': 'Diệt Thế Lôi Viêm Cung',
