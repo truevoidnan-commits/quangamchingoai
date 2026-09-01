@@ -5762,146 +5762,59 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
 
                 {/* ─── QUẦN THỂ 13 PHÁP TƯỚNG ĐẠO ANH BẢN NGUYÊN TỌA TRẤN ─── */}
-                {palaceCoordinates.map((pos, i) => {
-                  const isLampPalace = i < lampCount;
-                  const selfLocalIdx = isLampPalace ? null : (maxThienCung - 1) - i;
-                  const lampId = isLampPalace ? lampList[i] : null;
-                  const anchor = !isLampPalace ? (cultivation?.palaceAnchors?.[selfLocalIdx] || cultivation?.palaceAnchors?.[i - lampCount] || cultivation?.palaceAnchors?.[i]) : null;
-
-                  const palaceName = (() => {
-                    if (isLampPalace) {
-                      const lobj = LIFE_LAMPS.find(l => l.id === lampId);
-                      return lobj ? getLampPalaceName(lobj) : `Chân Cung #${i + 1}`;
-                    }
-                    if (anchor) {
-                      const artifactObj = (SUPPRESSING_ARTIFACTS || []).find(a => a.id === anchor.id) || anchor;
-                      const aId = anchor.id || artifactObj?.id;
-                      const aName = anchor.name || artifactObj?.name || '';
-                      if (aId === 'luan_hoi_ban' || aName.includes('Luân Hồi')) return 'Lục Đạo Luân Hồi Cung';
-                      if (aId && typeof getPalaceNameForArtifact === 'function') {
-                        const computed = getPalaceNameForArtifact(artifactObj || anchor);
-                        if (computed) return computed;
-                      }
-                      return anchor.palaceName || `${artifactObj?.shortName || artifactObj?.name || 'Bảo Vật'} Cung`;
-                    }
-                    return `Thiên Cung Tự Thân #${selfLocalIdx !== null ? selfLocalIdx + 1 : i + 1}`;
-                  })();
-
-                  const da = existingDaoAnhs.find(d => d.palaceIndex === i) || existingDaoAnhs[i] || null;
-                  const currentKiep = da ? (da.currentKiep || 0) : 0;
+                {palaceCoordinates.map((pos, palaceIdx) => {
+                  const daoAnh = existingDaoAnhs.find(d => d.palaceIndex === palaceIdx) || { palaceIndex: palaceIdx, currentKiep: 0, currentExp: 0 };
+                  const currentKiep = daoAnh.currentKiep || 0;
                   const isMaxKiep = currentKiep >= 5;
-                  const curExp = da ? (da.currentExp !== undefined ? da.currentExp : (da.currentThienMenh || 0)) : 0;
-                  const maxExp = da ? (da.maxExp || KIEP_EXP_REQUIREMENTS[currentKiep] || 5000) : 5000;
-                  const expPercent = Math.min(100, Math.floor((curExp / maxExp) * 100));
+                  const expPercent = Math.min(100, Math.floor(((daoAnh.currentExp || 0) / (daoAnh.maxExp || KIEP_EXP_REQUIREMENTS[currentKiep] || 5000)) * 100));
                   const isReady80 = expPercent >= 80 && !isMaxKiep;
-                  const isHovered = hoveredPalace === `palace_na_${i}`;
-
-                  const arch = (() => {
-                    const t = (palaceName + ' ' + (lampId || '') + ' ' + (anchor?.id || '')).toLowerCase();
-                    if (t.includes('long') || t.includes('tổ long')) return { type: 'dragon', color: '#f59e0b', glow: '#fde047', name: 'Thái Cổ Kim Long' };
-                    if (t.includes('hồng mông') || t.includes('tử khí')) return { type: 'purple_lotus', color: '#c084fc', glow: '#f0abfc', name: 'Hồng Mông Tử Liên' };
-                    if (t.includes('kiếm') || t.includes('phạt thiên')) return { type: 'sword', color: '#facc15', glow: '#38bdf8', name: 'Vô Thượng Kiếm Thần' };
-                    if (t.includes('vận mệnh') || t.includes('tử nguyệt')) return { type: 'destiny_moon', color: '#a855f7', glow: '#e879f9', name: 'Tử Nguyệt Thần Đồng' };
-                    if (t.includes('luân hồi') || t.includes('lục đạo')) return { type: 'reincarnation', color: '#38bdf8', glow: '#e2e8f0', name: 'Lục Đạo Thái Cực' };
-                    if (t.includes('sáng thế') || t.includes('bàn nguyên')) return { type: 'phoenix', color: '#fde047', glow: '#4ade80', name: 'Sáng Thế Kim Phượng' };
-                    if (t.includes('ngọc điệp') || t.includes('tạo hóa')) return { type: 'jade_butterfly', color: '#67e8f9', glow: '#ffffff', name: 'Tạo Hóa Bích Điệp' };
-                    if (t.includes('thời không')) return { type: 'space_time', color: '#818cf8', glow: '#38bdf8', name: 'Tuế Nguyệt Bàn Chu' };
-                    if (t.includes('tiêu dao')) return { type: 'crane', color: '#2dd4bf', glow: '#bae6fd', name: 'Tiêu Dao Tiên Hạc' };
-                    if (t.includes('mộc') || t.includes('sinh mệnh')) return { type: 'world_tree', color: '#22c55e', glow: '#86efac', name: 'Khởi Nguyên Thần Mộc' };
-                    if (t.includes('đỉnh') || t.includes('bất hủ')) return { type: 'cauldron', color: '#eab308', glow: '#fbbf24', name: 'Cửu Châu Thần Đỉnh' };
-                    if (t.includes('hư vô') || t.includes('tịch diệt')) return { type: 'void_eye', color: '#94a3b8', glow: '#c084fc', name: 'Hư Vô Chi Đồng' };
-                    if (t.includes('túc mệnh') || t.includes('nhân quả')) return { type: 'karma_knot', color: '#f43f5e', glow: '#fde047', name: 'Nhân Quả Chi Kết' };
-                    return { type: 'sovereign_deity', color: '#fbbf24', glow: '#fde047', name: 'Chí Tôn Thần Thai' };
-                  })();
-
-                  const daoAnhDef = (() => {
-                    if (da) {
-                      const def = findDaoAnhDefinition(da, cultivation);
-                      if (def && def.image) return def;
-                    }
-                    if (lampId) {
-                      const match = DAO_ANH_LIST.find(d => d.sourceType === 'lamp' && d.sourceId === lampId);
-                      if (match && match.image) return match;
-                    }
-                    const artId = anchor?.id;
-                    if (artId) {
-                      const match = DAO_ANH_LIST.find(d => d.sourceType === 'artifact' && d.sourceId === artId);
-                      if (match && match.image) return match;
-                    }
-                    if (arch?.name) {
-                      const clean = arch.name.toLowerCase().replace(/đạo anh/gi, '').trim();
-                      const match = DAO_ANH_LIST.find(d => d.name.toLowerCase().includes(clean) || clean.includes(d.name.toLowerCase().replace(/đạo anh/gi, '').trim()));
-                      if (match && match.image) return match;
-                    }
-                    return findDaoAnhDefinition(da || { palaceIndex: i }, cultivation);
-                  })();
-
-                  const scale = (pos.scale || 1.0) * 1.30;
+                  
+                  const arch = { name: 'Đạo Anh', color: '#fbbf24' };
+                  const daoAnhDef = findDaoAnhDefinition(daoAnh, cultivation);
+                  const nodeScale = (pos.scale || 1.0) * 1.30;
                   const transCfg = getDaoAnhTransformConfig(daoAnhDef, currentKiep);
-
+                  const floatTransform = `translate(0, ${Math.sin(Date.now() / 1000 + palaceIdx) * 5})`;
+                  
                   return (
-                    <g key={`na-palace-group-${i}`}>
-                      <g
-                        key={`na-palace-${i}`}
-                        transform={`translate(${pos.x}, ${pos.y})`}
-                        style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
-                        onMouseEnter={() => setHoveredPalace(`palace_na_${i}`)}
-                        onMouseLeave={() => setHoveredPalace(null)}
-                        onClick={() => setFocusedDaoAnhId(da ? da.id : i)}
-                      >
-                        <g style={{ animation: 'spiritBreathing 3.6s ease-in-out infinite alternate', animationDelay: `${i * 0.35}s`, willChange: 'transform' }}>
-                          
-                          <ellipse
-                            cx="0"
-                            cy="28"
-                            rx={74 * scale}
-                            ry={24 * scale}
-                            fill={daoAnhDef?.primaryColor || arch.color}
-                            opacity={isReady80 ? 0.45 : (isHovered ? 0.38 : 0.22)}
-                          />
+                    <g
+                      key={`palace-dao-anh-node-${palaceIdx}`}
+                      onClick={() => setFocusedDaoAnhId(daoAnh.id || daoAnh.palaceIndex)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {/* Tooltip Chuẩn Phương Án D cho Sảnh Ngoài */}
+                      <title>{`${daoAnhDef?.name || arch.name} [Kiếp ${currentKiep}/5 · ${isMaxKiep ? 'Đại Viên Mãn' : (isReady80 ? `Sẵn sàng độ kiếp ${expPercent}%` : `${expPercent}% Linh Lực`)}]`}</title>
 
-                          <g transform={`scale(${scale})`}>
-                            {/* 1. HÌNH ẢNH GEN AI ĐẠO ANH HOẶC PHÁP TƯỚNG BẢN NGUYÊN (PHÓNG TO 144x144) */}
+                      <g transform={`translate(${pos.x}, ${pos.y})`}>
+                        <g transform={`scale(${nodeScale})`}>
+                          <g transform={floatTransform} style={{ willChange: 'transform' }}>
+                            
+                            {/* 1. HIỂN THỊ ĐẠO ẢNH PHÁP THÂN HOÀNG KIM / CHIBI GEN AI */}
                             <g>
                               {daoAnhDef?.image ? (
-                                <g style={{ willChange: 'transform' }}>
-                                  {/* Quầng sáng nhẹ phía sau ảnh */}
-                                  <circle
-                                    cx="0"
-                                    cy="0"
-                                    r="50"
-                                    fill={daoAnhDef.primaryColor || arch.color}
-                                    opacity={0.25}
+                                <g style={{ willChange: 'transform', animation: 'spiritBreathing 3.6s ease-in-out infinite alternate', transform: 'scale(1)', transformOrigin: '0 0' }}>
+                                  <image
+                                    href={getAssetUrl(getDaoAnhEvolutionImage(daoAnhDef, currentKiep))}
+                                    x={-48 + (transCfg.x || 0)}
+                                    y={-48 + (transCfg.y || 0)}
+                                    width={96 * (transCfg.scale || 1)}
+                                    height={96 * (transCfg.scale || 1)}
+                                    preserveAspectRatio="xMidYMid meet"
+                                    style={{
+                                      transformOrigin: '0 0',
+                                      filter: isMaxKiep
+                                        ? 'drop-shadow(0 0 16px #fde047)'
+                                        : isReady80
+                                        ? 'drop-shadow(0 0 16px #f0abfc)'
+                                        : `drop-shadow(0 0 12px ${daoAnhDef.glowColor || arch.color || '#fbbf24'})`,
+                                    }}
                                   />
-
-                                  {/* Hình ảnh Chibi Tiên Thai Gen AI Cắt Nền Trong Suốt (Đồng bộ tỉ lệ Scale & Toạ độ theo từng Kiếp) */}
-                                  <g transform={`translate(${transCfg.x}, ${transCfg.y}) scale(${transCfg.scale})`}>
-                                    <image
-                                      href={getAssetUrl(getDaoAnhEvolutionImage(daoAnhDef, currentKiep))}
-                                      x="-72"
-                                      y="-76"
-                                      width="144"
-                                      height="144"
-                                      preserveAspectRatio="xMidYMid meet"
-                                      style={{
-                                        filter: isReady80
-                                          ? 'drop-shadow(0 0 16px #f0abfc)'
-                                          : isMaxKiep
-                                          ? 'drop-shadow(0 0 16px #fde047)'
-                                          : `drop-shadow(0 0 14px ${daoAnhDef.glowColor || arch.color || '#fbbf24'})`,
-                                        pointerEvents: 'none',
-                                      }}
-                                    />
-                                  </g>
                                 </g>
                               ) : (
-                                <g transform="scale(1.5)">
+                                <g transform="scale(1.15)">
                                   {renderDetailedPrimordialAvatar(arch, currentKiep, isMaxKiep, isReady80, false)}
                                 </g>
                               )}
                             </g>
-
-
 
                           </g>
                         </g>
@@ -5912,58 +5825,48 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               </svg>
             </div>
 
-            {/* 3. MODAL XEM CẬN CẢNH ĐẠO ANH (FOCUS DETAIL MODAL) */}
+            {/* 3. MODAL XEM CẬN CẢNH ĐẠO ANH (FOCUS DETAIL MODAL SIÊU SANG TRỌNG) */}
             {focusedDaoAnhObj && (() => {
               const matchedDaoAnh = existingDaoAnhs.find(d => d.id === focusedDaoAnhId || d.palaceIndex === focusedDaoAnhObj.palaceIndex) || focusedDaoAnhObj;
               const curKiep = matchedDaoAnh.currentKiep || 0;
               const isMax = curKiep >= 5;
               const curExp = matchedDaoAnh.currentExp !== undefined ? matchedDaoAnh.currentExp : (matchedDaoAnh.currentThienMenh || 0);
-              const maxExp = matchedDaoAnh.maxExp || KIEP_EXP_REQUIREMENTS[curKiep] || 5000;
+              const maxExp = matchedDaoAnh.maxExp || KIEP_EXP_REQUIREMENTS[Math.min(4, curKiep)] || 5000;
               const percent = Math.min(100, Math.floor((curExp / maxExp) * 100));
-              const canTribulate = percent >= 80 && !isMax;
-
-              const tierKey = getDaoAnhTierKey(matchedDaoAnh, cultivation);
-              const tierInfo = LAMP_TIERS[tierKey] || LAMP_TIERS.than_pham;
-              const earnedTMOnSuccess = calculateDaoAnhTribulationReward(matchedDaoAnh, curKiep + 1, cultivation);
+              const canTribulate = !isMax && percent >= 80;
 
               const modalArch = (() => {
-                const t = ((matchedDaoAnh.name || '') + ' ' + (matchedDaoAnh.palaceName || '')).toLowerCase();
-                if (t.includes('long') || t.includes('tổ long')) return { type: 'dragon', color: '#f59e0b', glow: '#fde047', name: 'Thái Cổ Kim Long' };
-                if (t.includes('hồng mông') || t.includes('tử khí')) return { type: 'purple_lotus', color: '#c084fc', glow: '#f0abfc', name: 'Hồng Mông Tử Liên' };
-                if (t.includes('kiếm') || t.includes('phạt thiên')) return { type: 'sword', color: '#facc15', glow: '#38bdf8', name: 'Vô Thượng Kiếm Thần' };
-                if (t.includes('vận mệnh') || t.includes('tử nguyệt')) return { type: 'destiny_moon', color: '#a855f7', glow: '#e879f9', name: 'Tử Nguyệt Thần Đồng' };
+                const t = (matchedDaoAnh.title || matchedDaoAnh.name || '').toLowerCase();
+                if (t.includes('thần ma') || t.includes('ma công') || t.includes('tâm ma')) return { type: 'demon_god', color: '#c084fc', glow: '#ef4444', name: 'Đạo Ma Thần Thể' };
+                if (t.includes('thần vương') || t.includes('thái sơ') || t.includes('hoàng kim')) return { type: 'divine_king', color: '#fbbf24', glow: '#fef08a', name: 'Thái Sơ Thần Vương' };
+                if (t.includes('kim ô') || t.includes('thái dương') || t.includes('viêm')) return { type: 'solar_crow', color: '#f97316', glow: '#fbbf24', name: 'Kim Ô Liệt Diễm' };
+                if (t.includes('nguyệt') || t.includes('hồng trần') || t.includes('băng')) return { type: 'moon_goddess', color: '#e0e7ff', glow: '#38bdf8', name: 'Thái Âm Nguyệt Hoa' };
                 if (t.includes('luân hồi') || t.includes('lục đạo')) return { type: 'reincarnation', color: '#38bdf8', glow: '#e2e8f0', name: 'Lục Đạo Thái Cực' };
                 if (t.includes('sáng thế') || t.includes('bàn nguyên')) return { type: 'phoenix', color: '#fde047', glow: '#4ade80', name: 'Sáng Thế Kim Phượng' };
                 if (t.includes('ngọc điệp') || t.includes('tạo hóa')) return { type: 'jade_butterfly', color: '#67e8f9', glow: '#ffffff', name: 'Tạo Hóa Bích Điệp' };
                 if (t.includes('thời không')) return { type: 'space_time', color: '#818cf8', glow: '#38bdf8', name: 'Tuế Nguyệt Bàn Chu' };
                 if (t.includes('tiêu dao')) return { type: 'crane', color: '#2dd4bf', glow: '#bae6fd', name: 'Tiêu Dao Tiên Hạc' };
-                if (t.includes('mộc') || t.includes('sinh mệnh')) return { type: 'world_tree', color: '#22c55e', glow: '#86efac', name: 'Khởi Nguyên Thần Mộc' };
-                if (t.includes('đỉnh') || t.includes('bất hủ')) return { type: 'cauldron', color: '#eab308', glow: '#fbbf24', name: 'Cửu Châu Thần Đỉnh' };
-                if (t.includes('hư vô') || t.includes('tịch diệt')) return { type: 'void_eye', color: '#94a3b8', glow: '#c084fc', name: 'Hư Vô Chi Đồng' };
-                if (t.includes('túc mệnh') || t.includes('nhân quả')) return { type: 'karma_knot', color: '#f43f5e', glow: '#fde047', name: 'Nhân Quả Chi Kết' };
                 return { type: 'sovereign_deity', color: '#fbbf24', glow: '#fde047', name: 'Chí Tôn Thần Thai' };
               })();
 
-              const modalDaoAnhDef = (() => {
-                if (matchedDaoAnh) {
-                  const def = findDaoAnhDefinition(matchedDaoAnh, cultivation);
-                  if (def && def.image) return def;
-                }
-                const matchByName = DAO_ANH_LIST.find(d => 
-                  d.name.toLowerCase().includes((matchedDaoAnh.name || '').toLowerCase().replace(/đạo anh/gi, '').trim()) ||
-                  (modalArch.name && d.name.toLowerCase().includes(modalArch.name.toLowerCase()))
-                );
-                if (matchByName && matchByName.image) return matchByName;
-                return findDaoAnhDefinition(matchedDaoAnh, cultivation);
-              })();
+              const modalDaoAnhDef = findDaoAnhDefinition(matchedDaoAnh, cultivation);
+              const modalDaoAnhDisplayName = `Đạo Anh · ${modalDaoAnhDef?.name || modalArch.name || matchedDaoAnh.name || 'Bản Nguyên Thần Thể'}`.replace(/^Đạo Anh · Đạo Anh · /, 'Đạo Anh · ');
+              const tierInfo = LAMP_TIERS[getDaoAnhTierKey(matchedDaoAnh, cultivation)] || LAMP_TIERS.than_pham;
 
-              const modalDaoAnhDisplayName = (() => {
-                if (modalDaoAnhDef?.name) {
-                  const clean = modalDaoAnhDef.name.replace(/^Đạo Anh · /, '').replace(/^Đạo Anh /, '').trim();
-                  return `Đạo Anh · ${clean}`;
-                }
-                return `Đạo Anh · ${modalArch.name || matchedDaoAnh.name || 'Bản Nguyên Thần Thể'}`.replace(/^Đạo Anh · Đạo Anh · /, 'Đạo Anh · ');
-              })();
+              const kiepNames = [
+                'Sơ Thai · Linh Căn Khởi Nguyên',
+                'Nhất Kiếp · Tứ Tượng Thần Lôi',
+                'Nhị Kiếp · Lục Đạo Huyền Minh',
+                'Tam Kiếp · Bát Hoang Tru Tiên',
+                'Tứ Kiếp · Cửu U Hỗn Độn',
+                '👑 ĐẠI VIÊN MÃN · Vô Thượng Thái Sơ'
+              ];
+              const kiepTitle = kiepNames[Math.min(5, Math.max(0, curKiep))];
+
+              const modalTransCfg = getDaoAnhTransformConfig(modalDaoAnhDef, Math.max(1, curKiep));
+              const finalModalScale = (modalTransCfg?.scale || 1.0) * 1.25;
+              const modalOffsetX = (modalTransCfg?.x || 0) * 0.7;
+              const modalOffsetY = (modalTransCfg?.y || 0) * 0.7;
 
               return (
                 <div
@@ -5972,8 +5875,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     position: 'fixed',
                     inset: 0,
                     zIndex: 9999,
-                    background: 'rgba(0, 0, 0, 0.85)',
-                    backdropFilter: 'blur(10px)',
+                    background: 'rgba(0, 0, 0, 0.88)',
+                    backdropFilter: 'blur(12px)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -5984,35 +5887,62 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     onClick={(e) => e.stopPropagation()}
                     style={{
                       width: '100%',
-                      maxWidth: 680,
-                      background: 'linear-gradient(180deg, #0f172a 0%, #030712 100%)',
-                      border: `1.5px solid ${modalDaoAnhDef?.primaryColor || 'rgba(251, 191, 36, 0.5)'}`,
-                      borderRadius: 16,
+                      maxWidth: 620,
+                      background: 'radial-gradient(ellipse at top, #111a36 0%, #060a17 100%)',
+                      border: `1.5px solid ${modalDaoAnhDef?.primaryColor || 'rgba(251, 191, 36, 0.55)'}`,
+                      borderRadius: 20,
                       overflow: 'hidden',
                       display: 'flex',
                       flexDirection: 'column',
-                      boxShadow: '0 0 50px rgba(0, 0, 0, 0.9), 0 0 30px rgba(251, 191, 36, 0.25)'
+                      boxShadow: `0 0 60px rgba(0, 0, 0, 0.95), 0 0 35px ${modalDaoAnhDef?.primaryColor ? `${modalDaoAnhDef.primaryColor}33` : 'rgba(251, 191, 36, 0.25)'}`
                     }}
                   >
-                    {/* Header */}
+                    {/* Header Sang Trọng */}
                     <div style={{
-                      padding: '16px 22px',
-                      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                      padding: '18px 24px',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      background: 'rgba(15, 23, 42, 0.8)'
+                      background: 'rgba(15, 23, 42, 0.85)'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 24 }}>👑</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <div style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 12,
+                          background: 'rgba(251, 191, 36, 0.12)',
+                          border: '1.5px solid rgba(251, 191, 36, 0.5)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 22,
+                          boxShadow: '0 0 15px rgba(251, 191, 36, 0.25)'
+                        }}>
+                          {isMax ? '👑' : '⚡'}
+                        </div>
                         <div>
-                          <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--color-kim)', fontFamily: 'var(--font-serif)' }}>
-                            {modalDaoAnhDisplayName}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 17, fontWeight: 900, color: 'var(--color-kim)', fontFamily: 'var(--font-serif)', letterSpacing: 0.5 }}>
+                              {modalDaoAnhDisplayName}
+                            </span>
+                            <span style={{
+                              fontSize: 11,
+                              fontWeight: 800,
+                              padding: '2px 10px',
+                              borderRadius: 20,
+                              background: isMax ? 'rgba(251, 191, 36, 0.2)' : (canTribulate ? 'rgba(240, 171, 252, 0.2)' : 'rgba(56, 189, 248, 0.15)'),
+                              border: `1px solid ${isMax ? '#fde047' : (canTribulate ? '#f0abfc' : '#38bdf8')}`,
+                              color: isMax ? '#fef08a' : (canTribulate ? '#f0abfc' : '#38bdf8'),
+                              boxShadow: isMax ? '0 0 10px rgba(253, 224, 71, 0.3)' : 'none'
+                            }}>
+                              {kiepTitle}
+                            </span>
                           </div>
-                          <div style={{ fontSize: 12, color: modalDaoAnhDef?.primaryColor || modalArch.color || tierInfo.color || '#38bdf8', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span>Pháp Tướng: [{modalDaoAnhDef?.title || modalArch.name}]</span>
+                          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span>Pháp Tướng: <strong style={{ color: modalDaoAnhDef?.primaryColor || '#cbd5e1' }}>[{modalDaoAnhDef?.title || modalArch.name}]</strong></span>
                             <span>•</span>
-                            <span>Phẩm Cấp: {tierInfo.name}</span>
+                            <span>Phẩm Cấp: <strong style={{ color: '#fde047' }}>{tierInfo.name}</strong></span>
                           </div>
                         </div>
                       </div>
