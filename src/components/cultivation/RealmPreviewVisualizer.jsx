@@ -5100,9 +5100,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         })() : null;
 
         const naCanvasWidth = isMobile ? 720 : 1280;
-        const naCanvasHeight = isMobile ? 1220 : 960;
+        const naCanvasHeight = isMobile ? 1440 : 960;
         const naCenterX = isMobile ? 360 : 640;
-        const naCenterY = isMobile ? 610 : 480;
+        const naCenterY = isMobile ? 720 : 480;
 
         // 13 VỊ TRÍ TỔ ONG KIM CƯƠNG (3 - 2 - 3 - 2 - 3): HÀNG 3 DÃN RỘNG KHOẢNG CÁCH RA 2 MÉP (490PX MỖI BÊN)
         const desktop13Positions = [
@@ -5122,19 +5122,19 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         ];
 
         const mobile13Positions = [
-          { id: 'pos_0',  x: 360, y: 610, isCenter: true, scale: 1.24, nw: 180 }, // Index 0: TÂM
-          { id: 'pos_1',  x: 360, y: 115, scale: 1.16, nw: 170 },                 // Index 1: ĐỈNH GIỮA
-          { id: 'pos_2',  x: 230, y: 360, scale: 1.16, nw: 165 },                 // Index 2: HÀNG 2 TRONG-TRÁI
-          { id: 'pos_3',  x: 105, y: 610, scale: 1.16, nw: 165 },                 // Index 3: HÀNG 3 CỰC-TRÁI
-          { id: 'pos_4',  x: 120, y: 1100, scale: 1.16, nw: 165 },                // Index 4: GÓC DƯỚI-TRÁI
-          { id: 'pos_5',  x: 600, y: 115, scale: 1.16, nw: 165 },                 // Index 5: GÓC TRÊN-PHẢI
-          { id: 'pos_6',  x: 230, y: 860, scale: 1.16, nw: 165 },                 // Index 6: HÀNG 4 TRONG-TRÁI
-          { id: 'pos_7',  x: 600, y: 1100, scale: 1.16, nw: 165 },                // Index 7: GÓC DƯỚI-PHẢI
-          { id: 'pos_8',  x: 360, y: 1100, scale: 1.16, nw: 170 },                // Index 8: ĐÁY GIỮA
-          { id: 'pos_9',  x: 490, y: 360, scale: 1.16, nw: 165 },                 // Index 9: HÀNG 2 TRONG-PHẢI
-          { id: 'pos_10', x: 120, y: 115, scale: 1.16, nw: 165 },                 // Index 10: GÓC TRÊN-TRÁI
-          { id: 'pos_11', x: 490, y: 860, scale: 1.16, nw: 165 },                 // Index 11: HÀNG 4 TRONG-PHẢI
-          { id: 'pos_12', x: 615, y: 610, scale: 1.16, nw: 165 },                 // Index 12: HÀNG 3 CỰC-PHẢI
+          { id: 'pos_0',  x: 360, y: 720, isCenter: true, scale: 1.08, nw: 180 }, // Index 0: TÂM
+          { id: 'pos_1',  x: 360, y: 150, scale: 1.00, nw: 170 },                 // Index 1: ĐỈNH GIỮA (Cách mép trên 150px)
+          { id: 'pos_2',  x: 230, y: 435, scale: 1.00, nw: 165 },                 // Index 2: HÀNG 2 TRONG-TRÁI
+          { id: 'pos_3',  x: 105, y: 720, scale: 1.00, nw: 165 },                 // Index 3: HÀNG 3 CỰC-TRÁI
+          { id: 'pos_4',  x: 120, y: 1290, scale: 1.00, nw: 165 },                // Index 4: GÓC DƯỚI-TRÁI (Cách mép dưới 150px)
+          { id: 'pos_5',  x: 600, y: 150, scale: 1.00, nw: 165 },                 // Index 5: GÓC TRÊN-PHẢI (Cách mép trên 150px)
+          { id: 'pos_6',  x: 230, y: 1005, scale: 1.00, nw: 165 },                // Index 6: HÀNG 4 TRONG-TRÁI
+          { id: 'pos_7',  x: 600, y: 1290, scale: 1.00, nw: 165 },                // Index 7: GÓC DƯỚI-PHẢI (Cách mép dưới 150px)
+          { id: 'pos_8',  x: 360, y: 1290, scale: 1.00, nw: 170 },                // Index 8: ĐÁY GIỮA (Cách mép dưới 150px)
+          { id: 'pos_9',  x: 490, y: 435, scale: 1.00, nw: 165 },                 // Index 9: HÀNG 2 TRONG-PHẢI
+          { id: 'pos_10', x: 120, y: 150, scale: 1.00, nw: 165 },                 // Index 10: GÓC TRÊN-TRÁI (Cách mép trên 150px)
+          { id: 'pos_11', x: 490, y: 1005, scale: 1.00, nw: 165 },                // Index 11: HÀNG 4 TRONG-PHẢI
+          { id: 'pos_12', x: 615, y: 720, scale: 1.00, nw: 165 },                 // Index 12: HÀNG 3 CỰC-PHẢI
         ];
 
         const palaceCoordinates = isMobile ? mobile13Positions : desktop13Positions;
@@ -5713,14 +5713,14 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   {/* Đường Linh Mạch Cực Biên & Trục Trận */}
                   <path
                     d={isMobile ? `
-                      M 120,115 L 360,115 L 600,115
-                      M 120,1100 L 360,1100 L 600,1100
-                      M 360,115 L 360,1100
-                      M 105,610 L 615,610
-                      M 120,115 L 230,360 L 105,610 L 230,860 L 120,1100
-                      M 600,115 L 490,360 L 615,610 L 490,860 L 600,1100
-                      M 360,115 L 230,360 L 360,610 L 490,360 L 360,115
-                      M 360,1100 L 230,860 L 360,610 L 490,860 L 360,1100
+                      M 120,150 L 360,150 L 600,150
+                      M 120,1290 L 360,1290 L 600,1290
+                      M 360,150 L 360,1290
+                      M 105,720 L 615,720
+                      M 120,150 L 230,435 L 105,720 L 230,1005 L 120,1290
+                      M 600,150 L 490,435 L 615,720 L 490,1005 L 600,1290
+                      M 360,150 L 230,435 L 360,720 L 490,435 L 360,150
+                      M 360,1290 L 230,1005 L 360,720 L 490,1005 L 360,1290
                     ` : `
                       M 150,80 L 640,80 L 1130,80
                       M 150,870 L 640,870 L 1130,870
@@ -5741,7 +5741,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <circle
                     cx={naCenterX}
                     cy={naCenterY}
-                    r={isMobile ? 220 : 260}
+                    r={isMobile ? 260 : 260}
                     fill="none"
                     stroke="rgba(251, 191, 36, 0.18)"
                     strokeWidth="1.2"
@@ -5751,7 +5751,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <circle
                     cx={naCenterX}
                     cy={naCenterY}
-                    r={isMobile ? 440 : 490}
+                    r={isMobile ? 520 : 490}
                     fill="none"
                     stroke="rgba(192, 132, 252, 0.15)"
                     strokeWidth="1.2"
