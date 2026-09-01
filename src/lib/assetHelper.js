@@ -8,6 +8,10 @@ export function getAssetUrl(path) {
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:')) {
     return path;
   }
+  // Nếu đã là relative path asset của Vite (ví dụ './assets/' hoặc 'assets/')
+  if (path.startsWith('./assets/') || path.startsWith('assets/')) {
+    return path;
+  }
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
 
   if (typeof window !== 'undefined') {

@@ -1,23 +1,29 @@
 // =========================================================================
-// THIÊN CƠ LÂU - PERSISTENT SERVICE WORKER (Cache-First Image Engine)
-// Lưu trữ vĩnh viễn toàn bộ hình ảnh và tài nguyên vào ổ cứng thiết bị.
-// Tốc độ phản hồi: 0ms (Offline & Instant Local Disk Retrieval).
+// THIÊN CƠ LÂU - PERSISTENT SERVICE WORKER (V2 - Auto Cache Busting)
 // =========================================================================
 
-const IMAGE_CACHE = 'tcl-images-v1';
-const STATIC_CACHE = 'tcl-static-v1';
+const IMAGE_CACHE = 'tcl-images-v2';
+const STATIC_CACHE = 'tcl-static-v2';
+const CURRENT_CACHES = [IMAGE_CACHE, STATIC_CACHE];
 
 // Install: Activate immediately
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate: Take control of all clients immediately
+// Activate: Purge all old caches and take control of clients immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    clients.claim().then(() => {
-      console.log('[SW] Thiên Cơ Lâu Service Worker đã kích hoạt & quản lý Cache.');
-    })
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (!CURRENT_CACHES.includes(key)) {
+            console.log('[SW] Xóa cache cũ không tương thích:', key);
+            return caches.delete(key);
+          }
+        })
+      );
+    }).then(() => clients.claim())
   );
 });
 
@@ -26,31 +32,25 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // 1. IMAGE CACHE (Cache-First Strategy with Background Cache-Fill)
+  // 1. IMAGE CACHE (Chỉ cache đúng file ảnh, TUYỆT ĐỐI không cache JS/CSS bundles)
   const isImage = 
     request.destination === 'image' || 
-    url.pathname.match(/\.(png|jpg|jpeg|webp|svg|gif|ico)$/i) ||
-    url.pathname.includes('/assets/');
+    url.pathname.match(/\.(png|jpg|jpeg|webp|svg|gif|ico)(\?.*)?$/i);
 
   if (isImage) {
     event.respondWith(
       caches.open(IMAGE_CACHE).then((cache) => {
         return cache.match(request).then((cachedResponse) => {
-          if (cachedResponse) {
-            // Found in persistent cache -> Return instantly (0ms)
-            return cachedResponse;
-          }
-
-          // Not in cache yet -> Fetch once from network, then cache permanently
-          return fetch(request).then((networkResponse) => {
+          // Fetch fresh from network in background or return cache
+          const fetchPromise = fetch(request).then((networkResponse) => {
             if (networkResponse && networkResponse.status === 200) {
               cache.put(request, networkResponse.clone());
             }
             return networkResponse;
-          }).catch(() => {
-            // Fallback if offline
-            return cachedResponse;
-          });
+          }).catch(() => cachedResponse);
+
+          // If cached and valid, return cache instantly, else wait for network
+          return cachedResponse || fetchPromise;
         });
       })
     );
@@ -75,5 +75,5 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. CODE & HTML: Default Network-First for seamless app updates
+  // 3. CODE, HTML & BUNDLES: Luôn lấy mới từ Network để app cập nhật ngay lập tức
 });

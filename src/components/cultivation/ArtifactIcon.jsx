@@ -482,6 +482,11 @@ function SvgLamp({ color, size }) {
  */
 export default function ArtifactIcon({ item, isLamp = false, size = 28, className = '' }) {
   const [imgError, setImgError] = React.useState(false);
+
+  React.useEffect(() => {
+    setImgError(false);
+  }, [item?.id, isLamp]);
+
   if (!item && !isLamp) return <span style={{ width: size, height: size, display: 'inline-block' }} />;
 
   const tier  = item?.tier  || 'ha_pham';
@@ -503,6 +508,7 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
           <img
             src={getLampImageUrl(item.id)}
             alt={item?.name || 'Mệnh Đăng'}
+            loading="lazy"
             decoding="async"
             className={styles.aiImg}
             style={{ width: size, height: size }}
@@ -568,6 +574,7 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
         <img
           src={getArtifactImageUrl(item.id)}
           alt={item?.name}
+          loading="lazy"
           decoding="async"
           className={styles.aiImg}
           style={{ width: size, height: size }}

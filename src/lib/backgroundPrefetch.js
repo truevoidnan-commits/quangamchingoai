@@ -1,7 +1,7 @@
 // =========================================================================
-// UNIVERSAL BACKGROUND ASSET PREFETCHER
-// Tải ngầm toàn bộ hình ảnh tu luyện mọi lúc mọi nơi (kể cả khi vừa mở web không làm gì).
-// Lưu trực tiếp vào Service Worker CacheStorage (Bộ nhớ đệm vĩnh viễn trên ổ cứng).
+// UNIVERSAL BACKGROUND ASSET PREFETCHER (Gentle Drip Throttle)
+// Tải ngầm tài nguyên nhẹ nhàng trong thời gian rảnh rỗi (Idle Time).
+// Hoàn toàn không chiếm dụng băng thông hay bộ nhớ máy di động.
 // =========================================================================
 
 import { THAN_PHAM_AI_ICONS, LAMP_THAN_PHAM_AI_ICONS } from './artifactIcons';
@@ -20,74 +20,59 @@ export function startBackgroundPrefetch() {
 
   const urlQueue = [];
 
-  // 1. All Thần Phẩm Icons
+  // 1. Core Thần Phẩm & Lamp Icons
   Object.values(THAN_PHAM_AI_ICONS).forEach((url) => {
     if (url && !urlQueue.includes(url)) urlQueue.push(url);
   });
-
-  // 2. All Life Lamp Icons
   Object.values(LAMP_THAN_PHAM_AI_ICONS).forEach((url) => {
     if (url && !urlQueue.includes(url)) urlQueue.push(url);
   });
 
-  // 3. All Backgrounds
+  // 2. Core Backgrounds
   [bgTrucCoGalaxy, bgGodCosmicEye, imgHuyetHoGod, imgLongKinhGod, imgTuTuongWheelFlow].forEach((url) => {
     if (url && !urlQueue.includes(url)) urlQueue.push(url);
   });
 
-  // 4. All 5 Kiếp Evolution Images of all 42 Đạo Anh
+  // 3. Đạo Ảnh Kiếp 1 & Kiếp 5
   DAO_ANH_LIST.forEach((da) => {
-    for (let kiep = 1; kiep <= 5; kiep++) {
-      const url = getDaoAnhEvolutionImage(da, kiep);
-      if (url && !urlQueue.includes(url)) urlQueue.push(url);
-    }
+    const urlK1 = getDaoAnhEvolutionImage(da, 1);
+    const urlK5 = getDaoAnhEvolutionImage(da, 5);
+    if (urlK1 && !urlQueue.includes(urlK1)) urlQueue.push(urlK1);
+    if (urlK5 && !urlQueue.includes(urlK5)) urlQueue.push(urlK5);
   });
 
-  // Start preloading after initial paint (600ms)
+  // Tải từ tốn sau khi trang đã render xong (2000ms)
   setTimeout(() => {
-    const runWorker = async () => {
-      // Strategy 1: Direct CacheStorage caching (Fastest & Most reliable)
-      if ('caches' in window) {
-        try {
-          const cache = await caches.open('tcl-images-v1');
-          for (let i = 0; i < urlQueue.length; i += 3) {
-            const batch = urlQueue.slice(i, i + 3);
-            await Promise.allSettled(
-              batch.map(async (url) => {
-                const match = await cache.match(url);
-                if (!match) {
-                  const res = await fetch(url);
-                  if (res.ok) await cache.put(url, res);
-                }
-              })
-            );
+    let index = 0;
+    const processNext = async () => {
+      if (index >= urlQueue.length) return;
+      const url = urlQueue[index++];
+      
+      try {
+        if ('caches' in window) {
+          const cache = await caches.open('tcl-images-v2');
+          const match = await cache.match(url);
+          if (!match) {
+            const res = await fetch(url);
+            if (res && res.status === 200) await cache.put(url, res);
           }
-          console.log(`[Prefetch] ✅ Đã tải ngầm & lưu vĩnh viễn ${urlQueue.length} ảnh vào ổ cứng!`);
-          return;
-        } catch (e) {
-          // Fallback to Image DOM
+        } else {
+          const img = new Image();
+          img.decoding = 'async';
+          img.src = url;
         }
+      } catch {
+        // Silent catch to prevent any error bubbling
       }
 
-      // Strategy 2: Multi-stream Parallel DOM Preloader
-      let idx = 0;
-      const pump = () => {
-        if (idx >= urlQueue.length) return;
-        const url = urlQueue[idx++];
-        const img = new Image();
-        img.decoding = 'async';
-        img.src = url;
-        img.onload = img.onerror = () => {
-          setTimeout(pump, 40);
-        };
-      };
-      for (let c = 0; c < 3; c++) pump();
+      // Khoảng nghỉ 150ms giữa mỗi ảnh để CPU và RAM điện thoại luôn mát mẻ
+      if (window.requestIdleCallback) {
+        window.requestIdleCallback(() => setTimeout(processNext, 120), { timeout: 2000 });
+      } else {
+        setTimeout(processNext, 150);
+      }
     };
 
-    if ('requestIdleCallback' in window) {
-      window.requestIdleCallback(() => runWorker(), { timeout: 1000 });
-    } else {
-      runWorker();
-    }
-  }, 600);
+    processNext();
+  }, 2000);
 }

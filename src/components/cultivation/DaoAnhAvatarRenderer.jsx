@@ -113,6 +113,7 @@ export default function DaoAnhAvatarRenderer({
             key={`${daoAnh.id || 'da'}_kiep_${currentKiep}`}
             src={getDaoAnhEvolutionImage(daoAnh, currentKiep)}
             alt={daoAnh.name}
+            loading="lazy"
             decoding="async"
             onError={() => setImgError(true)}
             style={{
@@ -120,12 +121,11 @@ export default function DaoAnhAvatarRenderer({
               height: '100%',
               objectFit: 'contain',
               userSelect: 'none',
-              imageRendering: '-webkit-optimize-contrast',
               transform: getDaoAnhTransformStyle(daoAnh, currentKiep),
               transformOrigin: 'center center',
               backfaceVisibility: 'hidden',
               pointerEvents: 'none',
-              filter: showAura ? `drop-shadow(0 0 10px ${glow})` : 'none',
+              filter: showAura ? `drop-shadow(0 0 8px ${glow})` : 'none',
             }}
           />
         </div>

@@ -1292,9 +1292,13 @@ export { getAssetUrl } from './assetHelper';
 
 export function resolveDaoAnhImage(rawPathOrId) {
   if (!rawPathOrId) return '';
-  if (rawPathOrId.startsWith('http') || rawPathOrId.startsWith('data:')) return rawPathOrId;
+  if (rawPathOrId.startsWith('http') || rawPathOrId.startsWith('data:') || rawPathOrId.startsWith('blob:')) return rawPathOrId;
   const cleanKey = rawPathOrId.split(/[\/\\]/).pop().split('.')[0];
-  return bundledDaoAnh[cleanKey] || rawPathOrId;
+  if (bundledDaoAnh[cleanKey]) return bundledDaoAnh[cleanKey];
+  // Fallback: nếu chưa có hình ảnh Kiếp (ví dụ _k2, _k3, _k4, _k5), tự động dùng hình ảnh gốc
+  const baseKey = cleanKey.replace(/_k[1-5]$/, '');
+  if (bundledDaoAnh[baseKey]) return bundledDaoAnh[baseKey];
+  return getAssetUrl(rawPathOrId);
 }
 
 /**
