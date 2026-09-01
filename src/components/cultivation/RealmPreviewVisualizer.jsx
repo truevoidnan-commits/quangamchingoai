@@ -5902,14 +5902,14 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             </g>
 
                             {/* 2. ĐÀI LINH ẤN TIÊN HIỆP BÁT GIÁC KHẢM 5 TINH THẠCH ĐỘ KIẾP (THU GỌN TINH TẾ) */}
-                            <g transform="translate(0, 58)">
+                            <g transform="translate(0, 56)">
                               {/* Đài Bát Giác Pha Lê Thần Tinh */}
                               <polygon
                                 points="-38,-8 38,-8 43,0 38,8 -38,8 -43,0"
                                 fill="rgba(8, 14, 30, 0.94)"
-                                stroke={isMaxKiep ? 'rgba(251, 191, 36, 0.8)' : (isReady80 ? 'rgba(240, 171, 252, 0.75)' : 'rgba(56, 189, 248, 0.35)')}
+                                stroke={isMaxKiep ? 'rgba(251, 191, 36, 0.85)' : (isReady80 ? 'rgba(240, 171, 252, 0.75)' : 'rgba(56, 189, 248, 0.35)')}
                                 strokeWidth="0.9"
-                                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.6))' }}
+                                style={{ filter: isMaxKiep ? 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.5))' : 'drop-shadow(0 2px 4px rgba(0,0,0,0.6))' }}
                               />
 
                               {/* Mỏm Ngọc Phù Điêu 2 Đầu Đài */}
@@ -6003,31 +6003,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                 );
                               })}
                             </g>
-
-                            {/* 3. NHÃN NGỌC PHÙ TIẾN ĐỘ & TRẠNG THÁI SANG TRỌNG (GỌN GÀNG KHÔNG BỊ TRÀN) */}
-                            {isMaxKiep && (
-                              <g transform="translate(0, 73)">
-                                <rect x="-34" y="-6" width="68" height="12" rx="6" fill="rgba(180, 83, 9, 0.45)" stroke="#fde047" strokeWidth="0.7" />
-                                <text textAnchor="middle" y="2.8" fontSize="7.2" fontWeight="900" fill="#fef08a" fontFamily="var(--font-serif)" letterSpacing="0.5">
-                                  👑 ĐẠI VIÊN MÃN
-                                </text>
-                              </g>
-                            )}
-                            {isReady80 && (
-                              <g transform="translate(0, 73)" style={{ animation: 'daoAnhHeartbeat 1.4s ease-in-out infinite' }}>
-                                <rect x="-40" y="-6" width="80" height="12" rx="6" fill="rgba(112, 26, 117, 0.55)" stroke="#f0abfc" strokeWidth="0.8" />
-                                <text textAnchor="middle" y="2.8" fontSize="7.5" fontWeight="900" fill="#f0abfc" fontFamily="var(--font-serif)" letterSpacing="0.5">
-                                  ⚡ ĐỘ KIẾP {expPercent}%
-                                </text>
-                              </g>
-                            )}
-                            {!isMaxKiep && !isReady80 && (
-                              <g transform="translate(0, 72)">
-                                <text textAnchor="middle" y="2.6" fontSize="7.2" fontWeight="700" fill="#94a3b8" letterSpacing="0.6" fontFamily="monospace">
-                                  {expPercent}%
-                                </text>
-                              </g>
-                            )}
 
                           </g>
                         </g>
