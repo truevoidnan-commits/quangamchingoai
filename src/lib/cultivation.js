@@ -825,26 +825,6 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     gainedExp = Math.floor(Math.random() * (maxExp - minExp + 1)) + minExp;
   }
 
-  const isGrand = isGrandCompletion(state);
-
-  // TÍCH LŨY THIÊN MỆNH SỐ NHỎ KHI Ở NGUYÊN ANH / GIẢ ANH (+1 ~ +3 TM mỗi chu kỳ)
-  let gainedThienMenh = 0;
-  if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
-    state.isThienMenhUnlocked = true;
-    gainedThienMenh = Math.floor(Math.random() * 3) + 1; // 1 đến 3 Thiên Mệnh
-    state.totalThienMenh = (state.totalThienMenh || 0) + gainedThienMenh;
-
-    // Tự động nạp vào Đạo Anh đang độ kiếp (nếu có)
-    const daoAnhs = state.daoAnhs || [];
-    const activeDaoAnhs = daoAnhs.filter(da => (da.currentKiep || 0) < 5);
-    if (activeDaoAnhs.length > 0) {
-      const targetDa = activeDaoAnhs[0];
-      const maxExp = targetDa.maxExp || 50;
-      targetDa.maxExp = maxExp;
-      targetDa.currentExp = Math.min(maxExp, (targetDa.currentExp || 0) + gainedThienMenh);
-    }
-  }
-
   // Kiểm tra xem nhân vật có đang kẹt ở BÌNH CẢNH của cảnh giới hay không
   let isAtBottleneck = false;
   if (state.realm === 'ngung_khi') {
@@ -852,91 +832,12 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     if (path === 'the' && (state.ngungKhiTheExp || 0) >= 4500) isAtBottleneck = true;
     if (path === 'phap' && (state.ngungKhiPhapExp || 0) >= 4500) isAtBottleneck = true;
   } else if (state.realm === 'truc_co') {
-      const maxExp120 = TRUC_CO_KHIEU_THRESHOLDS[120] || 14568;
-      
-      // 1. ĐANG TRONG QUÁ TRÌNH MỞ 120 PHÁP KHIẾU ĐẦU TIÊN
-      if (state.phapKhieu < 120) {
-        state.expCurrentRealm = (state.expCurrentRealm || 0) + gainedExp;
-        const opened = getOpenedPhapKhieuFromExp(state.expCurrentRealm);
-        if (opened > state.phapKhieu) {
-          state.phapKhieu = Math.min(120, opened);
-          const newSelfHoa = Math.floor(state.phapKhieu / 30);
-          if (newSelfHoa > (state.selfMenhHoa || 0)) {
-            state.selfMenhHoa = newSelfHoa;
-          }
-        }
-
-        // Nếu chạm hoặc vượt 120 khiếu, phần dư nạp vào Khiếu 121
-        if (state.expCurrentRealm >= maxExp120) {
-          const excess = state.expCurrentRealm - maxExp120;
-          state.expCurrentRealm = maxExp120;
-          
-          if (!state.has121st) {
-            const needed121 = EXP_FOR_121_ATTEMPT - (state.attemptExp121 || 0);
-            if (excess >= needed121) {
-              state.attemptExp121 = EXP_FOR_121_ATTEMPT;
-              const rem = excess - needed121;
-              
-              // NẾU ĐÃ TỪNG MỞ 121 TRƯỚC ĐÓ -> TỰ ĐỘNG BẬT LẠI 121 NGAY
-              if (state.hasEverUnlocked121) {
-                state.has121st = true;
-                state.phapKhieu = 121;
-                state.selfMenhHoa = 5;
-                state.logs.unshift({
-                  text: '⚡ TÁI THỨC TỈNH PHÁP KHIẾU 121! Đã tích lũy đủ 800 Tu Vi, Pháp Khiếu 121 tự động thức tỉnh trở lại (+1 Hỏa Tự Thân)!',
-                  time: Date.now()
-                });
-              }
-              state.storedExp = (state.storedExp || 0) + rem;
-            } else {
-              state.attemptExp121 = (state.attemptExp121 || 0) + excess;
-            }
-          } else {
-            state.storedExp = (state.storedExp || 0) + excess;
-          }
-        }
-      } 
-      // 2. ĐÃ MỞ 120 KHIẾU NHƯNG CHƯA BẬT KHIẾU 121
-      else if (state.phapKhieu === 120 && !state.has121st) {
-        if ((state.attemptExp121 || 0) < EXP_FOR_121_ATTEMPT) {
-          const needed = EXP_FOR_121_ATTEMPT - (state.attemptExp121 || 0);
-          if (gainedExp >= needed) {
-            state.attemptExp121 = EXP_FOR_121_ATTEMPT;
-            const rem = gainedExp - needed;
-            
-            // NẾU ĐÃ TỪNG MỞ 121 -> TỰ ĐỘNG BẬT LẠI 121 NGAY
-            if (state.hasEverUnlocked121) {
-              state.has121st = true;
-              state.phapKhieu = 121;
-              state.selfMenhHoa = 5;
-              state.logs.unshift({
-                text: '⚡ TÁI THỨC TỈNH PHÁP KHIẾU 121! Đã tích lũy đủ 800 Tu Vi, Pháp Khiếu 121 tự động thức tỉnh trở lại (+1 Hỏa Tự Thân)!',
-                time: Date.now()
-              });
-            }
-            state.storedExp = (state.storedExp || 0) + rem;
-          } else {
-            state.attemptExp121 = (state.attemptExp121 || 0) + gainedExp;
-          }
-        } else {
-          // Đã đủ 800 Tu Vi
-          if (state.hasEverUnlocked121) {
-            state.has121st = true;
-            state.phapKhieu = 121;
-            state.selfMenhHoa = 5;
-          }
-          state.storedExp = (state.storedExp || 0) + gainedExp;
-        }
-      } 
-      // 3. ĐÃ Ở TRẠNG THÁI CỰC CẢNH 121 (BÌNH CẢNH VIÊN MÃN)
-      else {
-        state.storedExp = (state.storedExp || 0) + gainedExp;
-        state.logs.unshift({
-          text: `🧘 BÌNH CẢNH TRÚC CƠ ĐẠI VIÊN MÃN! +${gainedExp} Tu Vi đã nạp vào Uẩn Tích (Hiện có: +${(state.storedExp).toLocaleString()} Tu Vi) chờ Đột Phá Kim Đan!`,
-          time: Date.now()
-        });
+    if ((state.phapKhieu || 0) >= 120) {
+      if (state.has121st || state.failed121st || (state.attemptExp121 || 0) >= EXP_FOR_121_ATTEMPT) {
+        isAtBottleneck = true;
       }
-    } else if (state.realm === 'kim_dan') {
+    }
+  } else if (state.realm === 'kim_dan') {
     const lampCount = (state.absorbedLamps || []).length;
     const selfPalacesMax = Math.max(1, (state.maxThienCung || 6) - lampCount);
     if ((state.realizedThienCung || 0) >= selfPalacesMax) {
@@ -1023,138 +924,153 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     state.unreadDropsCount = (state.unreadDropsCount || 0) + 1;
   }
 
+  // TÍCH LŨY THIÊN MỆNH SỐ NHỎ KHI Ở NGUYÊN ANH / GIẢ ANH (+1 ~ +3 TM mỗi chu kỳ)
+  let gainedThienMenh = 0;
+  if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
+    state.isThienMenhUnlocked = true;
+    gainedThienMenh = Math.floor(Math.random() * 3) + 1; // 1 đến 3 Thiên Mệnh
+    state.totalThienMenh = (state.totalThienMenh || 0) + gainedThienMenh;
+
+    // Tự động nạp vào Đạo Anh đang độ kiếp (nếu có)
+    const daoAnhs = state.daoAnhs || [];
+    const activeDaoAnhs = daoAnhs.filter(da => (da.currentKiep || 0) < 5);
+    if (activeDaoAnhs.length > 0) {
+      const targetDa = activeDaoAnhs[0];
+      const maxExp = targetDa.maxExp || 50;
+      targetDa.maxExp = maxExp;
+      targetDa.currentExp = Math.min(maxExp, (targetDa.currentExp || 0) + gainedThienMenh);
+    }
+  }
+
   // XỬ LÝ TIẾN ĐỘ TU VI VÀ UẨN TÍCH BÌNH CẢNH
-  if (!isGrand) {
-    if (state.realm === 'ngung_khi') {
-      const path = state.ngungKhiActivePath === 'phap' ? 'phap' : 'the';
-      const theGained = path === 'the' ? gainedExp : 0;
-      const phapGained = path === 'phap' ? gainedExp : 0;
+  if (state.realm === 'ngung_khi') {
+    const path = state.ngungKhiActivePath === 'phap' ? 'phap' : 'the';
+    const theGained = path === 'the' ? gainedExp : 0;
+    const phapGained = path === 'phap' ? gainedExp : 0;
 
-      const prevTheLvl = state.ngungKhiTheLevel || 1;
-      const prevPhapLvl = state.ngungKhiPhapLevel || 1;
-
-      if (path === 'the' && (state.ngungKhiTheExp || 0) >= 4500) {
-        state.storedExp = (state.storedExp || 0) + gainedExp;
-      } else if (path === 'phap' && (state.ngungKhiPhapExp || 0) >= 4500) {
+    if (path === 'the') {
+      const curExp = state.ngungKhiTheExp || 0;
+      if (curExp >= 4500) {
         state.storedExp = (state.storedExp || 0) + gainedExp;
       } else {
-        if (theGained > 0) {
-          const newExp = (state.ngungKhiTheExp || 0) + theGained;
-          if (newExp > 4500) {
-            state.storedExp = (state.storedExp || 0) + (newExp - 4500);
-            state.ngungKhiTheExp = 4500;
-          } else {
-            state.ngungKhiTheExp = newExp;
-          }
-          for (let lvl = 10; lvl >= 1; lvl--) {
-            if (state.ngungKhiTheExp >= (NGUNG_KHI_THRESHOLDS[lvl - 1] || 0)) {
-              state.ngungKhiTheLevel = lvl;
-              break;
-            }
-          }
+        const newExp = curExp + theGained;
+        if (newExp > 4500) {
+          state.storedExp = (state.storedExp || 0) + (newExp - 4500);
+          state.ngungKhiTheExp = 4500;
+        } else {
+          state.ngungKhiTheExp = newExp;
         }
-
-        if (phapGained > 0) {
-          const newExp = (state.ngungKhiPhapExp || 0) + phapGained;
-          if (newExp > 4500) {
-            state.storedExp = (state.storedExp || 0) + (newExp - 4500);
-            state.ngungKhiPhapExp = 4500;
-          } else {
-            state.ngungKhiPhapExp = newExp;
-          }
-          for (let lvl = 10; lvl >= 1; lvl--) {
-            if (state.ngungKhiPhapExp >= (NGUNG_KHI_THRESHOLDS[lvl - 1] || 0)) {
-              state.ngungKhiPhapLevel = lvl;
-              break;
-            }
+        for (let lvl = 10; lvl >= 1; lvl--) {
+          if (state.ngungKhiTheExp >= (NGUNG_KHI_THRESHOLDS[lvl - 1] || 0)) {
+            state.ngungKhiTheLevel = lvl;
+            break;
           }
         }
       }
-
-      state.ngungKhiLevel = Math.max(state.ngungKhiTheLevel || 1, state.ngungKhiPhapLevel || 1);
-      state.expCurrentRealm = Math.max(state.ngungKhiTheExp || 0, state.ngungKhiPhapExp || 0);
-
-      const isTheMax = (state.ngungKhiTheExp || 0) >= 4500;
-      const isPhapMax = (state.ngungKhiPhapExp || 0) >= 4500;
-
-      if ((isTheMax || isPhapMax) && !state.readyBreakthroughTrucCo) {
-        state.readyBreakthroughTrucCo = true;
+    } else if (path === 'phap') {
+      const curExp = state.ngungKhiPhapExp || 0;
+      if (curExp >= 4500) {
+        state.storedExp = (state.storedExp || 0) + gainedExp;
+      } else {
+        const newExp = curExp + phapGained;
+        if (newExp > 4500) {
+          state.storedExp = (state.storedExp || 0) + (newExp - 4500);
+          state.ngungKhiPhapExp = 4500;
+        } else {
+          state.ngungKhiPhapExp = newExp;
+        }
+        for (let lvl = 10; lvl >= 1; lvl--) {
+          if (state.ngungKhiPhapExp >= (NGUNG_KHI_THRESHOLDS[lvl - 1] || 0)) {
+            state.ngungKhiPhapLevel = lvl;
+            break;
+          }
+        }
       }
-    } else if (state.realm === 'truc_co') {
-      const maxExp120 = TRUC_CO_KHIEU_THRESHOLDS[120] || 14568;
-      if (state.phapKhieu < 120) {
-        state.expCurrentRealm = (state.expCurrentRealm || 0) + gainedExp;
-        const opened = getOpenedPhapKhieuFromExp(state.expCurrentRealm);
-        if (opened > state.phapKhieu) {
-          state.phapKhieu = Math.min(120, opened);
-          const newSelfHoa = Math.floor(state.phapKhieu / 30);
-          if (newSelfHoa > (state.selfMenhHoa || 0)) {
-            state.selfMenhHoa = newSelfHoa;
-          }
-        }
+    }
 
-        // Nếu đã chạm/vượt ngưỡng 120 khiếu, phần dư nạp vào Khiếu 121 hoặc Uẩn Tích
-        if (state.expCurrentRealm >= maxExp120) {
-          const excess = state.expCurrentRealm - maxExp120;
-          state.expCurrentRealm = maxExp120;
-          if (!state.has121st && !state.failed121st) {
-            state.attemptExp121 = Math.min(EXP_FOR_121_ATTEMPT, (state.attemptExp121 || 0) + excess);
-            if ((state.attemptExp121 || 0) >= EXP_FOR_121_ATTEMPT) {
-              const rem = state.attemptExp121 - EXP_FOR_121_ATTEMPT;
-              state.storedExp = (state.storedExp || 0) + rem;
-            }
-          } else {
-            state.storedExp = (state.storedExp || 0) + excess;
-          }
+    state.ngungKhiLevel = Math.max(state.ngungKhiTheLevel || 1, state.ngungKhiPhapLevel || 1);
+    state.expCurrentRealm = Math.max(state.ngungKhiTheExp || 0, state.ngungKhiPhapExp || 0);
+
+    const isTheMax = (state.ngungKhiTheExp || 0) >= 4500;
+    const isPhapMax = (state.ngungKhiPhapExp || 0) >= 4500;
+
+    if ((isTheMax || isPhapMax) && !state.readyBreakthroughTrucCo) {
+      state.readyBreakthroughTrucCo = true;
+    }
+  } else if (state.realm === 'truc_co') {
+    const maxExp120 = TRUC_CO_KHIEU_THRESHOLDS[120] || 14568;
+    if (state.phapKhieu < 120) {
+      state.expCurrentRealm = (state.expCurrentRealm || 0) + gainedExp;
+      const opened = getOpenedPhapKhieuFromExp(state.expCurrentRealm);
+      if (opened > state.phapKhieu) {
+        state.phapKhieu = Math.min(120, opened);
+        const newSelfHoa = Math.floor(state.phapKhieu / 30);
+        if (newSelfHoa > (state.selfMenhHoa || 0)) {
+          state.selfMenhHoa = newSelfHoa;
         }
-      } else if (state.phapKhieu >= 120 && !state.has121st && !state.failed121st) {
-        if ((state.attemptExp121 || 0) < EXP_FOR_121_ATTEMPT) {
-          const needed = EXP_FOR_121_ATTEMPT - (state.attemptExp121 || 0);
-          if (gainedExp >= needed) {
-            state.attemptExp121 = EXP_FOR_121_ATTEMPT;
-            state.storedExp = (state.storedExp || 0) + (gainedExp - needed);
-          } else {
-            state.attemptExp121 = (state.attemptExp121 || 0) + gainedExp;
+      }
+
+      // Nếu đã chạm/vượt ngưỡng 120 khiếu, phần dư nạp vào Khiếu 121 hoặc Uẩn Tích
+      if (state.expCurrentRealm >= maxExp120) {
+        const excess = state.expCurrentRealm - maxExp120;
+        state.expCurrentRealm = maxExp120;
+        if (!state.has121st && !state.failed121st) {
+          state.attemptExp121 = Math.min(EXP_FOR_121_ATTEMPT, (state.attemptExp121 || 0) + excess);
+          if ((state.attemptExp121 || 0) >= EXP_FOR_121_ATTEMPT) {
+            const rem = state.attemptExp121 - EXP_FOR_121_ATTEMPT;
+            state.storedExp = (state.storedExp || 0) + rem;
           }
         } else {
-          state.storedExp = (state.storedExp || 0) + gainedExp;
+          state.storedExp = (state.storedExp || 0) + excess;
+        }
+      }
+    } else if (state.phapKhieu >= 120 && !state.has121st && !state.failed121st) {
+      if ((state.attemptExp121 || 0) < EXP_FOR_121_ATTEMPT) {
+        const needed = EXP_FOR_121_ATTEMPT - (state.attemptExp121 || 0);
+        if (gainedExp >= needed) {
+          state.attemptExp121 = EXP_FOR_121_ATTEMPT;
+          state.storedExp = (state.storedExp || 0) + (gainedExp - needed);
+        } else {
+          state.attemptExp121 = (state.attemptExp121 || 0) + gainedExp;
         }
       } else {
         state.storedExp = (state.storedExp || 0) + gainedExp;
       }
-    } else if (state.realm === 'kim_dan') {
-      const lampBonusCount = (state.absorbedLamps || []).length;
-      const selfPalacesMax = Math.max(1, state.maxThienCung - lampBonusCount);
+    } else {
+      state.storedExp = (state.storedExp || 0) + gainedExp;
+    }
+  } else if (state.realm === 'kim_dan') {
+    const lampBonusCount = (state.absorbedLamps || []).length;
+    const selfPalacesMax = Math.max(1, state.maxThienCung - lampBonusCount);
 
-      if (state.realizedThienCung < selfPalacesMax) {
-        const targetPalaceExp = getPalaceCost(state.realizedThienCung + 1);
-        const bottleneckExp = targetPalaceExp - 1;
-        if (state.currentThienCungExp < bottleneckExp) {
-          const needed = bottleneckExp - state.currentThienCungExp;
-          if (gainedExp > needed) {
-            state.currentThienCungExp = bottleneckExp;
-            state.storedExp = (state.storedExp || 0) + (gainedExp - needed);
-          } else {
-            state.currentThienCungExp += gainedExp;
-          }
+    if (state.realizedThienCung < selfPalacesMax) {
+      const targetPalaceExp = getPalaceCost(state.realizedThienCung + 1);
+      const bottleneckExp = targetPalaceExp - 1;
+      if (state.currentThienCungExp < bottleneckExp) {
+        const needed = bottleneckExp - state.currentThienCungExp;
+        if (gainedExp > needed) {
+          state.currentThienCungExp = bottleneckExp;
+          state.storedExp = (state.storedExp || 0) + (gainedExp - needed);
         } else {
-          state.storedExp = (state.storedExp || 0) + gainedExp;
+          state.currentThienCungExp += gainedExp;
         }
       } else {
-        const prevDaoAnhExp = state.daoAnhExp || 0;
-        if (prevDaoAnhExp < 10000) {
-          const needed = 10000 - prevDaoAnhExp;
-          if (gainedExp > needed) {
-            state.daoAnhExp = 10000;
-            state.currentThienCungExp = 10000;
-            state.storedExp = (state.storedExp || 0) + (gainedExp - needed);
-          } else {
-            state.daoAnhExp = prevDaoAnhExp + gainedExp;
-            state.currentThienCungExp = state.daoAnhExp;
-          }
+        state.storedExp = (state.storedExp || 0) + gainedExp;
+      }
+    } else {
+      const prevDaoAnhExp = state.daoAnhExp || 0;
+      if (prevDaoAnhExp < 10000) {
+        const needed = 10000 - prevDaoAnhExp;
+        if (gainedExp > needed) {
+          state.daoAnhExp = 10000;
+          state.currentThienCungExp = 10000;
+          state.storedExp = (state.storedExp || 0) + (gainedExp - needed);
         } else {
-          state.storedExp = (state.storedExp || 0) + gainedExp;
+          state.daoAnhExp = prevDaoAnhExp + gainedExp;
+          state.currentThienCungExp = state.daoAnhExp;
         }
+      } else {
+        state.storedExp = (state.storedExp || 0) + gainedExp;
       }
     }
   }
