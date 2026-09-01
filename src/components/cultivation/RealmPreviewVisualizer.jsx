@@ -1616,6 +1616,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
     anchorPalace,
     manifestDaoAnh,
     injectThienMenh,
+    attemptTribulationSingle,
     attemptTribulationAll,
     fillAllDaoAnhThienMenh,
     getDaoAnhTheme,
@@ -6150,143 +6151,72 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     </div>
 
                     {/* Modal Content */}
-                    <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 18, maxHeight: '75vh', overflowY: 'auto' }}>
+                    <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 18, maxHeight: '85vh', overflowY: 'auto' }}>
                       
-                      {/* Avatar Phòng Thiền Cận Cảnh */}
+                      {/* Avatar Phòng Thiền Cận Cảnh Thuần Show Đạo Ảnh Siêu To Sắc Nét */}
                       <div style={{
                         position: 'relative',
-                        height: 220,
-                        borderRadius: 12,
-                        background: 'radial-gradient(circle at center, rgba(30, 41, 75, 0.8) 0%, rgba(8, 12, 24, 0.95) 100%)',
-                        border: `1px solid ${modalDaoAnhDef?.primaryColor || modalArch.color || 'rgba(56, 189, 248, 0.3)'}`,
+                        height: 330,
+                        borderRadius: 14,
+                        background: 'radial-gradient(circle at center, rgba(30, 41, 75, 0.85) 0%, rgba(8, 12, 24, 0.98) 100%)',
+                        border: `1.5px solid ${modalDaoAnhDef?.primaryColor || modalArch.color || 'rgba(56, 189, 248, 0.4)'}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        boxShadow: `inset 0 0 40px ${modalDaoAnhDef?.primaryColor ? `${modalDaoAnhDef.primaryColor}22` : 'rgba(56, 189, 248, 0.15)'}`
                       }}>
-                        <svg width="100%" height="100%" viewBox="-100 -80 200 160" style={{ overflow: 'visible' }}>
-                          {/* Vành Hào Quang Tinh Tú */}
-                          <circle r="52" fill="none" stroke={modalDaoAnhDef?.primaryColor || modalArch.color} strokeWidth="1.6" strokeDasharray="4 4" style={{ transformOrigin: '0 0', animation: 'haloSpinSlow 30s linear infinite', willChange: 'transform' }} />
-                          <circle r="62" fill="none" stroke={modalDaoAnhDef?.secondaryColor || modalArch.glow} strokeWidth="0.8" opacity="0.5" style={{ transformOrigin: '0 0', animation: 'haloSpinReverse 45s linear infinite', willChange: 'transform' }} />
+                        <svg width="100%" height="100%" viewBox="-120 -120 240 240" style={{ overflow: 'visible' }}>
+                          {/* Vầng hào quang phát quang êm dịu thanh nhã */}
+                          <circle
+                            r="75"
+                            fill={modalDaoAnhDef?.primaryColor || modalArch.color}
+                            opacity={0.25}
+                            style={{ filter: 'blur(12px)' }}
+                          />
 
                           {modalDaoAnhDef?.image ? (
                             <g style={{ willChange: 'transform', animation: 'spiritBreathing 3.6s ease-in-out infinite alternate', transform: 'scale(1)', transformOrigin: '0 0' }}>
                               <image
                                 href={getAssetUrl(getDaoAnhEvolutionImage(modalDaoAnhDef, curKiep))}
-                                x="-56"
-                                y="-60"
-                                width="112"
-                                height="112"
+                                x="-95"
+                                y="-95"
+                                width="190"
+                                height="190"
                                 preserveAspectRatio="xMidYMid meet"
                                 style={{
                                   filter: isMax
-                                    ? 'drop-shadow(0 0 16px #fde047)'
+                                    ? 'drop-shadow(0 0 24px #fde047)'
                                     : canTribulate
-                                    ? 'drop-shadow(0 0 16px #f0abfc)'
-                                    : `drop-shadow(0 0 12px ${modalDaoAnhDef.glowColor || modalArch.color || '#fbbf24'})`,
+                                    ? 'drop-shadow(0 0 24px #f0abfc)'
+                                    : `drop-shadow(0 0 18px ${modalDaoAnhDef.glowColor || modalArch.color || '#fbbf24'})`,
                                 }}
                               />
                             </g>
                           ) : (
-                            <g transform="scale(1.4)">
+                            <g transform="scale(2.0)">
                               {renderDetailedPrimordialAvatar(modalArch, curKiep, isMax, canTribulate, true)}
                             </g>
                           )}
-
-                          {/* 5 Hạt Tinh Ấn Kiếp trong Modal */}
-                          <g transform="translate(0, 56)">
-                            {[-30, -15, 0, 15, 30].map((xPos, kIdx) => {
-                              const kiepNum = kIdx + 1;
-                              const isCompleted = curKiep >= kiepNum;
-                              const isCurrentActive = curKiep === kIdx && !isMax;
-
-                              if (isCompleted) {
-                                return (
-                                  <g key={`modal-kiep-${kIdx}`} transform={`translate(${xPos}, 0)`}>
-                                    <polygon
-                                      points="0,-4.5 4.5,0 0,4.5 -4.5,0"
-                                      fill={isMax ? '#fde047' : (modalDaoAnhDef?.glowColor || modalArch.glow || '#fde047')}
-                                      stroke="#ffffff"
-                                      strokeWidth="0.6"
-                                    />
-                                    <circle cx="0" cy="0" r="1.3" fill="#ffffff" />
-                                  </g>
-                                );
-                              }
-
-                              if (isCurrentActive) {
-                                return (
-                                  <g key={`modal-kiep-${kIdx}`} transform={`translate(${xPos}, 0)`}>
-                                    <polygon
-                                      points="0,-4 4,0 0,4 -4,0"
-                                      fill="rgba(56, 189, 248, 0.45)"
-                                      stroke="#38bdf8"
-                                      strokeWidth="1"
-                                    />
-                                    <circle cx="0" cy="0" r="1" fill="#38bdf8" />
-                                  </g>
-                                );
-                              }
-
-                              return (
-                                <g key={`modal-kiep-${kIdx}`} transform={`translate(${xPos}, 0)`}>
-                                  <polygon
-                                    points="0,-3.5 3.5,0 0,3.5 -3.5,0"
-                                    fill="none"
-                                    stroke="rgba(255, 255, 255, 0.25)"
-                                    strokeWidth="0.8"
-                                  />
-                                </g>
-                              );
-                            })}
-                          </g>
                         </svg>
-
-                        <div style={{
-                          position: 'absolute',
-                          bottom: 10,
-                          padding: '3px 14px',
-                          borderRadius: 20,
-                          background: 'rgba(0, 0, 0, 0.88)',
-                          border: `1px solid ${tierInfo.color || 'rgba(251, 191, 36, 0.5)'}`,
-                          fontSize: 11,
-                          fontWeight: 800,
-                          color: isMax ? 'var(--color-kim)' : (canTribulate ? '#f0abfc' : '#38bdf8')
-                        }}>
-                          {isMax ? '👑 ĐẠO ANH ĐẠI VIÊN MÃN (5/5 KIẾP)' : `⚡ NGUYÊN ANH KIẾP THỨ ${curKiep} (${canTribulate ? 'ĐÃ ĐẠT ≥80% SẴN SÀNG ĐỘ KIẾP' : 'ĐANG TÍCH LŨY LINH LỰC'})`}
-                        </div>
-                      </div>
-
-                      {/* Thông tin Lore & Phần thưởng Thiên Mệnh */}
-                      <div style={{ background: 'rgba(15, 23, 42, 0.6)', borderRadius: 10, padding: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-kim)', marginBottom: 6 }}>
-                          📜 Bản Nguyên Bí Lục
-                        </div>
-                        <div style={{ fontSize: 12, color: '#cbd5e1', lineHeight: 1.6 }}>
-                          {modalArch.name} là Đạo Anh pháp thân tối thượng thai nghén từ căn cơ thiên địa, trải qua 5 tầng Thiên Kiếp tôi luyện để chứng đạo Đại Viên Mãn.
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 12 }}>
-                          <span style={{ color: '#94a3b8' }}>Thiên Mệnh Thưởng Độ Kiếp Kế Tiếp:</span>
-                          <span style={{ color: '#fde047', fontWeight: 800 }}>+{earnedTMOnSuccess.toLocaleString()} TM</span>
-                        </div>
                       </div>
 
                       {/* Thanh Tiến Độ EXP Linh Lực */}
                       <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
-                          <span style={{ color: '#94a3b8' }}>Tiến Độ Tích Lũy Linh Lực Kiếp Thần:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 8 }}>
+                          <span style={{ color: '#cbd5e1', fontWeight: 600 }}>Tiến Độ Tích Lũy Linh Lực Kiếp Thần:</span>
                           <span style={{ color: isMax ? '#fde047' : '#38bdf8', fontWeight: 800 }}>
                             {curExp.toLocaleString()} / {maxExp.toLocaleString()} ({percent}%)
                           </span>
                         </div>
-                        <div style={{ height: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 5, overflow: 'hidden' }}>
+                        <div style={{ height: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 6, overflow: 'hidden' }}>
                           <div style={{
                             width: `${percent}%`,
                             height: '100%',
                             background: isMax 
                               ? 'linear-gradient(90deg, #f59e0b, #fde047)' 
                               : (canTribulate ? 'linear-gradient(90deg, #c084fc, #f0abfc)' : 'linear-gradient(90deg, #0284c7, #38bdf8)'),
-                            borderRadius: 5,
+                            borderRadius: 6,
                             transition: 'width 0.4s ease'
                           }} />
                         </div>
@@ -6294,7 +6224,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                       {/* Các Nút Thao Tác: Bơm Linh Lực / Độ Kiếp */}
                       {!isMax && (
-                        <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                        <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
                           <button
                             onClick={() => {
                               if (typeof injectThienMenh === 'function') {
@@ -6303,12 +6233,12 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             }}
                             style={{
                               flex: 1,
-                              padding: '10px 14px',
+                              padding: '12px 16px',
                               borderRadius: 8,
                               background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(14, 165, 233, 0.4) 100%)',
                               border: '1px solid #38bdf8',
                               color: '#ffffff',
-                              fontSize: 12,
+                              fontSize: 13,
                               fontWeight: 800,
                               cursor: 'pointer'
                             }}
@@ -6319,21 +6249,27 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                           {canTribulate && (
                             <button
                               onClick={() => {
-                                if (typeof attemptTribulationAll === 'function') {
-                                  attemptTribulationAll();
+                                const daId = matchedDaoAnh?.id !== undefined ? matchedDaoAnh.id : (matchedDaoAnh?.palaceIndex !== undefined ? matchedDaoAnh.palaceIndex : focusedDaoAnhId);
+                                if (typeof attemptTribulationSingle === 'function') {
+                                  try {
+                                    attemptTribulationSingle(daId);
+                                  } catch (err) {
+                                    console.error('Tribulation error:', err);
+                                    alert(err.message || 'Lỗi khi tiến hành độ kiếp');
+                                  }
                                 }
                               }}
                               style={{
                                 flex: 1,
-                                padding: '10px 14px',
+                                padding: '12px 16px',
                                 borderRadius: 8,
                                 background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
                                 border: '1px solid #f0abfc',
                                 color: '#ffffff',
-                                fontSize: 12,
+                                fontSize: 13,
                                 fontWeight: 900,
                                 cursor: 'pointer',
-                                boxShadow: '0 0 15px rgba(240, 171, 252, 0.5)'
+                                boxShadow: '0 0 18px rgba(240, 171, 252, 0.55)'
                               }}
                             >
                               ⚡ Tiến Hành Độ Kiếp ({percent}%)

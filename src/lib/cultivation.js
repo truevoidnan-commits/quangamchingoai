@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Hệ thống Tu Vi, Chiến Lực & Thất Thập Nhị Huyền Môn Mệnh Đăng (72 Mệnh Đăng) – Thiên Cơ Lâu
  *
  * CHIẾN LỰC THEO TỪNG CẢNH GIỚI:
@@ -2507,7 +2507,11 @@ export const injectThienMenhToDaoAnh = injectExpToDaoAnh;
  */
 export function attemptTribulationSingle(daoAnhId) {
   const state = getCultivationState();
-  const da = (state.daoAnhs || []).find(d => d.id === daoAnhId);
+  const da = (state.daoAnhs || []).find(d => 
+    d.id === daoAnhId || 
+    d.palaceIndex === daoAnhId || 
+    (typeof daoAnhId === 'string' && d.id && (d.id.includes(daoAnhId) || daoAnhId.includes(d.id)))
+  );
   if (!da) throw new Error('Không tìm thấy Đạo Anh.');
   if (da.currentKiep >= 5) throw new Error('Đạo Anh này đã đạt Kiếp 5 Đại Viên Mãn.');
 
