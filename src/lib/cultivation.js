@@ -379,7 +379,7 @@ export const SUPPRESSING_ARTIFACTS = [
   { id: 'cuu_kiep_loi_nguc_kiem_phap', name: 'Cửu Kiếp Lôi Ngục Kiếm Pháp', shortName: 'Lôi Ngục Kiếm Pháp', tier: 'than_pham', type: 'Sát Phạt Kiếm Quyết', icon: '⚔️', color: '#ef4444', desc: 'Kiếm pháp triệu hoán chín tầng ngục lôi đình, trảm diệt sinh cơ và phong tỏa hoàn toàn kẻ địch.', poem: 'Cửu kiếp lôi ngục, kiếm trảm thần ma.' },
   { id: 'hong_tran_ngung_vong_anh_hao_nguyet', name: 'Hồng Trần Ngưng Vọng Ánh Hạo Nguyệt', shortName: 'Hồng Trần Hạo Nguyệt', tier: 'than_pham', type: 'Vô Thượng Dị Tượng', icon: '🌕', color: '#ef4444', desc: 'Dị tượng vô thượng hồng trần ngưng vọng trăng sáng rực rỡ, ánh trăng chiếu rọi thế gian xua tan mọi ma chướng cõi phàm.', poem: 'Hồng trần ngưng vọng, hạo nguyệt chiếu chư thiên.' },
   { id: 'nhat_khi_hoa_tam_thanh', name: 'Nhất Khí Hóa Tam Thanh', shortName: 'Tam Thanh Quyết', tier: 'than_pham', type: 'Đạo Môn Đỉnh Cao Thần Thông', icon: '🪷', color: '#ef4444', desc: 'Thần thông tối cao của Đạo Môn, một luồng chân khí phân hóa thành ba đạo thân tương đương bản thể.', poem: 'Nhất khí hóa tam thanh, vạn cổ duy ngã tôn.' },
-  { id: 'vo_thuy_vo_chung_vo_vi_than', name: 'Vô Thủy Vô Chung Vô Vi Thân', shortName: 'Vô Thủy Vô Chung', tier: 'than_pham', type: 'Vĩnh Hằng Bất Hủ Đạo Thể', icon: '🛡️', color: '#ef4444', desc: 'Thân xác bất tử không có điểm bắt đầu cũng không có điểm kết thúc, miễn nhiễm tuyệt đối mọi đòn sát phạt.', poem: 'Vô thủy vô chung, vĩnh hằng bất diệt.' },
+  { id: 'thuong_thuong_hac_huyet', name: 'Thượng Thương Hắc Huyết', shortName: 'Hắc Huyết', tier: 'than_pham', type: 'Hắc Ám Đầu Nguồn', icon: '🩸', color: '#ef4444', desc: 'Một giọt máu rơi ra từ thượng thương, đầu nguồn hắc ám.', poem: 'Thượng thương hắc huyết, vạn giới trầm luân.' },
   { id: 'diet_the_loi_viem_dong', name: 'Diệt Thế Lôi Viêm Đồng', shortName: 'Lôi Viêm Đồng', tier: 'than_pham', type: 'Thần Thông Cực Hạn Nhãn Đồng', icon: '👁️', color: '#ef4444', desc: 'Đồng tử thần thoại ngưng tụ lôi đình và ngọn lửa diệt thế, một ánh nhìn thiêu rụi hư không và cấm chế.', poem: 'Lôi viêm đồng tử, chiếu rọi chư thiên.' },
 ];const DEFAULT_STATE = {
   totalExp: 0,
@@ -1498,7 +1498,7 @@ export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = 
     'cuu_kiep_loi_nguc_kiem_phap': 'Cửu Kiếp Lôi Ngục Cung',
     'hong_tran_ngung_vong_anh_hao_nguyet': 'Hồng Trần Hạo Nguyệt Cung',
     'nhat_khi_hoa_tam_thanh': 'Nhất Khí Tam Thanh Cung',
-    'vo_thuy_vo_chung_vo_vi_than': 'Vô Thủy Vô Chung Cung',
+    'thuong_thuong_hac_huyet': 'Thượng Thương Hắc Huyết Cung',
     'diet_the_loi_viem_dong': 'Diệt Thế Lôi Viêm Cung',
   };
 

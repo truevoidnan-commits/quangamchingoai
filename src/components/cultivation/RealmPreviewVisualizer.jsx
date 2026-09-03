@@ -5254,7 +5254,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           'tran_nguc_minh_vuong_the': getAssetUrl('icons/than_pham/art_tran_nguc_minh_vuong_the.jpg'),
           'trung_dong': getAssetUrl('icons/than_pham/art_trung_dong.jpg'),
           'van_gioi_quy_nhat': getAssetUrl('icons/than_pham/art_van_gioi_quy_nhat.jpg'),
-          'vo_thuy_vo_chung_vo_vi_than': getAssetUrl('icons/than_pham/art_vo_thuy_vo_chung_vo_vi_than.jpg'),
+          'thuong_thuong_hac_huyet': getAssetUrl('icons/than_pham/art_thuong_thuong_hac_huyet.jpg'),
         };
 
         const getTierConfig = (tier) => {
