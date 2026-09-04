@@ -5240,7 +5240,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           'ngu_hanh_dai_dong_thien': getAssetUrl('icons/than_pham/art_ngu_hanh_dai_dong_thien.jpg'),
           'nguyen_gioi_hon_co': getAssetUrl('icons/than_pham/art_nguyen_gioi_hon_co.jpg'),
           'nguyen_thuy_thai_so_ma_kinh': getAssetUrl('icons/than_pham/art_nguyen_thuy_thai_so_ma_kinh.jpg'),
-          'nhat_khi_hoa_tam_thanh': getAssetUrl('icons/than_pham/art_nhat_khi_hoa_tam_thanh.jpg'),
+          'tam_thu_dao': getAssetUrl('icons/than_pham/art_tam_thu_dao.jpg'),
           'tam_sinh_luan_hoi_an': getAssetUrl('icons/than_pham/art_tam_sinh_luan_hoi_an.jpg'),
           'tan_tien_phe_than': getAssetUrl('icons/than_pham/art_tan_tien_phe_than.jpg'),
           'tao_hoa_ngoc_diep': getAssetUrl('icons/than_pham/art_tao_hoa_ngoc_diep.jpg'),

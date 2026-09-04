@@ -34,7 +34,7 @@ export const THAN_PHAM_AI_ICONS = {
   trung_dong:                   bundledIcons['art_trung_dong'] || '',
   cuu_kiep_loi_nguc_kiem_phap:  bundledIcons['art_cuu_kiep_loi_nguc_kiem_phap'] || '',
   hong_tran_ngung_vong_anh_hao_nguyet: bundledIcons['art_hong_tran_ngung_vong_anh_hao_nguyet'] || '',
-  nhat_khi_hoa_tam_thanh:       bundledIcons['art_nhat_khi_hoa_tam_thanh'] || '',
+  tam_thu_dao:                  bundledIcons['art_tam_thu_dao'] || '',
   thuong_thuong_hac_huyet:      bundledIcons['art_thuong_thuong_hac_huyet'] || '',
   diet_the_loi_viem_dong:       bundledIcons['art_diet_the_loi_viem_dong'] || '',
 };
