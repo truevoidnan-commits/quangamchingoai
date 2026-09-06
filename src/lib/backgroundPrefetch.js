@@ -12,6 +12,8 @@ import imgHuyetHoGod from '../assets/images/huyet_ho_god.png';
 import imgLongKinhGod from '../assets/images/long_kinh_god.png';
 import imgTuTuongWheelFlow from '../assets/images/tu_tuong_wheel_flow.jpg';
 
+import { fetchAndCacheImage } from './persistentImageCache';
+
 let _prefetchStarted = false;
 
 export function startBackgroundPrefetch() {
@@ -44,23 +46,21 @@ export function startBackgroundPrefetch() {
   // Tải từ tốn sau khi trang đã render xong (2000ms)
   setTimeout(() => {
     let index = 0;
-    const processNext = () => {
+    const processNext = async () => {
       if (index >= urlQueue.length) return;
       const url = urlQueue[index++];
       
       try {
-        const img = new Image();
-        img.decoding = 'async';
-        img.src = url;
+        await fetchAndCacheImage(url);
       } catch {
         // Silent catch to prevent any error bubbling
       }
 
-      // Khoảng nghỉ 120ms giữa mỗi ảnh để CPU và RAM điện thoại luôn mát mẻ
+      // Khoảng nghỉ 100ms giữa mỗi ảnh để CPU và RAM điện thoại luôn mát mẻ
       if (window.requestIdleCallback) {
-        window.requestIdleCallback(() => setTimeout(processNext, 120), { timeout: 2000 });
+        window.requestIdleCallback(() => setTimeout(processNext, 100), { timeout: 2000 });
       } else {
-        setTimeout(processNext, 120);
+        setTimeout(processNext, 100);
       }
     };
 

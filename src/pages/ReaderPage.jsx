@@ -11,6 +11,7 @@ import TableOfContents from '../components/reader/TableOfContents';
 import ReadingSettings from '../components/reader/ReadingSettings';
 import ScrollToTop from '../components/ui/ScrollToTop';
 import { startBackgroundPrefetch } from '../lib/backgroundPrefetch';
+import { findDaoAnhDefinition } from '../lib/daoAnhData';
 import styles from './ReaderPage.module.css';
 
 export default function ReaderPage() {
@@ -20,7 +21,17 @@ export default function ReaderPage() {
   const searchKeyword = searchParams.get('q') || '';
   const navigate = useNavigate();
   const { settings, updateSettings } = useReadingSettings();
-  const { gainReadingExp, displayName, LAMP_TIERS, unreadDropsCount, clearUnreadDrops } = useCultivation();
+  const { 
+    gainReadingExp, 
+    displayName, 
+    LAMP_TIERS, 
+    unreadDropsCount, 
+    clearUnreadDrops,
+    cultivation,
+    chooseSwitchDaoAnhAfter80,
+    chooseContinueDaoAnhTo100,
+    dismissPromptAllDaoAnhFull
+  } = useCultivation();
 
   const [novel, setNovel] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -132,6 +143,14 @@ export default function ReaderPage() {
       paraIndex: currentParaIndex
     });
   }, [chapter, activeNovelId]);
+
+  const handleGoToCultivationFromReader = useCallback(() => {
+    if (dismissPromptAllDaoAnhFull) dismissPromptAllDaoAnhFull();
+    saveCurrentPositionImmediate();
+    sessionStorage.setItem('from_reader', '1');
+    sessionStorage.setItem('last_reading_url', window.location.hash ? window.location.hash.slice(1) : (window.location.pathname + window.location.search));
+    navigate('/cultivation');
+  }, [dismissPromptAllDaoAnhFull, saveCurrentPositionImmediate, navigate]);
 
   // Khôi phục vị trí đọc chính xác (đoạn văn đang đọc dở hoặc %) khi vào lại chương
   useEffect(() => {
@@ -573,6 +592,204 @@ export default function ReaderPage() {
         isOpen={cultivationOpen}
         onClose={() => setCultivationOpen(false)}
       />
+
+      {/* MODAL THÔNG BÁO TIÊN KIẾP: ĐẠO ANH ĐẠT 80% LINH LỰC */}
+      {cultivation?.prompt80DaoAnh && (() => {
+        const promptTargetDa = (cultivation?.daoAnhs || []).find(d => d.id === cultivation.prompt80DaoAnh?.daoAnhId);
+        const resolvedDaoAnhName = findDaoAnhDefinition(promptTargetDa, cultivation)?.name || promptTargetDa?.name || cultivation.prompt80DaoAnh.daoAnhName;
+        return (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(2, 6, 23, 0.85)',
+            backdropFilter: 'blur(10px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20
+          }}>
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%)',
+              border: '1.5px solid #fde047',
+              boxShadow: '0 0 40px rgba(253, 224, 71, 0.35), 0 20px 40px rgba(0, 0, 0, 0.8)',
+              borderRadius: 20,
+              maxWidth: 480,
+              width: '100%',
+              padding: '28px 24px',
+              textAlign: 'center',
+              color: '#f8fafc',
+              animation: 'fadeIn 0.25s ease-out'
+            }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>⚡</div>
+              <h3 style={{
+                fontSize: 18,
+                fontWeight: 900,
+                color: '#fde047',
+                margin: '0 0 10px 0',
+                letterSpacing: '0.5px'
+              }}>
+                ĐẠO ANH ĐÃ ĐẠT 80% LINH LỰC!
+              </h3>
+              <p style={{
+                fontSize: 13.5,
+                lineHeight: 1.6,
+                color: '#cbd5e1',
+                margin: '0 0 14px 0'
+              }}>
+                <strong style={{ color: '#38bdf8' }}>[{resolvedDaoAnhName}]</strong> đã tích lũy đủ <strong style={{ color: '#fde047' }}>80% Linh Lực</strong> ({cultivation.prompt80DaoAnh.currentExp?.toLocaleString()} / {cultivation.prompt80DaoAnh.maxExp?.toLocaleString()} Tu Vi), sẵn sàng nghênh tiếp Thiên Kiếp!
+              </p>
+              <p style={{
+                fontSize: 12.5,
+                color: '#94a3b8',
+                margin: '0 0 24px 0',
+                fontStyle: 'italic'
+              }}>
+                Đạo hữu có muốn chuyển quyền nạp sang Đạo Anh khác không, hay tiếp tục nạp đến 100% để đảm bảo độ kiếp viên mãn?
+              </p>
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                <button
+                  onClick={() => chooseSwitchDaoAnhAfter80 && chooseSwitchDaoAnhAfter80(cultivation.prompt80DaoAnh.daoAnhId)}
+                  style={{
+                    flex: 1,
+                    padding: '12px 14px',
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
+                    border: '1px solid #7dd3fc',
+                    color: '#ffffff',
+                    fontSize: 13,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: '0 0 16px rgba(56, 189, 248, 0.35)'
+                  }}
+                >
+                  🔄 Chuyển Đạo Anh Khác
+                </button>
+
+                <button
+                  onClick={() => chooseContinueDaoAnhTo100 && chooseContinueDaoAnhTo100(cultivation.prompt80DaoAnh.daoAnhId)}
+                  style={{
+                    flex: 1,
+                    padding: '12px 14px',
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+                    border: '1px solid #fde047',
+                    color: '#0f172a',
+                    fontSize: 13,
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    boxShadow: '0 0 16px rgba(253, 224, 71, 0.35)'
+                  }}
+                >
+                  ⚡ Tiếp Tục Nạp Đến 100%
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* MODAL THÔNG BÁO TIÊN KIẾP: TOÀN BỘ ĐẠO ANH ĐÃ VIÊN MÃN 100% */}
+      {cultivation?.promptAllDaoAnhFull && !cultivation?.promptAllDaoAnhFullDismissed && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(2, 6, 23, 0.88)',
+          backdropFilter: 'blur(12px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 20
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
+            border: '2px solid #f0abfc',
+            boxShadow: '0 0 50px rgba(240, 171, 252, 0.35), 0 25px 50px rgba(0, 0, 0, 0.85)',
+            borderRadius: 20,
+            maxWidth: 500,
+            width: '100%',
+            padding: '28px 24px',
+            textAlign: 'center',
+            color: '#f8fafc',
+            animation: 'fadeIn 0.25s ease-out'
+          }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>⛈️</div>
+            <h3 style={{
+              fontSize: 18,
+              fontWeight: 900,
+              background: 'linear-gradient(135deg, #f0abfc 0%, #fde047 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              margin: '0 0 10px 0',
+              letterSpacing: '0.5px'
+            }}>
+              TOÀN BỘ ĐẠO ANH ĐÃ VIÊN MÃN 100%!
+            </h3>
+            <p style={{
+              fontSize: 13.5,
+              lineHeight: 1.6,
+              color: '#cbd5e1',
+              margin: '0 0 12px 0'
+            }}>
+              Toàn bộ các Đạo Anh đều đã tích lũy đạt <strong style={{ color: '#fde047' }}>100% Linh Lực viên mãn</strong>, sẵn sàng cùng nhau tiến hành Vạn Kiếp Tề Thăng!
+            </p>
+            <p style={{
+              fontSize: 12.5,
+              color: '#94a3b8',
+              margin: '0 0 24px 0',
+              fontStyle: 'italic',
+              lineHeight: 1.5
+            }}>
+              Nếu đạo hữu chưa muốn độ kiếp lúc này, Tu Vi nhận được từ việc đọc truyện và Tụ Linh Trận sẽ được chuyển dồn tích lũy vào <strong style={{ color: '#f59e0b' }}>Uẩn Tích Bình Cảnh</strong>.
+            </p>
+
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button
+                onClick={handleGoToCultivationFromReader}
+                style={{
+                  flex: 1.2,
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+                  border: '1px solid #f0abfc',
+                  color: '#ffffff',
+                  fontSize: 13,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  boxShadow: '0 0 18px rgba(240, 171, 252, 0.4)'
+                }}
+              >
+                ⚡ Đến Độ Kiếp Đài
+              </button>
+
+              <button
+                onClick={() => dismissPromptAllDaoAnhFull && dismissPromptAllDaoAnhFull()}
+                style={{
+                  flex: 0.8,
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#cbd5e1',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                ❌ Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Scroll to top FAB */}
       <ScrollToTop />

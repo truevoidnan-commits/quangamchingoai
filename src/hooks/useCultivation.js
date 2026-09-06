@@ -42,6 +42,9 @@ import {
   getCombatPowerDisplay,
   getTotalMenhHoa,
   getTotalCombatPowerAnh,
+  chooseSwitchDaoAnhAfter80,
+  chooseContinueDaoAnhTo100,
+  dismissPromptAllDaoAnhFull,
   resetCultivationState,
   LIFE_LAMPS,
   SUPPRESSING_ARTIFACTS,
@@ -278,6 +281,24 @@ export function useCultivation() {
     return res;
   }, []);
 
+  const handleSwitchDaoAnhAfter80 = useCallback((daoAnhId) => {
+    const res = chooseSwitchDaoAnhAfter80(daoAnhId);
+    setCultivation({ ...res });
+    return res;
+  }, []);
+
+  const handleContinueDaoAnhTo100 = useCallback((daoAnhId) => {
+    const res = chooseContinueDaoAnhTo100(daoAnhId);
+    setCultivation({ ...res });
+    return res;
+  }, []);
+
+  const handleDismissPromptAllDaoAnhFull = useCallback(() => {
+    const res = dismissPromptAllDaoAnhFull();
+    setCultivation({ ...res });
+    return res;
+  }, []);
+
   return {
     cultivation,
     displayName,
@@ -324,6 +345,9 @@ export function useCultivation() {
     swapDaoAnhPositions: handleSwapDaoAnhPositions,
     fillAllDaoAnhThienMenh: handleFillAllDaoAnhThienMenh,
     fillAllDaoAnhExp: handleFillAllDaoAnhThienMenh,
+    chooseSwitchDaoAnhAfter80: handleSwitchDaoAnhAfter80,
+    chooseContinueDaoAnhTo100: handleContinueDaoAnhTo100,
+    dismissPromptAllDaoAnhFull: handleDismissPromptAllDaoAnhFull,
     setDaoAnhStrategy: handleSetDaoAnhStrategy,
     resetCultivation: handleReset,
     debugAddChapter,

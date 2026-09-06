@@ -1,5 +1,6 @@
 import React from 'react';
 import { getDaoAnhEvolutionImage, getDaoAnhTransformStyle, getAssetUrl } from '../../lib/daoAnhData';
+import { PersistentImage } from '../../lib/persistentImageCache';
 
 /**
  * DAO ANH AVATAR RENDERER
@@ -109,7 +110,7 @@ export default function DaoAnhAvatarRenderer({
             zIndex: 2,
           }}
         >
-          <img
+          <PersistentImage
             key={`${daoAnh.id || 'da'}_kiep_${currentKiep}`}
             src={getDaoAnhEvolutionImage(daoAnh, currentKiep)}
             alt={daoAnh.name}

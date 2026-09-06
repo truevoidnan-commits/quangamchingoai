@@ -1315,7 +1315,27 @@ export function findDaoAnhDefinition(da, state) {
     if (directMatch) return directMatch;
   }
 
-  // 2. Phân giải theo cung mệnh đăng hoặc vật trấn áp
+  // 2. ƯU TIÊN HÀNG ĐẦU: Nguồn gốc cụ thể của chính Đạo Anh (lampId hoặc artifactId)
+  if (da.lampId) {
+    const match = DAO_ANH_LIST.find(d => d.sourceType === 'lamp' && d.sourceId === da.lampId);
+    if (match) return match;
+  }
+  if (da.artifactId) {
+    const match = DAO_ANH_LIST.find(d => d.sourceType === 'artifact' && d.sourceId === da.artifactId);
+    if (match) return match;
+  }
+
+  // 3. Khớp theo tên của Đạo Anh
+  const cleanName = (da.name || '').toLowerCase();
+  if (cleanName) {
+    const matchByName = DAO_ANH_LIST.find(d => 
+      (d.name && (cleanName.includes(d.name.toLowerCase().replace('đạo anh', '').trim()) || d.name.toLowerCase().includes(cleanName.replace('đạo anh', '').trim()))) ||
+      (d.sourceId && cleanName.includes(d.sourceId.replace(/_/g, ' ')))
+    );
+    if (matchByName) return matchByName;
+  }
+
+  // 4. Fallback: Phân giải theo vị trí cung nếu Đạo Anh chưa có thông tin vật phẩm
   const pIdx = da.palaceIndex !== undefined ? da.palaceIndex : 0;
   const maxThienCung = state?.maxThienCung || 13;
   const lampList = state?.absorbedLamps || [];
@@ -1325,27 +1345,19 @@ export function findDaoAnhDefinition(da, state) {
 
   if (isLampPalace) {
     const lampIdx = pIdx - selfPalacesTotal;
-    const lampId = lampList[lampIdx] || da.lampId;
+    const lampId = lampList[lampIdx];
     if (lampId) {
       const match = DAO_ANH_LIST.find(d => d.sourceType === 'lamp' && d.sourceId === lampId);
       if (match) return match;
     }
   } else {
     const anchor = state?.palaceAnchors?.[pIdx] || state?.palaceAnchors?.[selfPalacesTotal - 1 - pIdx];
-    const artId = anchor?.id || da.artifactId;
+    const artId = anchor?.id;
     if (artId) {
       const match = DAO_ANH_LIST.find(d => d.sourceType === 'artifact' && d.sourceId === artId);
       if (match) return match;
     }
   }
-
-  // 3. Fallback tìm kiếm theo tên
-  const cleanName = (da.name || '').toLowerCase();
-  const matchByName = DAO_ANH_LIST.find(d => 
-    (d.name && cleanName.includes(d.name.toLowerCase().replace('đạo anh', '').trim())) ||
-    (d.sourceId && cleanName.includes(d.sourceId.replace(/_/g, ' ')))
-  );
-  if (matchByName) return matchByName;
 
   return DAO_ANH_LIST[0];
 }

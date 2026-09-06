@@ -11,6 +11,7 @@
 import React from 'react';
 import styles from './ArtifactIcon.module.css';
 import { THAN_PHAM_AI_ICONS, LAMP_THAN_PHAM_AI_ICONS, getLampImageUrl, getArtifactImageUrl, TIER_COLORS, TIER_GLOW } from '../../lib/artifactIcons';
+import { PersistentImage } from '../../lib/persistentImageCache';
 
 // ─── DEDICATED SVG ART FOR THE 9 THẦN PHẨM ARTIFACTS ──────────────────────
 
@@ -505,7 +506,7 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
           style={{ '--icon-glow': lampGlow, width: size, height: size }}
           title={item?.name || 'Mệnh Đăng'}
         >
-          <img
+          <PersistentImage
             src={getLampImageUrl(item.id)}
             alt={item?.name || 'Mệnh Đăng'}
             loading="lazy"
@@ -571,7 +572,7 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
         style={{ '--icon-glow': glow, width: size, height: size }}
         title={item?.name}
       >
-        <img
+        <PersistentImage
           src={getArtifactImageUrl(item.id)}
           alt={item?.name}
           loading="lazy"

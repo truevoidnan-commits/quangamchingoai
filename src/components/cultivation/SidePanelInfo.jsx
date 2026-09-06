@@ -14,8 +14,9 @@ import {
   getLampPalaceName
 } from '../../lib/cultivation';
 import { useNavigate } from 'react-router-dom';
+import { findDaoAnhDefinition } from '../../lib/daoAnhData';
 
-export default function SidePanelInfo() {
+export default function SidePanelInfo({ setTribulationModalData }) {
   const navigate = useNavigate();
   const { 
     cultivation, 
@@ -1404,7 +1405,7 @@ export default function SidePanelInfo() {
                       boxShadow: '0 0 20px rgba(236, 72, 153, 0.6)'
                     }}
                   >
-                    ⚡ HÓA ĐẠO ANH (ĐỘT PHÁ NGUYÊN ANH)
+                    ⚡ HÓA SINH ĐẠO ANH
                   </button>
                 ) : (
                   <button
@@ -1435,99 +1436,99 @@ export default function SidePanelInfo() {
          ======================================================== */}
       {(realm === 'nguyen_anh' || realm === 'gia_anh') && (() => {
         const daoAnhs = cultivation?.daoAnhs || [];
-        const daoAnhCount = daoAnhs.length;
-        const totalPalaces = cultivation?.maxThienCung || 13;
-        const totalThienMenh = cultivation?.totalThienMenh || 0;
-        const currentStrategy = cultivation?.daoAnhTargetStrategy || 'auto_80';
-        const maxKiepCount = daoAnhs.filter(d => (d.currentKiep || 0) >= 5).length;
+        const activeDaoAnhs = daoAnhs.filter(d => (d.currentKiep || 0) < 5);
+        const activeCount = activeDaoAnhs.length;
+        const currentTargetId = cultivation?.currentTargetDaoAnhId;
+        let targetDa = activeDaoAnhs.find(d => d.id === currentTargetId);
+        if (!targetDa && activeDaoAnhs.length > 0) {
+          targetDa = activeDaoAnhs.find(d => (d.currentExp || 0) < (d.maxExp || 5000)) || activeDaoAnhs[0];
+        }
 
-        const toggleStrategy = () => {
-          const next = currentStrategy === 'auto_80' ? 'auto_100' : 'auto_80';
-          if (setDaoAnhStrategy) {
-            setDaoAnhStrategy(next);
-          } else {
-            try {
-              const state = JSON.parse(localStorage.getItem('cultivation_state_v1') || '{}');
-              state.daoAnhTargetStrategy = next;
-              localStorage.setItem('cultivation_state_v1', JSON.stringify(state));
-              window.dispatchEvent(new CustomEvent('cultivation_updated', { detail: state }));
-            } catch (e) {}
-          }
-        };
+        const targetDef = targetDa ? findDaoAnhDefinition(targetDa, cultivation) : null;
+        const targetName = targetDef?.name || targetDa?.name || 'Đạo Anh';
+        const targetKiep = targetDa?.currentKiep || 0;
+        const targetMaxExp = targetDa?.maxExp || 5000;
+        const targetCurExp = targetDa?.currentExp || 0;
+        const targetPercent = Math.min(100, Math.floor((targetCurExp / targetMaxExp) * 100));
+
+        const readyCount = activeDaoAnhs.filter(d => (d.currentExp || 0) >= Math.floor((d.maxExp || 5000) * 0.8)).length;
+        const firstKiep = activeCount > 0 ? (activeDaoAnhs[0]?.currentKiep || 0) : 0;
+        const isSameKiep = activeCount > 0 && activeDaoAnhs.every(d => (d.currentKiep || 0) === firstKiep);
+        const allReady = activeCount > 0 && readyCount === activeCount;
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {/* Status Card */}
-            <div className="status-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 20 }}>👑</span>
-                <div>
-                  <h4 style={{ color: 'var(--color-kim)', fontSize: 13, fontWeight: 900, margin: 0 }}>
-                    THẬP TAM BẢN NGUYÊN ĐẠO ANH
-                  </h4>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                    {daoAnhCount}/{totalPalaces} Đạo Anh Tọa Trấn
+            {/* Thẻ Trực Quan: Tiến Độ Linh Lực & Nghênh Kiếp */}
+            <div className="status-card" style={{ padding: '14px 16px', borderRadius: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>⚡</span>
+                  <div>
+                    <div style={{ fontSize: 10, letterSpacing: 1, color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase' }}>
+                      ĐẠO ANH ĐANG NẠP
+                    </div>
+                    <div style={{ fontSize: 13.5, fontWeight: 900, color: '#fde047', fontFamily: 'var(--font-serif)', marginTop: 1 }}>
+                      {targetName}
+                    </div>
                   </div>
+                </div>
+                <span style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  padding: '3px 8px',
+                  borderRadius: 6,
+                  background: targetPercent >= 100 ? 'rgba(34, 197, 94, 0.15)' : (targetPercent >= 80 ? 'rgba(234, 179, 8, 0.15)' : 'rgba(56, 189, 248, 0.12)'),
+                  color: targetPercent >= 100 ? '#4ade80' : (targetPercent >= 80 ? '#fde047' : '#38bdf8'),
+                  border: `1px solid ${targetPercent >= 100 ? 'rgba(34, 197, 94, 0.3)' : (targetPercent >= 80 ? 'rgba(234, 179, 8, 0.3)' : 'rgba(56, 189, 248, 0.25)')}`
+                }}>
+                  {targetPercent >= 100 ? 'Viên Mãn' : (targetPercent >= 80 ? 'Sẵn Sàng' : `${targetPercent}%`)}
+                </span>
+              </div>
+
+              {/* Progress Bar của Đạo Anh đang nạp */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#cbd5e1', marginBottom: 5 }}>
+                  <span>Tiến Độ Kiếp {targetKiep + 1}</span>
+                  <strong style={{ color: '#f8fafc' }}>{targetCurExp.toLocaleString()} / {targetMaxExp.toLocaleString()} EXP</strong>
+                </div>
+                <div style={{ height: 6, width: '100%', background: 'rgba(255, 255, 255, 0.08)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${targetPercent}%`,
+                    background: targetPercent >= 80 ? 'linear-gradient(90deg, #eab308, #f59e0b)' : 'linear-gradient(90deg, #0284c7, #38bdf8)',
+                    borderRadius: 4,
+                    transition: 'width 0.3s ease'
+                  }} />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 8 }}>
-                <span style={{ color: '#94a3b8' }}>Lực Chiến:</span>
-                <strong style={{ color: 'var(--color-cuc-canh, #ff3fd5)' }}>
-                  {calculatedCombatPower}
-                </strong>
-              </div>
+              <div style={{ height: 1, background: 'rgba(255, 255, 255, 0.06)', margin: '10px 0' }} />
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6 }}>
-                <span style={{ color: '#94a3b8' }}>Thiên Mệnh Thu Hoạch:</span>
-                <strong style={{ color: '#fde047', fontWeight: 800 }}>
-                  {totalThienMenh.toLocaleString()} TM
-                </strong>
-              </div>
+              {/* Tiến Độ Toàn Trận */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11.5 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#94a3b8' }}>Sẵn Sàng Độ Kiếp:</span>
+                  <strong style={{ color: readyCount === activeCount && activeCount > 0 ? '#4ade80' : '#fde047' }}>
+                    {readyCount} / {activeCount} Đạo Anh
+                  </strong>
+                </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6 }}>
-                <span style={{ color: '#94a3b8' }}>Đạo Anh Đại Viên Mãn:</span>
-                <strong style={{ color: 'var(--color-kim)' }}>
-                  {maxKiepCount}/{daoAnhCount} Tôn (5/5 Kiếp)
-                </strong>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6 }}>
-                <span style={{ color: '#94a3b8' }}>Tốc Độ Đọc Truyện:</span>
-                <strong style={{ color: '#38bdf8' }}>
-                  200 - 300 EXP / vòng
-                </strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#94a3b8' }}>Vạn Kiếp Tề Thăng:</span>
+                  <strong style={{
+                    color: (allReady && isSameKiep) ? '#4ade80' : ((!isSameKiep) ? '#f87171' : '#94a3b8')
+                  }}>
+                    {allReady && isSameKiep 
+                      ? 'Sẵn Sàng' 
+                      : (!isSameKiep ? 'Lệch Cấp Kiếp' : `Thiếu ${activeCount - readyCount} Đạo Anh`)}
+                  </strong>
+                </div>
               </div>
             </div>
 
             {/* Action Buttons Group */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {/* 1. Toggle Chiến Lược Tự Nạp */}
-              <button
-                onClick={toggleStrategy}
-                style={{
-                  padding: '9px 12px',
-                  borderRadius: 8,
-                  background: currentStrategy === 'auto_80' ? 'rgba(168, 85, 247, 0.18)' : 'rgba(2, 132, 199, 0.18)',
-                  border: `1px solid ${currentStrategy === 'auto_80' ? '#c084fc' : '#38bdf8'}`,
-                  color: currentStrategy === 'auto_80' ? '#f0abfc' : '#7dd3fc',
-                  fontSize: 11.5,
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 6
-                }}
-                title="Chế độ tự nạp khi đọc sách: 80% (chuẩn bị độ kiếp) hoặc 100% (an toàn tối đa)"
-              >
-                <span>⚡ Tự nạp đọc sách:</span>
-                <span style={{ fontWeight: 900 }}>
-                  {currentStrategy === 'auto_80' ? '80% (Nhanh)' : '100% (Đầy)'}
-                </span>
-              </button>
-
-              {/* 2. Nạp Đầy Linh Lực Toàn Bộ */}
+              {/* 1. Nạp Đầy Linh Lực Toàn Bộ */}
               <button
                 onClick={() => {
                   try {
@@ -1537,12 +1538,12 @@ export default function SidePanelInfo() {
                   }
                 }}
                 style={{
-                  padding: '10px 14px',
+                  padding: '11px 14px',
                   borderRadius: 8,
                   background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
                   border: '1px solid #7dd3fc',
                   color: '#fff',
-                  fontSize: 12,
+                  fontSize: 12.5,
                   fontWeight: 800,
                   cursor: 'pointer',
                   boxShadow: '0 0 12px rgba(56, 189, 248, 0.3)',
@@ -1555,23 +1556,36 @@ export default function SidePanelInfo() {
                 <span>⚡ NẠP ĐẦY LINH LỰC</span>
               </button>
 
-              {/* 3. Vạn Kiếp Tề Thăng */}
+              {/* 2. Vạn Kiếp Tề Thăng */}
               <button
                 onClick={() => {
                   try {
                     const res = attemptTribulationAll();
-                    if (res && res.message) alert(res.message);
+                    if (res) {
+                      if (setTribulationModalData) {
+                        setTribulationModalData({
+                          isSuccess: res.isSuccess !== undefined ? res.isSuccess : (res.totalCount > 0),
+                          tribulationName: 'Vạn Kiếp Tề Thăng (Toàn Bộ Đạo Anh)',
+                          daoAnhName: `Toàn Bộ ${cultivation?.daoAnhs?.length || 0} Đạo Anh`,
+                          element: 'Thiên Cơ Lôi Kiếp',
+                          message: res.message,
+                          successChance: 100,
+                        });
+                      } else if (res.message) {
+                        alert(res.message);
+                      }
+                    }
                   } catch (e) {
                     alert(e.message || 'Không thể độ kiếp');
                   }
                 }}
                 style={{
-                  padding: '10px 14px',
+                  padding: '11px 14px',
                   borderRadius: 8,
                   background: 'linear-gradient(135deg, #a855f7 0%, #ff3fd5 100%)',
                   border: '1px solid #f0abfc',
                   color: '#fff',
-                  fontSize: 12,
+                  fontSize: 12.5,
                   fontWeight: 900,
                   cursor: 'pointer',
                   boxShadow: '0 0 14px rgba(255, 63, 213, 0.4)',
@@ -1581,21 +1595,21 @@ export default function SidePanelInfo() {
                   gap: 6
                 }}
               >
-                <span>⛈️ VẠN KIẾP TỀ THĂNG (+50% TM)</span>
+                <span>⛈️ VẠN KIẾP TỀ THĂNG</span>
               </button>
 
-              {/* 4. Đạo Anh Đồ Lục */}
+              {/* 3. Đạo Anh Đồ Lục */}
               <button
                 onClick={() => {
                   if (setGalleryModalOpen) setGalleryModalOpen(true);
                 }}
                 style={{
-                  padding: '10px 14px',
+                  padding: '11px 14px',
                   borderRadius: 8,
                   background: 'linear-gradient(135deg, #a855f7 0%, #f59e0b 100%)',
                   border: '1.5px solid #fde047',
                   color: '#fff',
-                  fontSize: 12,
+                  fontSize: 12.5,
                   fontWeight: 900,
                   cursor: 'pointer',
                   boxShadow: '0 0 16px rgba(251, 191, 36, 0.45)',
@@ -1604,9 +1618,9 @@ export default function SidePanelInfo() {
                   justifyContent: 'center',
                   gap: 6
                 }}
-                title="Mở Đạo Anh Đồ Lục (42 Pháp Tướng Thần Phẩm Nguyên Anh)"
+                title="Mở Đạo Anh Đồ Lục"
               >
-                <span>✨ ĐẠO ANH ĐỒ LỤC (42 THẦN PHẨM)</span>
+                <span>✨ ĐẠO ANH ĐỒ LỤC</span>
               </button>
             </div>
           </div>
@@ -1637,7 +1651,7 @@ export default function SidePanelInfo() {
           }}
           title="Xóa sạch tu vi, quay về phàm nhân để tu luyện lại từ đầu"
         >
-          <span>☠️ TẢN TU VI (HÓA PHÀM TRÙNG TU)</span>
+          <span>☠️ TẢN TU VI</span>
         </button>
       </div>
 

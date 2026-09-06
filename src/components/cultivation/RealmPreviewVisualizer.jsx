@@ -6284,31 +6284,10 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                         </div>
                       </div>
 
-                      {/* Các Nút Thao Tác: Bơm Linh Lực / Độ Kiếp */}
+                      {/* Các Nút Thao Tác: Độ Kiếp khi đủ điều kiện */}
                       {!isMax && (
-                        <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
-                          <button
-                            onClick={() => {
-                              if (typeof injectThienMenh === 'function') {
-                                injectThienMenh(matchedDaoAnh.id || matchedDaoAnh.palaceIndex, 1000);
-                              }
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: '12px 16px',
-                              borderRadius: 8,
-                              background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(14, 165, 233, 0.4) 100%)',
-                              border: '1px solid #38bdf8',
-                              color: '#ffffff',
-                              fontSize: 13,
-                              fontWeight: 800,
-                              cursor: 'pointer'
-                            }}
-                          >
-                            ⚡ Quán Chú 1.000 Tu Vi
-                          </button>
-
-                          {canTribulate && (
+                        <div style={{ display: 'flex', gap: 12, marginTop: 6, width: '100%' }}>
+                          {canTribulate ? (
                             <button
                               onClick={() => {
                                 const daId = matchedDaoAnh?.id !== undefined ? matchedDaoAnh.id : (matchedDaoAnh?.palaceIndex !== undefined ? matchedDaoAnh.palaceIndex : focusedDaoAnhId);
@@ -6336,6 +6315,10 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             >
                               ⚡ Tiến Hành Độ Kiếp ({percent}%)
                             </button>
+                          ) : (
+                            <div style={{ textAlign: 'center', width: '100%', fontSize: 12, color: 'rgba(255,255,255,0.5)', padding: '6px 0' }}>
+                              Đang thai nghén tích lũy linh lực qua đọc sách & Tụ Linh Trận ({percent}% / 80% để độ kiếp)
+                            </div>
                           )}
                         </div>
                       )}

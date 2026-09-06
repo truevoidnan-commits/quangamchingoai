@@ -861,11 +861,29 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
       const bottleneckExp = targetPalaceExp - 1;
       if ((state.currentThienCungExp || 0) >= bottleneckExp) isAtBottleneck = true;
     }
+  } else if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
+    const daoAnhs = state.daoAnhs || [];
+    const activeDaoAnhs = daoAnhs.filter(da => (da.currentKiep || 0) < 5);
+    if (activeDaoAnhs.length > 0) {
+      const allActiveFull = activeDaoAnhs.every(da => {
+        const maxExp = da.maxExp || KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
+        return (da.currentExp || 0) >= maxExp;
+      });
+      if (allActiveFull) {
+        isAtBottleneck = true;
+      }
+    } else if (daoAnhs.length > 0) {
+      isAtBottleneck = true;
+    }
   }
 
   // TỔNG TU VI (Chỉ tăng khi chưa kẹt bình cảnh, nếu kẹt bình cảnh thì TU VI giữ nguyên mức trần và nạp vào Uẩn Tích)
   if (!isAtBottleneck) {
     state.totalExp = (state.totalExp || 0) + gainedExp;
+  } else if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
+    if (!state.promptAllDaoAnhFullDismissed) {
+      state.promptAllDaoAnhFull = true;
+    }
   }
 
   let droppedLamp = null;
@@ -938,21 +956,86 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     state.unreadDropsCount = (state.unreadDropsCount || 0) + 1;
   }
 
-  // TÍCH LŨY THIÊN MỆNH SỐ NHỎ KHI Ở NGUYÊN ANH / GIẢ ANH (+1 ~ +3 TM mỗi chu kỳ)
-  let gainedThienMenh = 0;
+  // NẠP TU VI VÀO ĐẠO ANH TƯƠNG ỨNG ĐƯỢC CHỌN KHI Ở NGUYÊN ANH / GIẢ ANH
   if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
     state.isThienMenhUnlocked = true;
-    gainedThienMenh = Math.floor(Math.random() * 3) + 1; // 1 đến 3 Thiên Mệnh
-    state.totalThienMenh = (state.totalThienMenh || 0) + gainedThienMenh;
-
-    // Tự động nạp vào Đạo Anh đang độ kiếp (nếu có)
     const daoAnhs = state.daoAnhs || [];
     const activeDaoAnhs = daoAnhs.filter(da => (da.currentKiep || 0) < 5);
+
     if (activeDaoAnhs.length > 0) {
-      const targetDa = activeDaoAnhs[0];
-      const maxExp = targetDa.maxExp || 50;
-      targetDa.maxExp = maxExp;
-      targetDa.currentExp = Math.min(maxExp, (targetDa.currentExp || 0) + gainedThienMenh);
+      let targetDa = activeDaoAnhs.find(da => da.id === state.currentTargetDaoAnhId);
+      const isTargetFull = targetDa && (targetDa.currentExp || 0) >= (targetDa.maxExp || KIEP_EXP_REQUIREMENTS[targetDa.currentKiep || 0] || 5000);
+      const isTargetPassed80AndSwitched = targetDa && targetDa.hasPrompted80 && !targetDa.continueTo100 && (targetDa.currentExp || 0) >= Math.floor((targetDa.maxExp || 5000) * 0.8);
+
+      if (!targetDa || isTargetFull || isTargetPassed80AndSwitched) {
+        const candidatesUnder80 = activeDaoAnhs.filter(da => {
+          const maxExp = da.maxExp || KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
+          return (da.currentExp || 0) < Math.floor(maxExp * 0.8);
+        });
+
+        if (candidatesUnder80.length > 0) {
+          const randIdx = Math.floor(Math.random() * candidatesUnder80.length);
+          targetDa = candidatesUnder80[randIdx];
+        } else {
+          const candidatesUnder100 = activeDaoAnhs.filter(da => {
+            const maxExp = da.maxExp || KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
+            return (da.currentExp || 0) < maxExp;
+          });
+          if (candidatesUnder100.length > 0) {
+            const randIdx = Math.floor(Math.random() * candidatesUnder100.length);
+            targetDa = candidatesUnder100[randIdx];
+          }
+        }
+
+        if (targetDa) {
+          state.currentTargetDaoAnhId = targetDa.id;
+        }
+      }
+
+      if (targetDa) {
+        const curExp = targetDa.currentExp || 0;
+        const maxExp = targetDa.maxExp || KIEP_EXP_REQUIREMENTS[targetDa.currentKiep || 0] || 5000;
+        targetDa.maxExp = maxExp;
+        const threshold80 = Math.floor(maxExp * 0.8);
+        const wasBelow80 = curExp < threshold80;
+
+        if (wasBelow80 || targetDa.continueTo100) {
+          const rawExp = curExp + gainedExp;
+          const newExp = Math.min(maxExp, rawExp);
+          targetDa.currentExp = newExp;
+          targetDa.currentThienMenh = newExp;
+
+          if (rawExp > maxExp) {
+            state.storedExp = (state.storedExp || 0) + (rawExp - maxExp);
+          }
+
+          if (wasBelow80 && newExp >= threshold80 && !targetDa.hasPrompted80) {
+            targetDa.hasPrompted80 = true;
+            state.prompt80DaoAnh = {
+              daoAnhId: targetDa.id,
+              daoAnhName: targetDa.name,
+              currentKiep: targetDa.currentKiep || 0,
+              currentExp: newExp,
+              maxExp: maxExp
+            };
+          }
+
+          if (newExp >= maxExp) {
+            state.currentTargetDaoAnhId = null;
+
+            const allNowFull = activeDaoAnhs.every(da => {
+              const mExp = da.maxExp || KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
+              return (da.currentExp || 0) >= mExp;
+            });
+            if (allNowFull) {
+              state.prompt80DaoAnh = null;
+              if (!state.promptAllDaoAnhFullDismissed) {
+                state.promptAllDaoAnhFull = true;
+              }
+            }
+          }
+        }
+      }
     }
   }
 
@@ -1086,6 +1169,10 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
       } else {
         state.storedExp = (state.storedExp || 0) + gainedExp;
       }
+    }
+  } else if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
+    if (isAtBottleneck) {
+      state.storedExp = (state.storedExp || 0) + gainedExp;
     }
   }
 
@@ -2610,6 +2697,138 @@ export function swapDaoAnhPositions(idOrIndex1, idOrIndex2) {
 export const injectThienMenhToDaoAnh = injectExpToDaoAnh;
 
 /**
+ * Khi Đạo Anh đạt 80%, người chơi chọn CHUYỂN sang Đạo Anh khác
+ */
+export function chooseSwitchDaoAnhAfter80(daoAnhId) {
+  const state = getCultivationState();
+  if (state.daoAnhs) {
+    const da = state.daoAnhs.find(d => d.id === daoAnhId);
+    if (da) {
+      da.continueTo100 = false;
+      da.hasPrompted80 = true;
+    }
+    const candidates = state.daoAnhs.filter(d => {
+      if ((d.currentKiep || 0) >= 5) return false;
+      if (d.id === daoAnhId) return false;
+      const maxExp = d.maxExp || KIEP_EXP_REQUIREMENTS[d.currentKiep || 0] || 5000;
+      return (d.currentExp || 0) < Math.floor(maxExp * 0.8);
+    });
+    let newTarget = null;
+    if (candidates.length > 0) {
+      const randIdx = Math.floor(Math.random() * candidates.length);
+      newTarget = candidates[randIdx];
+    } else {
+      const under100 = state.daoAnhs.filter(d => {
+        if ((d.currentKiep || 0) >= 5) return false;
+        if (d.id === daoAnhId) return false;
+        const maxExp = d.maxExp || KIEP_EXP_REQUIREMENTS[d.currentKiep || 0] || 5000;
+        return (d.currentExp || 0) < maxExp;
+      });
+      newTarget = under100.length > 0 ? under100[0] : null;
+    }
+
+    if (newTarget) {
+      state.currentTargetDaoAnhId = newTarget.id;
+
+      // Nếu còn Uẩn Tích, tiếp tục xả vào Đạo Anh mới chuyển sang này
+      if (state.storedExp > 0) {
+        const maxExp = newTarget.maxExp || KIEP_EXP_REQUIREMENTS[newTarget.currentKiep || 0] || 5000;
+        const curExp = newTarget.currentExp || 0;
+        const needed = maxExp - curExp;
+        const flush = Math.min(state.storedExp, needed);
+        if (flush > 0) {
+          newTarget.currentExp = curExp + flush;
+          newTarget.currentThienMenh = newTarget.currentExp;
+          state.storedExp -= flush;
+          state.logs.unshift({
+            text: `🌊 UẨN TÍCH TIẾP TỤC XẢ RA! +${flush.toLocaleString()} Tu Vi uẩn tích đã rót vào Đạo Anh [${formatDaoAnhTitle(newTarget.name)}] (${newTarget.currentExp}/${maxExp} EXP)!`,
+            time: Date.now()
+          });
+
+          const threshold80 = Math.floor(maxExp * 0.8);
+          if (newTarget.currentExp >= threshold80 && !newTarget.hasPrompted80) {
+            newTarget.hasPrompted80 = true;
+            state.prompt80DaoAnh = {
+              daoAnhId: newTarget.id,
+              daoAnhName: newTarget.name,
+              currentKiep: newTarget.currentKiep || 0,
+              currentExp: newTarget.currentExp,
+              maxExp: maxExp
+            };
+            saveCultivationState(state);
+            return state;
+          }
+        }
+      }
+    } else {
+      state.currentTargetDaoAnhId = null;
+    }
+  }
+  state.prompt80DaoAnh = null;
+  saveCultivationState(state);
+  return state;
+}
+
+/**
+ * Khi Đạo Anh đạt 80%, người chơi chọn TIẾP TỤC NẠP ĐẾN 100%
+ */
+export function chooseContinueDaoAnhTo100(daoAnhId) {
+  const state = getCultivationState();
+  if (state.daoAnhs) {
+    const da = state.daoAnhs.find(d => d.id === daoAnhId);
+    if (da) {
+      da.continueTo100 = true;
+      da.hasPrompted80 = true;
+      state.currentTargetDaoAnhId = daoAnhId;
+
+      // Nếu người chơi chọn tiếp tục nạp đến 100% và kho còn Uẩn Tích, xả tiếp vào Đạo Anh này
+      if (state.storedExp > 0) {
+        const maxExp = da.maxExp || KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
+        const curExp = da.currentExp || 0;
+        const needed = maxExp - curExp;
+        const flush = Math.min(state.storedExp, needed);
+        if (flush > 0) {
+          da.currentExp = curExp + flush;
+          da.currentThienMenh = da.currentExp;
+          state.storedExp -= flush;
+          state.logs.unshift({
+            text: `🌊 UẨN TÍCH TIẾP TỤC XẢ RA! +${flush.toLocaleString()} Tu Vi uẩn tích đã rót vào Đạo Anh [${formatDaoAnhTitle(da.name)}] (${da.currentExp}/${maxExp} EXP)!`,
+            time: Date.now()
+          });
+
+          if (da.currentExp >= maxExp) {
+            state.currentTargetDaoAnhId = null;
+            const activeDaoAnhs = state.daoAnhs.filter(d => (d.currentKiep || 0) < 5);
+            const allNowFull = activeDaoAnhs.every(d => {
+              const mExp = d.maxExp || KIEP_EXP_REQUIREMENTS[d.currentKiep || 0] || 5000;
+              return (d.currentExp || 0) >= mExp;
+            });
+            if (allNowFull && !state.promptAllDaoAnhFullDismissed) {
+              state.promptAllDaoAnhFull = true;
+            }
+          }
+        }
+      }
+    }
+  }
+  state.prompt80DaoAnh = null;
+  saveCultivationState(state);
+  return state;
+}
+
+/**
+ * Hủy thông báo Toàn bộ Đạo Anh đã viên mãn 100%
+ * (Để người chơi tiếp tục đọc sách / tụ linh trận, Tu Vi sẽ tích lũy vào Uẩn Tích)
+ */
+export function dismissPromptAllDaoAnhFull() {
+  const state = getCultivationState();
+  state.promptAllDaoAnhFull = false;
+  state.promptAllDaoAnhFullDismissed = true;
+  saveCultivationState(state);
+  return state;
+}
+
+/**
  * Độ Kiếp cho 1 Đạo Anh
  */
 export function attemptTribulationSingle(daoAnhId) {
@@ -2643,9 +2862,41 @@ export function attemptTribulationSingle(daoAnhId) {
   if (isSuccess) {
     da.currentKiep += 1;
     da.currentExp = 0;
+    da.hasPrompted80 = false;
+    da.continueTo100 = false;
     da.currentThienMenh = 0;
     da.maxExp = KIEP_EXP_REQUIREMENTS[Math.min(4, da.currentKiep)];
     da.maxThienMenh = da.maxExp;
+
+    // Xả Uẩn Tích (nếu có tích lũy khi kẹt bình cảnh 100%) vào Đạo Anh vừa thăng kiếp
+    if (state.storedExp > 0) {
+      const flush = Math.min(state.storedExp, da.maxExp);
+      da.currentExp = flush;
+      da.currentThienMenh = flush;
+      state.storedExp -= flush;
+      state.currentTargetDaoAnhId = da.id;
+
+      state.logs.unshift({
+        text: `🌊 UẨN TÍCH THĂNG KIẾP XẢ RA! +${flush.toLocaleString()} Tu Vi uẩn tích đã rót vào Đạo Anh [${formatDaoAnhTitle(da.name)}] (${da.currentExp}/${da.maxExp} EXP)!`,
+        time: Date.now()
+      });
+
+      const threshold80 = Math.floor(da.maxExp * 0.8);
+      if (flush >= threshold80) {
+        da.hasPrompted80 = true;
+        state.prompt80DaoAnh = {
+          daoAnhId: da.id,
+          daoAnhName: da.name,
+          currentKiep: da.currentKiep || 0,
+          currentExp: flush,
+          maxExp: da.maxExp
+        };
+      } else {
+        da.hasPrompted80 = false;
+        da.continueTo100 = false;
+        state.prompt80DaoAnh = null;
+      }
+    }
 
     // Tính phần thưởng Thiên Mệnh nhận được theo Phẩm Cấp
     earnedTM = calculateDaoAnhTribulationReward(da, da.currentKiep, state);
@@ -2659,6 +2910,8 @@ export function attemptTribulationSingle(daoAnhId) {
       state.realm = 'nguyen_anh';
     }
   } else {
+    da.hasPrompted80 = false;
+    da.continueTo100 = false;
     if (da.fromLamp) {
       da.currentExp = Math.round(da.maxExp * 0.5);
       da.currentThienMenh = da.currentExp;
@@ -2670,6 +2923,9 @@ export function attemptTribulationSingle(daoAnhId) {
     }
     state.logs.unshift({ text: message, time: Date.now() });
   }
+
+  state.promptAllDaoAnhFull = false;
+  state.promptAllDaoAnhFullDismissed = false;
 
   saveCultivationState(state);
   return { state, isSuccess, successChance, tribulationName, daoAnhName: da.name, element: da.element, earnedTM, message };
@@ -2742,6 +2998,38 @@ export function attemptTribulationAll() {
     totalEarnedTM = baseTotalTM + bonusTM;
     state.totalThienMenh = (state.totalThienMenh || 0) + totalEarnedTM;
 
+    // Xả Uẩn Tích (nếu có tích lũy khi kẹt bình cảnh 100%) vào Đạo Anh ở Kiếp mới
+    if (state.storedExp > 0 && activeDaoAnhs.length > 0) {
+      const targetDa = activeDaoAnhs[0];
+      const maxExp = targetDa.maxExp || KIEP_EXP_REQUIREMENTS[targetDa.currentKiep || 0] || 10000;
+      const flush = Math.min(state.storedExp, maxExp);
+      targetDa.currentExp = flush;
+      targetDa.currentThienMenh = flush;
+      state.storedExp -= flush;
+      state.currentTargetDaoAnhId = targetDa.id;
+
+      state.logs.unshift({
+        text: `🌊 UẨN TÍCH THĂNG KIẾP XẢ RA! +${flush.toLocaleString()} Tu Vi uẩn tích đã rót vào Đạo Anh [${formatDaoAnhTitle(targetDa.name)}] (${targetDa.currentExp}/${maxExp} EXP)!`,
+        time: Date.now()
+      });
+
+      const threshold80 = Math.floor(maxExp * 0.8);
+      if (flush >= threshold80) {
+        targetDa.hasPrompted80 = true;
+        state.prompt80DaoAnh = {
+          daoAnhId: targetDa.id,
+          daoAnhName: targetDa.name,
+          currentKiep: targetDa.currentKiep || 0,
+          currentExp: flush,
+          maxExp: maxExp
+        };
+      } else {
+        targetDa.hasPrompted80 = false;
+        targetDa.continueTo100 = false;
+        state.prompt80DaoAnh = null;
+      }
+    }
+
     resultMsg = `⚡ VẠN KIẾP TỀ THĂNG ĐẠI THÀNH CÔNG! Đồng loạt ${activeDaoAnhs.length} Đạo Anh thăng hoa lên Kiếp thứ ${firstKiep + 1}! Kích hoạt cộng hưởng nhận +${totalEarnedTM.toLocaleString()} Thiên Mệnh (Gồm +${bonusTM.toLocaleString()} TM Bonus +50%)!`;
     state.logs.unshift({ text: resultMsg, time: Date.now() });
   } else {
@@ -2760,6 +3048,13 @@ export function attemptTribulationAll() {
     resultMsg = `⚡ VẠN KIẾP TỀ THĂNG THẤT BẠI! Do [${failedNames}] bị thiên lôi đánh lui, toàn bộ ${activeDaoAnhs.length} Đạo Anh đều không thể lên kiếp!`;
     state.logs.unshift({ text: resultMsg, time: Date.now() });
   }
+
+  activeDaoAnhs.forEach(da => {
+    da.hasPrompted80 = false;
+    da.continueTo100 = false;
+  });
+  state.promptAllDaoAnhFull = false;
+  state.promptAllDaoAnhFullDismissed = false;
 
   saveCultivationState(state);
   return {
@@ -2789,6 +3084,10 @@ export function fillAllDaoAnhExp() {
       filledCount++;
     }
   });
+
+  state.promptAllDaoAnhFull = true;
+  state.promptAllDaoAnhFullDismissed = false;
+  state.prompt80DaoAnh = null;
 
   const msg = `⚡ ĐẠI TRẬN BỒI DƯỠNG! Đã nạp đầy 100% Linh Lực cho ${filledCount} Đạo Anh! Sẵn sàng nghênh tiếp Lôi Kiếp!`;
   state.logs.unshift({ text: msg, time: Date.now() });
