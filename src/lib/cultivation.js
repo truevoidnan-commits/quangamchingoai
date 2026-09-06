@@ -704,11 +704,25 @@ export function clearUnreadDrops() {
  * Tính tổng số Mệnh Hỏa sở hữu ở Trúc Cơ
  */
 export function getTotalMenhHoa(state) {
+  const is121Active = Boolean(state.has121st || (state.phapKhieu || 0) >= 121);
   const baseHoa = Math.floor(Math.min(120, state.phapKhieu || 0) / 30);
-  const secretHoa = (state.has121st || (state.phapKhieu || 0) >= 121) ? 1 : 0;
-  const selfHoa = state.selfMenhHoa !== undefined ? Math.min(5, Math.max(state.selfMenhHoa, baseHoa + secretHoa)) : (baseHoa + secretHoa);
-  const lampCount = (state.absorbedLamps || []).length;
-  return Math.min(10, selfHoa + lampCount);
+  const secretHoa = is121Active ? 1 : 0;
+  const selfHoa = Math.min(5, baseHoa + secretHoa);
+
+  // Mệnh Đăng chỉ phát hỏa khi đài sen tương ứng đã thức tỉnh (slot < selfHoa)
+  // Quy luật Tiên Hiệp: Số Mệnh Đăng thắp sáng luôn <= Số Mệnh Hỏa tự thân
+  const absorbed = state.absorbedLamps || [];
+  let activeLampsCount = 0;
+  for (let i = 0; i < Math.min(4, absorbed.length); i++) {
+    if (absorbed[i] && selfHoa >= (i + 1)) {
+      activeLampsCount++;
+    }
+  }
+  if (absorbed[4] && is121Active && selfHoa >= 5) {
+    activeLampsCount++;
+  }
+
+  return Math.min(10, selfHoa + activeLampsCount);
 }
 
 /**
@@ -1082,7 +1096,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
 /**
  * HẤP THỤ MỆNH ĐĂNG (Vĩnh viễn, KHÔNG HOÀN TRẢ, Tối đa 5 Mệnh Đăng)
  */
-export function absorbLifeLamp(lampId) {
+export function absorbLifeLamp(lampId, targetSlot = null) {
   const state = getCultivationState();
 
   if (state.realm === 'ngung_khi') {
@@ -1093,27 +1107,129 @@ export function absorbLifeLamp(lampId) {
     throw new Error('Đến cảnh giới Nguyên Anh đạo cơ đã định hình, KHÔNG THỂ hấp thụ thêm Mệnh Đăng!');
   }
 
-  const currentAbsorbed = state.absorbedLamps || [];
-  if (currentAbsorbed.length >= 5) {
-    throw new Error('Đã đạt giới hạn tối đa 5 Mệnh Đăng.');
+  const baseHoa = Math.floor(Math.min(120, state.phapKhieu || 0) / 30);
+  const is121Active = Boolean(state.has121st || (state.phapKhieu || 0) >= 121);
+  const selfHoa = Math.min(5, baseHoa + (is121Active ? 1 : 0));
+
+  if (state.realm === 'truc_co') {
+    if (selfHoa === 0) {
+      throw new Error('Đạo Cơ hiện chưa ngưng tụ Mệnh Hỏa tự thân (cần tối thiểu 30 Pháp Khiếu để có 1 Hỏa). Chưa có Hỏa thì không thể thắp Đăng!');
+    }
+
+    if (targetSlot !== null) {
+      if (targetSlot < 4 && selfHoa < (targetSlot + 1)) {
+        throw new Error(`Đài sen này cần đạt ${targetSlot + 1} Hỏa tự thân (tối thiểu ${(targetSlot + 1) * 30} Pháp Khiếu) mới thức tỉnh để thắp Mệnh Đăng!`);
+      }
+      if (targetSlot === 4 && (!is121Active || selfHoa < 5)) {
+        throw new Error('Đài sen Hỗn Độn trung tâm chỉ thức tỉnh khi đã khai mở Pháp Khiếu thứ 121 (Cực Cảnh Sinh Tử)!');
+      }
+    }
   }
 
-  if (!state.inventoryLamps.includes(lampId)) {
+  if (!state.inventoryLamps || !state.inventoryLamps.includes(lampId)) {
     throw new Error('Bạn không có Mệnh Đăng này trong túi trữ vật.');
   }
 
+  if (!state.absorbedLamps) state.absorbedLamps = [];
+
+  // Xác định vị trí khảm nạp
+  let slotToUse = targetSlot;
+  if (slotToUse === null) {
+    for (let i = 0; i < selfHoa; i++) {
+      if (!state.absorbedLamps[i]) {
+        slotToUse = i;
+        break;
+      }
+    }
+  }
+
+  if (slotToUse === null || slotToUse >= selfHoa) {
+    throw new Error(`Mệnh Hỏa tự thân hiện tại (${selfHoa} Hỏa) chỉ đủ thắp sáng tối đa ${selfHoa} Mệnh Đăng. Hãy đả thông thêm Pháp Khiếu để ngưng tụ thêm Mệnh Hỏa!`);
+  }
+
+  // Nếu vị trí này đã có đèn cũ -> Tháo đèn cũ về túi trữ vật
+  const oldLampId = state.absorbedLamps[slotToUse];
+  if (oldLampId && oldLampId !== lampId) {
+    if (!state.inventoryLamps.includes(oldLampId)) {
+      state.inventoryLamps.push(oldLampId);
+    }
+  }
+
+  // Đặt đèn mới vào vị trí slot
   state.inventoryLamps = state.inventoryLamps.filter(id => id !== lampId);
-  state.absorbedLamps = [...currentAbsorbed, lampId];
+  state.absorbedLamps[slotToUse] = lampId;
 
   // Tính lại trần maxThienCung (tối đa 13)
-  const selfHoa = state.selfMenhHoa || Math.floor((state.phapKhieu || 0) / 30);
-  const totalBaseHoa = selfHoa + (state.has121st ? 1 : 0);
+  const totalBaseHoa = selfHoa;
   let baseSelfPalaces = 6;
   if (totalBaseHoa === 4) baseSelfPalaces = 7;
   else if (totalBaseHoa >= 5) baseSelfPalaces = 8;
+  const activeLamps = (state.absorbedLamps || []).filter(Boolean).length;
+  state.maxThienCung = Math.min(13, baseSelfPalaces + activeLamps);
 
-  state.maxThienCung = Math.min(13, baseSelfPalaces + state.absorbedLamps.length);
-  // Tuyệt đối không can thiệp state.realizedThienCung vì Mệnh Đăng là Chân Cung riêng biệt!
+  const lampObj = LIFE_LAMPS.find(l => l.id === lampId);
+  state.logs.unshift({
+    text: `🏮 Đã khảm nạp Mệnh Đăng [${lampObj?.name || lampId}] vào đài sen vị trí #${slotToUse + 1}!`,
+    time: Date.now()
+  });
+
+  saveCultivationState(state);
+  return state;
+}
+
+/**
+ * THÁO MỆNH ĐĂNG KHỎI ĐÀI SEN VỀ LẠI TÚI TRỮ VẬT
+ */
+export function unequipLifeLamp(slotOrLampId) {
+  const state = getCultivationState();
+  if (!state.absorbedLamps || state.absorbedLamps.length === 0) {
+    throw new Error('Chưa khảm nạp Mệnh Đăng nào để tháo.');
+  }
+
+  let slotIndex = -1;
+  let lampId = null;
+
+  if (typeof slotOrLampId === 'number') {
+    slotIndex = slotOrLampId;
+    lampId = state.absorbedLamps[slotIndex];
+  } else {
+    lampId = slotOrLampId;
+    slotIndex = state.absorbedLamps.findIndex(id => id === lampId);
+  }
+
+  if (!lampId || slotIndex === -1) {
+    throw new Error('Không tìm thấy Mệnh Đăng tại vị trí này để tháo.');
+  }
+
+  // Gỡ bỏ khỏi slot đài sen
+  state.absorbedLamps[slotIndex] = null;
+
+  // Thu dọn các phần tử null ở cuối mảng nếu có
+  while (state.absorbedLamps.length > 0 && !state.absorbedLamps[state.absorbedLamps.length - 1]) {
+    state.absorbedLamps.pop();
+  }
+
+  // Đưa về Túi Trữ Vật
+  if (!state.inventoryLamps) state.inventoryLamps = [];
+  if (!state.inventoryLamps.includes(lampId)) {
+    state.inventoryLamps.push(lampId);
+  }
+
+  // Tính lại trần maxThienCung
+  const baseHoa = Math.floor(Math.min(120, state.phapKhieu || 0) / 30);
+  const is121Active = Boolean(state.has121st || (state.phapKhieu || 0) >= 121);
+  const selfHoa = Math.min(5, baseHoa + (is121Active ? 1 : 0));
+  let baseSelfPalaces = 6;
+  if (selfHoa === 4) baseSelfPalaces = 7;
+  else if (selfHoa >= 5) baseSelfPalaces = 8;
+  const activeLamps = (state.absorbedLamps || []).filter(Boolean).length;
+  state.maxThienCung = Math.min(13, baseSelfPalaces + activeLamps);
+
+  const lampObj = LIFE_LAMPS.find(l => l.id === lampId);
+  state.logs.unshift({
+    text: `✨ Đã tháo Mệnh Đăng [${lampObj?.name || lampId}] khỏi đài sen, cất lại vào Túi Trữ Vật.`,
+    time: Date.now()
+  });
 
   saveCultivationState(state);
   return state;

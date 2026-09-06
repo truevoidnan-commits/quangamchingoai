@@ -5,6 +5,7 @@ import {
   clearUnreadDrops,
   addReadingProgress,
   absorbLifeLamp,
+  unequipLifeLamp,
   burnExpForLamp,
   sellLampForTienTinh,
   buyLampWithTienTinhAndExp,
@@ -83,8 +84,14 @@ export function useCultivation() {
     return res;
   }, []);
 
-  const handleAbsorbLamp = useCallback((lampId) => {
-    const next = absorbLifeLamp(lampId);
+  const handleAbsorbLamp = useCallback((lampId, slot = null) => {
+    const next = absorbLifeLamp(lampId, slot);
+    setCultivation({ ...next });
+    return next;
+  }, []);
+
+  const handleUnequipLamp = useCallback((slotOrId) => {
+    const next = unequipLifeLamp(slotOrId);
     setCultivation({ ...next });
     return next;
   }, []);
@@ -287,6 +294,7 @@ export function useCultivation() {
     clearUnreadDrops: handleClearUnreadDrops,
     gainReadingExp,
     absorbLamp: handleAbsorbLamp,
+    unequipLamp: handleUnequipLamp,
     burnExpForLamp: handleBurnExpForLamp,
     buyLamp: handleBurnExpForLamp,
     buyLampWithExp: handleBurnExpForLamp,

@@ -1610,6 +1610,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
     setNgungKhiPath, 
     gainReadingExp,
     absorbLamp,
+    unequipLamp,
     attempt121Breakthrough,
     activeRealmView,
     setActiveRealmView,
@@ -2889,10 +2890,23 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           )}
 
           {/* TỨ ĐẠI LIÊN ĐÀI 12 PHẨM CỐ ĐỊNH Ở 4 GÓC MÀN HÌNH (HTML ABSOLUTE CORNERS) */}
-          {/* Góc Tây Bắc - Tạo Hóa Thanh Liên */}
+          {/* Góc Tây Bắc - Tạo Hóa Thanh Liên (Mở khi đạt 1 Hỏa - 30 khiếu) */}
           <div 
             className="lotus-altar-tl"
-            onClick={() => { setSelectedSlot(0); setLampModalOpen(true); }}
+            onClick={() => {
+              if (openedCount < 30) {
+                alert(`⚠️ ĐÀI SEN CHƯA THỨC TỈNH!\n\nCần đạt tối thiểu 1 Hỏa tự thân (30 Pháp Khiếu) để thức tỉnh [Tạo Hóa Thanh Liên] và thắp Mệnh Đăng!\n(Hiện tại: ${openedCount}/120 Khiếu)`);
+                return;
+              }
+              setSelectedSlot(0);
+              setLampModalOpen(true);
+            }}
+            style={{
+              opacity: openedCount < 30 ? 0.38 : 1,
+              filter: openedCount < 30 ? 'grayscale(0.75)' : 'none',
+              cursor: openedCount < 30 ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s ease'
+            }}
           >
             <LotusAltarSlot
               altar={{ idx: 0, position: 'topLeft' }}
@@ -2903,10 +2917,23 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             />
           </div>
 
-          {/* Góc Đông Bắc - Diệt Thế Hắc Liên */}
+          {/* Góc Đông Bắc - Diệt Thế Hắc Liên (Mở khi đạt 2 Hỏa - 60 khiếu) */}
           <div 
             className="lotus-altar-tr"
-            onClick={() => { setSelectedSlot(1); setLampModalOpen(true); }}
+            onClick={() => {
+              if (openedCount < 60) {
+                alert(`⚠️ ĐÀI SEN CHƯA THỨC TỈNH!\n\nCần đạt tối thiểu 2 Hỏa tự thân (60 Pháp Khiếu) để thức tỉnh [Diệt Thế Hắc Liên] và thắp Mệnh Đăng thứ 2!\n(Hiện tại: ${openedCount}/120 Khiếu)`);
+                return;
+              }
+              setSelectedSlot(1);
+              setLampModalOpen(true);
+            }}
+            style={{
+              opacity: openedCount < 60 ? 0.38 : 1,
+              filter: openedCount < 60 ? 'grayscale(0.75)' : 'none',
+              cursor: openedCount < 60 ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s ease'
+            }}
           >
             <LotusAltarSlot
               altar={{ idx: 1, position: 'topRight' }}
@@ -2917,10 +2944,23 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             />
           </div>
 
-          {/* Góc Tây Nam - Công Đức Kim Liên */}
+          {/* Góc Tây Nam - Công Đức Kim Liên (Mở khi đạt 3 Hỏa - 90 khiếu) */}
           <div 
             className="lotus-altar-bl"
-            onClick={() => { setSelectedSlot(2); setLampModalOpen(true); }}
+            onClick={() => {
+              if (openedCount < 90) {
+                alert(`⚠️ ĐÀI SEN CHƯA THỨC TỈNH!\n\nCần đạt tối thiểu 3 Hỏa tự thân (90 Pháp Khiếu) để thức tỉnh [Công Đức Kim Liên] và thắp Mệnh Đăng thứ 3!\n(Hiện tại: ${openedCount}/120 Khiếu)`);
+                return;
+              }
+              setSelectedSlot(2);
+              setLampModalOpen(true);
+            }}
+            style={{
+              opacity: openedCount < 90 ? 0.38 : 1,
+              filter: openedCount < 90 ? 'grayscale(0.75)' : 'none',
+              cursor: openedCount < 90 ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s ease'
+            }}
           >
             <LotusAltarSlot
               altar={{ idx: 2, position: 'bottomLeft' }}
@@ -2931,10 +2971,23 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             />
           </div>
 
-          {/* Góc Đông Nam - Nghiệp Hỏa Hồng Liên */}
+          {/* Góc Đông Nam - Nghiệp Hỏa Hồng Liên (Mở khi đạt 4 Hỏa - 120 khiếu) */}
           <div 
             className="lotus-altar-br"
-            onClick={() => { setSelectedSlot(3); setLampModalOpen(true); }}
+            onClick={() => {
+              if (openedCount < 120) {
+                alert(`⚠️ ĐÀI SEN CHƯA THỨC TỈNH!\n\nCần đạt tối thiểu 4 Hỏa tự thân (120 Pháp Khiếu Viên Mãn) để thức tỉnh [Nghiệp Hỏa Hồng Liên] và thắp Mệnh Đăng thứ 4!\n(Hiện tại: ${openedCount}/120 Khiếu)`);
+                return;
+              }
+              setSelectedSlot(3);
+              setLampModalOpen(true);
+            }}
+            style={{
+              opacity: openedCount < 120 ? 0.38 : 1,
+              filter: openedCount < 120 ? 'grayscale(0.75)' : 'none',
+              cursor: openedCount < 120 ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s ease'
+            }}
           >
             <LotusAltarSlot
               altar={{ idx: 3, position: 'bottomRight' }}
@@ -6603,8 +6656,15 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   </div>
                   <button
                     onClick={() => {
-                      if (absorbLamp) absorbLamp(absorbedLamps[selectedSlot]);
-                      setLampModalOpen(false);
+                      try {
+                        if (unequipLamp) {
+                          unequipLamp(selectedSlot);
+                        }
+                        try { playStarChime(440); } catch(e) {}
+                        setLampModalOpen(false);
+                      } catch (e) {
+                        alert(e.message || 'Không thể tháo Mệnh Đăng.');
+                      }
                     }}
                     style={{
                       padding: '5px 12px',
@@ -6788,9 +6848,15 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                         ) : (
                           <button
                             onClick={() => {
-                              if (absorbLamp) absorbLamp(lamp.id);
-                              try { playStarChime(659); } catch(e) {}
-                              setLampModalOpen(false);
+                              try {
+                                if (absorbLamp) {
+                                  absorbLamp(lamp.id, selectedSlot);
+                                }
+                                try { playStarChime(659); } catch(e) {}
+                                setLampModalOpen(false);
+                              } catch (e) {
+                                alert(e.message || 'Không thể khảm Mệnh Đăng.');
+                              }
                             }}
                             style={{
                               padding: '6px 14px',
