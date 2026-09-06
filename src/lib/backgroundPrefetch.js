@@ -44,32 +44,23 @@ export function startBackgroundPrefetch() {
   // Tải từ tốn sau khi trang đã render xong (2000ms)
   setTimeout(() => {
     let index = 0;
-    const processNext = async () => {
+    const processNext = () => {
       if (index >= urlQueue.length) return;
       const url = urlQueue[index++];
       
       try {
-        if ('caches' in window) {
-          const cache = await caches.open('tcl-images-v2');
-          const match = await cache.match(url);
-          if (!match) {
-            const res = await fetch(url);
-            if (res && res.status === 200) await cache.put(url, res);
-          }
-        } else {
-          const img = new Image();
-          img.decoding = 'async';
-          img.src = url;
-        }
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = url;
       } catch {
         // Silent catch to prevent any error bubbling
       }
 
-      // Khoảng nghỉ 150ms giữa mỗi ảnh để CPU và RAM điện thoại luôn mát mẻ
+      // Khoảng nghỉ 120ms giữa mỗi ảnh để CPU và RAM điện thoại luôn mát mẻ
       if (window.requestIdleCallback) {
         window.requestIdleCallback(() => setTimeout(processNext, 120), { timeout: 2000 });
       } else {
-        setTimeout(processNext, 150);
+        setTimeout(processNext, 120);
       }
     };
 

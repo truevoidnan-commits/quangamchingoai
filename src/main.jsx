@@ -5,14 +5,22 @@ import './styles/globals.css'
 import './styles/animations.css'
 import App from './App.jsx'
 
-// Register persistent Service Worker safely for image caching
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    const swUrl = `${import.meta.env.BASE_URL}sw.js`;
-    navigator.serviceWorker.register(swUrl).catch((err) => {
-      console.warn('[SW] Service Worker registration failed:', err);
-    });
-  });
+// Clean up and unregister any legacy Service Worker to guarantee 0 white screens
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister().catch(() => {});
+    }
+  }).catch(() => {});
+  if ('caches' in window) {
+    caches.keys().then((keys) => {
+      keys.forEach((key) => {
+        if (key.startsWith('tcl-')) {
+          caches.delete(key).catch(() => {});
+        }
+      });
+    }).catch(() => {});
+  }
 }
 
 const rootElement = document.getElementById('root');
