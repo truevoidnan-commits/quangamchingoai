@@ -2020,6 +2020,22 @@ export const DAO_ANH_CUSTOM_TRANSFORMS = {
     4: { scale: 1.75, x: 0, y: 0 },
     5: { scale: 1.90, x: 0, y: 0 },
   },
+  nguyen_thuy_thien_ma: {
+    0: { scale: 1.45, x: 0, y: 0 },
+    1: { scale: 1.45, x: 0, y: 0 },
+    2: { scale: 1.45, x: 0, y: 0 },
+    3: { scale: 1.45, x: 0, y: 0 },
+    4: { scale: 1.45, x: 0, y: 0 },
+    5: { scale: 1.75, x: 0, y: 15 },
+  },
+  da_nguyen_thuy_thien_ma: {
+    0: { scale: 1.45, x: 0, y: 0 },
+    1: { scale: 1.45, x: 0, y: 0 },
+    2: { scale: 1.45, x: 0, y: 0 },
+    3: { scale: 1.45, x: 0, y: 0 },
+    4: { scale: 1.45, x: 0, y: 0 },
+    5: { scale: 1.75, x: 0, y: 15 },
+  },
 };
 
 export function getDaoAnhTransformStyle(daoAnhDef, currentKiep = 1) {
