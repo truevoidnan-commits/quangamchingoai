@@ -90,6 +90,49 @@ export default function ReaderPage() {
     return () => { isMounted = false; };
   }, [chapterId, activeNovelId]);
 
+  const lastRecordedScrollRef = useRef({ scrollY: 0, percent: 0, paraIndex: 0 });
+  const isRestoringRef = useRef(true);
+
+  // Lưu vị trí đọc chính xác (đoạn văn, % và pixel scrollY)
+  const saveCurrentPositionImmediate = useCallback(() => {
+    if (!chapter) return;
+    const currentScrollY = window.scrollY;
+    // Nếu currentScrollY === 0 mà trước đó đã cuộn được (ví dụ unmount event), giữ vị trí trước đó
+    const effectiveScrollY = currentScrollY > 0 ? currentScrollY : lastRecordedScrollRef.current.scrollY;
+
+    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+    let currentParaIndex = lastRecordedScrollRef.current.paraIndex;
+    const paraEls = document.querySelectorAll('[data-para-index]');
+    if (paraEls.length > 0) {
+      const targetOffset = effectiveScrollY + 85;
+      for (let i = 0; i < paraEls.length; i++) {
+        if (paraEls[i].offsetTop <= targetOffset) {
+          currentParaIndex = i;
+        } else {
+          break;
+        }
+      }
+    }
+
+    const percent = maxScroll > 0 ? Math.max(0, Math.min(1, effectiveScrollY / maxScroll)) : (lastRecordedScrollRef.current.percent || 0);
+    const posData = {
+      percent,
+      scrollY: effectiveScrollY,
+      paraIndex: currentParaIndex,
+      time: Date.now()
+    };
+
+    lastRecordedScrollRef.current = posData;
+    localStorage.setItem(`scroll_pos_${activeNovelId}_${chapter.id}`, JSON.stringify(posData));
+    sessionStorage.setItem(`scroll_pos_${activeNovelId}_${chapter.id}`, JSON.stringify(posData));
+    saveReadingProgress(activeNovelId, {
+      chapterId: chapter.id,
+      scrollTop: effectiveScrollY,
+      percent,
+      paraIndex: currentParaIndex
+    });
+  }, [chapter, activeNovelId]);
+
   // Khôi phục vị trí đọc chính xác (đoạn văn đang đọc dở hoặc %) khi vào lại chương
   useEffect(() => {
     if (!chapter || loading) return;
@@ -105,9 +148,14 @@ export default function ReaderPage() {
       return () => clearTimeout(searchTimer);
     }
 
-    let restored = false;
+    isRestoringRef.current = true;
+    let restoreSucceeded = false;
+
     const tryRestore = () => {
-      const savedRaw = localStorage.getItem(`scroll_pos_${activeNovelId}_${chapter.id}`);
+      if (restoreSucceeded) return;
+
+      const savedRaw = sessionStorage.getItem(`scroll_pos_${activeNovelId}_${chapter.id}`) ||
+                       localStorage.getItem(`scroll_pos_${activeNovelId}_${chapter.id}`);
       if (savedRaw) {
         try {
           const { percent, scrollY, paraIndex } = JSON.parse(savedRaw);
@@ -118,7 +166,8 @@ export default function ReaderPage() {
             if (targetPara) {
               const targetY = Math.max(0, targetPara.offsetTop - 70);
               window.scrollTo({ top: targetY, behavior: 'instant' });
-              restored = true;
+              lastRecordedScrollRef.current = { percent: percent || 0, scrollY: targetY, paraIndex };
+              restoreSucceeded = true;
               return;
             }
           }
@@ -129,11 +178,14 @@ export default function ReaderPage() {
             if (typeof percent === 'number' && percent > 0.005) {
               const targetY = percent * maxScroll;
               window.scrollTo({ top: targetY, behavior: 'instant' });
-              restored = true;
+              lastRecordedScrollRef.current = { percent, scrollY: targetY, paraIndex: paraIndex || 0 };
+              restoreSucceeded = true;
               return;
             } else if (typeof scrollY === 'number' && scrollY > 20) {
-              window.scrollTo({ top: Math.min(scrollY, maxScroll), behavior: 'instant' });
-              restored = true;
+              const targetY = Math.min(scrollY, maxScroll);
+              window.scrollTo({ top: targetY, behavior: 'instant' });
+              lastRecordedScrollRef.current = { percent: percent || 0, scrollY: targetY, paraIndex: paraIndex || 0 };
+              restoreSucceeded = true;
               return;
             }
           }
@@ -141,32 +193,45 @@ export default function ReaderPage() {
           console.warn('Lỗi khôi phục vị trí đọc:', e);
         }
       }
-
-      if (!restored) {
-        window.scrollTo({ top: 0, behavior: 'instant' });
-      }
     };
 
-    // Delay các nhịp để đảm bảo toàn bộ font chữ và layout đoạn văn đã được render đầy đủ
-    const timer1 = setTimeout(tryRestore, 60);
-    const timer2 = setTimeout(tryRestore, 180);
-    const timer3 = setTimeout(tryRestore, 320);
+    // Đa nhịp khôi phục theo chu kỳ render DOM và font chữ
+    tryRestore();
+    const timer1 = setTimeout(tryRestore, 50);
+    const timer2 = setTimeout(tryRestore, 150);
+    const timer3 = setTimeout(tryRestore, 300);
+    const timer4 = setTimeout(tryRestore, 500);
+
+    // Mở lại cờ cho phép lưu cuộn sau khi hoàn tất khôi phục
+    const timerDone = setTimeout(() => {
+      isRestoringRef.current = false;
+    }, 650);
 
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
       clearTimeout(timer3);
+      clearTimeout(timer4);
+      clearTimeout(timerDone);
     };
   }, [chapter?.id, loading, activeNovelId, searchKeyword]);
 
   // Chu kỳ ngộ đạo 60s lặp lại liên tục (cứ 60s tăng tu vi âm thầm & bắt đầu vòng mới)
   const [cycleSeconds, setCycleSeconds] = useState(0);
 
-  // Reset timer on chapter change & save reading progress
+  // Reset timer on chapter change & save reading progress (KHÔNG đè scrollTop = 0 lên vị trí đang đọc)
   useEffect(() => {
     setCycleSeconds(0);
     if (chapter) {
-      saveReadingProgress(activeNovelId, { chapterId: chapter.id, scrollTop: window.scrollY });
+      const existing = getReadingProgress(activeNovelId);
+      if (existing?.chapterId !== chapter.id) {
+        saveReadingProgress(activeNovelId, {
+          chapterId: chapter.id,
+          scrollTop: 0,
+          percent: 0,
+          paraIndex: 0
+        });
+      }
     }
   }, [chapter?.id, activeNovelId]);
 
@@ -209,65 +274,39 @@ export default function ReaderPage() {
   useEffect(() => {
     if (!chapter || loading) return;
 
-    const saveCurrentPosition = () => {
-      const scrollY = window.scrollY;
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-
-      // Tìm đoạn văn đang hiển thị ở phần trên của màn hình
-      let currentParaIndex = 0;
-      const paraEls = document.querySelectorAll('[data-para-index]');
-      if (paraEls.length > 0) {
-        const targetOffset = scrollY + 85;
-        for (let i = 0; i < paraEls.length; i++) {
-          if (paraEls[i].offsetTop <= targetOffset) {
-            currentParaIndex = i;
-          } else {
-            break;
-          }
-        }
-      }
-
-      const percent = maxScroll > 0 ? Math.max(0, Math.min(1, scrollY / maxScroll)) : 0;
-      const posData = {
-        percent,
-        scrollY,
-        paraIndex: currentParaIndex,
-        time: Date.now()
-      };
-
-      localStorage.setItem(`scroll_pos_${activeNovelId}_${chapter.id}`, JSON.stringify(posData));
-      saveReadingProgress(activeNovelId, {
-        chapterId: chapter.id,
-        scrollTop: scrollY,
-        percent,
-        paraIndex: currentParaIndex
-      });
-    };
-
     let throttleTimer = null;
     const handleScroll = () => {
       const currentY = window.scrollY;
       setBarVisible(currentY < lastScrollY.current || currentY < 80);
       lastScrollY.current = currentY;
 
+      // Không ghi đè nếu trang đang trong giai đoạn khôi phục vị trí lúc đầu
+      if (isRestoringRef.current) return;
+
+      if (currentY > 0) {
+        lastRecordedScrollRef.current.scrollY = currentY;
+      }
+
       if (!throttleTimer) {
         throttleTimer = setTimeout(() => {
-          saveCurrentPosition();
+          saveCurrentPositionImmediate();
           throttleTimer = null;
         }, 180);
       }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('beforeunload', saveCurrentPosition);
+    window.addEventListener('beforeunload', saveCurrentPositionImmediate);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('beforeunload', saveCurrentPosition);
+      window.removeEventListener('beforeunload', saveCurrentPositionImmediate);
       if (throttleTimer) clearTimeout(throttleTimer);
-      saveCurrentPosition();
+      if (!isRestoringRef.current && window.scrollY > 0) {
+        saveCurrentPositionImmediate();
+      }
     };
-  }, [chapter?.id, loading, activeNovelId]);
+  }, [chapter?.id, loading, activeNovelId, saveCurrentPositionImmediate]);
 
   // Navigate to adjacent chapters
   const currentIndex = chapters.findIndex(c => c.id === chapterId);
@@ -322,6 +361,7 @@ export default function ReaderPage() {
               <button
                 className={styles.topBtn}
                 onClick={() => {
+                  saveCurrentPositionImmediate();
                   sessionStorage.setItem('from_reader', '1');
                   sessionStorage.setItem('last_reading_url', window.location.hash ? window.location.hash.slice(1) : (window.location.pathname + window.location.search));
                   clearUnreadDrops();
@@ -417,6 +457,7 @@ export default function ReaderPage() {
               <button
                 className="btn-gold"
                 onClick={() => {
+                  saveCurrentPositionImmediate();
                   sessionStorage.setItem('from_reader', '1');
                   sessionStorage.setItem('last_reading_url', window.location.hash ? window.location.hash.slice(1) : (window.location.pathname + window.location.search));
                   setDroppedLamp(null);

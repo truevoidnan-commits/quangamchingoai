@@ -22,7 +22,11 @@ import { startBackgroundPrefetch } from './lib/backgroundPrefetch';
 function ScrollRestorer() {
   const { pathname } = useLocation();
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // Không tự ý cuộn lên đầu nếu vào trang đọc truyện (ReaderPage tự quản lý khôi phục vị trí đọc dở)
+    const isReaderRoute = pathname.includes('/read/') || pathname.includes('/chapter/');
+    if (!isReaderRoute) {
+      window.scrollTo(0, 0);
+    }
   }, [pathname]);
   useEffect(() => {
     preloadCoreArtifactIcons();
