@@ -2004,6 +2004,22 @@ export const DAO_ANH_CUSTOM_TRANSFORMS = {
     4: { scale: 1.24, x: 0, y: 0 },
     5: { scale: 1.32, x: 0, y: 0 },
   },
+  diet_the_loi_viem_dong: {
+    0: { scale: 1.35, x: 10, y: 0 },
+    1: { scale: 1.35, x: 10, y: 0 },
+    2: { scale: 1.35, x: 10, y: 0 },
+    3: { scale: 1.35, x: 10, y: 0 },
+    4: { scale: 1.75, x: 0, y: 0 },
+    5: { scale: 1.90, x: 0, y: 0 },
+  },
+  da_diet_the_loi_viem_dong: {
+    0: { scale: 1.35, x: 10, y: 0 },
+    1: { scale: 1.35, x: 10, y: 0 },
+    2: { scale: 1.35, x: 10, y: 0 },
+    3: { scale: 1.35, x: 10, y: 0 },
+    4: { scale: 1.75, x: 0, y: 0 },
+    5: { scale: 1.90, x: 0, y: 0 },
+  },
 };
 
 export function getDaoAnhTransformStyle(daoAnhDef, currentKiep = 1) {
