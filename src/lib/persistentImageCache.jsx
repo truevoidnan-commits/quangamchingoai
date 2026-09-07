@@ -7,13 +7,34 @@
 
 import { useState, useEffect } from 'react';
 
-const DB_NAME = 'tcl_image_cache_v1';
+const DB_NAME = 'tcl_image_cache_v2';
 const STORE_NAME = 'images';
 const DB_VERSION = 1;
+
+// Purge old obsolete v1 cache
+if (typeof window !== 'undefined' && window.indexedDB) {
+  try {
+    window.indexedDB.deleteDatabase('tcl_image_cache_v1');
+  } catch (e) {}
+}
 
 // In-memory cache for 0ms synchronous access
 const _memoryBlobMap = new Map();
 let _dbPromise = null;
+
+export function clearImageCache() {
+  _memoryBlobMap.clear();
+  _dbPromise = null;
+  if (typeof window !== 'undefined' && window.indexedDB) {
+    try {
+      window.indexedDB.deleteDatabase(DB_NAME);
+    } catch (e) {}
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.clearTCLImageCache = clearImageCache;
+}
 
 function getDB() {
   if (typeof window === 'undefined' || !window.indexedDB) return Promise.resolve(null);
@@ -38,6 +59,11 @@ function getDB() {
         console.warn('[ImageCache] IndexedDB open error:', err);
         resolve(null);
       };
+
+      request.onblocked = () => {
+        console.warn('[ImageCache] IndexedDB blocked');
+        resolve(null);
+      };
     } catch {
       resolve(null);
     }
@@ -50,6 +76,7 @@ function getDB() {
  * Lấy Blob URL từ IndexedDB nếu đã từng tải trước đó
  */
 export async function getCachedBlobUrl(url) {
+  if (import.meta.env.DEV) return null;
   if (!url || typeof url !== 'string') return null;
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
 
@@ -69,9 +96,13 @@ export async function getCachedBlobUrl(url) {
 
       request.onsuccess = () => {
         if (request.result && request.result.blob) {
-          const blobUrl = URL.createObjectURL(request.result.blob);
-          _memoryBlobMap.set(url, blobUrl);
-          resolve(blobUrl);
+          try {
+            const blobUrl = URL.createObjectURL(request.result.blob);
+            _memoryBlobMap.set(url, blobUrl);
+            resolve(blobUrl);
+          } catch {
+            resolve(null);
+          }
         } else {
           resolve(null);
         }
@@ -98,8 +129,10 @@ export async function saveImageToCache(url, blob) {
     store.put({ url, blob, savedAt: Date.now() });
     
     if (!_memoryBlobMap.has(url)) {
-      const blobUrl = URL.createObjectURL(blob);
-      _memoryBlobMap.set(url, blobUrl);
+      try {
+        const blobUrl = URL.createObjectURL(blob);
+        _memoryBlobMap.set(url, blobUrl);
+      } catch {}
     }
   } catch (e) {
     // Quota or transaction error
@@ -122,9 +155,13 @@ export async function fetchAndCacheImage(url) {
     if (res.ok) {
       const blob = await res.blob();
       await saveImageToCache(url, blob);
-      const blobUrl = _memoryBlobMap.get(url) || URL.createObjectURL(blob);
-      _memoryBlobMap.set(url, blobUrl);
-      return blobUrl;
+      try {
+        const blobUrl = _memoryBlobMap.get(url) || URL.createObjectURL(blob);
+        _memoryBlobMap.set(url, blobUrl);
+        return blobUrl;
+      } catch {
+        return url;
+      }
     }
   } catch {
     // Fallback to original network URL
@@ -137,6 +174,10 @@ export async function fetchAndCacheImage(url) {
  * React Hook: Tự động dùng ảnh từ IndexedDB nếu có, hoặc tải ngầm lưu vào máy
  */
 export function usePersistentImage(src) {
+  if (import.meta.env.DEV) {
+    return src;
+  }
+
   // Đồng bộ tức thì nếu đã có trong memory
   const initial = src && _memoryBlobMap.has(src) ? _memoryBlobMap.get(src) : src;
   const [currentSrc, setCurrentSrc] = useState(initial);

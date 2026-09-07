@@ -8,6 +8,7 @@ export default defineConfig({
     cssCodeSplit: true,
   },
   server: {
+    host: true,
     port: 3000,
     open: true,
   },
