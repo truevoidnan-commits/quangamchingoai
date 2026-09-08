@@ -526,6 +526,7 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
       switch (item.id) {
         case 'hong_mong_bat_diet': DedicatedLampSvg = SvgLampHongMong;  break;
         case 'cuu_chuyen_luan_hoi': DedicatedLampSvg = SvgLampLuanHoi;   break;
+        case 'chung_yen_tich_diet':
         case 'thuong_thuong_loi_kiep':
         case 'thien_dao_trung_phat': DedicatedLampSvg = SvgLampLoiKiep;  break;
         case 'van_menh_hu_vo':
