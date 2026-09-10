@@ -7,14 +7,15 @@
 
 import { useState, useEffect } from 'react';
 
-const DB_NAME = 'tcl_image_cache_v2';
+const DB_NAME = 'tcl_image_cache_v3';
 const STORE_NAME = 'images';
 const DB_VERSION = 1;
 
-// Purge old obsolete v1 cache
+// Purge old obsolete v1 and v2 caches to avoid stale local images
 if (typeof window !== 'undefined' && window.indexedDB) {
   try {
     window.indexedDB.deleteDatabase('tcl_image_cache_v1');
+    window.indexedDB.deleteDatabase('tcl_image_cache_v2');
   } catch (e) {}
 }
 
@@ -174,6 +175,7 @@ export async function fetchAndCacheImage(url) {
  * React Hook: Tự động dùng ảnh từ IndexedDB nếu có, hoặc tải ngầm lưu vào máy
  */
 export function usePersistentImage(src) {
+  // Ở môi trường local dev, luôn dùng ảnh trực tiếp từ file disk để cập nhật tức thì khi chỉnh sửa
   if (import.meta.env.DEV) {
     return src;
   }

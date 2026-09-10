@@ -1403,26 +1403,9 @@ export function getDaoAnhEvolutionImage(daoAnhDef, currentKiep = 0) {
   return resolveDaoAnhImage(chosenPath);
 }
 
-/** Preload all 5 Kiep evolution images of all Dao Anh into browser memory */
-let _hasPreloadedDaoAnh = false;
+/** Deprecated: Replaced by progressive gentle prefetcher in backgroundPrefetch.js */
 export function preloadAllDaoAnhEvolutionImages() {
-  if (typeof window === 'undefined' || _hasPreloadedDaoAnh) return;
-  _hasPreloadedDaoAnh = true;
-
-  const runPreload = () => {
-    Object.values(bundledDaoAnh).forEach((imgUrl) => {
-      if (imgUrl) {
-        const img = new Image();
-        img.src = imgUrl;
-      }
-    });
-  };
-
-  if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(runPreload, { timeout: 1500 });
-  } else {
-    setTimeout(runPreload, 50);
-  }
+  // Intentionally empty to prevent 231 simultaneous unthrottled image requests
 }
 
 /**

@@ -35,12 +35,20 @@ export function startBackgroundPrefetch() {
     if (url && !urlQueue.includes(url)) urlQueue.push(url);
   });
 
-  // 3. Đạo Ảnh Kiếp 1 & Kiếp 5
+  // 3. Đạo Ảnh Kiếp 1 & Kiếp 5 (Ưu tiên hiển thị mặc định)
   DAO_ANH_LIST.forEach((da) => {
     const urlK1 = getDaoAnhEvolutionImage(da, 1);
     const urlK5 = getDaoAnhEvolutionImage(da, 5);
     if (urlK1 && !urlQueue.includes(urlK1)) urlQueue.push(urlK1);
     if (urlK5 && !urlQueue.includes(urlK5)) urlQueue.push(urlK5);
+  });
+
+  // 4. Các tầng Kiếp 2, 3, 4 tiếp theo (Tải ngầm tiếp tục khi rảnh)
+  DAO_ANH_LIST.forEach((da) => {
+    for (let k = 2; k <= 4; k++) {
+      const urlK = getDaoAnhEvolutionImage(da, k);
+      if (urlK && !urlQueue.includes(urlK)) urlQueue.push(urlK);
+    }
   });
 
   // Tải từ tốn sau khi trang đã render xong (2000ms)
