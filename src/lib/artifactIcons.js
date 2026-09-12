@@ -51,7 +51,7 @@ export const LAMP_THAN_PHAM_AI_ICONS = {
   tuc_menh_nhan_qua:            bundledIcons['lamp_tuc_menh_nhan_qua'] || '',
   thai_co_than_long:            bundledIcons['lamp_thai_co_than_long'] || '',
   khoi_nguyen_thoi_khong:       bundledIcons['lamp_khoi_nguyen_thoi_khong'] || '',
-  van_gioi_quy_nhat:            bundledIcons['lamp_van_gioi_quy_nhat'] || '',
+  tinh_ha_dich_dao:             bundledIcons['lamp_tinh_ha_dich_dao'] || '',
   toi_cao_thien_menh:           bundledIcons['lamp_toi_cao_thien_menh'] || '',
   cuu_khieu_linh_lung:          bundledIcons['lamp_cuu_khieu_linh_lung'] || '',
   thien_dao_chi_ton:            bundledIcons['lamp_thien_dao_chi_ton'] || '',

@@ -4557,7 +4557,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                       'chung_yen_tich_diet': getAssetUrl('icons/than_pham/lamp_chung_yen_tich_diet.jpg'),
                       'toi_cao_thien_menh': getAssetUrl('icons/than_pham/lamp_toi_cao_thien_menh.jpg'),
                       'tuc_menh_nhan_qua': getAssetUrl('icons/than_pham/lamp_tuc_menh_nhan_qua.jpg'),
-                      'van_gioi_quy_nhat': getAssetUrl('icons/than_pham/lamp_van_gioi_quy_nhat.jpg'),
+                      'tinh_ha_dich_dao': getAssetUrl('icons/than_pham/lamp_tinh_ha_dich_dao.jpg'),
                       'van_menh_hu_vo': getAssetUrl('icons/than_pham/lamp_van_menh_hu_vo.jpg'),
                     };
 
@@ -5272,7 +5272,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           'chung_yen_tich_diet': getAssetUrl('icons/than_pham/lamp_chung_yen_tich_diet.jpg'),
           'toi_cao_thien_menh': getAssetUrl('icons/than_pham/lamp_toi_cao_thien_menh.jpg'),
           'tuc_menh_nhan_qua': getAssetUrl('icons/than_pham/lamp_tuc_menh_nhan_qua.jpg'),
-          'van_gioi_quy_nhat': getAssetUrl('icons/than_pham/lamp_van_gioi_quy_nhat.jpg'),
+          'tinh_ha_dich_dao': getAssetUrl('icons/than_pham/lamp_tinh_ha_dich_dao.jpg'),
           'van_menh_hu_vo': getAssetUrl('icons/than_pham/lamp_van_menh_hu_vo.jpg'),
         };
 

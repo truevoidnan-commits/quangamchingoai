@@ -536,6 +536,7 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
         case 'thai_co_than_long':  DedicatedLampSvg = SvgLampThanLong;  break;
         case 'khoi_nguyen_thoi_khong':
         case 'bat_hu_thoi_khong':  DedicatedLampSvg = SvgLampThoiKhong;  break;
+        case 'tinh_ha_dich_dao':
         case 'van_gioi_quy_nhat':  DedicatedLampSvg = SvgLampQuyNhat;   break;
         case 'toi_cao_thien_menh':  DedicatedLampSvg = SvgLampThienMenh; break;
         default: break;
