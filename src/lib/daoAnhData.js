@@ -1414,8 +1414,6 @@ export function preloadAllDaoAnhEvolutionImages() {
 export const DAO_ANH_ENLARGED_IDS = new Set([
   'da_cuu_khieu_linh_lung',
   'cuu_khieu_linh_lung',
-  'da_tinh_ha_dich_dao',
-  'tinh_ha_dich_dao',
   'da_khoi_nguyen_vu_tru_ban_nguyen',
   'khoi_nguyen_vu_tru_ban_nguyen',
   'da_cam_ky_cuc_dao',
@@ -1484,14 +1482,14 @@ export const SANCTUM_DAO_ANH_SCALES = {
   kim_o_luyen_van_linh: 1.38,
   da_cam_ky_cuc_dao: 1.35,
   cam_ky_cuc_dao: 1.35,
-  da_tinh_ha_dich_dao: 1.35,
-  tinh_ha_dich_dao: 1.35,
   da_khoi_nguyen_vu_tru_ban_nguyen: 1.35,
   khoi_nguyen_vu_tru_ban_nguyen: 1.35,
   da_hon_don_diet_the_loi_tri: 1.36,
   hon_don_diet_the_loi_tri: 1.36,
 
   // 2. Nhóm đã to sẵn (thân thể thẳng đứng, chiếm trọn khung hình -> giữ nguyên tỉ lệ 1.0)
+  da_tinh_ha_dich_dao: 1.0,
+  tinh_ha_dich_dao: 1.0,
   da_cuu_chuyen_luan_hoi: 1.0,
   cuu_chuyen_luan_hoi: 1.0,
   da_chung_yen_tich_diet: 1.0,
@@ -2186,6 +2184,22 @@ export const DAO_ANH_CUSTOM_TRANSFORMS = {
     3: { scale: 1.40, x: 0, y: 0 },
     4: { scale: 1.65, x: 0, y: 0 },
     5: { scale: 1.75, x: 0, y: 0 },
+  },
+  tinh_ha_dich_dao: {
+    0: { scale: 1.35, x: 0, y: 0 },
+    1: { scale: 1.35, x: 0, y: 0 },
+    2: { scale: 1.35, x: 0, y: 0 },
+    3: { scale: 1.40, x: 0, y: 0 },
+    4: { scale: 1.65, x: 0, y: 0 },
+    5: { scale: 1.85, x: 0, y: 0 },
+  },
+  da_tinh_ha_dich_dao: {
+    0: { scale: 1.35, x: 0, y: 0 },
+    1: { scale: 1.35, x: 0, y: 0 },
+    2: { scale: 1.35, x: 0, y: 0 },
+    3: { scale: 1.40, x: 0, y: 0 },
+    4: { scale: 1.65, x: 0, y: 0 },
+    5: { scale: 1.85, x: 0, y: 0 },
   },
 };
 
