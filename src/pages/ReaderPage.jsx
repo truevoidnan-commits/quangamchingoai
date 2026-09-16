@@ -104,6 +104,13 @@ export default function ReaderPage() {
   const lastRecordedScrollRef = useRef({ scrollY: 0, percent: 0, paraIndex: 0 });
   const isRestoringRef = useRef(true);
 
+  // Vô hiệu hoá tính năng tự động cuộn mặc định của trình duyệt để tránh nhảy lung tung khi back/forward
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
   // Lưu vị trí đọc chính xác (đoạn văn, % và pixel scrollY)
   const saveCurrentPositionImmediate = useCallback(() => {
     if (!chapter) return;
@@ -111,17 +118,34 @@ export default function ReaderPage() {
     // Nếu currentScrollY === 0 mà trước đó đã cuộn được (ví dụ unmount event), giữ vị trí trước đó
     const effectiveScrollY = currentScrollY > 0 ? currentScrollY : lastRecordedScrollRef.current.scrollY;
 
-    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-    let currentParaIndex = lastRecordedScrollRef.current.paraIndex;
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    let currentParaIndex = lastRecordedScrollRef.current.paraIndex || 0;
     const paraEls = document.querySelectorAll('[data-para-index]');
     if (paraEls.length > 0) {
-      const targetOffset = effectiveScrollY + 85;
+      let found = false;
+      // 1. Tìm đoạn văn đang nằm ngay dưới thanh top bar (độ cao bar ~50-60px)
       for (let i = 0; i < paraEls.length; i++) {
-        if (paraEls[i].offsetTop <= targetOffset) {
+        const rect = paraEls[i].getBoundingClientRect();
+        if (rect.bottom >= 60 && rect.top <= 140) {
           currentParaIndex = i;
-        } else {
+          found = true;
           break;
         }
+      }
+      // 2. Dự phòng: tìm đoạn văn đầu tiên bắt đầu từ vị trí đọc trở xuống
+      if (!found) {
+        for (let i = 0; i < paraEls.length; i++) {
+          const rect = paraEls[i].getBoundingClientRect();
+          if (rect.top >= 60) {
+            currentParaIndex = Math.max(0, i - 1);
+            found = true;
+            break;
+          }
+        }
+      }
+      // 3. Chỉ cho phép chỉ định đoạn cuối cùng nếu người dùng thực sự đã cuộn đến sát đáy trang
+      if (!found && effectiveScrollY >= maxScroll - 60) {
+        currentParaIndex = paraEls.length - 1;
       }
     }
 
@@ -168,63 +192,55 @@ export default function ReaderPage() {
     }
 
     isRestoringRef.current = true;
-    let restoreSucceeded = false;
 
     const tryRestore = () => {
-      if (restoreSucceeded) return;
-
       const savedRaw = sessionStorage.getItem(`scroll_pos_${activeNovelId}_${chapter.id}`) ||
                        localStorage.getItem(`scroll_pos_${activeNovelId}_${chapter.id}`);
-      if (savedRaw) {
-        try {
-          const { percent, scrollY, paraIndex } = JSON.parse(savedRaw);
+      if (!savedRaw) return;
 
-          // 1. Ưu tiên cuộn đến đúng đoạn văn (paragraph) đang đọc dở
-          if (typeof paraIndex === 'number' && paraIndex > 0) {
-            const targetPara = document.getElementById(`para-${paraIndex}`);
-            if (targetPara) {
-              const targetY = Math.max(0, targetPara.offsetTop - 70);
-              window.scrollTo({ top: targetY, behavior: 'instant' });
-              lastRecordedScrollRef.current = { percent: percent || 0, scrollY: targetY, paraIndex };
-              restoreSucceeded = true;
-              return;
-            }
-          }
+      try {
+        const { percent, scrollY, paraIndex } = JSON.parse(savedRaw);
 
-          // 2. Dự phòng theo % hoặc tọa độ pixel scrollY
-          const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-          if (maxScroll > 60) {
-            if (typeof percent === 'number' && percent > 0.005) {
-              const targetY = percent * maxScroll;
-              window.scrollTo({ top: targetY, behavior: 'instant' });
-              lastRecordedScrollRef.current = { percent, scrollY: targetY, paraIndex: paraIndex || 0 };
-              restoreSucceeded = true;
-              return;
-            } else if (typeof scrollY === 'number' && scrollY > 20) {
-              const targetY = Math.min(scrollY, maxScroll);
-              window.scrollTo({ top: targetY, behavior: 'instant' });
-              lastRecordedScrollRef.current = { percent: percent || 0, scrollY: targetY, paraIndex: paraIndex || 0 };
-              restoreSucceeded = true;
-              return;
-            }
+        // 1. Ưu tiên cuộn đến đúng đoạn văn (paragraph) đang đọc dở (chuẩn xác theo getBoundingClientRect)
+        if (typeof paraIndex === 'number' && paraIndex >= 0) {
+          const targetPara = document.getElementById(`para-${paraIndex}`);
+          if (targetPara) {
+            const rect = targetPara.getBoundingClientRect();
+            const targetY = Math.max(0, window.scrollY + rect.top - 70);
+            window.scrollTo({ top: targetY, behavior: 'instant' });
+            lastRecordedScrollRef.current = { percent: percent || 0, scrollY: targetY, paraIndex };
+            return;
           }
-        } catch (e) {
-          console.warn('Lỗi khôi phục vị trí đọc:', e);
         }
+
+        // 2. Dự phòng theo % hoặc tọa độ pixel scrollY
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        if (maxScroll > 60) {
+          if (typeof scrollY === 'number' && scrollY > 20 && scrollY <= maxScroll) {
+            window.scrollTo({ top: scrollY, behavior: 'instant' });
+            lastRecordedScrollRef.current = { percent: percent || 0, scrollY, paraIndex: paraIndex || 0 };
+          } else if (typeof percent === 'number' && percent > 0.005) {
+            const targetY = Math.min(percent * maxScroll, maxScroll);
+            window.scrollTo({ top: targetY, behavior: 'instant' });
+            lastRecordedScrollRef.current = { percent, scrollY: targetY, paraIndex: paraIndex || 0 };
+          }
+        }
+      } catch (e) {
+        console.warn('Lỗi khôi phục vị trí đọc:', e);
       }
     };
 
-    // Đa nhịp khôi phục theo chu kỳ render DOM và font chữ
+    // Đa nhịp khôi phục theo chu kỳ render DOM và font chữ (không ngắt sớm để bảo đảm font reflow vẫn giữ đúng đoạn văn)
     tryRestore();
-    const timer1 = setTimeout(tryRestore, 50);
-    const timer2 = setTimeout(tryRestore, 150);
-    const timer3 = setTimeout(tryRestore, 300);
-    const timer4 = setTimeout(tryRestore, 500);
+    const timer1 = setTimeout(tryRestore, 60);
+    const timer2 = setTimeout(tryRestore, 160);
+    const timer3 = setTimeout(tryRestore, 320);
+    const timer4 = setTimeout(tryRestore, 520);
 
     // Mở lại cờ cho phép lưu cuộn sau khi hoàn tất khôi phục
     const timerDone = setTimeout(() => {
       isRestoringRef.current = false;
-    }, 650);
+    }, 700);
 
     return () => {
       clearTimeout(timer1);
@@ -321,9 +337,6 @@ export default function ReaderPage() {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('beforeunload', saveCurrentPositionImmediate);
       if (throttleTimer) clearTimeout(throttleTimer);
-      if (!isRestoringRef.current && window.scrollY > 0) {
-        saveCurrentPositionImmediate();
-      }
     };
   }, [chapter?.id, loading, activeNovelId, saveCurrentPositionImmediate]);
 
