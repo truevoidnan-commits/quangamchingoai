@@ -21,6 +21,7 @@ import {
 import ArtifactIcon from './ArtifactIcon';
 import { LAMP_THAN_PHAM_AI_ICONS, getLampImageUrl, getArtifactImageUrl } from '../../lib/artifactIcons';
 import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhTransformConfig } from '../../lib/daoAnhData';
+import DaoAnhAvatarRenderer from './DaoAnhAvatarRenderer';
 import styles from './RealmPreviewVisualizer.module.css';
 
 import bgTrucCoGalaxy from '../../assets/images/truc_co_galaxy_bg.jpg';
@@ -6121,11 +6122,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               ];
               const kiepTitle = kiepNames[Math.min(5, Math.max(0, curKiep))];
 
-              const modalTransCfg = getDaoAnhTransformConfig(modalDaoAnhDef, Math.max(1, curKiep));
-              const finalModalScale = (modalTransCfg?.scale || 1.0) * 1.25;
-              const modalOffsetX = (modalTransCfg?.x || 0) * 0.7;
-              const modalOffsetY = (modalTransCfg?.y || 0) * 0.7;
-
               return (
                 <div
                   onClick={() => setFocusedDaoAnhId(null)}
@@ -6228,39 +6224,35 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                         overflow: 'hidden',
                         boxShadow: `inset 0 0 40px ${modalDaoAnhDef?.primaryColor ? `${modalDaoAnhDef.primaryColor}22` : 'rgba(56, 189, 248, 0.15)'}`
                       }}>
-                        <svg width="100%" height="100%" viewBox="-120 -120 240 240" style={{ overflow: 'visible' }}>
-                          {/* Vầng hào quang phát quang êm dịu thanh nhã */}
-                          <circle
-                            r="75"
-                            fill={modalDaoAnhDef?.primaryColor || modalArch.color}
-                            opacity={0.25}
-                            style={{ filter: 'blur(12px)' }}
+                        {modalDaoAnhDef?.image ? (
+                          <DaoAnhAvatarRenderer
+                            daoAnh={{
+                              ...modalDaoAnhDef,
+                              glowColor: isMax
+                                ? '#fde047'
+                                : canTribulate
+                                ? '#f0abfc'
+                                : (modalDaoAnhDef.glowColor || modalArch.color || '#fbbf24')
+                            }}
+                            size={260}
+                            currentKiep={curKiep}
+                            animate={true}
+                            showAura={true}
                           />
-
-                          {modalDaoAnhDef?.image ? (
-                            <g style={{ willChange: 'transform', animation: 'spiritBreathing 3.6s ease-in-out infinite alternate', transform: 'scale(1)', transformOrigin: '0 0' }}>
-                              <image
-                                href={getAssetUrl(getDaoAnhEvolutionImage(modalDaoAnhDef, curKiep))}
-                                x="-95"
-                                y="-95"
-                                width="190"
-                                height="190"
-                                preserveAspectRatio="xMidYMid meet"
-                                style={{
-                                  filter: isMax
-                                    ? 'drop-shadow(0 0 24px #fde047)'
-                                    : canTribulate
-                                    ? 'drop-shadow(0 0 24px #f0abfc)'
-                                    : `drop-shadow(0 0 18px ${modalDaoAnhDef.glowColor || modalArch.color || '#fbbf24'})`,
-                                }}
-                              />
-                            </g>
-                          ) : (
+                        ) : (
+                          <svg width="100%" height="100%" viewBox="-120 -120 240 240" style={{ overflow: 'visible' }}>
+                            {/* Vầng hào quang phát quang êm dịu thanh nhã */}
+                            <circle
+                              r="75"
+                              fill={modalDaoAnhDef?.primaryColor || modalArch.color}
+                              opacity={0.25}
+                              style={{ filter: 'blur(12px)' }}
+                            />
                             <g transform="scale(2.0)">
                               {renderDetailedPrimordialAvatar(modalArch, curKiep, isMax, canTribulate, true)}
                             </g>
-                          )}
-                        </svg>
+                          </svg>
+                        )}
                       </div>
 
                       {/* Thanh Tiến Độ EXP Linh Lực */}

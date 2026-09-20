@@ -102,6 +102,12 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
     return cat ? `${cat.icon} ${cat.name}` : catId;
   };
 
+  const getShortCategoryName = (catId) => {
+    const cat = Object.values(DAO_ANH_ELEMENT_TYPES).find((c) => c.id === catId);
+    if (!cat) return catId;
+    return `${cat.icon} ${cat.name.split(' & ')[0]}`;
+  };
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContainer} onClick={(e) => e.stopPropagation()}>
@@ -222,9 +228,12 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                 key={`cat-${cat.id}`}
                 className={`${styles.categoryChip} ${isActive ? styles.activeCategoryChip : ''}`}
                 onClick={() => setCategoryFilter(cat.id)}
+                title={cat.name}
               >
                 <span className={styles.catIcon}>{cat.icon}</span>
-                <span className={styles.catName}>{cat.name}</span>
+                <span className={styles.catName}>
+                  {cat.id === 'all' ? cat.name : cat.name.split(' & ')[0]}
+                </span>
                 <span className={styles.catCount}>({count})</span>
               </button>
             );
@@ -257,44 +266,27 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                       setPreviewKiep(5);
                     }}
                   >
-                    {/* Top Badges */}
-                    <div className={styles.cardHeaderBadges}>
-                      <span className={styles.tierBadge}>THẦN PHẨM</span>
-                      <span className={styles.sourceBadge}>
-                        {da.sourceType === 'lamp' ? '🏮 MỆNH ĐĂNG' : '🏛️ TRẤN ÁP'}
-                      </span>
-                    </div>
 
-                    {/* Stage Portrait Mirror - TẢI NHANH MƯỢT MÀ */}
+
+                    {/* Stage Portrait Mirror */}
                     <div className={styles.avatarStageWrap}>
                       <DaoAnhAvatarRenderer
                         daoAnh={da}
-                        size={200}
+                        size={185}
                         currentKiep={5}
                         animate={isHovered}
                         showAura={isHovered}
                       />
                     </div>
 
-                    {/* Text Details - TINH GỌN SANG TRỌNG */}
+                    {/* Card Plaque / Bottom Info */}
                     <div className={styles.cardContent}>
-                      <h3 className={styles.cardName}>{da.name}</h3>
-                      <div className={styles.cardTitle}>{da.title}</div>
-
-                      <div className={styles.skillPreviewTag} title={da.skillDesc}>
-                        <span className={styles.skillIcon}>⚡</span>
-                        <span className={styles.skillNameText}>{da.skillName}</span>
+                      <h3 className={styles.cardName} title={da.name}>
+                        {da.name.replace(/ Đạo Anh$/, '')}
+                      </h3>
+                      <div className={styles.cardHonorificText}>
+                        {da.title}
                       </div>
-                    </div>
-
-                    {/* Card Bottom Bar */}
-                    <div className={styles.cardFooter}>
-                      <span className={styles.kiepLabel}>
-                        <span className={styles.kiepDotGlow}>●</span> 5 Kiếp Thần Tướng
-                      </span>
-                      <span className={styles.inspectBtnText}>
-                        Chi Tiết ➔
-                      </span>
                     </div>
                   </div>
                 );
@@ -402,96 +394,71 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
               {/* Spotlight Content Split */}
               <div className={styles.spotlightSplit}>
                 
-                {/* LEFT PANE: Large Avatar & Tribulation Halo Stage */}
+                {/* LEFT PANE: Pure Art Showcase */}
                 <div className={styles.spotlightLeft}>
                   <div className={styles.spotlightAvatarBackdrop}>
                     <DaoAnhAvatarRenderer
                       daoAnh={selectedDaoAnh}
-                      size={220}
+                      size={300}
                       currentKiep={previewKiep}
                       animate={true}
                       showAura={true}
                     />
                   </div>
+                </div>
+
+                {/* RIGHT PANE: Title, Halo Stage Selector, Skill & Lore */}
+                <div className={styles.spotlightRight}>
+                  {/* Title & Honorific */}
+                  <div className={styles.spotlightHeader}>
+                    <h2 className={styles.spotlightName}>{selectedDaoAnh.name}</h2>
+                    <div className={styles.spotlightHonorific}>{selectedDaoAnh.title}</div>
+                  </div>
 
                   {/* Interactive Tribulation Halo Stage Selector */}
                   <div className={styles.haloStageControl}>
                     <div className={styles.haloLabelRow}>
-                      <span>HÀO QUANG ĐỘ KIẾP:</span>
+                      <span className={styles.haloHeadingText}>HÀO QUANG ĐỘ KIẾP</span>
                       <strong className={styles.haloCurrentKiep}>
-                        {previewKiep === 0 ? 'Sơ Khai' : `Kiếp ${previewKiep}/5 Viên Mãn`}
+                        Kiếp {previewKiep}/5 {previewKiep === 5 ? 'Viên Mãn' : ''}
                       </strong>
                     </div>
+
                     <div className={styles.haloBtnGroup}>
-                      {[0, 1, 2, 3, 4, 5].map((k) => (
+                      {[1, 2, 3, 4, 5].map((k) => (
                         <button
                           key={`k-btn-${k}`}
                           className={`${styles.haloBtn} ${previewKiep === k ? styles.activeHaloBtn : ''}`}
                           onClick={() => setPreviewKiep(k)}
                         >
-                          {k === 0 ? 'Sơ Khai' : `K${k}`}
+                          K{k}
                         </button>
                       ))}
                     </div>
-                  </div>
 
-                  {/* Evolution Form Title */}
-                  <div className={styles.tribulationFormBadge}>
-                    <span className={styles.formTag}>👑 CỰC HẠN THẦN THÂN:</span>
-                    <span className={styles.formValue}>{selectedDaoAnh.tribulationForm}</span>
-                  </div>
-                </div>
-
-                {/* RIGHT PANE: Deep Lore, Skill & Inscriptions */}
-                <div className={styles.spotlightRight}>
-                  {/* Title & Origin Tags */}
-                  <div className={styles.spotlightHeader}>
-                    <div className={styles.spotlightBadgesRow}>
-                      <span className={styles.spotlightTier}>THẦN PHẨM PHÁP TƯỚNG</span>
-                      <span className={styles.spotlightSource}>
-                        {selectedDaoAnh.sourceType === 'lamp' ? '🏮 MỆNH ĐĂNG' : '🏛️ VẬT TRẤN ÁP'}
-                      </span>
-                      <span className={styles.spotlightCategory}>
-                        {getCategoryName(selectedDaoAnh.category)}
-                      </span>
+                    {/* Evolution Form Title */}
+                    <div className={styles.tribulationFormBadge}>
+                      <span className={styles.formTag}>👑 CỰC HẠN THẦN THÂN:</span>
+                      <span className={styles.formValue}>{selectedDaoAnh.tribulationForm}</span>
                     </div>
-                    <h2 className={styles.spotlightName}>{selectedDaoAnh.name}</h2>
-                    <div className={styles.spotlightHonorific}>{selectedDaoAnh.title}</div>
-                  </div>
-
-                  {/* Divine Inscription / Poem */}
-                  <div className={styles.spotlightPoemBox}>
-                    <span className={styles.poemQuoteMark}>“</span>
-                    <p className={styles.spotlightPoemText}>{selectedDaoAnh.poem}</p>
-                    <span className={styles.poemQuoteMarkEnd}>”</span>
                   </div>
 
                   {/* Signature Skill Box */}
                   <div className={styles.spotlightSectionSkill}>
                     <div className={styles.sectionSkillHeader}>
                       <span className={styles.sectionSkillIcon}>⚡</span>
-                      <span className={styles.sectionSkillTitle}>THẦN THÔNG BẢN MỆNH</span>
+                      <span className={styles.sectionSkillTitle}>THẦN THÔNG:</span>
+                      <span className={styles.skillCoreName}>{selectedDaoAnh.skillName}</span>
                     </div>
-                    <div className={styles.skillCoreName}>{selectedDaoAnh.skillName}</div>
                     <p className={styles.skillCoreDesc}>{selectedDaoAnh.skillDesc}</p>
                   </div>
 
                   {/* Lore Description */}
                   <div className={styles.spotlightSectionLore}>
                     <div className={styles.sectionLoreHeader}>
-                      <span>📜 CHÂN THÂN TẢ TƯỚNG & KHỞI NGUYÊN</span>
+                      <span>📜 CHÂN THÂN & KHỞI NGUYÊN</span>
                     </div>
                     <p className={styles.loreDescText}>{selectedDaoAnh.desc}</p>
-                  </div>
-
-                  {/* Origin Info */}
-                  <div className={styles.spotlightSectionOrigin}>
-                    <div className={styles.originLabel}>Nguồn Gốc Bản Thể:</div>
-                    <div className={styles.originValue}>
-                      {selectedDaoAnh.sourceType === 'lamp'
-                        ? 'Sinh ra từ uy năng vô thượng của Mệnh Đăng Thần Phẩm tương ứng.'
-                        : 'Ngưng tụ từ căn cơ thái cổ của Thần Vật Trấn Áp Thần Phẩm.'}
-                    </div>
                   </div>
                 </div>
               </div>
@@ -506,7 +473,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                 <div className={styles.spotlightNavCounter}>
                   {currentIndex >= 0 && (
                     <span>
-                      Đạo Anh <strong>{currentIndex + 1}</strong> / {filteredList.length}
+                      ✦ Đạo Anh <strong>{currentIndex + 1}</strong> / {filteredList.length} ✦
                     </span>
                   )}
                 </div>
