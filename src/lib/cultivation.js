@@ -31,6 +31,15 @@ export const THIEN_MENH_PER_EXP = 10;
 export const MAX_ABSORBED_LAMPS = 5;
 
 // ========================================================
+// HẰNG SỐ LINH TÀNG KỲ (BÍ TÀNG & THẦN TÀNG)
+// ========================================================
+export const EXP_PER_THIEN_DAO = 50000;          // 50.000 EXP để ngưng tụ/ủ 1 Thiên Đạo
+export const EXP_PER_DI_TIEN_LUU = 50000;        // 50.000 EXP để dệt Hồn Ti mở Thần Linh Thái
+export const THIEN_MENH_PER_THAN_TANG = 10000;   // 10.000 Thiên Mệnh để nạp Thần Huyết Nhục chuyển sang Thần Tàng
+export const HOA_LO_SPEED_BONUS = 0.20;          // +20% tốc độ hấp thu EXP ngưng tụ Thiên Đạo khi ghép Hỏa Lò
+export const MAX_LINH_TANG_SLOTS = 5;            // Tối đa 5 Tòa Tàng Môn
+
+// ========================================================
 // 1. NGƯNG KHÍ KỲ — HAI CON ĐƯỜNG TU LUYỆN (THỂ & PHÁP)
 // ========================================================
 
@@ -436,11 +445,32 @@ export const SUPPRESSING_ARTIFACTS = [
   totalThienMenh: 0,
   daoAnhs: [],
 
+  // Linh Tàng Kỳ (5 Tòa Tàng Môn)
+  linhTangs: [],                 // Danh sách 5 Tòa Bí Tàng / Thần Tàng
+  assignedHuyenLo: {},          // Ghép cặp Mệnh Đăng (Hỏa Lò) 1-1 với Tòa { [tangIndex]: lampId }
+  inventoryThienDaoPhoi: 0,     // Số lượng Thiên Đạo Phôi trong túi trữ vật (kỳ ngộ khi đọc truyện)
+  targetLinhTangIndex: 1,       // Tòa đang ưu tiên nhận EXP Dưỡng Đạo khi đọc truyện
+
   // Lịch sử tu tiên
   logs: [
     { text: 'Bắt đầu bước chân vào đạo lộ tu tiên tại Thiên Cơ Lâu.', time: Date.now() },
   ],
 };
+
+/**
+ * Kiểm tra xem đã thu thập đầy đủ toàn bộ Mệnh Đăng và Vật Trấn Cung (Full đồ) hay chưa
+ */
+export function isAllItemsCollected(state) {
+  if (!state) return false;
+  const allOwnedLamps = [...(state.inventoryLamps || []), ...(state.absorbedLamps || [])];
+  const unownedLamps = LIFE_LAMPS.filter(l => !allOwnedLamps.includes(l.id));
+
+  const anchoredIds = Object.values(state.palaceAnchors || {}).map(a => a?.id || a).filter(Boolean);
+  const allOwnedArtifacts = [...(state.inventoryArtifacts || []), ...anchoredIds];
+  const unownedArtifacts = SUPPRESSING_ARTIFACTS.filter(a => !allOwnedArtifacts.includes(a.id));
+
+  return unownedLamps.length === 0 && unownedArtifacts.length === 0;
+}
 
 /**
  * Mở khóa cờ Thiên Mệnh khi ở Giả Anh hoặc Nguyên Anh
@@ -526,6 +556,11 @@ export function getCultivationState() {
     if (!raw) return DEFAULT_STATE;
     const parsed = JSON.parse(raw);
     const state = { ...DEFAULT_STATE, ...parsed };
+
+    if (!state.linhTangs) state.linhTangs = [];
+    if (!state.assignedHuyenLo) state.assignedHuyenLo = {};
+    if (state.inventoryThienDaoPhoi === undefined) state.inventoryThienDaoPhoi = 0;
+    if (!state.targetLinhTangIndex) state.targetLinhTangIndex = 1;
 
     // Khởi tạo và đồng bộ chuẩn xác tầng Ngưng Khí Thể & Pháp theo EXP
     if (state.ngungKhiTheExp === undefined) {
@@ -673,6 +708,22 @@ export function getCultivationState() {
       }
     }
 
+    // Đồng bộ và bảo vệ bộ đếm bảo hiểm (Pity counter):
+    // 1. Khi ở Giả Anh, Nguyên Anh, Linh Tàng: Mệnh Đăng & Vật Trấn Cung không rơi nữa -> reset pity = 0
+    // 2. Khi đã thu thập đủ toàn bộ Thần Vật (Full đồ) -> reset pity = 0
+    // 3. Nếu pityReadingCycles > 45 (lỗi phình to phiên bản cũ lên hơn 800) -> thiết lập lại về 0
+    const isAnhOrHighRealm = state.realm === 'gia_anh' || state.realm === 'nguyen_anh' || state.realm === 'linh_tang';
+    if (isAnhOrHighRealm || isAllItemsCollected(state) || (state.pityReadingCycles || 0) > 45) {
+      if (parsed.pityReadingCycles !== 0) {
+        state.pityReadingCycles = 0;
+        try {
+          localStorage.setItem(CULTIVATION_KEY, JSON.stringify(state));
+        } catch (_) {}
+      } else {
+        state.pityReadingCycles = 0;
+      }
+    }
+
     convertToThienMenhIfInAnhRealm(state);
 
     return state;
@@ -747,7 +798,7 @@ export function getCombatPowerDisplay(state) {
     const phapDesc = phapLvl === 10 ? '1 Cấm Hải' : phapLvl >= 5 ? (phapLvl - 5 > 0 ? `1 Tuyền ${phapLvl - 5} Lãng` : '1 Tuyền') : `${phapLvl} Lãng`;
 
     if (state.isSongTuVienMan || (theLvl >= 10 && phapLvl >= 10)) {
-      return '1 Bạt · 1 Cấm Hải (👑 Song Tuyệt)';
+      return '1 Bạt · 1 Cấm Hải (Song Tuyệt)';
     }
 
     if (state.ngungKhiActivePath === 'the') {
@@ -775,6 +826,28 @@ export function getCombatPowerDisplay(state) {
   if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
     const totalAnh = getTotalCombatPowerAnh(state);
     return `${totalAnh} Anh`;
+  }
+
+  if (state.realm === 'linh_tang') {
+    const linhTangs = state.linhTangs || [];
+    const openGatesCount = linhTangs.filter(t => t.isGateOpen).length;
+    const thanLinhThaiCount = linhTangs.filter(t => t.type === 'than_tang' && t.isThanLinhThai).length;
+
+    if (thanLinhThaiCount === 0) {
+      if (openGatesCount === 0) return 'Linh Tàng Sơ Khởi';
+      if (openGatesCount === 5) return '5 Tạng (Viên Mãn)';
+      return `${openGatesCount} Tạng`;
+    }
+
+    const thanLinhThaiEquiv = {
+      1: 'Quy Hư 1',
+      2: 'Quy Hư 2',
+      3: 'Quy Hư 3',
+      4: 'Quy Hư 4',
+      5: 'Bán Bộ Uẩn Thần'
+    }[thanLinhThaiCount] || `Thần Thái ${thanLinhThaiCount}`;
+
+    return `${openGatesCount} Tạng · ${thanLinhThaiEquiv}`;
   }
 
   return '0 Hổ';
@@ -811,6 +884,12 @@ export function isGrandCompletion(state) {
   if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
     if (!state.daoAnhs || state.daoAnhs.length === 0) return false;
     return state.daoAnhs.every(da => (da.currentKiep || 0) >= 5);
+  }
+
+  if (state.realm === 'linh_tang') {
+    const linhTangs = state.linhTangs || [];
+    if (linhTangs.length < 5) return false;
+    return linhTangs.every(t => t.isGateOpen);
   }
 
   return false;
@@ -890,64 +969,131 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   let droppedArtifact = null;
   let breakthrough = null;
 
-  // ĐẾN CHÍNH THỨC NGUYÊN ANH: Mệnh Đăng và Vật Trấn Áp sẽ KHÔNG RƠI NỮA
-  const isNguyenAnh = state.realm === 'nguyen_anh';
+  // Ở GIẢ ANH, NGUYÊN ANH VÀ LINH TÀNG: Mệnh Đăng & Vật Trấn Cung NGỪNG RƠI, thay bằng THIÊN MỆNH & THIÊN ĐẠO PHÔI
+  const isHighRealm = state.realm === 'gia_anh' || state.realm === 'nguyen_anh' || state.realm === 'linh_tang';
 
-  if (!isNguyenAnh) {
-    // Tăng bộ đếm bảo hiểm (Pity counter)
-    state.pityReadingCycles = (state.pityReadingCycles || 0) + 1;
+  if (isHighRealm) {
+    // Luôn giữ bộ đếm bảo hiểm ở 0 khi ở cảnh giới cao (không rơi Mệnh Đăng & Vật Trấn Cung)
+    state.pityReadingCycles = 0;
 
+    // 1. Rơi Lực Thiên Mệnh: 20 - 50 TM/chương (10% bạo kích nhận 100 TM)
+    const minTM = 20;
+    const maxTM = 50;
+    let droppedTM = Math.floor(Math.random() * (maxTM - minTM + 1)) + minTM;
+    if (Math.random() < 0.10) {
+      droppedTM = 100;
+    }
+    state.totalThienMenh = (state.totalThienMenh || 0) + droppedTM;
+
+    // 2. Kỳ Ngộ Thiên Đạo Ngoại Lai: ~1.2% xác suất rơi Thiên Đạo Phôi cất túi trữ vật
+    if (Math.random() < 0.012) {
+      state.inventoryThienDaoPhoi = (state.inventoryThienDaoPhoi || 0) + 1;
+      state.logs.unshift({
+        text: `🌌 KỲ NGỘ THIÊN ĐẠO! Cảm ngộ đại đạo chư thiên, thu hoạch được 1 [Thiên Đạo Phôi] cất vào túi trữ vật!`,
+        time: Date.now()
+      });
+    }
+
+    // 3. Nếu đang ở Linh Tàng Kỳ: Phân bổ Tu Vi đọc truyện vào Dưỡng Đạo hoặc Dị Tiên Lưu
+    if (state.realm === 'linh_tang' && state.linhTangs && state.linhTangs.length > 0) {
+      // A. Ưu tiên Thần Tàng đang bật Dị Tiên Lưu chưa đầy
+      const diTienLuuTarget = state.linhTangs.find(t => t.type === 'than_tang' && t.isNurturingDiTienLuu && !t.isThanLinhThai);
+      if (diTienLuuTarget) {
+        diTienLuuTarget.diTienLuuExp = Math.min(diTienLuuTarget.maxDiTienLuuExp || EXP_PER_DI_TIEN_LUU, (diTienLuuTarget.diTienLuuExp || 0) + gainedExp);
+        if (diTienLuuTarget.diTienLuuExp >= (diTienLuuTarget.maxDiTienLuuExp || EXP_PER_DI_TIEN_LUU)) {
+          diTienLuuTarget.isThanLinhThai = true;
+          diTienLuuTarget.isNurturingDiTienLuu = false;
+          const totalForms = state.linhTangs.filter(t => t.isThanLinhThai).length;
+          state.logs.unshift({
+            text: `👑 DỊ TIÊN LƯU ĐẠI THÀNH! [${diTienLuuTarget.name}] dệt xong Hồn Ti, giải phóng THẦN LINH THÁI (Tầng thứ ${totalForms})!`,
+            time: Date.now()
+          });
+        }
+      } else {
+        // B. Rót vào Tòa đang ủ Thiên Đạo (chưa mở cổng)
+        let targetTang = state.linhTangs.find(t => t.id === state.targetLinhTangIndex && t.isInitialized && !t.isGateOpen);
+        if (!targetTang) {
+          targetTang = state.linhTangs.find(t => t.isInitialized && !t.isGateOpen);
+        }
+        if (targetTang) {
+          const hasHuyenLo = Boolean(state.assignedHuyenLo?.[targetTang.id]);
+          const mult = hasHuyenLo ? (1 + HOA_LO_SPEED_BONUS) : 1.0;
+          const effectiveExp = Math.round(gainedExp * mult);
+          targetTang.exp = Math.min(targetTang.maxExp || EXP_PER_THIEN_DAO, (targetTang.exp || 0) + effectiveExp);
+          if (targetTang.exp >= (targetTang.maxExp || EXP_PER_THIEN_DAO)) {
+            targetTang.hasThienDao = true;
+            targetTang.thienDaoName = `${targetTang.originName || 'Bản Nguyên'} Thiên Đạo`;
+            targetTang.isGateOpen = true;
+            state.logs.unshift({
+              text: `🌟 KHẢI MINH THĂNG TINH! [${targetTang.name}] đã ngưng tụ thành công [${targetTang.thienDaoName}], TÀNG MÔN ẦM ẦM MỞ RA!`,
+              time: Date.now()
+            });
+          }
+        }
+      }
+    }
+  } else {
     const allOwnedLamps = [...(state.inventoryLamps || []), ...(state.absorbedLamps || [])];
     const unownedLamps = LIFE_LAMPS.filter(l => !allOwnedLamps.includes(l.id));
 
-    const anchoredIds = Object.values(state.palaceAnchors || {}).map(a => a?.id).filter(Boolean);
+    const anchoredIds = Object.values(state.palaceAnchors || {}).map(a => a?.id || a).filter(Boolean);
     const allOwnedArtifacts = [...(state.inventoryArtifacts || []), ...anchoredIds];
     const unownedArtifacts = SUPPRESSING_ARTIFACTS.filter(a => !allOwnedArtifacts.includes(a.id));
 
-    const dropLampRoll = Math.random();
-    const dropArtRoll = Math.random();
+    const isFullItems = unownedLamps.length === 0 && unownedArtifacts.length === 0;
 
-    // 1. Tỉ lệ rơi tự nhiên: Mệnh Đăng (3%), Vật Trấn Áp (4.5%)
-    if (dropLampRoll < 0.03 && unownedLamps.length > 0) {
-      const randomIndex = Math.floor(Math.random() * unownedLamps.length);
-      droppedLamp = unownedLamps[randomIndex];
-      state.inventoryLamps = [...(state.inventoryLamps || []), droppedLamp.id];
-      state.logs.unshift({
-        text: `✨ KỲ DUYÊN THẦN VẬT! Ngộ ra Mệnh Đăng [${droppedLamp.name}] (Thần Phẩm) - Đã thêm vào túi trữ vật!`,
-        time: Date.now(),
-      });
-      state.pityReadingCycles = 0; // Reset bảo hiểm
-    } else if (dropArtRoll < 0.045 && unownedArtifacts.length > 0) {
-      const randomIdx = Math.floor(Math.random() * unownedArtifacts.length);
-      droppedArtifact = unownedArtifacts[randomIdx];
-      state.inventoryArtifacts = [...(state.inventoryArtifacts || []), droppedArtifact.id];
-      state.logs.unshift({
-        text: `✨ KỲ DUYÊN XUẤT HIỆN! Nhặt được Vật Trấn Áp [${droppedArtifact.name}] (${droppedArtifact.type}) - Đã cất vào túi trữ vật!`,
-        time: Date.now(),
-      });
-      state.pityReadingCycles = 0; // Reset bảo hiểm
-    }
+    if (isFullItems) {
+      // Đã full đồ (toàn bộ Mệnh Đăng và Vật Trấn Áp đã thu thập đủ): Ngừng chạy bảo hiểm
+      state.pityReadingCycles = 0;
+    } else {
+      // Tăng bộ đếm bảo hiểm (Pity counter)
+      state.pityReadingCycles = (state.pityReadingCycles || 0) + 1;
 
-    // 2. Cơ chế Bảo Hiểm (Pity): 45 chu kỳ liên tiếp chưa rơi đồ
-    if (!droppedLamp && !droppedArtifact && state.pityReadingCycles >= 45) {
-      if (unownedLamps.length > 0 && (unownedArtifacts.length === 0 || Math.random() < 0.5)) {
+      const dropLampRoll = Math.random();
+      const dropArtRoll = Math.random();
+
+      // 1. Tỉ lệ rơi tự nhiên: Mệnh Đăng (3%), Vật Trấn Áp (4.5%)
+      if (dropLampRoll < 0.03 && unownedLamps.length > 0) {
         const randomIndex = Math.floor(Math.random() * unownedLamps.length);
         droppedLamp = unownedLamps[randomIndex];
         state.inventoryLamps = [...(state.inventoryLamps || []), droppedLamp.id];
         state.logs.unshift({
-          text: `🏮 CƠ DUYÊN TẤT THÀNH (BẢO HIỂM)! Trời cao không phụ lòng người, ban tặng [${droppedLamp.name}] (Thần Phẩm) vào túi trữ vật!`,
+          text: `✨ KỲ DUYÊN THẦN VẬT! Ngộ ra Mệnh Đăng [${droppedLamp.name}] (Thần Phẩm) - Đã thêm vào túi trữ vật!`,
           time: Date.now(),
         });
-        state.pityReadingCycles = 0;
-      } else if (unownedArtifacts.length > 0) {
+        state.pityReadingCycles = 0; // Reset bảo hiểm
+      } else if (dropArtRoll < 0.045 && unownedArtifacts.length > 0) {
         const randomIdx = Math.floor(Math.random() * unownedArtifacts.length);
         droppedArtifact = unownedArtifacts[randomIdx];
         state.inventoryArtifacts = [...(state.inventoryArtifacts || []), droppedArtifact.id];
         state.logs.unshift({
-          text: `🏛️ CƠ DUYÊN TẤT THÀNH (BẢO HIỂM)! Đạo tâm kiên định kết tinh Vật Trấn Áp [${droppedArtifact.name}] vào túi trữ vật!`,
+          text: `✨ KỲ DUYÊN XUẤT HIỆN! Nhặt được Vật Trấn Áp [${droppedArtifact.name}] (${droppedArtifact.type}) - Đã cất vào túi trữ vật!`,
           time: Date.now(),
         });
-        state.pityReadingCycles = 0;
+        state.pityReadingCycles = 0; // Reset bảo hiểm
+      }
+
+      // 2. Cơ chế Bảo Hiểm (Pity): 45 chu kỳ liên tiếp chưa rơi đồ
+      if (!droppedLamp && !droppedArtifact && state.pityReadingCycles >= 45) {
+        if (unownedLamps.length > 0 && (unownedArtifacts.length === 0 || Math.random() < 0.5)) {
+          const randomIndex = Math.floor(Math.random() * unownedLamps.length);
+          droppedLamp = unownedLamps[randomIndex];
+          state.inventoryLamps = [...(state.inventoryLamps || []), droppedLamp.id];
+          state.logs.unshift({
+            text: `🏮 CƠ DUYÊN TẤT THÀNH (BẢO HIỂM)! Trời cao không phụ lòng người, ban tặng [${droppedLamp.name}] (Thần Phẩm) vào túi trữ vật!`,
+            time: Date.now(),
+          });
+          state.pityReadingCycles = 0;
+        } else if (unownedArtifacts.length > 0) {
+          const randomIdx = Math.floor(Math.random() * unownedArtifacts.length);
+          droppedArtifact = unownedArtifacts[randomIdx];
+          state.inventoryArtifacts = [...(state.inventoryArtifacts || []), droppedArtifact.id];
+          state.logs.unshift({
+            text: `🏛️ CƠ DUYÊN TẤT THÀNH (BẢO HIỂM)! Đạo tâm kiên định kết tinh Vật Trấn Áp [${droppedArtifact.name}] vào túi trữ vật!`,
+            time: Date.now(),
+          });
+          state.pityReadingCycles = 0;
+        }
       }
     }
   }
@@ -2597,6 +2743,7 @@ export function manifestDaoAnh(palaceIndex) {
   state.isThienMenhUnlocked = true;
   state.daoAnhExp = 0;
   state.currentThienCungExp = 0;
+  state.pityReadingCycles = 0;
 
   // Tự động chuyển đổi toàn bộ Tiên Tinh thành Thiên Mệnh (1 Tiên Tinh = 2 Thiên Mệnh)
   convertToThienMenhIfInAnhRealm(state);
@@ -3099,12 +3246,355 @@ export function fillAllDaoAnhExp() {
 // Alias tương thích ngược
 export const fillAllDaoAnhThienMenh = fillAllDaoAnhExp;
 
+// ========================================================
+// HỆ THỐNG CẢNH GIỚI LINH TÀNG KỲ (BÍ TÀNG & THẦN TÀNG)
+// ========================================================
+
+/**
+ * Đột phá từ Nguyên Anh Đại Viên Mãn lên Linh Tàng Kỳ
+ */
+export function breakthroughToLinhTang() {
+  const state = getCultivationState();
+  if (state.realm !== 'nguyen_anh' && state.realm !== 'gia_anh') {
+    throw new Error('Chưa đạt cảnh giới Nguyên Anh để đột phá Linh Tàng.');
+  }
+
+  const daoAnhs = state.daoAnhs || [];
+  if (daoAnhs.length === 0) {
+    throw new Error('Chưa ngưng tụ Đạo Anh.');
+  }
+
+  const allPassed5Kiep = daoAnhs.every(da => (da.currentKiep || 0) >= 5);
+  if (!allPassed5Kiep) {
+    throw new Error('Yêu cầu toàn bộ Đạo Anh phải đạt Kiếp 5 Đại Viên Mãn trước khi đột phá Linh Tàng!');
+  }
+
+  // 1. Xác định Đạo Anh nổi bật nhất để định danh Tòa 1
+  let prominentDaoAnh = daoAnhs.find(da => da.lampId === 'thien_dao_chi_ton' || (da.name && da.name.includes('Thiên Đạo')));
+  let hasEasterEggThienDao = false;
+
+  if (prominentDaoAnh) {
+    hasEasterEggThienDao = true;
+  } else {
+    prominentDaoAnh = daoAnhs.find(da => da.tier === 'than_pham') || daoAnhs[0];
+  }
+
+  const baseName = prominentDaoAnh?.name || 'Thái Sơ';
+  const cleanName = baseName.replace(/Đạo Anh/gi, '').trim();
+
+  // Tòa 1 khởi tạo
+  const toa1 = {
+    id: 1,
+    name: cleanName ? `${cleanName} Bí Tàng` : 'Đệ Nhất Bí Tàng',
+    originName: cleanName,
+    type: 'bi_tang',
+    artifactId: null,
+    exp: hasEasterEggThienDao ? EXP_PER_THIEN_DAO : 0,
+    maxExp: EXP_PER_THIEN_DAO,
+    hasThienDao: hasEasterEggThienDao,
+    thienDaoName: hasEasterEggThienDao ? 'Chí Tôn Thiên Đạo' : '',
+    isGateOpen: hasEasterEggThienDao,
+    thanHuyetNhuc: 0,
+    maxThanHuyetNhuc: THIEN_MENH_PER_THAN_TANG,
+    diTienLuuExp: 0,
+    maxDiTienLuuExp: EXP_PER_DI_TIEN_LUU,
+    isNurturingDiTienLuu: false,
+    isThanLinhThai: false,
+    assignedLampId: null,
+    isInitialized: true,
+  };
+
+  // 4 Tòa còn lại
+  const remainingTangs = [2, 3, 4, 5].map(idx => ({
+    id: idx,
+    name: `Tòa Thứ ${idx}`,
+    originName: '',
+    type: 'bi_tang',
+    artifactId: null,
+    exp: 0,
+    maxExp: EXP_PER_THIEN_DAO,
+    hasThienDao: false,
+    thienDaoName: '',
+    isGateOpen: false,
+    thanHuyetNhuc: 0,
+    maxThanHuyetNhuc: THIEN_MENH_PER_THAN_TANG,
+    diTienLuuExp: 0,
+    maxDiTienLuuExp: EXP_PER_DI_TIEN_LUU,
+    isNurturingDiTienLuu: false,
+    isThanLinhThai: false,
+    assignedLampId: null,
+    isInitialized: false,
+  }));
+
+  state.realm = 'linh_tang';
+  state.linhTangs = [toa1, ...remainingTangs];
+  state.targetLinhTangIndex = hasEasterEggThienDao ? 2 : 1;
+  state.assignedHuyenLo = {};
+
+  const msg = hasEasterEggThienDao
+    ? `🌌 ĐỘT PHÁ LINH TÀNG KỲ ĐẠI THÀNH! Toàn bộ ${daoAnhs.length} Đạo Anh dung hợp đúc nên [${toa1.name}]. Nhờ có Đạo Anh [${prominentDaoAnh.name}] (Thiên Đạo Chí Tôn), Tòa 1 tự mang Phôi Thiên Đạo, TÀNG MÔN ẦM ẦM MỞ RA!`
+    : `🌌 ĐỘT PHÁ LINH TÀNG KỲ THÀNH CÔNG! Toàn bộ ${daoAnhs.length} Đạo Anh dung hợp đúc nên [${toa1.name}]. Bắt đầu hành trình Dưỡng Đạo Khải Minh!`;
+
+  state.logs.unshift({ text: msg, time: Date.now() });
+
+  saveCultivationState(state);
+  return {
+    state,
+    breakthrough: {
+      title: 'ĐỘT PHÁ LINH TÀNG KỲ!',
+      subtitle: hasEasterEggThienDao 
+        ? `Đạo Anh dung hợp thành [${toa1.name}], Tàng Môn Đệ Nhất mở tung!`
+        : `Đạo Anh dung hợp thành [${toa1.name}], Thức Hải xuất hiện 5 Tòa Tàng Môn!`,
+      icon: '🏛️',
+      badge: '✦ BÍ TÀNG NHỤC THÂN ✦',
+      theme: 'cyan',
+      cpStr: getCombatPowerDisplay(state)
+    }
+  };
+}
+
+/**
+ * Khởi tạo phôi cho Tòa 2..5 bằng một Bảo Vật Trấn Tạng
+ */
+export function initNextLinhTang(tangIndex, artifactOrName) {
+  const state = getCultivationState();
+  if (state.realm !== 'linh_tang') {
+    throw new Error('Chưa ở cảnh giới Linh Tàng.');
+  }
+
+  const prevIndex = tangIndex - 1;
+  const prevTang = state.linhTangs?.find(t => t.id === prevIndex);
+  if (!prevTang || !prevTang.isGateOpen) {
+    throw new Error(`Cần dưỡng tòa thứ ${prevIndex} đạt Viên Mãn (Tàng Môn mở) trước khi mở tòa tiếp theo!`);
+  }
+
+  const targetTang = state.linhTangs?.find(t => t.id === tangIndex);
+  if (!targetTang) {
+    throw new Error('Không tìm thấy Tòa Bí Tàng.');
+  }
+  if (targetTang.isInitialized) {
+    throw new Error(`Tòa thứ ${tangIndex} đã được khởi tạo.`);
+  }
+
+  const artifactName = typeof artifactOrName === 'string' ? artifactOrName : (artifactOrName?.name || `Bảo Vật Tòa ${tangIndex}`);
+  const artifactId = typeof artifactOrName === 'object' ? artifactOrName?.id : null;
+
+  targetTang.name = `${artifactName} Bí Tàng`;
+  targetTang.originName = artifactName;
+  targetTang.artifactId = artifactId;
+  targetTang.isInitialized = true;
+  targetTang.exp = 0;
+  targetTang.hasThienDao = false;
+  targetTang.isGateOpen = false;
+
+  state.targetLinhTangIndex = tangIndex;
+  state.logs.unshift({
+    text: `🏛️ Khai mở phôi [${targetTang.name}] (Tòa thứ ${tangIndex})! Bắt đầu Dưỡng Đạo tích lũy Thiên Đạo.`,
+    time: Date.now()
+  });
+
+  saveCultivationState(state);
+  return state;
+}
+
+/**
+ * Nạp EXP Tu Vi nuôi Thiên Đạo (Dưỡng Đạo) thủ công
+ */
+export function feedExpToLinhTang(tangIndex, expAmount) {
+  const state = getCultivationState();
+  const tang = state.linhTangs?.find(t => t.id === tangIndex);
+  if (!tang || !tang.isInitialized) throw new Error('Tòa chưa được khởi tạo.');
+  if (tang.isGateOpen) throw new Error('Tòa này đã hoàn thành Thiên Đạo, Tàng Môn đã mở!');
+
+  const hasHuyenLo = Boolean(state.assignedHuyenLo?.[tangIndex]);
+  const multiplier = hasHuyenLo ? (1 + HOA_LO_SPEED_BONUS) : 1.0;
+  const effectiveExp = Math.round(expAmount * multiplier);
+
+  tang.exp = Math.min(tang.maxExp || EXP_PER_THIEN_DAO, (tang.exp || 0) + effectiveExp);
+
+  if (tang.exp >= (tang.maxExp || EXP_PER_THIEN_DAO)) {
+    tang.hasThienDao = true;
+    tang.thienDaoName = `${tang.originName || 'Bản Nguyên'} Thiên Đạo`;
+    tang.isGateOpen = true;
+    state.logs.unshift({
+      text: `🌟 KHẢI MINH THĂNG TINH! [${tang.name}] đã ngưng tụ thành công [${tang.thienDaoName}], TÀNG MÔN ẦM ẦM MỞ RA!`,
+      time: Date.now()
+    });
+  }
+
+  saveCultivationState(state);
+  return state;
+}
+
+/**
+ * Dùng 1 Thiên Đạo Phôi từ túi đồ để hoàn tất Thiên Đạo tức thì
+ */
+export function attachThienDaoFromInventory(tangIndex) {
+  const state = getCultivationState();
+  if ((state.inventoryThienDaoPhoi || 0) <= 0) {
+    throw new Error('Trong túi trữ vật không có Thiên Đạo Phôi.');
+  }
+  const tang = state.linhTangs?.find(t => t.id === tangIndex);
+  if (!tang || !tang.isInitialized) throw new Error('Tòa chưa được khởi tạo.');
+  if (tang.isGateOpen) throw new Error('Tòa này đã có Thiên Đạo, Tàng Môn đã mở!');
+
+  state.inventoryThienDaoPhoi -= 1;
+  tang.exp = tang.maxExp || EXP_PER_THIEN_DAO;
+  tang.hasThienDao = true;
+  tang.thienDaoName = `${tang.originName || 'Hỗn Độn'} Thiên Đạo (Kỳ Ngộ)`;
+  tang.isGateOpen = true;
+
+  state.logs.unshift({
+    text: `🌟 DUNG NHẬP THIÊN ĐẠO PHÔI! [${tang.name}] lập tức viên mãn, TÀNG MÔN ẦM ẦM MỞ RA!`,
+    time: Date.now()
+  });
+
+  saveCultivationState(state);
+  return state;
+}
+
+/**
+ * Chuyển hóa Bí Tàng sang Thần Tàng (tiêu hao 10.000 Thiên Mệnh)
+ */
+export function convertBiTangToThanTang(tangIndex) {
+  const state = getCultivationState();
+  const tang = state.linhTangs?.find(t => t.id === tangIndex);
+  if (!tang || !tang.isInitialized) throw new Error('Tòa chưa được khởi tạo.');
+  if (tang.type === 'than_tang') throw new Error('Tòa này đã là Thần Tàng rồi.');
+
+  if ((state.totalThienMenh || 0) < THIEN_MENH_PER_THAN_TANG) {
+    throw new Error(`Cần tối thiểu ${THIEN_MENH_PER_THAN_TANG.toLocaleString()} Lực Thiên Mệnh để nuôi đủ Thần Huyết Nhục (Hiện có: ${(state.totalThienMenh || 0).toLocaleString()})!`);
+  }
+
+  state.totalThienMenh -= THIEN_MENH_PER_THAN_TANG;
+  tang.type = 'than_tang';
+  tang.thanHuyetNhuc = THIEN_MENH_PER_THAN_TANG;
+  tang.name = tang.name.replace(/Bí Tàng/gi, 'Thần Tàng').trim();
+  if (!tang.name.includes('Thần Tàng')) tang.name += ' Thần Tàng';
+
+  state.logs.unshift({
+    text: `🩸 THẦN HUYẾT NHỤC BỒI DƯỠNG! Đã tiêu hao ${THIEN_MENH_PER_THAN_TANG.toLocaleString()} Thiên Mệnh chuyển hóa [${tang.name}] thành THẦN TÀNG vĩnh viễn! Toàn bộ bảo vật đã đồng hóa thành Thần Khí!`,
+    time: Date.now()
+  });
+
+  saveCultivationState(state);
+  return state;
+}
+
+/**
+ * Bật/tắt chế độ tích lũy Dị Tiên Lưu cho Thần Tàng
+ */
+export function toggleDiTienLuu(tangIndex, isNurturing) {
+  const state = getCultivationState();
+  const tang = state.linhTangs?.find(t => t.id === tangIndex);
+  if (!tang || tang.type !== 'than_tang') {
+    throw new Error('Chỉ Thần Tàng mới có thể tu luyện Dị Tiên Lưu.');
+  }
+  if (!tang.isGateOpen) {
+    throw new Error('Cần Thần Tàng đạt Viên Mãn (đã có Thiên Đạo) trước khi mở Dị Tiên Lưu!');
+  }
+
+  tang.isNurturingDiTienLuu = isNurturing !== undefined ? isNurturing : !tang.isNurturingDiTienLuu;
+  state.logs.unshift({
+    text: tang.isNurturingDiTienLuu
+      ? `🔮 Đã kích hoạt Dị Tiên Lưu cho [${tang.name}]! Tu Vi đọc sách sẽ tích lũy dệt Hồn Ti.`
+      : `🔮 Đã tạm dừng Dị Tiên Lưu cho [${tang.name}].`,
+    time: Date.now()
+  });
+
+  saveCultivationState(state);
+  return state;
+}
+
+/**
+ * Nạp EXP Tu Vi vào Dị Tiên Lưu
+ */
+export function feedDiTienLuuExp(tangIndex, expAmount) {
+  const state = getCultivationState();
+  const tang = state.linhTangs?.find(t => t.id === tangIndex);
+  if (!tang || tang.type !== 'than_tang' || !tang.isGateOpen) return state;
+  if (tang.isThanLinhThai) return state;
+
+  tang.diTienLuuExp = Math.min(tang.maxDiTienLuuExp || EXP_PER_DI_TIEN_LUU, (tang.diTienLuuExp || 0) + expAmount);
+  if (tang.diTienLuuExp >= (tang.maxDiTienLuuExp || EXP_PER_DI_TIEN_LUU)) {
+    tang.isThanLinhThai = true;
+    tang.isNurturingDiTienLuu = false;
+    const totalForms = state.linhTangs.filter(t => t.isThanLinhThai).length;
+    state.logs.unshift({
+      text: `👑 DỊ TIÊN LƯU ĐẠI THÀNH! [${tang.name}] dệt xong Hồn Ti, giải phóng THẦN LINH THÁI (Tầng thứ ${totalForms})!`,
+      time: Date.now()
+    });
+  }
+
+  saveCultivationState(state);
+  return state;
+}
+
+/**
+ * Ghép cặp Mệnh Đăng (Hỏa Lò) 1-1 với Bí Tàng để tăng +20% tốc độ
+ */
+export function assignLampHuyenLo(tangIndex, lampId) {
+  const state = getCultivationState();
+  if (state.realm !== 'linh_tang') throw new Error('Chưa ở Linh Tàng Kỳ.');
+
+  const allLamps = [...(state.absorbedLamps || []), ...(state.inventoryLamps || [])];
+  if (!allLamps.includes(lampId)) {
+    throw new Error('Bạn không sở hữu Mệnh Đăng này.');
+  }
+
+  if (!state.assignedHuyenLo) state.assignedHuyenLo = {};
+  for (const [tIdx, lId] of Object.entries(state.assignedHuyenLo)) {
+    if (lId === lampId && Number(tIdx) !== Number(tangIndex)) {
+      throw new Error('Mệnh Đăng này đã được ghép làm Hỏa Lò cho một Bí Tàng khác!');
+    }
+  }
+
+  state.assignedHuyenLo[tangIndex] = lampId;
+  const targetTang = state.linhTangs?.find(t => t.id === tangIndex);
+  if (targetTang) targetTang.assignedLampId = lampId;
+
+  const lampObj = LIFE_LAMPS.find(l => l.id === lampId);
+  state.logs.unshift({
+    text: `🔥 HỎA LÒ THIÊU ĐỐT! Đã ghép [${lampObj?.name || 'Mệnh Đăng'}] vào [${targetTang?.name || `Tòa ${tangIndex}`}], tăng +20% tốc độ ngưng tụ Thiên Đạo!`,
+    time: Date.now()
+  });
+
+  saveCultivationState(state);
+  return state;
+}
+
+/**
+ * Tháo Mệnh Đăng khỏi Hỏa Lò
+ */
+export function unassignLampHuyenLo(tangIndex) {
+  const state = getCultivationState();
+  if (state.assignedHuyenLo && state.assignedHuyenLo[tangIndex]) {
+    delete state.assignedHuyenLo[tangIndex];
+  }
+  const targetTang = state.linhTangs?.find(t => t.id === tangIndex);
+  if (targetTang) targetTang.assignedLampId = null;
+
+  saveCultivationState(state);
+  return state;
+}
+
+/**
+ * Đổi Tòa ưu tiên nhận EXP Dưỡng Đạo
+ */
+export function setTargetLinhTangIndex(tangIndex) {
+  const state = getCultivationState();
+  state.targetLinhTangIndex = tangIndex;
+  saveCultivationState(state);
+  return state;
+}
+
 /**
  * Format tên cảnh giới hiển thị súc tích:
  * - Ngưng Khí X Tầng
  * - Trúc Cơ X Hỏa
  * - Kim Đan X Cung
  * - Nguyên Anh X Kiếp (lấy số kiếp cao nhất của Đạo Anh đã độ qua)
+ * - Linh Tàng X Tạng
  */
 export function getRealmDisplayName(state) {
   if (!state) state = getCultivationState();
@@ -3134,6 +3624,13 @@ export function getRealmDisplayName(state) {
     return `Nguyên Anh ${maxKiep} Kiếp`;
   }
 
+  if (state.realm === 'linh_tang') {
+    const openGatesCount = (state.linhTangs || []).filter(t => t.isGateOpen).length;
+    if (openGatesCount === 0) return 'Linh Tàng (Dưỡng Đạo)';
+    if (openGatesCount >= 5) return 'Linh Tàng Đại Viên Mãn';
+    return `Linh Tàng ${openGatesCount} Tạng`;
+  }
+
   return 'Phàm Nhân';
 }
 
@@ -3146,6 +3643,10 @@ export function resetCultivationState() {
     inventoryArtifacts: [],
     palaceAnchors: {},
     daoAnhs: [],
+    linhTangs: [],
+    assignedHuyenLo: {},
+    inventoryThienDaoPhoi: 0,
+    targetLinhTangIndex: 1,
     logs: [
       { text: '💀 Đã tản đi toàn bộ tu vi, tán sạch 72 Mệnh Đăng và Vật Trấn Áp, hóa phàm trùng tu đạo lộ lại từ đầu.', time: Date.now() },
     ],

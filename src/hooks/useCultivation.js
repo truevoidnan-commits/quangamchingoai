@@ -20,6 +20,16 @@ import {
   breakthroughToTrucCo,
   setNgungKhiActivePath,
   breakthroughToKimDan,
+  breakthroughToLinhTang,
+  initNextLinhTang,
+  feedExpToLinhTang,
+  attachThienDaoFromInventory,
+  convertBiTangToThanTang,
+  toggleDiTienLuu,
+  feedDiTienLuuExp,
+  assignLampHuyenLo,
+  unassignLampHuyenLo,
+  setTargetLinhTangIndex,
   activateKimDanTrialV2,
   endKimDanTrialV2,
   thangCungKimDan,
@@ -63,6 +73,11 @@ import {
   getExpForPhapKhieuIndex,
   KIM_DAN_PALACE_COSTS,
   getPalaceCost,
+  EXP_PER_THIEN_DAO,
+  EXP_PER_DI_TIEN_LUU,
+  THIEN_MENH_PER_THAN_TANG,
+  HOA_LO_SPEED_BONUS,
+  MAX_LINH_TANG_SLOTS,
 } from '../lib/cultivation';
 
 export function useCultivation() {
@@ -210,6 +225,65 @@ export function useCultivation() {
     setCultivation({ ...state });
   }, []);
 
+  const handleBreakthroughToLinhTang = useCallback(() => {
+    const res = breakthroughToLinhTang();
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
+  const handleInitNextLinhTang = useCallback((tangIndex, artifactOrName) => {
+    const next = initNextLinhTang(tangIndex, artifactOrName);
+    setCultivation({ ...next });
+    return next;
+  }, []);
+
+  const handleFeedExpToLinhTang = useCallback((tangIndex, expAmount) => {
+    const next = feedExpToLinhTang(tangIndex, expAmount);
+    setCultivation({ ...next });
+    return next;
+  }, []);
+
+  const handleAttachThienDaoFromInventory = useCallback((tangIndex) => {
+    const next = attachThienDaoFromInventory(tangIndex);
+    setCultivation({ ...next });
+    return next;
+  }, []);
+
+  const handleConvertBiTangToThanTang = useCallback((tangIndex) => {
+    const next = convertBiTangToThanTang(tangIndex);
+    setCultivation({ ...next });
+    return next;
+  }, []);
+
+  const handleToggleDiTienLuu = useCallback((tangIndex, isNurturing) => {
+    const next = toggleDiTienLuu(tangIndex, isNurturing);
+    setCultivation({ ...next });
+    return next;
+  }, []);
+
+  const handleFeedDiTienLuuExp = useCallback((tangIndex, expAmount) => {
+    const next = feedDiTienLuuExp(tangIndex, expAmount);
+    setCultivation({ ...next });
+    return next;
+  }, []);
+
+  const handleAssignLampHuyenLo = useCallback((tangIndex, lampId) => {
+    const next = assignLampHuyenLo(tangIndex, lampId);
+    setCultivation({ ...next });
+    return next;
+  }, []);
+
+  const handleUnassignLampHuyenLo = useCallback((tangIndex) => {
+    const next = unassignLampHuyenLo(tangIndex);
+    setCultivation({ ...next });
+    return next;
+  }, []);
+
+  const handleSetTargetLinhTangIndex = useCallback((tangIndex) => {
+    const next = setTargetLinhTangIndex(tangIndex);
+    setCultivation({ ...next });
+    return next;
+  }, []);
 
   const handleReset = useCallback(() => {
     const next = resetCultivationState();
@@ -333,6 +407,16 @@ export function useCultivation() {
     thangCung: handleThangCung,
     breakthroughToTrucCo: handleBreakthroughTrucCo,
     breakthroughToKimDan: handleBreakthroughKimDan,
+    breakthroughToLinhTang: handleBreakthroughToLinhTang,
+    initNextLinhTang: handleInitNextLinhTang,
+    feedExpToLinhTang: handleFeedExpToLinhTang,
+    attachThienDaoFromInventory: handleAttachThienDaoFromInventory,
+    convertBiTangToThanTang: handleConvertBiTangToThanTang,
+    toggleDiTienLuu: handleToggleDiTienLuu,
+    feedDiTienLuuExp: handleFeedDiTienLuuExp,
+    assignLampHuyenLo: handleAssignLampHuyenLo,
+    unassignLampHuyenLo: handleUnassignLampHuyenLo,
+    setTargetLinhTangIndex: handleSetTargetLinhTangIndex,
     unlockNextPhapKhieu: handleUnlockNextPhapKhieu,
     khaiKhieu: handleUnlockNextPhapKhieu,
     attemptUnlock121: handleUnlock121,
@@ -372,6 +456,11 @@ export function useCultivation() {
       getExpForPhapKhieuIndex,
       KIM_DAN_PALACE_COSTS,
       getPalaceCost,
+      EXP_PER_THIEN_DAO,
+      EXP_PER_DI_TIEN_LUU,
+      THIEN_MENH_PER_THAN_TANG,
+      HOA_LO_SPEED_BONUS,
+      MAX_LINH_TANG_SLOTS,
     },
   };
 }

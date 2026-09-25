@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCultivationContext } from '../context/CultivationContext';
-import { LIFE_LAMPS, SUPPRESSING_ARTIFACTS, getPalaceNameFromArtifact, getCombatPowerDisplay } from '../lib/cultivation';
+import { LIFE_LAMPS, SUPPRESSING_ARTIFACTS, getPalaceNameFromArtifact, getCombatPowerDisplay, isAllItemsCollected } from '../lib/cultivation';
 import { getLampImageUrl, getArtifactImageUrl } from '../lib/artifactIcons';
 import { useNavigate } from 'react-router-dom';
 import DaoAnhGalleryModal from '../components/cultivation/DaoAnhGalleryModal';
@@ -47,7 +47,8 @@ export default function SanctumPage() {
   const [hoveredCardId, setHoveredCardId] = useState(null);
   const [isDaoAnhModalOpen, setIsDaoAnhModalOpen] = useState(false);
 
-  const isNguyenAnhStage = cultivation?.realm === 'gia_anh' || cultivation?.realm === 'nguyen_anh';
+  const isNguyenAnhStage = cultivation?.realm === 'gia_anh' || cultivation?.realm === 'nguyen_anh' || cultivation?.realm === 'linh_tang';
+  const isFullItems = isAllItemsCollected(cultivation);
   const exp = cultivation?.totalExp || cultivation?.expCurrentRealm || 0;
   const storedExp = cultivation?.storedExp || 0;
   const totalThienMenh = cultivation?.totalThienMenh || 0;
@@ -245,15 +246,21 @@ export default function SanctumPage() {
         </div>
 
         {/* Ô 2: Bảo Hiểm Pity Rơi Thần Vật */}
-        <div className={styles.statCard} style={{ borderColor: 'rgba(239, 68, 68, 0.35)' }}>
-          <div className={styles.statCardLabel} style={{ color: '#fca5a5' }}>
-            CƠ CHẾ BẢO HIỂM (PITY)
+        <div className={styles.statCard} style={{ borderColor: (isNguyenAnhStage || isFullItems) ? 'rgba(74, 222, 128, 0.35)' : 'rgba(239, 68, 68, 0.35)' }}>
+          <div className={styles.statCardLabel} style={{ color: (isNguyenAnhStage || isFullItems) ? '#86efac' : '#fca5a5' }}>
+            {isNguyenAnhStage ? 'CƠ CHẾ NGUYÊN ANH' : 'CƠ CHẾ BẢO HIỂM (PITY)'}
           </div>
-          <div className={styles.statCardValue} style={{ color: '#ef4444' }}>
-            {pityReadingCycles} / 45 chu kỳ
+          <div className={styles.statCardValue} style={{ color: (isNguyenAnhStage || isFullItems) ? '#4ade80' : '#ef4444' }}>
+            {isNguyenAnhStage 
+              ? `${(totalThienMenh || 0).toLocaleString()} TM` 
+              : (isFullItems ? 'VIÊN MÃN' : `${pityReadingCycles} / 45 chu kỳ`)}
           </div>
           <div className={styles.statCardSub}>
-            {pityReadingCycles >= 45 ? '✨ Chu kỳ tiếp theo 100% ra Thần Vật!' : `Còn ${45 - pityReadingCycles} chu kỳ đọc nữa`}
+            {isNguyenAnhStage 
+              ? 'Lên Nguyên Anh ngừng rơi Mệnh Đăng & Vật Trấn Cung' 
+              : (isFullItems 
+                ? 'Đã thu thập đầy đủ toàn bộ Thần Vật' 
+                : (pityReadingCycles >= 45 ? '✨ Chu kỳ tiếp theo 100% ra Thần Vật!' : `Còn ${45 - pityReadingCycles} chu kỳ đọc nữa`))}
           </div>
         </div>
 

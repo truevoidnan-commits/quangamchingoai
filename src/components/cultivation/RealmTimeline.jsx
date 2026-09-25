@@ -86,22 +86,24 @@ export default function RealmTimeline() {
         </p>
       </div>
 
-      {/* 6. LINH TÀNG (PREVIEW / KHÓA) */}
+      {/* 6. LINH TÀNG */}
       <div 
         className={`timeline-item ${activeView === 'linh_tang' ? 'active' : ''}`}
         onClick={() => setActiveRealmView('linh_tang')}
         style={{ 
           cursor: 'pointer',
-          border: activeView === 'linh_tang' ? '1.5px solid #38bdf8' : '1px solid rgba(56, 189, 248, 0.25)',
-          background: activeView === 'linh_tang' ? 'rgba(56, 189, 248, 0.12)' : 'rgba(16, 25, 39, 0.5)'
+          border: activeView === 'linh_tang' ? '1.5px solid #38bdf8' : (currentRealm === 'linh_tang' ? '1.5px solid rgba(56, 189, 248, 0.6)' : '1px solid rgba(56, 189, 248, 0.25)'),
+          background: activeView === 'linh_tang' ? 'rgba(56, 189, 248, 0.16)' : 'rgba(16, 25, 39, 0.5)'
         }}
-        title="Cảnh Giới Tiếp Theo: Linh Tàng Kỳ (Bấm để xem Bí Tàng Nhục Thân)"
+        title="Linh Tàng Kỳ · Bí Tàng Nhục Thân (Bấm để xem 5 Tòa Tàng Môn)"
       >
-        <h3 style={{ color: activeView === 'linh_tang' ? '#38bdf8' : '#7dd3fc' }}>
+        <h3 style={{ color: activeView === 'linh_tang' ? '#38bdf8' : (currentRealm === 'linh_tang' ? '#38bdf8' : '#7dd3fc') }}>
           LINH TÀNG KỲ
         </h3>
-        <p style={{ color: activeView === 'linh_tang' ? '#38bdf8' : 'var(--text-muted)', fontSize: 11 }}>
-          🔒 Bí Tàng Nhục Thân (Preview)
+        <p style={{ color: activeView === 'linh_tang' || currentRealm === 'linh_tang' ? '#38bdf8' : 'var(--text-muted)', fontSize: 11 }}>
+          {currentRealm === 'linh_tang' 
+            ? `✦ ${(cultivation?.linhTangs || []).filter(t => t.isGateOpen).length}/5 Tàng Môn` 
+            : '🔒 Bí Tàng Nhục Thân'}
         </p>
       </div>
     </div>

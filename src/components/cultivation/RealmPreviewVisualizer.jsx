@@ -22,6 +22,7 @@ import ArtifactIcon from './ArtifactIcon';
 import { LAMP_THAN_PHAM_AI_ICONS, getLampImageUrl, getArtifactImageUrl } from '../../lib/artifactIcons';
 import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhTransformConfig } from '../../lib/daoAnhData';
 import DaoAnhAvatarRenderer from './DaoAnhAvatarRenderer';
+import LinhTangVisualizer from './LinhTangVisualizer';
 import styles from './RealmPreviewVisualizer.module.css';
 
 import bgTrucCoGalaxy from '../../assets/images/truc_co_galaxy_bg.jpg';
@@ -6857,6 +6858,13 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             </div>
           </div>
         </div>
+      )}
+
+      {/* ========================================================
+          STAGE 5: LINH TÀNG KỲ (BÍ TÀNG & THẦN TÀNG)
+         ======================================================== */}
+      {activeViewRealm === 'linh_tang' && (
+        <LinhTangVisualizer />
       )}
 
   </div>

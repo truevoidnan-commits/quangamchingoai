@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import BottomSheet from '../ui/BottomSheet';
 import { useCultivation } from '../../hooks/useCultivation';
-import { calculateDaoAnhTribulationReward, getDaoAnhTierKey, KIEP_EXP_REQUIREMENTS } from '../../lib/cultivation';
+import { calculateDaoAnhTribulationReward, getDaoAnhTierKey, KIEP_EXP_REQUIREMENTS, isAllItemsCollected } from '../../lib/cultivation';
 import RealmPreviewVisualizer from './RealmPreviewVisualizer';
 import BreakthroughModal from './BreakthroughModal';
 import TribulationModal from './TribulationModal';
@@ -110,8 +110,9 @@ export default function CultivationModal({ isOpen, onClose }) {
   const selfHoa = cultivation.selfMenhHoa !== undefined ? cultivation.selfMenhHoa : (Math.floor(Math.min(120, cultivation.phapKhieu || 0) / 30) + ((cultivation.has121st || (cultivation.phapKhieu || 0) >= 121) ? 1 : 0));
   const absorbedCount = (cultivation.absorbedLamps || []).length;
   const artifactCount = (cultivation.inventoryArtifacts || []).length;
-  const isNguyenAnhStage = cultivation.realm === 'gia_anh' || cultivation.realm === 'nguyen_anh';
+  const isNguyenAnhStage = cultivation.realm === 'gia_anh' || cultivation.realm === 'nguyen_anh' || cultivation.realm === 'linh_tang';
   const isStrictNguyenAnh = cultivation.realm === 'nguyen_anh';
+  const isFullItems = isAllItemsCollected(cultivation);
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title="✦ ĐẠO LỘ TU TIÊN ✦" fullHeight>
@@ -161,8 +162,10 @@ export default function CultivationModal({ isOpen, onClose }) {
                   <span className={styles.statLabel}>
                     {(cultivation.storedExp || 0) > 0 ? 'Uẩn Tích Bình Cảnh' : 'Bảo Hiểm Thần Vật'}
                   </span>
-                  <span className={styles.statValCyan}>
-                    {(cultivation.storedExp || 0) > 0 ? `+${(cultivation.storedExp).toLocaleString()} Tu Vi` : `${cultivation.pityReadingCycles || 0}/45`}
+                  <span className={styles.statValCyan} style={{ color: isFullItems ? '#4ade80' : undefined }}>
+                    {(cultivation.storedExp || 0) > 0 
+                      ? `+${(cultivation.storedExp).toLocaleString()} Tu Vi` 
+                      : (isFullItems ? 'Viên Mãn' : `${cultivation.pityReadingCycles || 0}/45`)}
                   </span>
                 </div>
                 <div className={styles.statBox}>

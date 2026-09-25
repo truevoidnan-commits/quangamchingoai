@@ -11,7 +11,8 @@ import {
   SUPPRESSING_ARTIFACTS, 
   getCombatPowerDisplay,
   getPalaceCost,
-  getLampPalaceName
+  getLampPalaceName,
+  isAllItemsCollected
 } from '../../lib/cultivation';
 import { useNavigate } from 'react-router-dom';
 import { findDaoAnhDefinition } from '../../lib/daoAnhData';
@@ -28,6 +29,7 @@ export default function SidePanelInfo({ setTribulationModalData }) {
     attempt121Breakthrough,
     breakthroughToTrucCo,
     breakthroughToKimDan,
+    breakthroughToLinhTang,
     activateKimDanTrialV2,
     endKimDanTrialV2,
     thangCung,
@@ -67,8 +69,9 @@ export default function SidePanelInfo({ setTribulationModalData }) {
   const absorbedLamps = cultivation?.absorbedLamps || [];
   const maxLamps = is121Unlocked ? 5 : 4;
   const isKimDanTrial = cultivation?.isKimDanTrialV2 || false;
-  const realizedThienCung = cultivation?.realizedThienCung || 0;
   const palaceAnchors = cultivation?.palaceAnchors || {};
+  const isNguyenAnhStage = currentRealm === 'gia_anh' || currentRealm === 'nguyen_anh' || currentRealm === 'linh_tang';
+  const isFullItems = isAllItemsCollected(cultivation);
 
   // Chế độ Tinh Đồ: 'luc_dai' (6 Chòm sao gốc) hoặc 'tu_tuong' (Tứ Tượng Thần Thú)
   const [constelMode, setConstelMode] = useState(() => {
@@ -212,43 +215,87 @@ export default function SidePanelInfo({ setTribulationModalData }) {
          ======================================================== */}
       <div style={{
         background: 'linear-gradient(135deg, rgba(16, 25, 39, 0.95) 0%, rgba(10, 16, 26, 0.98) 100%)',
-        border: '1px solid rgba(255, 204, 0, 0.4)',
-        borderRadius: 12,
-        padding: '10px 14px',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(255, 204, 0, 0.08)',
+        border: '1px solid rgba(255, 204, 0, 0.35)',
+        borderRadius: 14,
+        padding: '11px 14px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(255, 204, 0, 0.06)',
         display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        flexDirection: 'column',
+        gap: 10,
         marginBottom: 14
       }}>
-        {/* 1. Tu Vi */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', textAlign: 'center', flex: 1 }}>
-          <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: 'var(--text-muted)', textTransform: 'uppercase' }}>TU VI</span>
-          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 13.5, fontWeight: 800, color: 'var(--color-kim)' }}>
-            {exp.toLocaleString()} EXP
-          </span>
-        </div>
-
-        <div style={{ width: 1, height: 24, background: 'linear-gradient(to bottom, transparent, rgba(34, 195, 240, 0.35), transparent)' }} />
-
-        {/* 2. Chiến Lực */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', textAlign: 'center', flex: 1 }}>
-          <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: 'var(--text-muted)', textTransform: 'uppercase' }}>CHIẾN LỰC</span>
-          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 13.5, fontWeight: 800, color: 'var(--accent-cyan-bright, #22c3f0)' }}>
+        {/* TẦNG 1: CHIẾN LỰC TỐI THƯỢNG (DÀNH TOÀN BỘ BỀ NGANG, KHÔNG BAO GIỜ BỊ CẮT CHỮ) */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingBottom: 8,
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 13, color: '#38bdf8' }}>⚔️</span>
+            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              CHIẾN LỰC
+            </span>
+          </div>
+          <span style={{
+            fontFamily: 'var(--font-serif)',
+            fontSize: 13.5,
+            fontWeight: 800,
+            color: 'var(--accent-cyan-bright, #22c3f0)',
+            textShadow: '0 0 10px rgba(34, 195, 240, 0.35)',
+            letterSpacing: '0.3px',
+            whiteSpace: 'nowrap'
+          }}>
             {calculatedCombatPower}
           </span>
         </div>
 
-        <div style={{ width: 1, height: 24, background: 'linear-gradient(to bottom, transparent, rgba(34, 195, 240, 0.35), transparent)' }} />
+        {/* TẦNG 2: TU VI & BẢO HIỂM / UẨN TÍCH (2 CỘT RỘNG RÃI, CÂN ĐỐI) */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          {/* Tu Vi */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              TU VI
+            </span>
+            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 13, fontWeight: 800, color: 'var(--color-kim)', whiteSpace: 'nowrap' }}>
+              {exp.toLocaleString()} EXP
+            </span>
+          </div>
 
-        {/* 3. Bảo Hiểm / Uẩn Tích */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', textAlign: 'center', flex: 1 }}>
-          <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            {(cultivation?.storedExp || 0) > 0 ? 'UẨN TÍCH' : 'BẢO HIỂM'}
-          </span>
-          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 13.5, fontWeight: 800, color: (cultivation?.storedExp || 0) > 0 ? '#f59e0b' : '#ef4444' }}>
-            {(cultivation?.storedExp || 0) > 0 ? `+${(cultivation.storedExp).toLocaleString()}` : `${cultivation?.pityReadingCycles || 0}/45`}
-          </span>
+          <div style={{ width: 1, height: 22, background: 'rgba(255, 255, 255, 0.1)', flexShrink: 0 }} />
+
+          {/* Bảo Hiểm / Uẩn Tích / Thiên Mệnh */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end', textAlign: 'right' }}>
+            <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              {(cultivation?.storedExp || 0) > 0 
+                ? 'UẨN TÍCH' 
+                : (isNguyenAnhStage 
+                  ? 'THIÊN MỆNH' 
+                  : 'BẢO HIỂM')}
+            </span>
+            <span style={{
+              fontFamily: 'var(--font-serif)',
+              fontSize: 13,
+              fontWeight: 800,
+              color: (cultivation?.storedExp || 0) > 0 
+                ? '#f59e0b' 
+                : (isNguyenAnhStage 
+                  ? '#38bdf8' 
+                  : (isFullItems ? '#4ade80' : '#ef4444')),
+              whiteSpace: 'nowrap'
+            }}>
+              {(cultivation?.storedExp || 0) > 0 
+                ? `+${(cultivation.storedExp).toLocaleString()}` 
+                : (isNguyenAnhStage 
+                  ? `${(cultivation?.totalThienMenh || 0).toLocaleString()} TM` 
+                  : (isFullItems ? 'VIÊN MÃN' : `${cultivation?.pityReadingCycles || 0}/45`))}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -1621,6 +1668,107 @@ export default function SidePanelInfo({ setTribulationModalData }) {
                 title="Mở Đạo Anh Đồ Lục"
               >
                 <span>✨ ĐẠO ANH ĐỒ LỤC</span>
+              </button>
+
+              {/* 4. Nút Đột Phá Linh Tàng Kỳ khi toàn bộ Đạo Anh đạt 5 Kiếp */}
+              {(cultivation?.daoAnhs || []).length > 0 && (cultivation?.daoAnhs || []).every(d => (d.currentKiep || 0) >= 5) && (
+                <button
+                  onClick={() => {
+                    try {
+                      if (breakthroughToLinhTang) {
+                        breakthroughToLinhTang();
+                        if (setActiveRealmView) setActiveRealmView('linh_tang');
+                      }
+                    } catch (e) {
+                      alert(e.message || 'Chưa thể đột phá Linh Tàng.');
+                    }
+                  }}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 8,
+                    background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 50%, #f59e0b 100%)',
+                    border: '1.5px solid #38bdf8',
+                    color: '#fff',
+                    fontSize: 12.5,
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    boxShadow: '0 0 20px rgba(56, 189, 248, 0.6)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    marginTop: 4
+                  }}
+                  title="Dung hợp toàn bộ 13 Đạo Anh đúc thành Tòa Bí Tàng Đệ Nhất!"
+                >
+                  <span>⚡</span>
+                  <span>ĐỘT PHÁ LINH TÀNG KỲ (TỤ ANH)</span>
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ========================================================
+          4. LINH TÀNG VIEW IN SIDE PANEL
+         ======================================================== */}
+      {realm === 'linh_tang' && (() => {
+        const linhTangs = cultivation?.linhTangs || [];
+        const openGatesCount = linhTangs.filter(t => t.isGateOpen).length;
+        const thanLinhThaiCount = linhTangs.filter(t => t.type === 'than_tang' && t.isThanLinhThai).length;
+        const totalTM = cultivation?.totalThienMenh || 0;
+        const thienDaoPhoi = cultivation?.inventoryThienDaoPhoi || 0;
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{
+              padding: '14px 16px',
+              borderRadius: 12,
+              background: 'linear-gradient(145deg, rgba(14, 30, 50, 0.9) 0%, rgba(5, 12, 22, 0.95) 100%)',
+              border: '1.5px solid rgba(56, 189, 248, 0.4)',
+              boxShadow: '0 4px 20px rgba(56, 189, 248, 0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13.5, fontWeight: 900, color: '#38bdf8' }}>
+                  🏛️ LINH TÀNG KỲ
+                </span>
+                <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(56, 189, 248, 0.15)', color: '#7dd3fc', fontWeight: 800 }}>
+                  {openGatesCount}/5 Tàng Môn
+                </span>
+              </div>
+
+              <div style={{ fontSize: 11.5, color: '#94a3b8', lineHeight: 1.5 }}>
+                <div>✦ Lực Thiên Mệnh: <strong style={{ color: '#38bdf8' }}>{(totalTM || 0).toLocaleString()} TM</strong></div>
+                <div>✦ Thiên Đạo Phôi: <strong style={{ color: '#f59e0b' }}>{thienDaoPhoi}</strong></div>
+                {thanLinhThaiCount > 0 && (
+                  <div style={{ color: '#38bdf8', marginTop: 4, fontWeight: 700 }}>
+                    ✦ Thần Linh Thái: {thanLinhThaiCount} Trọng ({thanLinhThaiCount === 5 ? 'Bán Bộ Uẩn Thần' : `Quy Hư ${thanLinhThaiCount}`})
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => {
+                  if (setActiveRealmView) setActiveRealmView('linh_tang');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: 8,
+                  background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 0 12px rgba(56, 189, 248, 0.35)'
+                }}
+              >
+                Chiêm Ngưỡng 5 Tòa Tàng Môn ➔
               </button>
             </div>
           </div>
