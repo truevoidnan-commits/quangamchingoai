@@ -493,6 +493,24 @@ export function convertToThienMenhIfInAnhRealm(state) {
 export function getDaoAnhTheme(daoAnh, state) {
   if (!daoAnh) return { icon: '👑', color: '#ffcc00', glow: 'rgba(255, 204, 0, 0.4)', bg: 'rgba(255, 204, 0, 0.08)' };
 
+  // Ưu tiên số 1: Trực tiếp từ lampId gắn liền với Đạo Anh
+  if (daoAnh.lampId) {
+    const lampObj = LIFE_LAMPS.find(l => l.id === daoAnh.lampId);
+    if (lampObj) {
+      const tierInfo = LAMP_TIERS[lampObj.tier] || LAMP_TIERS.than_pham;
+      const color = tierInfo.color || '#FF2D4D';
+      return {
+        icon: lampObj.icon || '🏮',
+        color: color,
+        glow: tierInfo.border || `${color}aa`,
+        bg: `${color}18`,
+        isLamp: true,
+        tier: lampObj.tier || 'than_pham',
+        shortName: lampObj.shortName || lampObj.name,
+      };
+    }
+  }
+
   const pIdx = daoAnh.palaceIndex;
   const maxThienCung = state?.maxThienCung || 13;
   const lampList = state?.absorbedLamps || [];
@@ -1336,26 +1354,20 @@ export function absorbLifeLamp(lampId, targetSlot = null) {
     throw new Error('Cảnh giới Ngưng Khí chưa thể hấp thụ Mệnh Đăng.');
   }
 
-  if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
-    throw new Error('Đến cảnh giới Nguyên Anh đạo cơ đã định hình, KHÔNG THỂ hấp thụ thêm Mệnh Đăng!');
-  }
-
   const baseHoa = Math.floor(Math.min(120, state.phapKhieu || 0) / 30);
   const is121Active = Boolean(state.has121st || (state.phapKhieu || 0) >= 121);
   const selfHoa = Math.min(5, baseHoa + (is121Active ? 1 : 0));
 
-  if (state.realm === 'truc_co') {
-    if (selfHoa === 0) {
-      throw new Error('Đạo Cơ hiện chưa ngưng tụ Mệnh Hỏa tự thân (cần tối thiểu 30 Pháp Khiếu để có 1 Hỏa). Chưa có Hỏa thì không thể thắp Đăng!');
-    }
+  if (selfHoa === 0) {
+    throw new Error('Đạo Cơ hiện chưa ngưng tụ Mệnh Hỏa tự thân (cần tối thiểu 30 Pháp Khiếu để có 1 Hỏa). Chưa có Hỏa thì không thể thắp Đăng!');
+  }
 
-    if (targetSlot !== null) {
-      if (targetSlot < 4 && selfHoa < (targetSlot + 1)) {
-        throw new Error(`Đài sen này cần đạt ${targetSlot + 1} Hỏa tự thân (tối thiểu ${(targetSlot + 1) * 30} Pháp Khiếu) mới thức tỉnh để thắp Mệnh Đăng!`);
-      }
-      if (targetSlot === 4 && (!is121Active || selfHoa < 5)) {
-        throw new Error('Đài sen Hỗn Độn trung tâm chỉ thức tỉnh khi đã khai mở Pháp Khiếu thứ 121 (Cực Cảnh Sinh Tử)!');
-      }
+  if (targetSlot !== null) {
+    if (targetSlot < 4 && selfHoa < (targetSlot + 1)) {
+      throw new Error(`Đài sen này cần đạt ${targetSlot + 1} Hỏa tự thân (tối thiểu ${(targetSlot + 1) * 30} Pháp Khiếu) mới thức tỉnh để thắp Mệnh Đăng!`);
+    }
+    if (targetSlot === 4 && (!is121Active || selfHoa < 5)) {
+      throw new Error('Đài sen Hỗn Độn trung tâm chỉ thức tỉnh khi đã khai mở Pháp Khiếu thứ 121 (Cực Cảnh Sinh Tử)!');
     }
   }
 
@@ -1406,6 +1418,63 @@ export function absorbLifeLamp(lampId, targetSlot = null) {
     time: Date.now()
   });
 
+  // Đồng bộ hóa Đạo Anh ở cảnh giới Giả Anh / Nguyên Anh / Linh Tàng
+  if (state.daoAnhs && state.daoAnhs.length > 0) {
+    let targetDa = null;
+    if (oldLampId) {
+      targetDa = state.daoAnhs.find(d => d.fromLamp && d.lampId === oldLampId);
+    }
+    if (!targetDa) {
+      targetDa = state.daoAnhs.find(d => d.fromLamp && d.palaceIndex === slotToUse);
+    }
+    if (!targetDa && oldLampId) {
+      targetDa = state.daoAnhs.find(d => d.lampId === oldLampId);
+    }
+
+    if (targetDa) {
+      const oldTitle = targetDa.name;
+      targetDa.lampId = lampId;
+      if (lampObj) {
+        targetDa.palaceName = getLampPalaceName(lampObj);
+        targetDa.name = formatDaoAnhTitle(targetDa.palaceName);
+        let shortName = lampObj.shortName || lampObj.name;
+        shortName = shortName.replace(/Mệnh Đăng|Thần Đăng|Đăng|Cung/g, '').trim();
+        targetDa.element = `${shortName} Thần Thể`;
+        targetDa.tier = lampObj.tier || 'than_pham';
+      }
+      state.logs.unshift({
+        text: `✨ ĐẠO ANH CHUYỂN HÓA BẢN NGUYÊN! [${oldTitle}] đã lột xác thành [${targetDa.name}] tương ứng theo Mệnh Đăng mới [${lampObj?.name || lampId}] (bảo toàn trọn vẹn ${targetDa.currentKiep || 0} Kiếp & Tu Vi)!`,
+        time: Date.now()
+      });
+    } else if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh' || state.realm === 'linh_tang') {
+      const palaceName = lampObj ? getLampPalaceName(lampObj) : `Chân Cung #${slotToUse + 1}`;
+      const daoAnhTitle = formatDaoAnhTitle(palaceName);
+      let shortName = lampObj ? (lampObj.shortName || lampObj.name) : `Đăng ${slotToUse + 1}`;
+      shortName = shortName.replace(/Mệnh Đăng|Thần Đăng|Đăng|Cung/g, '').trim();
+      const newDa = {
+        id: `da_${slotToUse}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        palaceIndex: slotToUse,
+        palaceName: palaceName,
+        name: daoAnhTitle,
+        element: `${shortName} Thần Thể`,
+        fromLamp: true,
+        lampId: lampId,
+        artifactId: null,
+        tier: lampObj ? lampObj.tier : 'than_pham',
+        currentKiep: 0,
+        currentExp: 0,
+        maxExp: KIEP_EXP_REQUIREMENTS[0] || 5000,
+        currentThienMenh: 0,
+        maxThienMenh: KIEP_EXP_REQUIREMENTS[0] || 5000,
+      };
+      state.daoAnhs.push(newDa);
+      state.logs.unshift({
+        text: `🌟 KHAI SINH ĐẠO ANH MỚI! Mệnh Đăng [${lampObj?.name || lampId}] đã ngưng tụ thành [${daoAnhTitle}] tọa trấn Thiên Cung!`,
+        time: Date.now()
+      });
+    }
+  }
+
   saveCultivationState(state);
   return state;
 }
@@ -1432,6 +1501,17 @@ export function unequipLifeLamp(slotOrLampId) {
 
   if (!lampId || slotIndex === -1) {
     throw new Error('Không tìm thấy Mệnh Đăng tại vị trí này để tháo.');
+  }
+
+  // Kiểm tra nếu đang ở Nguyên Anh / Giả Anh / Linh Tàng và Đạo Anh tương ứng đã tu luyện:
+  if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh' || state.realm === 'linh_tang') {
+    const da = (state.daoAnhs || []).find(d => d.fromLamp && (d.lampId === lampId || d.palaceIndex === slotIndex));
+    if (da && ((da.currentKiep || 0) > 0 || (da.currentExp || 0) > 0)) {
+      throw new Error(`Đạo Anh [${da.name}] đã thai nghén/độ kiếp (Kiếp ${da.currentKiep || 0}). Không thể tháo rỗng Mệnh Đăng! Hãy chọn Mệnh Đăng khác trong túi để Khảm Thay Thế trực tiếp chuyển hóa bản nguyên.`);
+    }
+    if (da) {
+      state.daoAnhs = state.daoAnhs.filter(d => d !== da);
+    }
   }
 
   // Gỡ bỏ khỏi slot đài sen
