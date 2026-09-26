@@ -5,6 +5,7 @@ import SidePanelInfo from '../components/cultivation/SidePanelInfo';
 import RealmPreviewVisualizer from '../components/cultivation/RealmPreviewVisualizer';
 import DaoAnhGalleryModal from '../components/cultivation/DaoAnhGalleryModal';
 import TribulationModal from '../components/cultivation/TribulationModal';
+import BreakthroughModal from '../components/cultivation/BreakthroughModal';
 import { getRealmDisplayName } from '../lib/cultivation';
 import { findDaoAnhDefinition } from '../lib/daoAnhData';
 import { useNavigate } from 'react-router-dom';
@@ -28,6 +29,7 @@ export default function CultivationWorkspace() {
   const navigate = useNavigate();
   const [mobileTab, setMobileTab] = useState('visualizer'); // 'visualizer' | 'actions' | 'realm'
   const [tribulationModalData, setTribulationModalData] = useState(null);
+  const [breakthroughModalData, setBreakthroughModalData] = useState(null);
 
   const handleGoToTribulation = () => {
     if (dismissPromptAllDaoAnhFull) dismissPromptAllDaoAnhFull();
@@ -189,7 +191,10 @@ export default function CultivationWorkspace() {
 
       {/* 3. RIGHT COLUMN: Inspector & Actions Panel */}
       <div className={`cultivation-col-right ${mobileTab === 'actions' ? 'mobile-show' : ''}`}>
-        <SidePanelInfo setTribulationModalData={setTribulationModalData} />
+        <SidePanelInfo 
+          setTribulationModalData={setTribulationModalData} 
+          setBreakthroughModalData={setBreakthroughModalData}
+        />
       </div>
 
       {/* Đạo Anh Đồ Lục Modal */}
@@ -199,7 +204,7 @@ export default function CultivationWorkspace() {
       />
 
       {/* MODAL THÔNG BÁO TIÊN KIẾP: ĐẠO ANH ĐẠT 80% LINH LỰC */}
-      {cultivation?.prompt80DaoAnh && (() => {
+      {cultivation?.prompt80DaoAnh && !(cultivation?.daoAnhs || []).every(d => (d.currentKiep || 0) >= 5) && (() => {
         const promptTargetDa = (cultivation?.daoAnhs || []).find(d => d.id === cultivation.prompt80DaoAnh?.daoAnhId);
         const resolvedDaoAnhName = findDaoAnhDefinition(promptTargetDa, cultivation)?.name || promptTargetDa?.name || cultivation.prompt80DaoAnh.daoAnhName;
         return (
@@ -299,7 +304,7 @@ export default function CultivationWorkspace() {
       })()}
 
       {/* MODAL THÔNG BÁO TIÊN KIẾP: TOÀN BỘ ĐẠO ANH ĐÃ VIÊN MÃN 100% */}
-      {cultivation?.promptAllDaoAnhFull && !cultivation?.promptAllDaoAnhFullDismissed && (
+      {cultivation?.promptAllDaoAnhFull && !cultivation?.promptAllDaoAnhFullDismissed && !(cultivation?.daoAnhs || []).every(d => (d.currentKiep || 0) >= 5) && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -399,6 +404,14 @@ export default function CultivationWorkspace() {
         <TribulationModal
           activeData={tribulationModalData}
           onClose={() => setTribulationModalData(null)}
+        />
+      )}
+
+      {/* MODAL ĐỘT PHÁ CẢNH GIỚI LINH TÀNG */}
+      {breakthroughModalData && (
+        <BreakthroughModal
+          data={breakthroughModalData}
+          onClose={() => setBreakthroughModalData(null)}
         />
       )}
 

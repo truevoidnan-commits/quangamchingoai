@@ -744,6 +744,14 @@ export function getCultivationState() {
 
     convertToThienMenhIfInAnhRealm(state);
 
+    if ((state.realm === 'gia_anh' || state.realm === 'nguyen_anh') && (state.daoAnhs || []).length > 0) {
+      const isAll5Kiep = state.daoAnhs.every(da => (da.currentKiep || 0) >= 5);
+      if (isAll5Kiep) {
+        state.promptAllDaoAnhFull = false;
+        state.prompt80DaoAnh = null;
+      }
+    }
+
     return state;
   } catch (err) {
     return DEFAULT_STATE;
@@ -960,8 +968,11 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     }
   } else if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
     const daoAnhs = state.daoAnhs || [];
+    const isAll5Kiep = daoAnhs.length > 0 && daoAnhs.every(da => (da.currentKiep || 0) >= 5);
     const activeDaoAnhs = daoAnhs.filter(da => (da.currentKiep || 0) < 5);
-    if (activeDaoAnhs.length > 0) {
+    if (isAll5Kiep) {
+      isAtBottleneck = true;
+    } else if (activeDaoAnhs.length > 0) {
       const allActiveFull = activeDaoAnhs.every(da => {
         const maxExp = da.maxExp || KIEP_EXP_REQUIREMENTS[da.currentKiep || 0] || 5000;
         return (da.currentExp || 0) >= maxExp;
@@ -978,7 +989,8 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   if (!isAtBottleneck) {
     state.totalExp = (state.totalExp || 0) + gainedExp;
   } else if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
-    if (!state.promptAllDaoAnhFullDismissed) {
+    const isAll5Kiep = (state.daoAnhs || []).length > 0 && (state.daoAnhs || []).every(da => (da.currentKiep || 0) >= 5);
+    if (!isAll5Kiep && !state.promptAllDaoAnhFullDismissed) {
       state.promptAllDaoAnhFull = true;
     }
   }
@@ -1124,9 +1136,15 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
   if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
     state.isThienMenhUnlocked = true;
     const daoAnhs = state.daoAnhs || [];
+    const isAll5Kiep = daoAnhs.length > 0 && daoAnhs.every(da => (da.currentKiep || 0) >= 5);
     const activeDaoAnhs = daoAnhs.filter(da => (da.currentKiep || 0) < 5);
 
-    if (activeDaoAnhs.length > 0) {
+    if (isAll5Kiep) {
+      // Khi toàn bộ Đạo Anh đã đạt 5 kiếp đại viên mãn: Không tích linh lực nữa, toàn bộ đẩy vào uẩn tích!
+      state.storedExp = (state.storedExp || 0) + gainedExp;
+      state.promptAllDaoAnhFull = false;
+      state.prompt80DaoAnh = null;
+    } else if (activeDaoAnhs.length > 0) {
       let targetDa = activeDaoAnhs.find(da => da.id === state.currentTargetDaoAnhId);
       const isTargetFull = targetDa && (targetDa.currentExp || 0) >= (targetDa.maxExp || KIEP_EXP_REQUIREMENTS[targetDa.currentKiep || 0] || 5000);
       const isTargetPassed80AndSwitched = targetDa && targetDa.hasPrompted80 && !targetDa.continueTo100 && (targetDa.currentExp || 0) >= Math.floor((targetDa.maxExp || 5000) * 0.8);
@@ -1335,7 +1353,8 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
       }
     }
   } else if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh') {
-    if (isAtBottleneck) {
+    const isAll5Kiep = (state.daoAnhs || []).length > 0 && (state.daoAnhs || []).every(da => (da.currentKiep || 0) >= 5);
+    if (isAtBottleneck && !isAll5Kiep) {
       state.storedExp = (state.storedExp || 0) + gainedExp;
     }
   }
@@ -3300,6 +3319,21 @@ export function fillAllDaoAnhExp() {
   const state = getCultivationState();
   if (!state.daoAnhs || state.daoAnhs.length === 0) {
     throw new Error('Chưa có Đạo Anh nào để nạp Linh Lực.');
+  }
+
+  const isAll5Kiep = state.daoAnhs.every(da => (da.currentKiep || 0) >= 5);
+  if (isAll5Kiep) {
+    const expBonus = 10000;
+    state.storedExp = (state.storedExp || 0) + expBonus;
+    state.promptAllDaoAnhFull = false;
+    state.promptAllDaoAnhFullDismissed = true;
+    state.prompt80DaoAnh = null;
+
+    const msg = `⚡ NGUYÊN ANH ĐẠI VIÊN MÃN! Toàn bộ Đạo Anh đã đạt Kiếp 5 Đại Viên Mãn. +${expBonus.toLocaleString()} Tu Vi đã chuyển dồn vào Uẩn Tích Bình Cảnh. Đạo hữu đã có thể Đột Phá Linh Tàng!`;
+    state.logs.unshift({ text: msg, time: Date.now() });
+
+    saveCultivationState(state);
+    return { state, filledCount: 0, message: msg };
   }
 
   let filledCount = 0;

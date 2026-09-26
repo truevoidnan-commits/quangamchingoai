@@ -17,7 +17,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { findDaoAnhDefinition } from '../../lib/daoAnhData';
 
-export default function SidePanelInfo({ setTribulationModalData }) {
+export default function SidePanelInfo({ setTribulationModalData, setBreakthroughModalData }) {
   const navigate = useNavigate();
   const { 
     cultivation, 
@@ -1483,6 +1483,161 @@ export default function SidePanelInfo({ setTribulationModalData }) {
          ======================================================== */}
       {(realm === 'nguyen_anh' || realm === 'gia_anh') && (() => {
         const daoAnhs = cultivation?.daoAnhs || [];
+        const isAll5Kiep = daoAnhs.length > 0 && daoAnhs.every(d => (d.currentKiep || 0) >= 5);
+
+        if (isAll5Kiep) {
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Thẻ Trạng Thái Nguyên Anh Đại Viên Mãn */}
+              <div className="status-card" style={{
+                padding: '16px 18px',
+                borderRadius: 14,
+                background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%)',
+                border: '1.5px solid rgba(56, 189, 248, 0.4)',
+                boxShadow: '0 0 25px rgba(56, 189, 248, 0.15)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 24 }}>👑</span>
+                    <div>
+                      <div style={{ fontSize: 10, letterSpacing: 1.5, color: '#38bdf8', fontWeight: 800, textTransform: 'uppercase' }}>
+                        CẢNH GIỚI ĐỈNH PHONG
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: '#fde047', fontFamily: 'var(--font-serif)', marginTop: 2 }}>
+                        NGUYÊN ANH ĐẠI VIÊN MÃN
+                      </div>
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    padding: '4px 10px',
+                    borderRadius: 8,
+                    background: 'rgba(34, 197, 94, 0.2)',
+                    color: '#4ade80',
+                    border: '1px solid rgba(34, 197, 94, 0.4)'
+                  }}>
+                    5/5 Kiếp
+                  </span>
+                </div>
+
+                <div style={{
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  background: 'rgba(56, 189, 248, 0.08)',
+                  border: '1px solid rgba(56, 189, 248, 0.2)',
+                  fontSize: 12,
+                  color: '#cbd5e1',
+                  lineHeight: 1.6,
+                  marginBottom: 12
+                }}>
+                  Toàn bộ <strong style={{ color: '#fde047' }}>{daoAnhs.length} Đạo Anh</strong> đều đã vượt qua 5 lần Thiên Kiếp, đạt mức Đại Viên Mãn! Mọi Linh Lực nhận được lúc này đều chuyển dồn vào <strong style={{ color: '#f59e0b' }}>Uẩn Tích Bình Cảnh</strong>.
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0' }}>
+                  <span style={{ color: '#94a3b8' }}>Uẩn Tích Bình Cảnh:</span>
+                  <strong style={{ color: '#f59e0b', fontSize: 13 }}>
+                    +{(cultivation?.storedExp || 0).toLocaleString()} Tu Vi
+                  </strong>
+                </div>
+              </div>
+
+              {/* Nút Hành Động Khi Đạt Đại Viên Mãn */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* 1. NÚT ĐỘT PHÁ LINH TÀNG NỔI BẬT HÀNG ĐẦU */}
+                <button
+                  onClick={() => {
+                    try {
+                      if (breakthroughToLinhTang) {
+                        const res = breakthroughToLinhTang();
+                        if (res?.breakthrough && setBreakthroughModalData) {
+                          setBreakthroughModalData(res.breakthrough);
+                        }
+                        if (setActiveRealmView) setActiveRealmView('linh_tang');
+                      }
+                    } catch (e) {
+                      alert(e.message || 'Chưa thể đột phá Linh Tàng.');
+                    }
+                  }}
+                  style={{
+                    padding: '14px 18px',
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 50%, #f59e0b 100%)',
+                    border: '1.5px solid #fde047',
+                    color: '#ffffff',
+                    fontSize: 14,
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    boxShadow: '0 0 25px rgba(56, 189, 248, 0.6), 0 0 10px rgba(253, 224, 71, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    letterSpacing: '0.5px'
+                  }}
+                  title="Dung hợp toàn bộ 13 Đạo Anh đúc nên Tòa Bí Tàng Đệ Nhất!"
+                >
+                  <span style={{ fontSize: 18 }}>🏛️</span>
+                  <span>ĐỘT PHÁ LINH TÀNG</span>
+                </button>
+
+                {/* 2. Nạp Tu Vi Vào Uẩn Tích */}
+                <button
+                  onClick={() => {
+                    try {
+                      fillAllDaoAnhThienMenh();
+                    } catch (e) {
+                      alert(e.message || 'Không thể nạp Linh Lực');
+                    }
+                  }}
+                  style={{
+                    padding: '11px 14px',
+                    borderRadius: 8,
+                    background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
+                    border: '1px solid #7dd3fc',
+                    color: '#fff',
+                    fontSize: 12.5,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: '0 0 12px rgba(56, 189, 248, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6
+                  }}
+                >
+                  <span>⚡ NẠP LINH LỰC VÀO UẨN TÍCH</span>
+                </button>
+
+                {/* 3. Đạo Anh Đồ Lục */}
+                <button
+                  onClick={() => {
+                    if (setGalleryModalOpen) setGalleryModalOpen(true);
+                  }}
+                  style={{
+                    padding: '11px 14px',
+                    borderRadius: 8,
+                    background: 'linear-gradient(135deg, #a855f7 0%, #f59e0b 100%)',
+                    border: '1.5px solid #fde047',
+                    color: '#fff',
+                    fontSize: 12.5,
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    boxShadow: '0 0 16px rgba(251, 191, 36, 0.45)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6
+                  }}
+                  title="Mở Đạo Anh Đồ Lục"
+                >
+                  <span>✨ ĐẠO ANH ĐỒ LỤC</span>
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         const activeDaoAnhs = daoAnhs.filter(d => (d.currentKiep || 0) < 5);
         const activeCount = activeDaoAnhs.length;
         const currentTargetId = cultivation?.currentTargetDaoAnhId;
@@ -1669,42 +1824,6 @@ export default function SidePanelInfo({ setTribulationModalData }) {
               >
                 <span>✨ ĐẠO ANH ĐỒ LỤC</span>
               </button>
-
-              {/* 4. Nút Đột Phá Linh Tàng Kỳ khi toàn bộ Đạo Anh đạt 5 Kiếp */}
-              {(cultivation?.daoAnhs || []).length > 0 && (cultivation?.daoAnhs || []).every(d => (d.currentKiep || 0) >= 5) && (
-                <button
-                  onClick={() => {
-                    try {
-                      if (breakthroughToLinhTang) {
-                        breakthroughToLinhTang();
-                        if (setActiveRealmView) setActiveRealmView('linh_tang');
-                      }
-                    } catch (e) {
-                      alert(e.message || 'Chưa thể đột phá Linh Tàng.');
-                    }
-                  }}
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: 8,
-                    background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 50%, #f59e0b 100%)',
-                    border: '1.5px solid #38bdf8',
-                    color: '#fff',
-                    fontSize: 12.5,
-                    fontWeight: 900,
-                    cursor: 'pointer',
-                    boxShadow: '0 0 20px rgba(56, 189, 248, 0.6)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    marginTop: 4
-                  }}
-                  title="Dung hợp toàn bộ 13 Đạo Anh đúc thành Tòa Bí Tàng Đệ Nhất!"
-                >
-                  <span>⚡</span>
-                  <span>ĐỘT PHÁ LINH TÀNG KỲ (TỤ ANH)</span>
-                </button>
-              )}
             </div>
           </div>
         );

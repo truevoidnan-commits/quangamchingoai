@@ -607,7 +607,7 @@ export default function ReaderPage() {
       />
 
       {/* MODAL THÔNG BÁO TIÊN KIẾP: ĐẠO ANH ĐẠT 80% LINH LỰC */}
-      {cultivation?.prompt80DaoAnh && (() => {
+      {cultivation?.prompt80DaoAnh && !(cultivation?.daoAnhs || []).every(d => (d.currentKiep || 0) >= 5) && (() => {
         const promptTargetDa = (cultivation?.daoAnhs || []).find(d => d.id === cultivation.prompt80DaoAnh?.daoAnhId);
         const resolvedDaoAnhName = findDaoAnhDefinition(promptTargetDa, cultivation)?.name || promptTargetDa?.name || cultivation.prompt80DaoAnh.daoAnhName;
         return (
@@ -707,7 +707,7 @@ export default function ReaderPage() {
       })()}
 
       {/* MODAL THÔNG BÁO TIÊN KIẾP: TOÀN BỘ ĐẠO ANH ĐÃ VIÊN MÃN 100% */}
-      {cultivation?.promptAllDaoAnhFull && !cultivation?.promptAllDaoAnhFullDismissed && (
+      {cultivation?.promptAllDaoAnhFull && !cultivation?.promptAllDaoAnhFullDismissed && !(cultivation?.daoAnhs || []).every(d => (d.currentKiep || 0) >= 5) && (
         <div style={{
           position: 'fixed',
           top: 0,
