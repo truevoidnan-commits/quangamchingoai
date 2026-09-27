@@ -580,6 +580,60 @@ export function getCultivationState() {
     if (state.inventoryThienDaoPhoi === undefined) state.inventoryThienDaoPhoi = 0;
     if (!state.targetLinhTangIndex) state.targetLinhTangIndex = 1;
 
+    // Tự động nâng cấp/đồng bộ 5 Bí Tàng từ 5 Đạo Anh nổi bật nhất nếu đang ở Linh Tàng Kỳ
+    if (state.realm === 'linh_tang' && state.daoAnhs && state.daoAnhs.length > 0) {
+      if (!state.linhTangs || state.linhTangs.length < 5 || state.linhTangs.some(t => !t.isInitialized || !t.sourceDaoAnhName)) {
+        const top5DaoAnhs = getProminentDaoAnhs(state.daoAnhs, 5);
+        const existingMap = new Map((state.linhTangs || []).map(t => [t.id, t]));
+        const updatedTangs = [];
+        for (let i = 0; i < 5; i++) {
+          const slotId = i + 1;
+          const existing = existingMap.get(slotId);
+          const da = top5DaoAnhs[i];
+          const originName = getLinhTangNameFromDaoAnh(da, i);
+
+          if (existing && existing.isInitialized && existing.sourceDaoAnhName) {
+            if (existing.name) existing.name = existing.name.replace(/[\[\]]/g, '').trim();
+            if (existing.originName) existing.originName = existing.originName.replace(/[\[\]]/g, '').trim();
+            updatedTangs.push(existing);
+          } else {
+            const isSlot1 = (i === 0);
+            const isThienDaoSlot = isSlot1 && (da?.lampId === 'thien_dao_chi_ton' || da?.name?.includes('Thiên Đạo'));
+            const safeName = existing?.name && !existing.name.startsWith('Tòa Thứ') 
+              ? existing.name.replace(/[\[\]]/g, '').trim() 
+              : `${originName} Bí Tàng`;
+            updatedTangs.push({
+              id: slotId,
+              name: safeName,
+              originName: (existing?.originName || originName).replace(/[\[\]]/g, '').trim(),
+              sourceDaoAnhId: da?.id || null,
+              sourceDaoAnhName: da?.name || `${originName} Đạo Anh`,
+              sourceLampId: da?.lampId || null,
+              sourceArtifactId: da?.artifactId || null,
+              lampId: existing?.lampId || da?.lampId || null,
+              artifactId: existing?.artifactId || da?.artifactId || null,
+              artId: existing?.artId || da?.lampId || da?.artifactId || null,
+              type: existing?.type || 'bi_tang',
+              exp: existing ? existing.exp : (isThienDaoSlot ? EXP_PER_THIEN_DAO : 0),
+              maxExp: existing?.maxExp || EXP_PER_THIEN_DAO,
+              hasThienDao: existing ? existing.hasThienDao : isThienDaoSlot,
+              thienDaoName: existing?.thienDaoName || (isThienDaoSlot ? 'Chí Tôn Thiên Đạo' : `${originName} Thiên Đạo`),
+              isGateOpen: existing ? existing.isGateOpen : isThienDaoSlot,
+              thanHuyetNhuc: existing?.thanHuyetNhuc || 0,
+              maxThanHuyetNhuc: existing?.maxThanHuyetNhuc || THIEN_MENH_PER_THAN_TANG,
+              diTienLuuExp: existing?.diTienLuuExp || 0,
+              maxDiTienLuuExp: existing?.maxDiTienLuuExp || EXP_PER_DI_TIEN_LUU,
+              isNurturingDiTienLuu: existing?.isNurturingDiTienLuu || false,
+              isThanLinhThai: existing?.isThanLinhThai || false,
+              assignedLampId: existing?.assignedLampId || null,
+              isInitialized: true,
+            });
+          }
+        }
+        state.linhTangs = updatedTangs;
+      }
+    }
+
     // Khởi tạo và đồng bộ chuẩn xác tầng Ngưng Khí Thể & Pháp theo EXP
     if (state.ngungKhiTheExp === undefined) {
       state.ngungKhiTheExp = state.realm === 'ngung_khi' ? (state.expCurrentRealm || state.totalExp || 0) : 4500;
@@ -3365,7 +3419,118 @@ export const fillAllDaoAnhThienMenh = fillAllDaoAnhExp;
 // ========================================================
 
 /**
- * Đột phá từ Nguyên Anh Đại Viên Mãn lên Linh Tàng Kỳ
+ * Lựa chọn 5 Đạo Anh nổi bật nhất làm nguyên liệu chính đúc nên 5 Tòa Bí Tàng
+ */
+export function getProminentDaoAnhs(daoAnhs, count = 5) {
+  if (!daoAnhs || daoAnhs.length === 0) return [];
+
+  const PRIORITY_ID_MAP = {
+    thien_dao_chi_ton: 100000,
+    khoi_nguyen_thoi_khong: 95000,
+    luc_dao_luan_hoi_tien_can: 90000,
+    am_duong_hon_don_nguyen_can: 85000,
+    hong_mong_bat_diet: 80000,
+    toi_cao_thien_menh: 75000,
+    tao_hoa_ngoc_diep: 70000,
+    hon_don_diet_the_loi_tri: 65000,
+    thao_tu_kiem_quyet: 60000,
+    thai_co_than_long: 55000,
+    thai_so_than_vuong_the: 50000,
+    van_gioi_quy_nhat: 45000,
+    tam_sinh_luan_hoi_an: 40000,
+    ngu_hanh_dai_dong_thien: 35000,
+    kim_o_luyen_van_linh: 30000,
+    con_bang_tien_phap: 25000,
+  };
+
+  const TIER_SCORES = {
+    than_pham: 10000,
+    cuc_pham: 5000,
+    thuong_pham: 2000,
+    trung_pham: 1000,
+    ha_pham: 500,
+  };
+
+  const scored = daoAnhs.map((da, idx) => {
+    let score = 0;
+    if (da.lampId && PRIORITY_ID_MAP[da.lampId]) score += PRIORITY_ID_MAP[da.lampId];
+    if (da.artifactId && PRIORITY_ID_MAP[da.artifactId]) score += PRIORITY_ID_MAP[da.artifactId];
+
+    const nameLower = (da.name || '').toLowerCase();
+    if (nameLower.includes('thiên đạo')) score += 50000;
+    if (nameLower.includes('thời không')) score += 45000;
+    if (nameLower.includes('luân hồi')) score += 40000;
+    if (nameLower.includes('hỗn độn')) score += 35000;
+    if (nameLower.includes('hồng mông')) score += 30000;
+    if (nameLower.includes('sinh mệnh')) score += 25000;
+    if (nameLower.includes('ngũ hành')) score += 20000;
+    if (nameLower.includes('quang âm')) score += 20000;
+    if (nameLower.includes('kiếm')) score += 18000;
+    if (nameLower.includes('lôi')) score += 16000;
+
+    score += (TIER_SCORES[da.tier] || 1000);
+    score += (da.currentKiep || 0) * 1000;
+    if (da.fromLamp) score += 2000;
+    score -= (da.palaceIndex !== undefined ? da.palaceIndex : idx);
+
+    return { da, score, originalIdx: idx };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, count).map(s => s.da);
+}
+
+/**
+ * Trích xuất tên ngắn gọn, uy nghi của Bí Tàng từ Đạo Anh tương ứng
+ */
+export function getLinhTangNameFromDaoAnh(da, index) {
+  const fallbackNames = ['Thời Không', 'Sinh Mệnh', 'Luân Hồi', 'Ngũ Hành', 'Quang Âm'];
+  if (!da) {
+    return fallbackNames[index] || `Bản Nguyên ${index + 1}`;
+  }
+
+  const raw = (da.name || da.palaceName || '').replace(/Đạo Anh/gi, '')
+                                             .replace(/Thiên Cung/gi, '')
+                                             .replace(/Chân Cung/gi, '')
+                                             .replace(/Cung/gi, '')
+                                             .replace(/Thần Thể/gi, '')
+                                             .replace(/[\[\]]/g, '')
+                                             .trim();
+
+  // Ưu tiên khớp tên riêng biệt trước để tránh trùng lặp
+  if (raw.includes('Lục Đạo')) return 'Lục Đạo';
+  if (raw.includes('Tam Sinh')) return 'Tam Sinh';
+  if (raw.includes('Cửu Chuyển')) return 'Cửu Chuyển';
+  if (raw.includes('Thiên Đạo')) return 'Thiên Đạo';
+  if (raw.includes('Thời Không')) return 'Thời Không';
+  if (raw.includes('Luân Hồi')) return 'Luân Hồi';
+  if (raw.includes('Hỗn Độn')) return 'Hỗn Độn';
+  if (raw.includes('Hồng Mông')) return 'Hồng Mông';
+  if (raw.includes('Thiên Mệnh')) return 'Thiên Mệnh';
+  if (raw.includes('Tạo Hóa')) return 'Tạo Hóa';
+  if (raw.includes('Thần Vương')) return 'Thần Vương';
+  if (raw.includes('Thánh Thể')) return 'Thánh Thể';
+  if (raw.includes('Minh Vương')) return 'Minh Vương';
+  if (raw.includes('Trùng Đồng')) return 'Trùng Đồng';
+  if (raw.includes('Tha Hóa')) return 'Tha Hóa';
+  if (raw.includes('Tam Thu')) return 'Tam Thu';
+  if (raw.includes('Hồng Trần') || raw.includes('Hảo Nguyệt')) return 'Hồng Trần';
+  if (raw.includes('Lôi Trì') || raw.includes('Diệt Thế Lôi')) return 'Lôi Trì';
+  if (raw.includes('Kiếm') || raw.includes('Thảo Tự')) return 'Kiếm Thai';
+  if (raw.includes('Ngũ Hành')) return 'Ngũ Hành';
+  if (raw.includes('Quang Âm')) return 'Quang Âm';
+  if (raw.includes('Long')) return 'Thần Long';
+  if (raw.includes('Kim Ô')) return 'Kim Ô';
+  if (raw.includes('Côn Bằng')) return 'Côn Bằng';
+  if (raw.includes('Hắc Huyết')) return 'Hắc Huyết';
+  if (raw.includes('Túc Mệnh') || raw.includes('Tiêu Túc')) return 'Túc Mệnh';
+
+  return raw || fallbackNames[index] || `Đệ ${['Nhất', 'Nhị', 'Tam', 'Tứ', 'Ngũ'][index]}`;
+}
+
+/**
+ * Đột phá từ Nguyên Anh Đại Viên Mãn lên Linh Tàng Kỳ:
+ * Tuyển chọn 5 Đạo Anh nổi bật nhất làm nguyên liệu chính đúc nên 5 Bí Tàng
  */
 export function breakthroughToLinhTang() {
   const state = getCultivationState();
@@ -3383,71 +3548,75 @@ export function breakthroughToLinhTang() {
     throw new Error('Yêu cầu toàn bộ Đạo Anh phải đạt Kiếp 5 Đại Viên Mãn trước khi đột phá Linh Tàng!');
   }
 
-  // 1. Xác định Đạo Anh nổi bật nhất để định danh Tòa 1
-  let prominentDaoAnh = daoAnhs.find(da => da.lampId === 'thien_dao_chi_ton' || (da.name && da.name.includes('Thiên Đạo')));
-  let hasEasterEggThienDao = false;
-
-  if (prominentDaoAnh) {
-    hasEasterEggThienDao = true;
+  // 1. Xác định 5 Đạo Anh: Do người chơi tự chọn hoặc dùng 5 Đạo Anh nổi bật
+  let chosenDaoAnhs = [];
+  if (Array.isArray(selectedDaoAnhIds) && selectedDaoAnhIds.length === 5) {
+    chosenDaoAnhs = selectedDaoAnhIds.map((idOrObj, idx) => {
+      const id = typeof idOrObj === 'object' ? idOrObj.id : idOrObj;
+      const found = daoAnhs.find(da => da.id === id);
+      return found || daoAnhs[idx] || null;
+    });
   } else {
-    prominentDaoAnh = daoAnhs.find(da => da.tier === 'than_pham') || daoAnhs[0];
+    chosenDaoAnhs = getProminentDaoAnhs(daoAnhs, 5);
   }
 
-  const baseName = prominentDaoAnh?.name || 'Thái Sơ';
-  const cleanName = baseName.replace(/Đạo Anh/gi, '').trim();
+  // Nếu số lượng Đạo Anh được chọn ít hơn 5 (phòng hờ)
+  while (chosenDaoAnhs.length < 5) {
+    const remaining = daoAnhs.find(da => !chosenDaoAnhs.includes(da));
+    if (remaining) chosenDaoAnhs.push(remaining);
+    else chosenDaoAnhs.push(null);
+  }
 
-  // Tòa 1 khởi tạo
-  const toa1 = {
-    id: 1,
-    name: cleanName ? `${cleanName} Bí Tàng` : 'Đệ Nhất Bí Tàng',
-    originName: cleanName,
-    type: 'bi_tang',
-    artifactId: null,
-    exp: hasEasterEggThienDao ? EXP_PER_THIEN_DAO : 0,
-    maxExp: EXP_PER_THIEN_DAO,
-    hasThienDao: hasEasterEggThienDao,
-    thienDaoName: hasEasterEggThienDao ? 'Chí Tôn Thiên Đạo' : '',
-    isGateOpen: hasEasterEggThienDao,
-    thanHuyetNhuc: 0,
-    maxThanHuyetNhuc: THIEN_MENH_PER_THAN_TANG,
-    diTienLuuExp: 0,
-    maxDiTienLuuExp: EXP_PER_DI_TIEN_LUU,
-    isNurturingDiTienLuu: false,
-    isThanLinhThai: false,
-    assignedLampId: null,
-    isInitialized: true,
-  };
+  const newLinhTangs = [];
+  let hasEasterEggThienDao = false;
+  const firstProminentDa = chosenDaoAnhs[0];
 
-  // 4 Tòa còn lại
-  const remainingTangs = [2, 3, 4, 5].map(idx => ({
-    id: idx,
-    name: `Tòa Thứ ${idx}`,
-    originName: '',
-    type: 'bi_tang',
-    artifactId: null,
-    exp: 0,
-    maxExp: EXP_PER_THIEN_DAO,
-    hasThienDao: false,
-    thienDaoName: '',
-    isGateOpen: false,
-    thanHuyetNhuc: 0,
-    maxThanHuyetNhuc: THIEN_MENH_PER_THAN_TANG,
-    diTienLuuExp: 0,
-    maxDiTienLuuExp: EXP_PER_DI_TIEN_LUU,
-    isNurturingDiTienLuu: false,
-    isThanLinhThai: false,
-    assignedLampId: null,
-    isInitialized: false,
-  }));
+  for (let i = 0; i < 5; i++) {
+    const da = chosenDaoAnhs[i];
+    const originName = getLinhTangNameFromDaoAnh(da, i);
+    const isSlot1 = (i === 0);
+    const isThienDaoSlot = isSlot1 && (da?.lampId === 'thien_dao_chi_ton' || da?.name?.includes('Thiên Đạo'));
+    if (isThienDaoSlot) {
+      hasEasterEggThienDao = true;
+    }
+
+    newLinhTangs.push({
+      id: i + 1,
+      name: `${originName} Bí Tàng`,
+      originName: originName,
+      sourceDaoAnhId: da?.id || null,
+      sourceDaoAnhName: da?.name || `${originName} Đạo Anh`,
+      sourceLampId: da?.lampId || null,
+      sourceArtifactId: da?.artifactId || null,
+      lampId: da?.lampId || null,
+      artifactId: da?.artifactId || null,
+      artId: da?.lampId || da?.artifactId || null,
+      type: 'bi_tang',
+      exp: isThienDaoSlot ? EXP_PER_THIEN_DAO : 0,
+      maxExp: EXP_PER_THIEN_DAO,
+      hasThienDao: isThienDaoSlot,
+      thienDaoName: isThienDaoSlot ? 'Chí Tôn Thiên Đạo' : `${originName} Thiên Đạo`,
+      isGateOpen: isThienDaoSlot,
+      thanHuyetNhuc: 0,
+      maxThanHuyetNhuc: THIEN_MENH_PER_THAN_TANG,
+      diTienLuuExp: 0,
+      maxDiTienLuuExp: EXP_PER_DI_TIEN_LUU,
+      isNurturingDiTienLuu: false,
+      isThanLinhThai: false,
+      assignedLampId: null,
+      isInitialized: true,
+    });
+  }
 
   state.realm = 'linh_tang';
-  state.linhTangs = [toa1, ...remainingTangs];
+  state.linhTangs = newLinhTangs;
   state.targetLinhTangIndex = hasEasterEggThienDao ? 2 : 1;
   state.assignedHuyenLo = {};
 
+  const daoAnhNamesList = chosenDaoAnhs.filter(Boolean).map(da => da.name || da.palaceName).join(', ');
   const msg = hasEasterEggThienDao
-    ? `🌌 ĐỘT PHÁ LINH TÀNG KỲ ĐẠI THÀNH! Toàn bộ ${daoAnhs.length} Đạo Anh dung hợp đúc nên [${toa1.name}]. Nhờ có Đạo Anh [${prominentDaoAnh.name}] (Thiên Đạo Chí Tôn), Tòa 1 tự mang Phôi Thiên Đạo, TÀNG MÔN ẦM ẦM MỞ RA!`
-    : `🌌 ĐỘT PHÁ LINH TÀNG KỲ THÀNH CÔNG! Toàn bộ ${daoAnhs.length} Đạo Anh dung hợp đúc nên [${toa1.name}]. Bắt đầu hành trình Dưỡng Đạo Khải Minh!`;
+    ? `🌌 ĐỘT PHÁ LINH TÀNG KỲ ĐẠI THÀNH! Đạo hữu đã chọn 5 Tôn Đạo Anh [${daoAnhNamesList}] làm nguyên liệu chính đúc nên 5 Tòa Bí Tàng. Nhờ có [${firstProminentDa?.name}], Tòa 1 tự mang Phôi Thiên Đạo, TÀNG MÔN ẦM ẦM MỞ RA!`
+    : `🌌 ĐỘT PHÁ LINH TÀNG KỲ THÀNH CÔNG! Đạo hữu đã chọn 5 Tôn Đạo Anh [${daoAnhNamesList}] làm nguyên liệu chính đúc nên 5 Tòa Bí Tàng. Bắt đầu hành trình Dưỡng Đạo Khải Minh!`;
 
   state.logs.unshift({ text: msg, time: Date.now() });
 
@@ -3457,14 +3626,97 @@ export function breakthroughToLinhTang() {
     breakthrough: {
       title: 'ĐỘT PHÁ LINH TÀNG KỲ!',
       subtitle: hasEasterEggThienDao 
-        ? `Đạo Anh dung hợp thành [${toa1.name}], Tàng Môn Đệ Nhất mở tung!`
-        : `Đạo Anh dung hợp thành [${toa1.name}], Thức Hải xuất hiện 5 Tòa Tàng Môn!`,
+        ? `5 Đạo Anh tự chọn đúc thành 5 Bí Tàng. Tòa 1 tự mang Thiên Đạo mở tung!`
+        : `5 Đạo Anh tự chọn đúc thành 5 Tòa Bí Tàng Thức Hải!`,
       icon: '🏛️',
-      badge: '✦ BÍ TÀNG NHỤC THÂN ✦',
+      badge: '✦ 5 ĐẠI BÍ TÀNG NHỤC THÂN ✦',
       theme: 'cyan',
       cpStr: getCombatPowerDisplay(state)
     }
   };
+}
+
+/**
+ * Tự tay chỉ định hoặc hoán đổi Đạo Anh làm nguyên liệu cho Tòa Bí Tàng (khi chưa mở cổng)
+ */
+export function assignDaoAnhToLinhTang(tangIndex, daoAnhId) {
+  const state = getCultivationState();
+  if (state.realm !== 'linh_tang') {
+    throw new Error('Chưa ở cảnh giới Linh Tàng.');
+  }
+
+  const tang = state.linhTangs?.find(t => t.id === tangIndex);
+  if (!tang) throw new Error('Không tìm thấy Tòa Bí Tàng.');
+  if (tang.isGateOpen) throw new Error('Tòa này đã khai mở Tàng Môn, không thể đổi Đạo Anh nguồn!');
+
+  const da = (state.daoAnhs || []).find(d => d.id === daoAnhId);
+  if (!da) throw new Error('Không tìm thấy Đạo Anh.');
+
+  // Kiểm tra xem Đạo Anh này đã được gán cho Tòa khác chưa
+  const existingTang = (state.linhTangs || []).find(t => t.id !== tangIndex && t.sourceDaoAnhId === daoAnhId);
+  if (existingTang) {
+    if (!existingTang.isGateOpen) {
+      const oldDaId = tang.sourceDaoAnhId;
+      const oldDa = (state.daoAnhs || []).find(d => d.id === oldDaId);
+
+      // Đổi Tòa hiện tại sang da mới
+      const newOriginName = getLinhTangNameFromDaoAnh(da, tangIndex - 1);
+      tang.name = `${newOriginName} Bí Tàng`;
+      tang.originName = newOriginName;
+      tang.sourceDaoAnhId = da.id;
+      tang.sourceDaoAnhName = da.name;
+      tang.sourceLampId = da.lampId || null;
+      tang.sourceArtifactId = da.artifactId || null;
+      tang.lampId = da.lampId || null;
+      tang.artifactId = da.artifactId || null;
+      tang.artId = da.lampId || da.artifactId || null;
+      tang.thienDaoName = `${newOriginName} Thiên Đạo`;
+
+      // Đổi existingTang sang oldDa (nếu có)
+      if (oldDa) {
+        const oldOriginName = getLinhTangNameFromDaoAnh(oldDa, existingTang.id - 1);
+        existingTang.name = `${oldOriginName} Bí Tàng`;
+        existingTang.originName = oldOriginName;
+        existingTang.sourceDaoAnhId = oldDa.id;
+        existingTang.sourceDaoAnhName = oldDa.name;
+        existingTang.sourceLampId = oldDa.lampId || null;
+        existingTang.sourceArtifactId = oldDa.artifactId || null;
+        existingTang.lampId = oldDa.lampId || null;
+        existingTang.artifactId = oldDa.artifactId || null;
+        existingTang.artId = oldDa.lampId || oldDa.artifactId || null;
+        existingTang.thienDaoName = `${oldOriginName} Thiên Đạo`;
+      }
+
+      state.logs.unshift({
+        text: `🏛️ Hoán đổi nguyên liệu Đạo Anh giữa Tòa ${tangIndex} và Tòa ${existingTang.id}!`,
+        time: Date.now()
+      });
+      saveCultivationState(state);
+      return state;
+    } else {
+      throw new Error(`Đạo Anh [${da.name}] đã dùng cho [${existingTang.name}] (Tòa ${existingTang.id} đã mở cổng), không thể chọn!`);
+    }
+  }
+
+  const originName = getLinhTangNameFromDaoAnh(da, tangIndex - 1);
+  tang.name = `${originName} Bí Tàng`;
+  tang.originName = originName;
+  tang.sourceDaoAnhId = da.id;
+  tang.sourceDaoAnhName = da.name;
+  tang.sourceLampId = da.lampId || null;
+  tang.sourceArtifactId = da.artifactId || null;
+  tang.lampId = da.lampId || null;
+  tang.artifactId = da.artifactId || null;
+  tang.artId = da.lampId || da.artifactId || null;
+  tang.thienDaoName = `${originName} Thiên Đạo`;
+
+  state.logs.unshift({
+    text: `🏛️ Đã chọn Đạo Anh [${da.name}] làm nguyên liệu chính cho [${tang.name}] (Tòa Thứ ${tangIndex})!`,
+    time: Date.now()
+  });
+
+  saveCultivationState(state);
+  return state;
 }
 
 /**
@@ -3520,6 +3772,13 @@ export function feedExpToLinhTang(tangIndex, expAmount) {
   if (!tang || !tang.isInitialized) throw new Error('Tòa chưa được khởi tạo.');
   if (tang.isGateOpen) throw new Error('Tòa này đã hoàn thành Thiên Đạo, Tàng Môn đã mở!');
 
+  if (tangIndex > 1) {
+    const prevTang = state.linhTangs?.find(t => t.id === tangIndex - 1);
+    if (!prevTang || !prevTang.isGateOpen) {
+      throw new Error(`Cần dưỡng tòa thứ ${tangIndex - 1} đạt Viên Mãn (Tàng Môn mở) trước khi bồi dưỡng tòa này!`);
+    }
+  }
+
   const hasHuyenLo = Boolean(state.assignedHuyenLo?.[tangIndex]);
   const multiplier = hasHuyenLo ? (1 + HOA_LO_SPEED_BONUS) : 1.0;
   const effectiveExp = Math.round(expAmount * multiplier);
@@ -3530,6 +3789,7 @@ export function feedExpToLinhTang(tangIndex, expAmount) {
     tang.hasThienDao = true;
     tang.thienDaoName = `${tang.originName || 'Bản Nguyên'} Thiên Đạo`;
     tang.isGateOpen = true;
+    state.targetLinhTangIndex = Math.min(5, tangIndex + 1);
     state.logs.unshift({
       text: `🌟 KHẢI MINH THĂNG TINH! [${tang.name}] đã ngưng tụ thành công [${tang.thienDaoName}], TÀNG MÔN ẦM ẦM MỞ RA!`,
       time: Date.now()
@@ -3552,11 +3812,19 @@ export function attachThienDaoFromInventory(tangIndex) {
   if (!tang || !tang.isInitialized) throw new Error('Tòa chưa được khởi tạo.');
   if (tang.isGateOpen) throw new Error('Tòa này đã có Thiên Đạo, Tàng Môn đã mở!');
 
+  if (tangIndex > 1) {
+    const prevTang = state.linhTangs?.find(t => t.id === tangIndex - 1);
+    if (!prevTang || !prevTang.isGateOpen) {
+      throw new Error(`Cần hoàn tất tòa thứ ${tangIndex - 1} trước khi khảm nạp cho tòa này!`);
+    }
+  }
+
   state.inventoryThienDaoPhoi -= 1;
   tang.exp = tang.maxExp || EXP_PER_THIEN_DAO;
   tang.hasThienDao = true;
   tang.thienDaoName = `${tang.originName || 'Hỗn Độn'} Thiên Đạo (Kỳ Ngộ)`;
   tang.isGateOpen = true;
+  state.targetLinhTangIndex = Math.min(5, tangIndex + 1);
 
   state.logs.unshift({
     text: `🌟 DUNG NHẬP THIÊN ĐẠO PHÔI! [${tang.name}] lập tức viên mãn, TÀNG MÔN ẦM ẦM MỞ RA!`,

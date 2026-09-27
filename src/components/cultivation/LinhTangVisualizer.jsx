@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useCultivationContext } from '../../context/CultivationContext';
 import { 
   EXP_PER_THIEN_DAO, 
@@ -9,6 +10,7 @@ import {
 import { getArtifactImageUrl, getLampImageUrl, THAN_PHAM_AI_ICONS, LAMP_THAN_PHAM_AI_ICONS } from '../../lib/artifactIcons';
 import godEyeImg from '../../assets/images/bg_god_cosmic_eye.jpg';
 import styles from './LinhTangVisualizer.module.css';
+import DaoAnhToLinhTangModal from './DaoAnhToLinhTangModal';
 
 // Load toàn bộ ảnh AI tùy chỉnh trong thư mục linh_tang
 const customLinhTangImages = import.meta.glob('../../assets/images/linh_tang/*.{jpg,png,webp,jpeg}', { eager: true, import: 'default' });
@@ -81,6 +83,10 @@ function resolveGateArtwork(tang, isThanTang, isGateOpen) {
       `world_${tang.artId}`,
       tang.artId ? `world_${tang.artId.replace(/^art_/, '')}` : null,
       tang.artId,
+      tang.sourceLampId,
+      tang.sourceArtifactId,
+      tang.lampId,
+      tang.artifactId,
     ].filter(Boolean);
 
     for (const key of specificKeys) {
@@ -112,9 +118,38 @@ function resolveGateArtwork(tang, isThanTang, isGateOpen) {
       if (userImages['world_tao_hoa']) return userImages['world_tao_hoa'];
       return THAN_PHAM_AI_ICONS['tao_hoa_ngoc_diep'] || '';
     }
+    if (nameLower.includes('thiên đạo')) {
+      return LAMP_THAN_PHAM_AI_ICONS['thien_dao_chi_ton'] || '';
+    }
+    if (nameLower.includes('hồng mông')) {
+      return LAMP_THAN_PHAM_AI_ICONS['hong_mong_bat_diet'] || '';
+    }
+    if (nameLower.includes('thiên mệnh')) {
+      return LAMP_THAN_PHAM_AI_ICONS['toi_cao_thien_menh'] || '';
+    }
+    if (nameLower.includes('thần vương')) {
+      return THAN_PHAM_AI_ICONS['thai_so_than_vuong_the'] || '';
+    }
+    if (nameLower.includes('long')) {
+      return LAMP_THAN_PHAM_AI_ICONS['thai_co_than_long'] || '';
+    }
+    if (nameLower.includes('kim ô')) {
+      return LAMP_THAN_PHAM_AI_ICONS['kim_o_luyen_van_linh'] || '';
+    }
+    if (nameLower.includes('côn bằng')) {
+      return THAN_PHAM_AI_ICONS['con_bang_tien_phap'] || '';
+    }
 
-    if (tang.artId && getArtifactImageUrl(tang.artId)) {
-      return getArtifactImageUrl(tang.artId);
+    const lampKey = tang.lampId || tang.sourceLampId;
+    if (lampKey && LAMP_THAN_PHAM_AI_ICONS[lampKey]) {
+      return LAMP_THAN_PHAM_AI_ICONS[lampKey];
+    }
+    const artKey = tang.artifactId || tang.sourceArtifactId || tang.artId;
+    if (artKey && THAN_PHAM_AI_ICONS[artKey]) {
+      return THAN_PHAM_AI_ICONS[artKey];
+    }
+    if (artKey && getArtifactImageUrl(artKey)) {
+      return getArtifactImageUrl(artKey);
     }
     return userImages['world_default'] || THAN_PHAM_AI_ICONS['tao_hoa_ngoc_diep'] || '';
   }
@@ -141,6 +176,7 @@ export default function LinhTangVisualizer() {
     feedDiTienLuuExp,
     assignLampHuyenLo,
     unassignLampHuyenLo,
+    assignDaoAnhToLinhTang,
   } = context;
 
   const currentRealm = cultivation?.realm || 'truc_co';
@@ -151,6 +187,52 @@ export default function LinhTangVisualizer() {
 
   const [selectedTangId, setSelectedTangId] = useState(null);
   const [initSlotIndex, setInitSlotIndex] = useState(null);
+  const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+  const [mobileActiveSlot, setMobileActiveSlot] = useState(1);
+  const gatesRowRef = useRef(null);
+  const gateItemRefs = useRef([]);
+
+  const scrollToSlot = (slotNum) => {
+    setMobileActiveSlot(slotNum);
+    const targetEl = gateItemRefs.current[slotNum - 1];
+    if (targetEl && gatesRowRef.current) {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  };
+
+  const handleNextSlot = () => {
+    const next = Math.min(5, mobileActiveSlot + 1);
+    scrollToSlot(next);
+  };
+
+  const handlePrevSlot = () => {
+    const prev = Math.max(1, mobileActiveSlot - 1);
+    scrollToSlot(prev);
+  };
+
+  const handleRowScroll = () => {
+    if (!gatesRowRef.current) return;
+    const row = gatesRowRef.current;
+    const scrollLeft = row.scrollLeft;
+    const centerPoint = scrollLeft + row.clientWidth / 2;
+
+    let closestSlot = 1;
+    let minDistance = Infinity;
+
+    gateItemRefs.current.forEach((el, idx) => {
+      if (!el) return;
+      const elCenter = el.offsetLeft + el.offsetWidth / 2;
+      const dist = Math.abs(centerPoint - elCenter);
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestSlot = idx + 1;
+      }
+    });
+
+    if (closestSlot !== mobileActiveSlot) {
+      setMobileActiveSlot(closestSlot);
+    }
+  };
 
   const absorbedLamps = cultivation?.absorbedLamps || [];
   const assignedHuyenLo = cultivation?.assignedHuyenLo || {};
@@ -158,7 +240,23 @@ export default function LinhTangVisualizer() {
 
   const cleanName = (name) => {
     if (!name) return '';
-    return name.replace(/^\[|\]$/g, '').trim();
+    return name.replace(/[\[\]]/g, '').trim();
+  };
+
+  const handleConfirmReassign = (selectedIds) => {
+    try {
+      selectedIds.forEach((daId, idx) => {
+        const slotNum = idx + 1;
+        const tang = linhTangs.find(t => t.id === slotNum);
+        if (tang && !tang.isGateOpen && daId && tang.sourceDaoAnhId !== daId) {
+          if (assignDaoAnhToLinhTang) {
+            assignDaoAnhToLinhTang(slotNum, daId);
+          }
+        }
+      });
+    } catch (e) {
+      alert(e.message || 'Không thể cập nhật Đạo Anh.');
+    }
   };
 
   const handleSelectArtifactForInit = (art) => {
@@ -182,9 +280,78 @@ export default function LinhTangVisualizer() {
       />
       <div className={styles.astralFloorRing} />
 
+      {/* THANH ĐIỀU HƯỚNG TRÊN CÙNG CỦA LINH TÀNG */}
+      <div className={styles.topControlBar}>
+        <div className={styles.topControlTitle}>
+          <span className={styles.pantheonBadge}>VŨ TRỤ THỨC HẢI</span>
+          <span className={styles.pantheonSubtitle}>NGŨ ĐẠI BÍ TÀNG KHAI THIÊN</span>
+        </div>
+        <button
+          className={styles.reassignBtn}
+          onClick={() => setIsReassignModalOpen(true)}
+          title="Tự tay chọn hoặc hoán đổi 5 Đạo Anh làm nguyên liệu cho 5 Bí Tàng"
+        >
+          <span>🔮</span>
+          <span>Tùy Chỉnh 5 Đạo Anh Bí Tàng</span>
+        </button>
+      </div>
+
       {/* SÂN KHẤU 5 CỰ TỌA TÀNG MÔN */}
       <div className={styles.pantheonStage}>
-        <div className={styles.gatesRow}>
+        {/* THANH ĐIỀU HƯỚNG 5 TÒA TRÊN MOBILE */}
+        <div className={styles.mobileNavigatorBar}>
+          <button 
+            className={styles.navArrowBtn}
+            onClick={handlePrevSlot}
+            disabled={mobileActiveSlot <= 1}
+            title="Tòa trước"
+          >
+            ‹
+          </button>
+
+          <div className={styles.mobileTabsTrack}>
+            {Array.from({ length: 5 }).map((_, idx) => {
+              const sNum = idx + 1;
+              const t = linhTangs.find(item => item.id === sNum);
+              const isSlotOpen = t?.isGateOpen;
+              const isSelected = mobileActiveSlot === sNum;
+              const isThan = t?.type === 'than_tang';
+
+              return (
+                <button
+                  key={sNum}
+                  onClick={() => scrollToSlot(sNum)}
+                  className={`
+                    ${styles.mobileGateTab} 
+                    ${isSelected ? (isThan ? styles.mobileGateTabSelectedGold : styles.mobileGateTabSelected) : ''}
+                  `}
+                >
+                  <span className={styles.mobileGateTabRoman}>TÒA {['I', 'II', 'III', 'IV', 'V'][idx]}</span>
+                  {isSlotOpen ? (
+                    <span className={styles.mobileGateStatusDotOpen}>●</span>
+                  ) : (
+                    <span className={styles.mobileGateStatusDotLocked}>🔒</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <button 
+            className={styles.navArrowBtn}
+            onClick={handleNextSlot}
+            disabled={mobileActiveSlot >= 5}
+            title="Tòa tiếp theo"
+          >
+            ›
+          </button>
+        </div>
+
+        <div 
+          ref={gatesRowRef}
+          onScroll={handleRowScroll}
+          className={styles.gatesRow}
+        >
           {Array.from({ length: 5 }).map((_, index) => {
             const slotNum = index + 1;
             const tang = linhTangs.find(t => t.id === slotNum);
@@ -199,6 +366,7 @@ export default function LinhTangVisualizer() {
               return (
                 <div 
                   key={slotNum} 
+                  ref={el => gateItemRefs.current[index] = el}
                   className={`
                     ${styles.celestialGateEntity} 
                     ${isCenter ? styles.centerGateEntity : ''}
@@ -272,6 +440,7 @@ export default function LinhTangVisualizer() {
             return (
               <div 
                 key={slotNum} 
+                ref={el => gateItemRefs.current[index] = el}
                 className={`
                   ${styles.celestialGateEntity} 
                   ${isCenter ? styles.centerGateEntity : ''}
@@ -335,6 +504,24 @@ export default function LinhTangVisualizer() {
                   >
                     {cleanName(tang.name)}
                   </div>
+                  {tang.sourceDaoAnhName && (
+                    <div 
+                      style={{ 
+                        fontSize: 10.5, 
+                        color: isThanTang ? '#fde047' : '#38bdf8', 
+                        opacity: 0.9, 
+                        whiteSpace: 'nowrap', 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        maxWidth: 130,
+                        fontWeight: 600,
+                        marginTop: 1
+                      }}
+                      title={`Đúc từ Đạo Anh: ${tang.sourceDaoAnhName}`}
+                    >
+                      ✦ {tang.sourceDaoAnhName.replace(/Đạo Anh/gi, '').trim()}
+                    </div>
+                  )}
 
                   {/* 1 HUY HIỆU DUY NHẤT CÂN ĐỐI */}
                   <div className={styles.gateBadgesRow}>
@@ -377,7 +564,7 @@ export default function LinhTangVisualizer() {
       </div>
 
       {/* MODAL 1: CHỌN BẢO VẬT CỔ ĐẠI KHAI TẠNG */}
-      {initSlotIndex && (
+      {initSlotIndex && createPortal(
         <div className={styles.modalOverlay} onClick={() => setInitSlotIndex(null)}>
           <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
             <div className={styles.modalHeader}>
@@ -412,226 +599,364 @@ export default function LinhTangVisualizer() {
               })}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL 2: TẾ ĐÀN QUẢN LÝ CHI TIẾT TÀNG MÔN */}
-      {selectedTang && (
-        <div className={styles.modalOverlay} onClick={() => setSelectedTangId(null)}>
-          <div 
-            className={`${styles.modalCard} ${selectedTang.type === 'than_tang' ? styles.modalCardThanTang : ''}`}
-            onClick={e => e.stopPropagation()}
-          >
-            <div className={styles.modalHeader}>
-              <div>
-                <h3 className={styles.modalTitle}>
-                  {cleanName(selectedTang.name)} (Tòa Thứ {selectedTang.id})
-                </h3>
-                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                  <span className={`${styles.typePill} ${selectedTang.type === 'than_tang' ? styles.typePillThanTang : styles.typePillBiTang}`}>
-                    {selectedTang.type === 'than_tang' ? 'THẦN TU · THẦN TÀNG' : 'TIÊN TU · BÍ TÀNG'}
-                  </span>
-                  {selectedTang.isGateOpen && (
-                    <span className={`${styles.typePill} ${styles.typePillBiTang}`} style={{ borderColor: '#4ade80', color: '#4ade80' }}>
-                      CỔNG ĐÃ KHAI MỞ
-                    </span>
-                  )}
-                  {selectedTang.isThanLinhThai && (
-                    <span className={styles.typePillThanThai}>
-                      THẦN LINH THÁI
-                    </span>
-                  )}
-                </div>
-              </div>
-              <button className={styles.modalCloseBtn} onClick={() => setSelectedTangId(null)}>✕</button>
-            </div>
+      {selectedTang && (() => {
+        const isThanTang = selectedTang.type === 'than_tang';
+        const isGateOpen = selectedTang.isGateOpen;
+        const gateArtUrl = resolveGateArtwork(selectedTang, isThanTang, isGateOpen);
+        const cleanDaoAnhName = (selectedTang.sourceDaoAnhName || '').replace(/[\[\]]/g, '').replace(/Đạo Anh/gi, '').trim();
+        const cleanThienDao = (selectedTang.thienDaoName || 'Thiên Đạo').replace(/[\[\]]/g, '').trim();
+        const cleanTangName = cleanName(selectedTang.name);
+        const romanNum = ['I', 'II', 'III', 'IV', 'V'][selectedTang.id - 1] || selectedTang.id;
 
-            {/* PHẦN 1: THIÊN ĐẠO & DƯỠNG ĐẠO */}
-            <div className={`${styles.altarSection} ${selectedTang.type === 'than_tang' ? styles.altarSectionThanTang : ''}`}>
-              <div className={`${styles.altarSectionTitle} ${selectedTang.type === 'than_tang' ? styles.altarSectionTitleGold : ''}`}>
-                <span>🌟 Thiên Đạo Trấn Tạng & Khai Mở Tàng Môn</span>
-              </div>
-
-              {selectedTang.isGateOpen ? (
-                <div style={{ color: '#4ade80', fontSize: 13, fontWeight: 700, padding: '6px 0' }}>
-                  ✓ ĐÃ VIÊN MÃN: Cánh cổng thế giới đã khai mở hoàn toàn, trấn ngự bởi [{selectedTang.thienDaoName || 'Thiên Đạo'}].
-                </div>
-              ) : (
-                <div>
-                  <p style={{ fontSize: 13, color: '#94a3b8', margin: '4px 0 8px 0' }}>
-                    Tích lũy Tu Vi Dưỡng Đạo để ủ Thiên Đạo phôi thai:
-                  </p>
-
-                  <div className={styles.pedestalProgressTrack} style={{ width: '100%', height: 8 }}>
-                    <div 
-                      className={`${styles.pedestalProgressBar} ${selectedTang.type === 'than_tang' ? styles.pedestalProgressBarGold : ''}`}
-                      style={{ width: `${Math.min(100, Math.floor(((selectedTang.exp || 0) / (selectedTang.maxExp || EXP_PER_THIEN_DAO)) * 100))}%` }}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                    <span>Tiến độ: {Math.min(100, Math.floor(((selectedTang.exp || 0) / (selectedTang.maxExp || EXP_PER_THIEN_DAO)) * 100))}%</span>
-                    <span>{(selectedTang.exp || 0).toLocaleString()} / {(selectedTang.maxExp || EXP_PER_THIEN_DAO).toLocaleString()} EXP</span>
+        return createPortal(
+          <div className={styles.modalOverlay} onClick={() => setSelectedTangId(null)}>
+            <div 
+              className={`${styles.modalCard} ${isThanTang ? styles.modalCardThanTang : ''}`}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* HERO HEADER TẾ ĐÀN */}
+              <div className={styles.altarHeroHeader}>
+                <div className={styles.altarHeroLeft}>
+                  {/* VÒM CỔNG THU NHỎ MINI ARCH VISUAL */}
+                  <div className={`${styles.miniArchBox} ${isThanTang ? styles.miniArchBoxThanTang : ''}`}>
+                    <img src={gateArtUrl} alt={cleanTangName} className={styles.miniArchImg} />
                   </div>
 
-                  <div className={styles.altarActionRow}>
-                    <button 
-                      className={styles.primaryBtn}
-                      onClick={() => feedExpToLinhTang(selectedTang.id, 5000)}
-                    >
-                      + Nạp 5.000 Tu Vi Dưỡng Đạo
-                    </button>
-
-                    <button 
-                      className={styles.primaryBtn}
-                      onClick={() => feedExpToLinhTang(selectedTang.id, selectedTang.maxExp || EXP_PER_THIEN_DAO)}
-                    >
-                      ⚡ Nạp Đầy Thiên Đạo
-                    </button>
-
-                    {thienDaoPhoiCount > 0 && (
-                      <button 
-                        className={styles.goldBtn}
-                        onClick={() => attachThienDaoFromInventory(selectedTang.id)}
-                      >
-                        🌌 Khảm Nạp 1 Thiên Đạo Phôi (Mở Cổng Tức Thì)
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* PHẦN 2: HỎA LÒ MỆNH ĐĂNG */}
-            <div className={`${styles.altarSection} ${selectedTang.type === 'than_tang' ? styles.altarSectionThanTang : ''}`}>
-              <div className={`${styles.altarSectionTitle} ${styles.altarSectionTitleGold}`}>
-                <span>🔥 Hỏa Lò Mệnh Đăng (+20% Tốc Độ Dưỡng Đạo)</span>
-              </div>
-
-              {assignedHuyenLo[selectedTang.id] ? (
-                <div>
-                  <p style={{ fontSize: 13, color: '#fed7aa', margin: '4px 0 10px 0' }}>
-                    Đang nung đốt bởi Hỏa Lò: <strong>{LIFE_LAMPS.find(l => l.id === assignedHuyenLo[selectedTang.id])?.name}</strong>
-                  </p>
-                  <button 
-                    className={styles.dangerBtn}
-                    onClick={() => unassignLampHuyenLo(selectedTang.id)}
-                  >
-                    Tháo Hỏa Lò
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p style={{ fontSize: 12, color: '#94a3b8', margin: '4px 0 8px 0' }}>
-                    Ghép một Mệnh Đăng đã hấp thụ để hóa thành Hỏa Lò nung nấu Bí Tàng:
-                  </p>
-                  
-                  {absorbedLamps.length === 0 ? (
-                    <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic' }}>
-                      Chưa hấp thụ Mệnh Đăng nào để hóa Hỏa Lò.
+                  <div className={styles.altarHeaderMeta}>
+                    <div className={`${styles.altarTierBadge} ${isThanTang ? styles.altarTierBadgeGold : ''}`}>
+                      TÒA THỨ {romanNum} · {isThanTang ? 'THẦN TU THẦN TÀNG' : 'TIÊN TU BÍ TÀNG'}
                     </div>
-                  ) : (
-                    <div className={styles.lampPickerGrid}>
-                      {absorbedLamps.map(lId => {
-                        const lamp = LIFE_LAMPS.find(l => l.id === lId);
-                        const isUsedElsewhere = Object.entries(assignedHuyenLo).some(([tId, id]) => id === lId && Number(tId) !== selectedTang.id);
-                        if (isUsedElsewhere) return null;
 
-                        const lampThumb = getLampImageUrl(lId);
+                    <h3 className={styles.altarMainTitle}>
+                      {cleanTangName}
+                    </h3>
 
-                        return (
-                          <button 
-                            key={lId}
-                            className={styles.lampPickerBtn}
-                            onClick={() => assignLampHuyenLo(selectedTang.id, lId)}
+                    {cleanDaoAnhName && (
+                      <div className={styles.altarDaoAnhSourceRow}>
+                        <span>✦ Đạo Anh Nguồn: <strong style={{ color: '#fde047' }}>{cleanDaoAnhName}</strong></span>
+                        {!isGateOpen && (
+                          <button
+                            onClick={() => setIsReassignModalOpen(true)}
+                            className={styles.altarChangeDaBtn}
+                            title="Đổi sang Đạo Anh khác trong Thức Hải"
                           >
-                            <img src={lampThumb} alt={lamp?.name} className={styles.lampPickerThumb} />
-                            <span>🔥 Ghép {lamp?.shortName || lamp?.name}</span>
+                            🔄 Đổi Đạo Anh Khác
                           </button>
-                        );
-                      })}
+                        )}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <span className={`${styles.typePill} ${isThanTang ? styles.typePillThanTang : styles.typePillBiTang}`}>
+                        {isThanTang ? 'THẦN TU' : 'TIÊN TU'}
+                      </span>
+                      {isGateOpen ? (
+                        <span className={`${styles.typePill} ${styles.typePillBiTang}`} style={{ borderColor: '#4ade80', color: '#4ade80' }}>
+                          ✦ CỔNG ĐÃ VIÊN MÃN
+                        </span>
+                      ) : (
+                        <span className={`${styles.typePill} ${styles.typePillLocked}`}>
+                          🔒 ĐANG PHONG CẤM
+                        </span>
+                      )}
+                      {selectedTang.isThanLinhThai && (
+                        <span className={styles.typePillThanThai}>
+                          THẦN LINH THÁI
+                        </span>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {/* PHẦN 3: BỒI DƯỠNG THẦN HUYẾT NHỤC */}
-            {selectedTang.type !== 'than_tang' && (
-              <div className={styles.altarSection}>
-                <div className={`${styles.altarSectionTitle} ${styles.altarSectionTitleGold}`}>
-                  <span>🩸 Bồi Dưỡng Thần Huyết Nhục (Chuyển Hóa Thần Tàng)</span>
-                </div>
-                <p style={{ fontSize: 12, color: '#94a3b8', margin: '4px 0 10px 0' }}>
-                  Tiêu hao <strong>{THIEN_MENH_PER_THAN_TANG.toLocaleString()} Lực Thiên Mệnh</strong> để nạp Thần Huyết Nhục. Toàn bộ bảo vật sẽ đồng hóa thành Thần Khí, chuyển hóa vĩnh viễn thành Thần Tàng:
-                </p>
-                <button 
-                  className={`${styles.goldBtn} ${(totalThienMenh || 0) < THIEN_MENH_PER_THAN_TANG ? styles.disabledBtn : ''}`}
-                  disabled={(totalThienMenh || 0) < THIEN_MENH_PER_THAN_TANG}
-                  onClick={() => {
-                    try {
-                      convertBiTangToThanTang(selectedTang.id);
-                    } catch (e) {
-                      alert(e.message);
-                    }
-                  }}
-                >
-                  {(totalThienMenh || 0) >= THIEN_MENH_PER_THAN_TANG 
-                    ? `🩸 Nạp Thần Huyết Nhục (-${THIEN_MENH_PER_THAN_TANG.toLocaleString()} TM)` 
-                    : `🔒 Cần ${THIEN_MENH_PER_THAN_TANG.toLocaleString()} TM (Hiện có: ${(totalThienMenh || 0).toLocaleString()})`}
-                </button>
+                <button className={styles.modalCloseBtn} onClick={() => setSelectedTangId(null)}>✕</button>
               </div>
-            )}
 
-            {/* PHẦN 4: DỊ TIÊN LƯU & THẦN LINH THÁI */}
-            {selectedTang.type === 'than_tang' && (
-              <div className={`${styles.altarSection} ${selectedTang.type === 'than_tang' ? styles.altarSectionThanTang : ''}`}>
-                <div className={`${styles.altarSectionTitle} ${styles.altarSectionTitleGold}`}>
-                  <span>🔮 Dị Tiên Lưu · Dệt Hồn Ti Thần Linh Thái</span>
+              {/* PHẦN 1: THIÊN ĐẠO & DƯỠNG ĐẠO */}
+              <div className={`${styles.altarSection} ${isThanTang ? styles.altarSectionThanTang : ''}`}>
+                <div className={`${styles.altarSectionTitle} ${isThanTang ? styles.altarSectionTitleGold : ''}`}>
+                  <span>🌟 Thiên Đạo Trấn Tạng & Khai Mở Tàng Môn</span>
                 </div>
 
-                {selectedTang.isThanLinhThai ? (
-                  <div style={{ color: '#fbbf24', fontSize: 13, fontWeight: 800, padding: '4px 0' }}>
-                    👑 ĐÃ GIẢI PHÓNG THẦN LINH THÁI THƯỜNG TRỰC! Thần uy hiển hiện sau lưng, chiến lực tiệm cận Quy Hư.
+                {isGateOpen ? (
+                  <div className={styles.sealCard}>
+                    <div className={styles.sealCardLeft}>
+                      <span className={styles.sealIcon}>✦</span>
+                      <div>
+                        <div className={styles.sealStatusText}>KHAI THIÊN VIÊN MÃN · THIÊN ĐẠO ĐÃ ĐỊNH VỊ</div>
+                        <div className={styles.sealThienDaoName}>Trấn Ngự Bản Nguyên: <strong>{cleanThienDao}</strong></div>
+                      </div>
+                    </div>
+                    <span className={`${styles.typePill} ${styles.typePillBiTang}`} style={{ borderColor: '#4ade80', color: '#4ade80' }}>
+                      VIÊN MÃN
+                    </span>
                   </div>
                 ) : (
+                  (() => {
+                    const prevTang = linhTangs.find(t => t.id === selectedTang.id - 1);
+                    const isLockedByPrev = selectedTang.id > 1 && prevTang && !prevTang.isGateOpen;
+
+                    if (isLockedByPrev) {
+                      return (
+                        <div style={{
+                          padding: '12px 14px',
+                          borderRadius: 8,
+                          background: 'rgba(239, 68, 68, 0.12)',
+                          border: '1px solid rgba(239, 68, 68, 0.35)',
+                          color: '#fca5a5',
+                          fontSize: 12.5,
+                          fontWeight: 700,
+                        }}>
+                          🔒 TÒA NÀY ĐANG ĐỢI KHẢI MINH: Cần dưỡng hoàn tất mở cổng [<strong>{cleanName(prevTang?.name)}</strong>] (Tòa Thứ {selectedTang.id - 1}) trước khi bồi dưỡng Tòa này!
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div>
+                        <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 10px 0' }}>
+                          Tích lũy Tu Vi Dưỡng Đạo để ủ Thiên Đạo phôi thai, phá phong khai môn:
+                        </p>
+
+                        <div className={styles.pedestalProgressTrack} style={{ width: '100%', height: 8 }}>
+                          <div 
+                            className={`${styles.pedestalProgressBar} ${isThanTang ? styles.pedestalProgressBarGold : ''}`}
+                            style={{ width: `${Math.min(100, Math.floor(((selectedTang.exp || 0) / (selectedTang.maxExp || EXP_PER_THIEN_DAO)) * 100))}%` }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: '#94a3b8', marginTop: 6 }}>
+                          <span>Tiến độ: {Math.min(100, Math.floor(((selectedTang.exp || 0) / (selectedTang.maxExp || EXP_PER_THIEN_DAO)) * 100))}%</span>
+                          <span>{(selectedTang.exp || 0).toLocaleString()} / {(selectedTang.maxExp || EXP_PER_THIEN_DAO).toLocaleString()} EXP</span>
+                        </div>
+
+                        <div className={styles.altarActionRow}>
+                          <button 
+                            className={styles.primaryBtn}
+                            onClick={() => {
+                              try {
+                                feedExpToLinhTang(selectedTang.id, 5000);
+                              } catch (e) {
+                                alert(e.message);
+                              }
+                            }}
+                          >
+                            + Nạp 5.000 Tu Vi Dưỡng Đạo
+                          </button>
+
+                          <button 
+                            className={styles.primaryBtn}
+                            onClick={() => {
+                              try {
+                                feedExpToLinhTang(selectedTang.id, selectedTang.maxExp || EXP_PER_THIEN_DAO);
+                              } catch (e) {
+                                alert(e.message);
+                              }
+                            }}
+                          >
+                            ⚡ Nạp Đầy Thiên Đạo
+                          </button>
+
+                          {thienDaoPhoiCount > 0 && (
+                            <button 
+                              className={styles.goldBtn}
+                              onClick={() => {
+                                try {
+                                  attachThienDaoFromInventory(selectedTang.id);
+                                } catch (e) {
+                                  alert(e.message);
+                                }
+                              }}
+                            >
+                              🌌 Khảm Nạp 1 Thiên Đạo Phôi (Mở Cổng Tức Thì)
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()
+                )}
+              </div>
+
+              {/* PHẦN 2: HỎA LÒ MỆNH ĐĂNG (KHÔNG CÓ DÒNG +20%) */}
+              <div className={`${styles.altarSection} ${isThanTang ? styles.altarSectionThanTang : ''}`}>
+                <div className={`${styles.altarSectionTitle} ${isThanTang ? styles.altarSectionTitleGold : ''}`}>
+                  <span>🔥 Hỏa Lò Mệnh Đăng · Luyện Tàng Dưỡng Đạo</span>
+                </div>
+
+                {assignedHuyenLo[selectedTang.id] ? (
+                  (() => {
+                    const lampId = assignedHuyenLo[selectedTang.id];
+                    const lamp = LIFE_LAMPS.find(l => l.id === lampId);
+                    const lampThumb = getLampImageUrl(lampId);
+
+                    return (
+                      <div className={styles.lampActiveCard}>
+                        <div className={styles.lampActiveLeft}>
+                          {lampThumb && (
+                            <img src={lampThumb} alt={lamp?.name} className={styles.lampActiveThumb} />
+                          )}
+                          <div>
+                            <div className={styles.lampActiveName}>{lamp?.name}</div>
+                            <div className={styles.lampActiveDesc}>Linh hỏa bừng sáng nung nấu Bí Tàng, gia tốc luyện đạo</div>
+                          </div>
+                        </div>
+                        <button 
+                          className={styles.unassignBtn}
+                          onClick={() => unassignLampHuyenLo(selectedTang.id)}
+                        >
+                          Tháo Hỏa Lò
+                        </button>
+                      </div>
+                    );
+                  })()
+                ) : (
                   <div>
-                    <p style={{ fontSize: 12, color: '#94a3b8', margin: '4px 0 10px 0' }}>
-                      Bật Dị Tiên Lưu để Tu Vi đọc sách tự động tích lũy dệt Hồn Ti (Cần <strong>{EXP_PER_DI_TIEN_LUU.toLocaleString()} EXP</strong>):
+                    <p style={{ fontSize: 12.5, color: '#94a3b8', margin: '0 0 10px 0' }}>
+                      Ghép một Mệnh Đăng đã hấp thụ để hóa thành Hỏa Lò nung nấu Bí Tàng:
                     </p>
+                    
+                    {absorbedLamps.length === 0 ? (
+                      <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic', padding: '6px 0' }}>
+                        Chưa hấp thụ Mệnh Đăng nào để hóa Hỏa Lò.
+                      </div>
+                    ) : (
+                      <div className={styles.lampPickerGrid}>
+                        {absorbedLamps.map(lId => {
+                          const lamp = LIFE_LAMPS.find(l => l.id === lId);
+                          const isUsedElsewhere = Object.entries(assignedHuyenLo).some(([tId, id]) => id === lId && Number(tId) !== selectedTang.id);
+                          if (isUsedElsewhere) return null;
 
-                    <div className={styles.altarActionRow}>
-                      <button 
-                        className={selectedTang.isNurturingDiTienLuu ? styles.dangerBtn : styles.primaryBtn}
-                        onClick={() => toggleDiTienLuu(selectedTang.id)}
-                      >
-                        {selectedTang.isNurturingDiTienLuu ? '⏸ Tạm Dừng Dị Tiên Lưu' : '▶ Bật Tích Lũy Dị Tiên Lưu'}
-                      </button>
+                          const lampThumb = getLampImageUrl(lId);
 
-                      <button 
-                        className={styles.goldBtn}
-                        onClick={() => feedDiTienLuuExp(selectedTang.id, EXP_PER_DI_TIEN_LUU)}
-                      >
-                        ⚡ Hoàn Tất Thần Linh Thái Ngay
-                      </button>
-                    </div>
-
-                    <div className={styles.pedestalProgressTrack} style={{ width: '100%', height: 8, marginTop: 12 }}>
-                      <div 
-                        className={`${styles.pedestalProgressBar} ${styles.pedestalProgressBarGold}`} 
-                        style={{ width: `${Math.min(100, Math.floor(((selectedTang.diTienLuuExp || 0) / (selectedTang.maxDiTienLuuExp || EXP_PER_DI_TIEN_LUU)) * 100))}%` }}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                      <span>Tiến độ Hồn Ti: {Math.min(100, Math.floor(((selectedTang.diTienLuuExp || 0) / (selectedTang.maxDiTienLuuExp || EXP_PER_DI_TIEN_LUU)) * 100))}%</span>
-                      <span>{(selectedTang.diTienLuuExp || 0).toLocaleString()} / {(selectedTang.maxDiTienLuuExp || EXP_PER_DI_TIEN_LUU).toLocaleString()} EXP</span>
-                    </div>
+                          return (
+                            <button 
+                              key={lId}
+                              className={styles.lampPickerBtn}
+                              onClick={() => assignLampHuyenLo(selectedTang.id, lId)}
+                            >
+                              <img src={lampThumb} alt={lamp?.name} className={styles.lampPickerThumb} />
+                              <span>🔥 Ghép {lamp?.shortName || lamp?.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
-        </div>
-      )}
+
+              {/* PHẦN 3: BỒI DƯỠNG THẦN HUYẾT NHỤC (NẾU CHƯA LÀ THẦN TÀNG) */}
+              {!isThanTang && (
+                <div className={styles.altarSection}>
+                  <div className={`${styles.altarSectionTitle} ${styles.altarSectionTitleGold}`}>
+                    <span>🩸 Bồi Dưỡng Thần Huyết Nhục · Chuyển Hóa Thần Tàng</span>
+                  </div>
+                  
+                  <div className={styles.convertCard}>
+                    <div className={styles.convertCardLeft}>
+                      <div className={styles.convertCardTitle}>
+                        Chuyển hóa Bí Tàng sang Thần Tàng · Đồng hóa Thần Khí
+                      </div>
+                      <div className={styles.convertCardCost}>
+                        Chi phí: <strong>{THIEN_MENH_PER_THAN_TANG.toLocaleString()} Lực Thiên Mệnh</strong> (Hiện có: {(totalThienMenh || 0).toLocaleString()} TM)
+                      </div>
+                    </div>
+
+                    <button 
+                      className={`${styles.goldBtn} ${(totalThienMenh || 0) < THIEN_MENH_PER_THAN_TANG ? styles.disabledBtn : ''}`}
+                      disabled={(totalThienMenh || 0) < THIEN_MENH_PER_THAN_TANG}
+                      onClick={() => {
+                        try {
+                          convertBiTangToThanTang(selectedTang.id);
+                        } catch (e) {
+                          alert(e.message);
+                        }
+                      }}
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      {(totalThienMenh || 0) >= THIEN_MENH_PER_THAN_TANG 
+                        ? `🩸 Nạp Thần Huyết Nhục (-${THIEN_MENH_PER_THAN_TANG.toLocaleString()} TM)` 
+                        : `🔒 Chưa Đủ Thiên Mệnh`}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* PHẦN 4: DỊ TIÊN LƯU & THẦN LINH THÁI (CHO THẦN TÀNG) */}
+              {isThanTang && (
+                <div className={`${styles.altarSection} ${styles.altarSectionThanTang}`}>
+                  <div className={`${styles.altarSectionTitle} ${styles.altarSectionTitleGold}`}>
+                    <span>🔮 Dị Tiên Lưu · Dệt Hồn Ti Thần Linh Thái</span>
+                  </div>
+
+                  {selectedTang.isThanLinhThai ? (
+                    <div className={styles.sealCard} style={{ borderColor: 'rgba(245, 158, 11, 0.45)', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(239, 68, 68, 0.08) 100%)' }}>
+                      <div className={styles.sealCardLeft}>
+                        <span className={styles.sealIcon} style={{ color: '#fbbf24' }}>✦</span>
+                        <div>
+                          <div className={styles.sealStatusText} style={{ color: '#fbbf24' }}>THẦN LINH THÁI THƯỜNG TRỰC ĐÃ GIẢI PHÓNG</div>
+                          <div className={styles.sealThienDaoName} style={{ color: '#fed7aa' }}>Thần uy hiển hiện sau lưng, chiến lực tiệm cận Quy Hư</div>
+                        </div>
+                      </div>
+                      <span className={styles.typePillThanThai}>
+                        THẦN LINH THÁI
+                      </span>
+                    </div>
+                  ) : (
+                    <div>
+                      <p style={{ fontSize: 12.5, color: '#94a3b8', margin: '0 0 10px 0' }}>
+                        Bật Dị Tiên Lưu để Tu Vi đọc sách tự động tích lũy dệt Hồn Ti (Mục tiêu: <strong>{EXP_PER_DI_TIEN_LUU.toLocaleString()} EXP</strong>):
+                      </p>
+
+                      <div className={styles.altarActionRow}>
+                        <button 
+                          className={selectedTang.isNurturingDiTienLuu ? styles.dangerBtn : styles.primaryBtn}
+                          onClick={() => toggleDiTienLuu(selectedTang.id)}
+                        >
+                          {selectedTang.isNurturingDiTienLuu ? '⏸ Tạm Dừng Dị Tiên Lưu' : '▶ Bật Tích Lũy Dị Tiên Lưu'}
+                        </button>
+
+                        <button 
+                          className={styles.goldBtn}
+                          onClick={() => feedDiTienLuuExp(selectedTang.id, EXP_PER_DI_TIEN_LUU)}
+                        >
+                          ⚡ Hoàn Tất Thần Linh Thái Ngay
+                        </button>
+                      </div>
+
+                      <div className={styles.pedestalProgressTrack} style={{ width: '100%', height: 8, marginTop: 14 }}>
+                        <div 
+                          className={`${styles.pedestalProgressBar} ${styles.pedestalProgressBarGold}`} 
+                          style={{ width: `${Math.min(100, Math.floor(((selectedTang.diTienLuuExp || 0) / (selectedTang.maxDiTienLuuExp || EXP_PER_DI_TIEN_LUU)) * 100))}%` }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: '#94a3b8', marginTop: 5 }}>
+                        <span>Tiến độ Hồn Ti: {Math.min(100, Math.floor(((selectedTang.diTienLuuExp || 0) / (selectedTang.maxDiTienLuuExp || EXP_PER_DI_TIEN_LUU)) * 100))}%</span>
+                        <span>{(selectedTang.diTienLuuExp || 0).toLocaleString()} / {(selectedTang.maxDiTienLuuExp || EXP_PER_DI_TIEN_LUU).toLocaleString()} EXP</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body
+        );
+      })()}
+
+      {/* MODAL TUYỂN CHỌN & HOÁN ĐỔI 5 ĐẠO ANH HÓA BÍ TÀNG */}
+      <DaoAnhToLinhTangModal
+        isOpen={isReassignModalOpen}
+        onClose={() => setIsReassignModalOpen(false)}
+        daoAnhs={cultivation?.daoAnhs || []}
+        currentLinhTangs={linhTangs}
+        onConfirm={handleConfirmReassign}
+        mode="reassign"
+      />
     </div>
   );
 }

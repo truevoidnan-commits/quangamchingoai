@@ -16,6 +16,7 @@ import {
 } from '../../lib/cultivation';
 import { useNavigate } from 'react-router-dom';
 import { findDaoAnhDefinition } from '../../lib/daoAnhData';
+import DaoAnhToLinhTangModal from './DaoAnhToLinhTangModal';
 
 export default function SidePanelInfo({ setTribulationModalData, setBreakthroughModalData }) {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
     breakthroughToTrucCo,
     breakthroughToKimDan,
     breakthroughToLinhTang,
+    assignDaoAnhToLinhTang,
     activateKimDanTrialV2,
     endKimDanTrialV2,
     thangCung,
@@ -82,6 +84,35 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
     }
     return 'luc_dai';
   });
+
+  const [isLinhTangModalOpen, setIsLinhTangModalOpen] = useState(false);
+
+  const handleConfirmBreakthroughLinhTang = (selectedIds) => {
+    try {
+      if (realm === 'linh_tang') {
+        const linhTangs = cultivation?.linhTangs || [];
+        selectedIds.forEach((daId, idx) => {
+          const slotNum = idx + 1;
+          const tang = linhTangs.find(t => t.id === slotNum);
+          if (tang && !tang.isGateOpen && daId && tang.sourceDaoAnhId !== daId) {
+            if (assignDaoAnhToLinhTang) {
+              assignDaoAnhToLinhTang(slotNum, daId);
+            }
+          }
+        });
+      } else {
+        if (breakthroughToLinhTang) {
+          const res = breakthroughToLinhTang(selectedIds);
+          if (res?.breakthrough && setBreakthroughModalData) {
+            setBreakthroughModalData(res.breakthrough);
+          }
+          if (setActiveRealmView) setActiveRealmView('linh_tang');
+        }
+      }
+    } catch (e) {
+      alert(e.message || 'Không thể cập nhật Đạo Anh.');
+    }
+  };
 
   const isTuTuong = constelMode === 'tu_tuong';
 
@@ -1546,19 +1577,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {/* 1. NÚT ĐỘT PHÁ LINH TÀNG NỔI BẬT HÀNG ĐẦU */}
                 <button
-                  onClick={() => {
-                    try {
-                      if (breakthroughToLinhTang) {
-                        const res = breakthroughToLinhTang();
-                        if (res?.breakthrough && setBreakthroughModalData) {
-                          setBreakthroughModalData(res.breakthrough);
-                        }
-                        if (setActiveRealmView) setActiveRealmView('linh_tang');
-                      }
-                    } catch (e) {
-                      alert(e.message || 'Chưa thể đột phá Linh Tàng.');
-                    }
-                  }}
+                  onClick={() => setIsLinhTangModalOpen(true)}
                   style={{
                     padding: '14px 18px',
                     borderRadius: 12,
@@ -1767,7 +1786,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                       if (setTribulationModalData) {
                         setTribulationModalData({
                           isSuccess: res.isSuccess !== undefined ? res.isSuccess : (res.totalCount > 0),
-                          tribulationName: 'Vạn Kiếp Tề Thăng (Toàn Bộ Đạo Anh)',
+                          tribulationName: 'Vạn Kiếp Tề Thăng',
                           daoAnhName: `Toàn Bộ ${cultivation?.daoAnhs?.length || 0} Đạo Anh`,
                           element: 'Thiên Cơ Lôi Kiếp',
                           message: res.message,
@@ -1889,6 +1908,28 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
               >
                 Chiêm Ngưỡng 5 Tòa Tàng Môn ➔
               </button>
+
+              <button
+                onClick={() => setIsLinhTangModalOpen(true)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  background: 'rgba(56, 189, 248, 0.12)',
+                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                  color: '#7dd3fc',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6
+                }}
+              >
+                <span>🔮</span>
+                <span>Tùy Chỉnh 5 Đạo Anh Bí Tàng</span>
+              </button>
             </div>
           </div>
         );
@@ -1921,6 +1962,16 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
           <span>☠️ TẢN TU VI</span>
         </button>
       </div>
+
+      {/* MODAL TUYỂN CHỌN 5 ĐẠO ANH HÓA 5 BÍ TÀNG */}
+      <DaoAnhToLinhTangModal
+        isOpen={isLinhTangModalOpen}
+        onClose={() => setIsLinhTangModalOpen(false)}
+        daoAnhs={cultivation?.daoAnhs || []}
+        currentLinhTangs={cultivation?.linhTangs || []}
+        onConfirm={handleConfirmBreakthroughLinhTang}
+        mode={realm === 'linh_tang' ? 'reassign' : 'breakthrough'}
+      />
 
     </div>
   );

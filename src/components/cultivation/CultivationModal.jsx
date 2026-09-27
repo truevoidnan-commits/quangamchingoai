@@ -73,7 +73,7 @@ export default function CultivationModal({ isOpen, onClose }) {
       if (res) {
         setTribulationModalData({
           isSuccess: res.successCount > 0,
-          tribulationName: 'Vạn Kiếp Tề Phi (Toàn Bộ Đạo Anh)',
+          tribulationName: 'Vạn Kiếp Tề Thăng',
           daoAnhName: `Toàn Bộ ${cultivation.daoAnhs?.length || 0} Đạo Anh`,
           element: 'Thiên Cơ Lôi Kiếp',
           message: res.resultMsg,

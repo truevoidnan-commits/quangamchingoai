@@ -21,6 +21,7 @@ import {
   setNgungKhiActivePath,
   breakthroughToKimDan,
   breakthroughToLinhTang,
+  assignDaoAnhToLinhTang,
   initNextLinhTang,
   feedExpToLinhTang,
   attachThienDaoFromInventory,
@@ -225,10 +226,16 @@ export function useCultivation() {
     setCultivation({ ...state });
   }, []);
 
-  const handleBreakthroughToLinhTang = useCallback(() => {
-    const res = breakthroughToLinhTang();
+  const handleBreakthroughToLinhTang = useCallback((selectedDaoAnhIds) => {
+    const res = breakthroughToLinhTang(selectedDaoAnhIds);
     setCultivation({ ...res.state });
     return res;
+  }, []);
+
+  const handleAssignDaoAnhToLinhTang = useCallback((tangIndex, daoAnhId) => {
+    const next = assignDaoAnhToLinhTang(tangIndex, daoAnhId);
+    setCultivation({ ...next });
+    return next;
   }, []);
 
   const handleInitNextLinhTang = useCallback((tangIndex, artifactOrName) => {
@@ -408,6 +415,7 @@ export function useCultivation() {
     breakthroughToTrucCo: handleBreakthroughTrucCo,
     breakthroughToKimDan: handleBreakthroughKimDan,
     breakthroughToLinhTang: handleBreakthroughToLinhTang,
+    assignDaoAnhToLinhTang: handleAssignDaoAnhToLinhTang,
     initNextLinhTang: handleInitNextLinhTang,
     feedExpToLinhTang: handleFeedExpToLinhTang,
     attachThienDaoFromInventory: handleAttachThienDaoFromInventory,
