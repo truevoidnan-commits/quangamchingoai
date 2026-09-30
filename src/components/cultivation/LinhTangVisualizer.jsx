@@ -298,53 +298,31 @@ export default function LinhTangVisualizer() {
 
       {/* SÂN KHẤU 5 CỰ TỌA TÀNG MÔN */}
       <div className={styles.pantheonStage}>
-        {/* THANH ĐIỀU HƯỚNG 5 TÒA TRÊN MOBILE */}
+        {/* THANH ĐIỀU HƯỚNG 5 TÒA TRÊN MOBILE (CÂN ĐỐI 100%, KHÔNG LỆCH) */}
         <div className={styles.mobileNavigatorBar}>
-          <button 
-            className={styles.navArrowBtn}
-            onClick={handlePrevSlot}
-            disabled={mobileActiveSlot <= 1}
-            title="Tòa trước"
-          >
-            ‹
-          </button>
+          {Array.from({ length: 5 }).map((_, idx) => {
+            const sNum = idx + 1;
+            const t = linhTangs.find(item => item.id === sNum);
+            const isSlotOpen = t?.isGateOpen;
+            const isSelected = mobileActiveSlot === sNum;
+            const isThan = t?.type === 'than_tang';
 
-          <div className={styles.mobileTabsTrack}>
-            {Array.from({ length: 5 }).map((_, idx) => {
-              const sNum = idx + 1;
-              const t = linhTangs.find(item => item.id === sNum);
-              const isSlotOpen = t?.isGateOpen;
-              const isSelected = mobileActiveSlot === sNum;
-              const isThan = t?.type === 'than_tang';
-
-              return (
-                <button
-                  key={sNum}
-                  onClick={() => scrollToSlot(sNum)}
-                  className={`
-                    ${styles.mobileGateTab} 
-                    ${isSelected ? (isThan ? styles.mobileGateTabSelectedGold : styles.mobileGateTabSelected) : ''}
-                  `}
-                >
-                  <span className={styles.mobileGateTabRoman}>TÒA {['I', 'II', 'III', 'IV', 'V'][idx]}</span>
-                  {isSlotOpen ? (
-                    <span className={styles.mobileGateStatusDotOpen}>●</span>
-                  ) : (
-                    <span className={styles.mobileGateStatusDotLocked}>🔒</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <button 
-            className={styles.navArrowBtn}
-            onClick={handleNextSlot}
-            disabled={mobileActiveSlot >= 5}
-            title="Tòa tiếp theo"
-          >
-            ›
-          </button>
+            return (
+              <button
+                key={sNum}
+                onClick={() => scrollToSlot(sNum)}
+                className={`
+                  ${styles.mobileGateTab} 
+                  ${isSelected ? (isThan ? styles.mobileGateTabSelectedGold : styles.mobileGateTabSelected) : ''}
+                `}
+              >
+                <span className={styles.mobileGateTabRoman}>{['TÒA I', 'TÒA II', 'TÒA III', 'TÒA IV', 'TÒA V'][idx]}</span>
+                <span style={{ fontSize: 9, color: isSlotOpen ? '#4ade80' : '#64748b' }}>
+                  {isSlotOpen ? '● Mở' : '🔒 Khóa'}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <div 

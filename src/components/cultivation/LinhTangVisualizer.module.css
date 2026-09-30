@@ -1068,7 +1068,7 @@
 
 @media (max-width: 768px) {
   .container {
-    padding: 10px 4px 16px 4px;
+    padding: 8px 4px 16px 4px;
     min-height: calc(100vh - 46px);
     justify-content: flex-start;
     border-radius: 0;
@@ -1076,82 +1076,67 @@
     border-right: none;
   }
 
+  /* Thụt lề 46px bên trái để tránh nút quay lại tròn đè lên chữ VŨ TRỤ THỨC HẢI */
   .topControlBar {
     flex-direction: column;
     gap: 8px;
     align-items: stretch;
-    padding: 0 8px 8px 8px;
-    margin-bottom: 0;
+    padding: 0 8px 8px 46px;
+    margin-bottom: 2px;
   }
 
   .topControlTitle {
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .pantheonBadge {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+
+  .pantheonSubtitle {
+    font-size: 11px;
+    letter-spacing: 0.5px;
   }
 
   .reassignBtn {
     justify-content: center;
     font-size: 11.5px;
-    padding: 7px 12px;
+    padding: 6.5px 12px;
   }
 
   .pantheonStage {
     width: 100%;
-    padding: 4px 0;
+    padding: 2px 0 8px 0;
     position: relative;
     overflow: hidden;
   }
 
-  /* THANH ĐIỀU HƯỚNG 5 TÒA TRÊN MOBILE */
+  /* THANH CHỌN 5 TÒA CÂN ĐỐI 100% GIỮA MÀN HÌNH, KHÔNG BỊ LỆCH */
   .mobileNavigatorBar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    width: calc(100% - 16px);
     max-width: 380px;
-    padding: 0 6px 10px 6px;
-    margin: 0 auto;
+    margin: 0 auto 10px auto;
+    padding: 0;
     z-index: 10;
   }
 
-  .navArrowBtn {
-    background: rgba(15, 23, 42, 0.7);
-    border: 1px solid rgba(56, 189, 248, 0.4);
-    color: #38bdf8;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: 900;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .navArrowBtn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-    border-color: rgba(255, 255, 255, 0.1);
-    color: #64748b;
-  }
-
-  .mobileTabsTrack {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-  }
-
   .mobileGateTab {
-    background: rgba(15, 23, 42, 0.75);
+    background: rgba(15, 23, 42, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 8px;
-    padding: 5px 9px;
+    padding: 6px 2px;
     color: #94a3b8;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    gap: 2px;
     cursor: pointer;
     font-size: 10.5px;
     font-weight: 800;
@@ -1160,35 +1145,37 @@
 
   .mobileGateTabRoman {
     letter-spacing: 0.5px;
+    font-size: 10px;
+    font-weight: 900;
   }
 
   .mobileGateStatusDotOpen {
-    font-size: 8px;
+    font-size: 8.5px;
     color: #4ade80;
   }
 
   .mobileGateStatusDotLocked {
     font-size: 9px;
-    opacity: 0.6;
+    opacity: 0.55;
   }
 
   .mobileGateTabSelected {
-    background: linear-gradient(135deg, rgba(14, 165, 233, 0.3) 0%, rgba(2, 6, 23, 0.9) 100%);
+    background: linear-gradient(180deg, rgba(14, 165, 233, 0.35) 0%, rgba(2, 6, 23, 0.95) 100%);
     border-color: #38bdf8;
     color: #38bdf8;
-    box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
-    transform: scale(1.05);
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
+    transform: translateY(-1px);
   }
 
   .mobileGateTabSelectedGold {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.35) 0%, rgba(30, 8, 14, 0.9) 100%);
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.4) 0%, rgba(30, 8, 14, 0.95) 100%);
     border-color: #f59e0b;
     color: #fbbf24;
-    box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
-    transform: scale(1.05);
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.55);
+    transform: translateY(-1px);
   }
 
-  /* GATES ROW TRỞ THÀNH HORIZONTAL SCROLL SNAP */
+  /* KHUNG CỔNG THUÔN CAO BỀ THẾ CHUẨN CỰ MÔN KHAI THIÊN */
   .gatesRow {
     display: flex;
     justify-content: flex-start;
@@ -1197,7 +1184,7 @@
     width: 100%;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
-    padding: 8px 14vw 14px 14vw;
+    padding: 4px 8vw 16px 8vw;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
@@ -1207,17 +1194,45 @@
   }
 
   .celestialGateEntity {
-    flex: 0 0 72vw;
-    max-width: 275px;
-    min-width: 235px;
-    height: 485px;
+    flex: 0 0 84vw;
+    max-width: 330px;
+    min-width: 280px;
+    height: 535px;
     scroll-snap-align: center;
     transition: transform 0.3s ease, filter 0.3s ease;
   }
 
   .centerGateEntity {
-    max-width: 275px;
-    height: 485px;
+    max-width: 330px;
+    height: 535px;
+  }
+
+  .gateArchFrame {
+    border-radius: 130px 130px 16px 16px;
+    border-width: 2px;
+    box-shadow: 
+      0 18px 45px rgba(0, 0, 0, 0.85),
+      inset 0 0 35px rgba(56, 189, 248, 0.2);
+  }
+
+  .portalArtCanvas {
+    border-radius: 125px 125px 12px 12px;
+  }
+
+  .gateLabelBlock {
+    margin-top: 6px;
+    width: 100%;
+  }
+
+  .gateTierIndex {
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+
+  .gateMainName {
+    font-size: 14px;
+    min-height: 24px;
+    margin-bottom: 3px;
   }
 
   .modalCard {
@@ -1239,4 +1254,92 @@
     flex-direction: column;
     align-items: stretch;
   }
+
+  /* MODAL CHỌN ĐẠO ANH TRÊN MOBILE - CHỐNG TRÀN TUYỆT ĐỐI */
+  .assignModalCard {
+    width: 96vw !important;
+    max-width: 96vw !important;
+    padding: 14px 10px !important;
+    gap: 10px !important;
+    border-radius: 14px !important;
+    max-height: 94vh !important;
+  }
+
+  .assignModalTitle {
+    font-size: 15px !important;
+    line-height: 1.35 !important;
+  }
+
+  .assignSlotsGrid {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    gap: 8px !important;
+    padding-bottom: 6px !important;
+  }
+
+  .assignSlotsGrid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .assignSlotItem {
+    flex: 0 0 110px !important;
+    min-width: 106px !important;
+    scroll-snap-align: start !important;
+  }
+
+  .assignDaoAnhGrid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+}
+
+/* =========================================================================
+   ASSIGN MODAL CLASSES (DESKTOP DEFAULT)
+   ========================================================================= */
+
+.assignModalCard {
+  width: 92vw;
+  max-width: 920px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-x: hidden;
+}
+
+.assignModalTitle {
+  font-size: 19px;
+  font-weight: 900;
+  color: #f8fafc;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assignSlotsGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.assignSlotItem {
+  border-radius: 10px;
+  padding: 8px 6px;
+  min-height: 120px;
+  position: relative;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.assignDaoAnhGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
 }

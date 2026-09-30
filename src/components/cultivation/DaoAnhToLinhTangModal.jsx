@@ -162,14 +162,13 @@ export default function DaoAnhToLinhTangModal({
   return createPortal(
     <div className={styles.modalOverlay} onClick={onClose}>
       <div 
-        className={styles.modalCard} 
-        style={{ maxWidth: 940, width: '92vw', maxHeight: '92vh', display: 'flex', flexDirection: 'column', gap: 14 }}
+        className={`${styles.modalCard} ${styles.assignModalCard}`}
         onClick={e => e.stopPropagation()}
       >
         {/* HEADER */}
         <div className={styles.modalHeader} style={{ marginBottom: 4 }}>
           <div>
-            <h3 className={styles.modalTitle}>
+            <h3 className={`${styles.modalTitle} ${styles.assignModalTitle}`}>
               <span>🏛️</span>
               <span>TUYỂN CHỌN 5 ĐẠO ANH HÓA 5 BÍ TÀNG</span>
             </h3>
@@ -226,11 +225,7 @@ export default function DaoAnhToLinhTangModal({
           </div>
 
           {/* 5 Cột tương ứng 5 Tòa */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: 10
-          }}>
+          <div className={styles.assignSlotsGrid}>
             {Array.from({ length: 5 }).map((_, slotIdx) => {
               const daId = selectedIds[slotIdx];
               const da = daoAnhs.find(d => d.id === daId);
@@ -242,12 +237,11 @@ export default function DaoAnhToLinhTangModal({
               return (
                 <div
                   key={slotIdx}
+                  className={styles.assignSlotItem}
                   onClick={() => {
                     if (!isLocked) setActiveSlot(slotIdx);
                   }}
                   style={{
-                    borderRadius: 10,
-                    padding: '8px 6px',
                     background: isActive 
                       ? 'linear-gradient(180deg, rgba(14, 165, 233, 0.25) 0%, rgba(2, 6, 23, 0.9) 100%)' 
                       : da 
@@ -259,14 +253,7 @@ export default function DaoAnhToLinhTangModal({
                         ? '1px solid rgba(56, 189, 248, 0.35)' 
                         : '1px dashed rgba(255, 255, 255, 0.2)',
                     boxShadow: isActive ? '0 0 16px rgba(56, 189, 248, 0.35)' : 'none',
-                    cursor: isLocked ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    textAlign: 'center',
-                    minHeight: 120,
-                    position: 'relative',
-                    transition: 'all 0.2s ease'
+                    cursor: isLocked ? 'not-allowed' : 'pointer'
                   }}
                 >
                   <div style={{
@@ -374,11 +361,7 @@ export default function DaoAnhToLinhTangModal({
             KHO ĐẠO ANH THỨC HẢI ({daoAnhs.length} TÔN) · NHẤP ĐỂ GÁN VÀO CỰ TỌA
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-            gap: 10
-          }}>
+          <div className={styles.assignDaoAnhGrid}>
             {daoAnhs.map(da => {
               const assignedSlotIndex = selectedIds.indexOf(da.id);
               const isAssigned = assignedSlotIndex !== -1;
@@ -505,13 +488,15 @@ export default function DaoAnhToLinhTangModal({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 10,
           borderTop: '1px solid rgba(255, 255, 255, 0.1)',
           paddingTop: 12
         }}>
           <button 
             className={styles.modalCloseBtn} 
             onClick={onClose}
-            style={{ width: 'auto', padding: '8px 16px', borderRadius: 8 }}
+            style={{ width: 'auto', padding: '8px 16px', borderRadius: 8, height: 'auto', alignSelf: 'center' }}
           >
             Hủy Bỏ
           </button>
@@ -520,19 +505,21 @@ export default function DaoAnhToLinhTangModal({
             onClick={handleConfirm}
             disabled={!isReady}
             style={{
-              padding: '12px 24px',
+              padding: '10px 18px',
               borderRadius: 10,
               background: isReady 
                 ? 'linear-gradient(135deg, #0284c7 0%, #38bdf8 50%, #f59e0b 100%)' 
                 : 'rgba(255, 255, 255, 0.08)',
               border: isReady ? '1.5px solid #fde047' : '1px solid rgba(255, 255, 255, 0.15)',
               color: isReady ? '#ffffff' : '#64748b',
-              fontSize: 13.5,
+              fontSize: 13,
               fontWeight: 900,
               cursor: isReady ? 'pointer' : 'not-allowed',
               boxShadow: isReady ? '0 0 25px rgba(56, 189, 248, 0.6), 0 0 10px rgba(253, 224, 71, 0.4)' : 'none',
               letterSpacing: '0.4px',
-              transition: 'all 0.25s ease'
+              transition: 'all 0.25s ease',
+              flex: '1 1 200px',
+              textAlign: 'center'
             }}
           >
             {mode === 'reassign' 
