@@ -534,28 +534,64 @@
 }
 
 /* Mobile responsiveness */
-@media (max-width: 640px) {
-  .modalCard {
-    max-width: 95vw;
+@media (max-width: 768px) {
+  .selectionToolbar {
+    position: fixed !important;
+    top: auto !important;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: max-content !important;
+    max-width: 95vw !important;
+    border-radius: 26px !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.88), 0 0 24px rgba(34, 195, 240, 0.45) !important;
+    border: 1.5px solid rgba(34, 195, 240, 0.65) !important;
+    padding: 6px 12px !important;
   }
+
+  .modalOverlay {
+    align-items: flex-start !important;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 12px calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow-y: auto !important;
+  }
+
+  .modalCard {
+    max-width: 96vw;
+    max-height: 88vh;
+    max-height: 88dvh;
+    overflow-y: auto;
+  }
+
+  .editTextarea {
+    min-height: 75px;
+    max-height: 120px;
+    font-size: 13.5px;
+  }
+
   .modalActions {
     flex-direction: column-reverse;
     gap: 8px;
+    padding: 10px 14px;
   }
+
   .leftActions, .rightActions {
     width: 100%;
     justify-content: stretch;
   }
+
   .btnCancel, .btnDeleteDirect, .btnSave {
     flex: 1;
     text-align: center;
     justify-content: center;
+    padding: 9px 12px;
   }
+
   .editorToast {
-    width: 90vw;
+    width: 92vw;
     font-size: 12px;
-    padding: 8px 14px;
+    padding: 8px 12px;
     gap: 8px;
+    bottom: 16px;
     justify-content: space-between;
   }
 }

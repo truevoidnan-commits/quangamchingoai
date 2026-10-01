@@ -52,6 +52,7 @@ export default function ReaderPage() {
 
   // In-reader text selection & editing states
   const [selectionData, setSelectionData] = useState(null);
+  const [activeEditTarget, setActiveEditTarget] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [initialEditScope, setInitialEditScope] = useState('single');
   const [editorToast, setEditorToast] = useState(null);
@@ -389,10 +390,17 @@ export default function ReaderPage() {
 
   // Bắt sự kiện người dùng bôi đen chữ trong nội dung chương
   const handleSelection = useCallback(() => {
+    // Nếu đang mở hộp thoại chỉnh sửa thì không cập nhật vùng chọn để tránh xóa đè
+    if (editModalOpen) return;
+
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) {
       return;
     }
+
+    // Tự động mở rộng vùng bôi đen ra toàn bộ chữ (tránh đứt đoạn như "guy" thay vì "nguyệt")
+    const range = expandSelectionToWordBoundaries(sel);
+    if (!range) return;
 
     const rawText = sel.toString();
     if (!rawText || !rawText.trim()) {
@@ -400,7 +408,6 @@ export default function ReaderPage() {
       return;
     }
 
-    const range = sel.getRangeAt(0);
     if (!scrollRef.current || !scrollRef.current.contains(range.commonAncestorContainer)) {
       setSelectionData(null);
       return;
@@ -412,7 +419,7 @@ export default function ReaderPage() {
       return;
     }
 
-    // Tọa độ hiển thị thanh công cụ nổi ngay trên đoạn chữ
+    // Tọa độ hiển thị thanh công cụ nổi ngay trên đoạn chữ (trên desktop)
     const toolbarWidth = 280;
     let x = rect.left + rect.width / 2;
     x = Math.max(16 + toolbarWidth / 2, Math.min(window.innerWidth - 16 - toolbarWidth / 2, x));
@@ -466,19 +473,20 @@ export default function ReaderPage() {
       startOffset,
       endOffset,
     });
-  }, [chapter]);
+  }, [chapter, editModalOpen]);
 
   // Lắng nghe thay đổi vùng chọn (selectionchange)
   useEffect(() => {
     let timeoutId = null;
     const onSelectionChange = () => {
+      // Khi hộp thoại sửa đang mở thì hoàn toàn bỏ qua sự kiện chọn văn bản
+      if (editModalOpen) return;
+
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         const sel = window.getSelection();
         if (!sel || sel.isCollapsed) {
-          if (!editModalOpen) {
-            setSelectionData(null);
-          }
+          setSelectionData(null);
         } else {
           handleSelection();
         }
@@ -492,11 +500,21 @@ export default function ReaderPage() {
     };
   }, [handleSelection, editModalOpen]);
 
-  // Áp dụng thay đổi nội dung (sửa, xóa hẳn, thay thế toàn bộ)
-  const applyTextChange = useCallback(async ({ newText, scope }) => {
-    if (!chapter || !selectionData) return;
+  // Mở hộp thoại sửa và cố định snapshot văn bản đang chọn
+  const handleOpenEdit = useCallback((scope = 'single') => {
+    if (!selectionData) return;
+    setActiveEditTarget({ ...selectionData });
+    setInitialEditScope(scope);
+    setEditModalOpen(true);
+    setSelectionData(null);
+  }, [selectionData]);
 
-    const { selectedText, isTitle, startParaIndex, endParaIndex, startOffset, endOffset } = selectionData;
+  // Áp dụng thay đổi nội dung (sửa, xóa hẳn, thay thế toàn bộ)
+  const applyTextChange = useCallback(async ({ newText, scope, directTarget }) => {
+    const target = directTarget || activeEditTarget || selectionData;
+    if (!chapter || !target) return;
+
+    const { selectedText, isTitle, startParaIndex, endParaIndex, startOffset, endOffset } = target;
 
     // Lưu trạng thái trước khi sửa vào ngăn xếp hoàn tác
     historyStackRef.current.push({
@@ -582,6 +600,7 @@ export default function ReaderPage() {
       }
       setSelectionData(null);
       setEditModalOpen(false);
+      setActiveEditTarget(null);
 
       const isDeleted = !newText || newText.trim() === '';
       const message = isDeleted
@@ -596,7 +615,7 @@ export default function ReaderPage() {
       console.error('Lỗi lưu chương:', err);
       alert('Không thể lưu nội dung chương: ' + (err.message || err));
     }
-  }, [chapter, selectionData, handleUndo]);
+  }, [chapter, activeEditTarget, selectionData, handleUndo]);
 
   // Navigate to adjacent chapters
   const currentIndex = chapters.findIndex(c => c.id === chapterId);
@@ -896,16 +915,12 @@ export default function ReaderPage() {
           position={selectionData.position}
           selectedText={selectionData.selectedText}
           matchCount={selectionData.matchCount}
-          onOpenEdit={() => {
-            setInitialEditScope('single');
-            setEditModalOpen(true);
-          }}
-          onOpenReplaceAll={() => {
-            setInitialEditScope('all');
-            setEditModalOpen(true);
-          }}
+          onOpenEdit={() => handleOpenEdit('single')}
+          onOpenReplaceAll={() => handleOpenEdit('all')}
           onDeleteDirect={() => {
-            applyTextChange({ newText: '', scope: 'single' });
+            if (selectionData) {
+              applyTextChange({ newText: '', scope: 'single', directTarget: selectionData });
+            }
           }}
           onClose={() => setSelectionData(null)}
         />
@@ -914,14 +929,14 @@ export default function ReaderPage() {
       {/* In-depth text editor modal */}
       <ChapterTextEditModal
         isOpen={editModalOpen}
-        selectedText={selectionData?.selectedText || ''}
+        targetData={activeEditTarget}
         initialScope={initialEditScope}
-        matchCount={selectionData?.matchCount || 1}
-        startParaIndex={selectionData?.startParaIndex}
-        isTitle={selectionData?.isTitle}
         onSave={applyTextChange}
         onDelete={({ scope }) => applyTextChange({ newText: '', scope })}
-        onClose={() => setEditModalOpen(false)}
+        onClose={() => {
+          setEditModalOpen(false);
+          setActiveEditTarget(null);
+        }}
       />
 
       {/* Undo / Editor Toast notification */}
@@ -993,6 +1008,59 @@ function getTextOffsetInNode(rootEl, targetNode, targetOffset) {
 
   walk(rootEl);
   return charCount;
+}
+
+/**
+ * Tự động mở rộng vùng bôi đen ra toàn bộ chữ (không bị đứt đoạn như "guy" thay vì "nguyệt")
+ */
+function expandSelectionToWordBoundaries(sel) {
+  if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  const range = sel.getRangeAt(0);
+
+  const isWordChar = (ch) => {
+    if (!ch) return false;
+    return !/[\s,.;:!?"'()\[\]{}…—\-\/\\«»“”‘’]/.test(ch);
+  };
+
+  let startContainer = range.startContainer;
+  let startOffset = range.startOffset;
+  let endContainer = range.endContainer;
+  let endOffset = range.endOffset;
+
+  let changed = false;
+
+  // 1. Mở rộng biên đầu lùi về đầu chữ
+  if (startContainer.nodeType === Node.TEXT_NODE) {
+    const text = startContainer.textContent || '';
+    while (startOffset > 0 && isWordChar(text[startOffset - 1])) {
+      startOffset--;
+      changed = true;
+    }
+  }
+
+  // 2. Mở rộng biên cuối tiến tới hết chữ
+  if (endContainer.nodeType === Node.TEXT_NODE) {
+    const text = endContainer.textContent || '';
+    while (endOffset < text.length && isWordChar(text[endOffset])) {
+      endOffset++;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    try {
+      const newRange = document.createRange();
+      newRange.setStart(startContainer, startOffset);
+      newRange.setEnd(endContainer, endOffset);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      return newRange;
+    } catch (e) {
+      return range;
+    }
+  }
+
+  return range;
 }
 
 function highlightText(text, keyword, markClassName) {

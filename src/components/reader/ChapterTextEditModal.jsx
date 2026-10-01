@@ -3,32 +3,41 @@ import styles from './SelectionEditor.module.css';
 
 export default function ChapterTextEditModal({
   isOpen,
-  selectedText = '',
+  targetData,
   initialScope = 'single',
-  matchCount = 1,
-  startParaIndex = null,
-  isTitle = false,
   onSave,
   onDelete,
   onClose,
 }) {
-  const [newText, setNewText] = useState(selectedText);
+  const [newText, setNewText] = useState('');
   const [scope, setScope] = useState(initialScope);
+  const [snapshotOriginal, setSnapshotOriginal] = useState('');
   const textareaRef = useRef(null);
 
+  const selectedText = snapshotOriginal || targetData?.selectedText || '';
+  const matchCount = targetData?.matchCount || 1;
+  const startParaIndex = targetData?.startParaIndex;
+  const isTitle = targetData?.isTitle || false;
+
+  // Initialize only once upon opening the modal
   useEffect(() => {
-    if (isOpen) {
-      setNewText(selectedText);
+    if (isOpen && targetData) {
+      const orig = targetData.selectedText || '';
+      setSnapshotOriginal(orig);
+      setNewText(orig);
       setScope(initialScope);
-      // Auto focus textarea
+
       setTimeout(() => {
         if (textareaRef.current) {
           textareaRef.current.focus();
-          textareaRef.current.select();
+          // Only select all text on desktop; on mobile, select() causes tap-to-erase glitches
+          if (typeof window !== 'undefined' && window.innerWidth > 768) {
+            textareaRef.current.select();
+          }
         }
-      }, 50);
+      }, 70);
     }
-  }, [isOpen, selectedText, initialScope]);
+  }, [isOpen]);
 
   // Handle keyboard shortcuts (Escape, Ctrl+Enter)
   useEffect(() => {
@@ -72,8 +81,7 @@ export default function ChapterTextEditModal({
   const handleUppercase = () => setNewText(newText.toUpperCase());
   const handleLowercase = () => setNewText(newText.toLowerCase());
 
-  const wordCount = (selectedText.trim().split(/\s+/).filter(Boolean)).length;
-  const isChanged = newText !== selectedText;
+  const wordCount = selectedText.trim() ? selectedText.trim().split(/\s+/).filter(Boolean).length : 0;
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -159,8 +167,8 @@ export default function ChapterTextEditModal({
               className={styles.editTextarea}
               value={newText}
               onChange={(e) => setNewText(e.target.value)}
-              placeholder="Nhập nội dung mới cần sửa hoặc thay thế..."
-              rows={4}
+              placeholder="Nhập nội dung mới cần sửa hoặc thay..."
+              rows={3}
             />
           </div>
 
@@ -181,7 +189,7 @@ export default function ChapterTextEditModal({
                 <strong>Chỉ đoạn bôi đen này</strong>
                 {' '}
                 <span style={{ color: '#94a3b8', fontSize: 11.5 }}>
-                  ({isTitle ? 'ở tiêu đề chương' : `vị trí trong đoạn #${(startParaIndex !== null ? startParaIndex : 0) + 1}`})
+                  ({isTitle ? 'ở tiêu đề chương' : `vị trí trong đoạn #${(startParaIndex !== null && startParaIndex !== undefined ? startParaIndex : 0) + 1}`})
                 </span>
               </span>
             </label>

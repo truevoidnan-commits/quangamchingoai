@@ -373,8 +373,10 @@
   text-indent: 1.8em;
   text-align: left;
   line-height: inherit;
-  word-break: break-word;
-  hyphens: auto;
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: none;
+  -webkit-hyphens: none;
   letter-spacing: 0.01em;
 }
 

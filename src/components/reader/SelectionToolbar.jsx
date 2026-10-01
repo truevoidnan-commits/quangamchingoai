@@ -15,6 +15,14 @@ export default function SelectionToolbar({
 
   if (!position) return null;
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const toolbarStyle = isMobile
+    ? {}
+    : {
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+      };
+
   const handleCopy = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -30,10 +38,7 @@ export default function SelectionToolbar({
   return (
     <div
       className={styles.selectionToolbar}
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-      }}
+      style={toolbarStyle}
       onMouseDown={(e) => {
         // Prevent selection from collapsing when clicking toolbar
         e.preventDefault();
