@@ -13,6 +13,9 @@ import ScrollToTop from '../components/ui/ScrollToTop';
 import { startBackgroundPrefetch } from '../lib/backgroundPrefetch';
 import { findDaoAnhDefinition } from '../lib/daoAnhData';
 import { DaoAnh80Modal, DaoAnhFullModal } from '../components/cultivation/DaoAnhPromptModal';
+import SelectionToolbar from '../components/reader/SelectionToolbar';
+import ChapterTextEditModal from '../components/reader/ChapterTextEditModal';
+import selectionStyles from '../components/reader/SelectionEditor.module.css';
 import styles from './ReaderPage.module.css';
 
 export default function ReaderPage() {
@@ -46,6 +49,21 @@ export default function ReaderPage() {
   const [droppedLamp, setDroppedLamp] = useState(null);
   const scrollRef = useRef(null);
   const lastScrollY = useRef(0);
+
+  // In-reader text selection & editing states
+  const [selectionData, setSelectionData] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [initialEditScope, setInitialEditScope] = useState('single');
+  const [editorToast, setEditorToast] = useState(null);
+  const historyStackRef = useRef([]);
+
+  // Auto-dismiss editor toast after 6s
+  useEffect(() => {
+    if (editorToast) {
+      const timer = setTimeout(() => setEditorToast(null), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [editorToast]);
 
   // Background-fetch all cultivation graphics into persistent cache while reading
   useEffect(() => {
@@ -323,6 +341,9 @@ export default function ReaderPage() {
         lastRecordedScrollRef.current.scrollY = currentY;
       }
 
+      // Ẩn thanh công cụ bôi đen khi người dùng cuộn trang
+      setSelectionData(prev => (prev ? null : prev));
+
       if (!throttleTimer) {
         throttleTimer = setTimeout(() => {
           saveCurrentPositionImmediate();
@@ -340,6 +361,242 @@ export default function ReaderPage() {
       if (throttleTimer) clearTimeout(throttleTimer);
     };
   }, [chapter?.id, loading, activeNovelId, saveCurrentPositionImmediate]);
+
+  // Hoàn tác thay đổi vừa thực hiện
+  const handleUndo = useCallback(async () => {
+    if (!historyStackRef.current.length) return;
+    const previous = historyStackRef.current.pop();
+    if (!previous || !chapter) return;
+
+    const restoredChapter = {
+      ...chapter,
+      title: previous.title,
+      content: previous.content,
+    };
+
+    try {
+      const { saveChapter } = await import('../lib/db');
+      await saveChapter(restoredChapter);
+      setChapter(restoredChapter);
+      setEditorToast({
+        message: '↩ Đã hoàn tác lại nội dung trước đó!',
+        onUndo: null,
+      });
+    } catch (err) {
+      console.error('Lỗi hoàn tác chương:', err);
+    }
+  }, [chapter]);
+
+  // Bắt sự kiện người dùng bôi đen chữ trong nội dung chương
+  const handleSelection = useCallback(() => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) {
+      return;
+    }
+
+    const rawText = sel.toString();
+    if (!rawText || !rawText.trim()) {
+      setSelectionData(null);
+      return;
+    }
+
+    const range = sel.getRangeAt(0);
+    if (!scrollRef.current || !scrollRef.current.contains(range.commonAncestorContainer)) {
+      setSelectionData(null);
+      return;
+    }
+
+    const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      setSelectionData(null);
+      return;
+    }
+
+    // Tọa độ hiển thị thanh công cụ nổi ngay trên đoạn chữ
+    const toolbarWidth = 280;
+    let x = rect.left + rect.width / 2;
+    x = Math.max(16 + toolbarWidth / 2, Math.min(window.innerWidth - 16 - toolbarWidth / 2, x));
+
+    let y = rect.top - 46;
+    let placement = 'top';
+    if (y < 65) {
+      y = rect.bottom + 10;
+      placement = 'bottom';
+    }
+
+    // Đếm số lần xuất hiện trong chương
+    let matchCount = 0;
+    if (chapter?.content) {
+      const escaped = rawText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      try {
+        const matches = chapter.content.match(new RegExp(escaped, 'g'));
+        matchCount = matches ? matches.length : 0;
+      } catch (e) {}
+    }
+
+    // Xác định đoạn văn cụ thể hoặc tiêu đề
+    const startPEl = range.startContainer.parentElement?.closest('[data-para-index]');
+    const endPEl = range.endContainer.parentElement?.closest('[data-para-index]');
+    const titleEl = range.startContainer.parentElement?.closest('h2');
+
+    let isTitle = false;
+    let startParaIndex = null;
+    let endParaIndex = null;
+    let startOffset = 0;
+    let endOffset = 0;
+
+    if (titleEl) {
+      isTitle = true;
+      startOffset = getTextOffsetInNode(titleEl, range.startContainer, range.startOffset);
+      endOffset = getTextOffsetInNode(titleEl, range.endContainer, range.endOffset);
+    } else if (startPEl && endPEl) {
+      startParaIndex = parseInt(startPEl.getAttribute('data-para-index'), 10);
+      endParaIndex = parseInt(endPEl.getAttribute('data-para-index'), 10);
+      startOffset = getTextOffsetInNode(startPEl, range.startContainer, range.startOffset);
+      endOffset = getTextOffsetInNode(endPEl, range.endContainer, range.endOffset);
+    }
+
+    setSelectionData({
+      selectedText: rawText,
+      position: { x, y, placement },
+      matchCount,
+      isTitle,
+      startParaIndex,
+      endParaIndex,
+      startOffset,
+      endOffset,
+    });
+  }, [chapter]);
+
+  // Lắng nghe thay đổi vùng chọn (selectionchange)
+  useEffect(() => {
+    let timeoutId = null;
+    const onSelectionChange = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed) {
+          if (!editModalOpen) {
+            setSelectionData(null);
+          }
+        } else {
+          handleSelection();
+        }
+      }, 150);
+    };
+
+    document.addEventListener('selectionchange', onSelectionChange);
+    return () => {
+      document.removeEventListener('selectionchange', onSelectionChange);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [handleSelection, editModalOpen]);
+
+  // Áp dụng thay đổi nội dung (sửa, xóa hẳn, thay thế toàn bộ)
+  const applyTextChange = useCallback(async ({ newText, scope }) => {
+    if (!chapter || !selectionData) return;
+
+    const { selectedText, isTitle, startParaIndex, endParaIndex, startOffset, endOffset } = selectionData;
+
+    // Lưu trạng thái trước khi sửa vào ngăn xếp hoàn tác
+    historyStackRef.current.push({
+      content: chapter.content,
+      title: chapter.title,
+    });
+
+    let updatedContent = chapter.content;
+    let updatedTitle = chapter.title;
+
+    if (scope === 'all') {
+      // Thay thế hoặc xóa toàn bộ lần xuất hiện trong chương
+      updatedContent = updatedContent.replaceAll(selectedText, newText);
+      if (updatedTitle.includes(selectedText)) {
+        updatedTitle = updatedTitle.replaceAll(selectedText, newText);
+      }
+    } else {
+      if (isTitle) {
+        const before = updatedTitle.slice(0, startOffset);
+        const after = updatedTitle.slice(endOffset);
+        updatedTitle = before + newText + after;
+      } else if (startParaIndex !== null && endParaIndex !== null) {
+        const currentParagraphs = updatedContent.split('\n\n').filter(p => p.trim());
+
+        if (startParaIndex === endParaIndex) {
+          const targetP = currentParagraphs[startParaIndex] || '';
+          let sOff = startOffset;
+          let eOff = endOffset;
+
+          // Kiểm tra khớp chuỗi và tìm vị trí tương ứng nếu có lệch nhẹ
+          if (targetP.slice(sOff, eOff) !== selectedText) {
+            const idx = targetP.indexOf(selectedText, Math.max(0, sOff - 15));
+            if (idx !== -1 && Math.abs(idx - sOff) < 40) {
+              sOff = idx;
+              eOff = idx + selectedText.length;
+            } else {
+              const fallbackIdx = targetP.indexOf(selectedText);
+              if (fallbackIdx !== -1) {
+                sOff = fallbackIdx;
+                eOff = fallbackIdx + selectedText.length;
+              }
+            }
+          }
+
+          const newP = targetP.slice(0, sOff) + newText + targetP.slice(eOff);
+          const splittedP = newP.split('\n\n').filter(p => p.trim());
+
+          if (splittedP.length === 0) {
+            currentParagraphs.splice(startParaIndex, 1);
+          } else {
+            currentParagraphs.splice(startParaIndex, 1, ...splittedP);
+          }
+        } else {
+          // Bôi đen trải dài nhiều đoạn văn
+          const startP = currentParagraphs[startParaIndex] || '';
+          const endP = currentParagraphs[endParaIndex] || '';
+          const before = startP.slice(0, startOffset);
+          const after = endP.slice(endOffset);
+          const merged = (before + newText + after).split('\n\n').filter(p => p.trim());
+
+          const deleteCount = endParaIndex - startParaIndex + 1;
+          currentParagraphs.splice(startParaIndex, deleteCount, ...merged);
+        }
+
+        updatedContent = currentParagraphs.join('\n\n');
+      }
+    }
+
+    const updatedChapter = {
+      ...chapter,
+      title: updatedTitle,
+      content: updatedContent,
+    };
+
+    try {
+      const { saveChapter } = await import('../lib/db');
+      await saveChapter(updatedChapter);
+      setChapter(updatedChapter);
+
+      // Xóa vùng chọn trên trình duyệt
+      if (window.getSelection) {
+        window.getSelection().removeAllRanges();
+      }
+      setSelectionData(null);
+      setEditModalOpen(false);
+
+      const isDeleted = !newText || newText.trim() === '';
+      const message = isDeleted
+        ? (scope === 'all' ? '🗑️ Đã xóa toàn bộ các đoạn trùng khớp trong chương!' : '🗑️ Đã xóa đoạn chữ thành công!')
+        : (scope === 'all' ? '✨ Đã thay thế toàn bộ các vị trí trong chương!' : '✨ Đã lưu thay đổi vào chương thành công!');
+
+      setEditorToast({
+        message,
+        onUndo: handleUndo,
+      });
+    } catch (err) {
+      console.error('Lỗi lưu chương:', err);
+      alert('Không thể lưu nội dung chương: ' + (err.message || err));
+    }
+  }, [chapter, selectionData, handleUndo]);
 
   // Navigate to adjacent chapters
   const currentIndex = chapters.findIndex(c => c.id === chapterId);
@@ -511,6 +768,8 @@ export default function ReaderPage() {
       <main
         className={styles.content}
         ref={scrollRef}
+        onMouseUp={handleSelection}
+        onTouchEnd={handleSelection}
         style={{
           fontSize: `${settings.fontSize}px`,
           fontFamily: fontCss,
@@ -631,10 +890,109 @@ export default function ReaderPage() {
         onDismiss={() => dismissPromptAllDaoAnhFull && dismissPromptAllDaoAnhFull()}
       />
 
+      {/* Floating selection toolbar for in-place edit/delete */}
+      {selectionData && !editModalOpen && (
+        <SelectionToolbar
+          position={selectionData.position}
+          selectedText={selectionData.selectedText}
+          matchCount={selectionData.matchCount}
+          onOpenEdit={() => {
+            setInitialEditScope('single');
+            setEditModalOpen(true);
+          }}
+          onOpenReplaceAll={() => {
+            setInitialEditScope('all');
+            setEditModalOpen(true);
+          }}
+          onDeleteDirect={() => {
+            applyTextChange({ newText: '', scope: 'single' });
+          }}
+          onClose={() => setSelectionData(null)}
+        />
+      )}
+
+      {/* In-depth text editor modal */}
+      <ChapterTextEditModal
+        isOpen={editModalOpen}
+        selectedText={selectionData?.selectedText || ''}
+        initialScope={initialEditScope}
+        matchCount={selectionData?.matchCount || 1}
+        startParaIndex={selectionData?.startParaIndex}
+        isTitle={selectionData?.isTitle}
+        onSave={applyTextChange}
+        onDelete={({ scope }) => applyTextChange({ newText: '', scope })}
+        onClose={() => setEditModalOpen(false)}
+      />
+
+      {/* Undo / Editor Toast notification */}
+      {editorToast && (
+        <div className={selectionStyles.editorToast}>
+          <span>{editorToast.message}</span>
+          {editorToast.onUndo && (
+            <button
+              type="button"
+              className={selectionStyles.undoBtn}
+              onClick={editorToast.onUndo}
+            >
+              ↩ Hoàn tác
+            </button>
+          )}
+          <button
+            type="button"
+            className={selectionStyles.toastCloseBtn}
+            onClick={() => setEditorToast(null)}
+            title="Đóng thông báo"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Scroll to top FAB */}
       <ScrollToTop />
     </div>
   );
+}
+
+/**
+ * Tính toán độ lệch ký tự chính xác (character offset) trong cây DOM của đoạn văn
+ */
+function getTextOffsetInNode(rootEl, targetNode, targetOffset) {
+  let charCount = 0;
+  let found = false;
+
+  if (targetNode === rootEl && targetNode.nodeType === Node.ELEMENT_NODE) {
+    for (let i = 0; i < targetOffset && i < targetNode.childNodes.length; i++) {
+      charCount += targetNode.childNodes[i].textContent.length;
+    }
+    return charCount;
+  }
+
+  function walk(node) {
+    if (found) return;
+    if (node === targetNode) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        charCount += targetOffset;
+      } else {
+        for (let i = 0; i < targetOffset && i < node.childNodes.length; i++) {
+          charCount += node.childNodes[i].textContent.length;
+        }
+      }
+      found = true;
+      return;
+    }
+    if (node.nodeType === Node.TEXT_NODE) {
+      charCount += node.textContent.length;
+    } else {
+      for (let i = 0; i < node.childNodes.length; i++) {
+        walk(node.childNodes[i]);
+        if (found) return;
+      }
+    }
+  }
+
+  walk(rootEl);
+  return charCount;
 }
 
 function highlightText(text, keyword, markClassName) {
