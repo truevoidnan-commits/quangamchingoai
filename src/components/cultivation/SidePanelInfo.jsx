@@ -51,7 +51,8 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
     setDaoAnhStrategy,
     anchorPalace,
     anchorModalPalace,
-    setAnchorModalPalace
+    setAnchorModalPalace,
+    dropDaoAnhKiep
   } = useCultivationContext();
 
   const [activeModal, setActiveModal] = useState(null); // 'lamps' | 'artifacts' | 'inventory' | null
@@ -1674,8 +1675,10 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
 
         const readyCount = activeDaoAnhs.filter(d => (d.currentExp || 0) >= Math.floor((d.maxExp || 5000) * 0.8)).length;
         const firstKiep = activeCount > 0 ? (activeDaoAnhs[0]?.currentKiep || 0) : 0;
+        const minKiep = activeCount > 0 ? Math.min(...activeDaoAnhs.map(d => d.currentKiep || 0)) : 0;
         const isSameKiep = activeCount > 0 && activeDaoAnhs.every(d => (d.currentKiep || 0) === firstKiep);
         const allReady = activeCount > 0 && readyCount === activeCount;
+        const canDropKiep = targetDa && targetKiep > minKiep;
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1722,6 +1725,38 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   }} />
                 </div>
               </div>
+
+              {canDropKiep && (
+                <button
+                  onClick={() => {
+                    try {
+                      if (dropDaoAnhKiep) {
+                        dropDaoAnhKiep(targetDa.id);
+                      }
+                    } catch (e) {
+                      alert(e.message || 'Không thể đánh rơi kiếp');
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    color: '#fca5a5',
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    marginBottom: 12
+                  }}
+                >
+                  <span>⬇️ ĐÁNH RƠI VỀ KIẾP {minKiep + 1}</span>
+                </button>
+              )}
 
               <div style={{ height: 1, background: 'rgba(255, 255, 255, 0.06)', margin: '10px 0' }} />
 

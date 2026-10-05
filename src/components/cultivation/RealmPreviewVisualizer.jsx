@@ -4855,134 +4855,384 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             </g>
                           </g>
 
-                          {/* 3. KIẾN TRÚC SVG CỔ ĐIỆN VẼ CHUẨN XÁC 6 PHẨM CẤP */}
+                          {/* 3. KIẾN TRÚC SVG CỔ ĐIỆN VẼ CHUẨN XÁC 6 PHẨM CẤP (TIÊN GIA ĐẠI ĐIỆN) */}
                           <g transform={`scale(${scale})`}>
-                            {/* TYPE 6: THÁI SƠ THẦN CUNG (THẦN PHẨM: 3 TẦNG MÁI ĐAO + 2 CÁNH PHỤ) */}
+                            {/* TYPE 6: THÁI SƠ THẦN CUNG (THẦN PHẨM: 3 TẦNG PHI THIỀM + DỰC ĐIỆN + TU DI TỌA) */}
                             {cfg.type === 6 && (
                               <g>
-                                <path d="M -20 -30 Q -10 -39 0 -39 Q 10 -39 20 -30 Q 14 -25 0 -26.5 Q -14 -25 -20 -30 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="1.4" />
-                                <path d="M -18 -30 Q -9 -36 0 -36 Q 9 -36 18 -30" fill="none" stroke={highlight} strokeWidth="0.9" />
-                                <path d="M -20 -30 Q -27 -35 -25 -40 Q -20 -35 -16.5 -31.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.8" />
-                                <path d="M 20 -30 Q 27 -35 25 -40 Q 20 -35 16.5 -31.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.8" />
-                                <circle cx="-24" cy="-38.5" r="1.4" fill={cfg.starGlow} />
-                                <circle cx="24" cy="-38.5" r="1.4" fill={cfg.starGlow} />
-                                <rect x="-12" y="-26.5" width="24" height="9" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="1" rx="1" />
-                                <rect x="-2" y="-26.5" width="4" height="9" fill={cfg.primary} opacity="0.85" />
+                                {/* ── TẦNG 3: ĐỈNH ĐIỆN (TOP TIER: Y = -39 -> -29) ── */}
+                                {/* Tháp bảo đỉnh liên hoa trên nóc */}
+                                <polygon points="-2.5,-39 2.5,-39 0,-42.5" fill={cfg.border} />
+                                <circle cx="0" cy="-43" r="1.5" fill={cfg.starGlow} />
 
-                                <path d="M -28 -16 Q -14 -25 0 -25 Q 14 -25 28 -16 Q 20 -11 0 -12.5 Q -20 -11 -28 -16 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="1.4" />
-                                <path d="M -25 -16.5 Q -13 -22.5 0 -22.5 Q 13 -22.5 25 -16.5" fill="none" stroke={highlight} strokeWidth="0.9" />
-                                <path d="M -28 -16 Q -36 -21 -34 -26 Q -28 -21 -23.5 -17.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.8" />
-                                <path d="M 28 -16 Q 36 -21 34 -26 Q 28 -21 23.5 -17.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.8" />
-                                <rect x="-18" y="-12.5" width="36" height="10" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="1" rx="1" />
-                                <rect x="-16" y="-11.5" width="2.5" height="8" fill={cfg.border} />
-                                <rect x="13.5" y="-11.5" width="2.5" height="8" fill={cfg.border} />
+                                {/* Mái tầng 3: Đường lượn phi thiềm uyển chuyển */}
+                                <path
+                                  d="M 0 -39 C -6 -36.5 -14 -34.5 -18 -32.5 C -22 -31.5 -25 -31 -27 -35.5 C -24.5 -29.5 -15 -29 -8 -29.2 Q 0 -29.2 0 -29.2 Q 0 -29.2 8 -29.2 C 15 -29 24.5 -29.5 27 -35.5 C 25 -31 22 -31.5 18 -32.5 C 14 -34.5 6 -36.5 0 -39 Z"
+                                  fill={cfg.roofFill}
+                                  stroke={cfg.border}
+                                  strokeWidth="1.2"
+                                />
+                                {/* Sống mái hoàng kim & vạch ngói lưu ly */}
+                                <path d="M 0 -39 C -7 -36.5 -15 -34.5 -25 -33" fill="none" stroke={highlight} strokeWidth="0.8" />
+                                <path d="M 0 -39 C 7 -36.5 15 -34.5 25 -33" fill="none" stroke={highlight} strokeWidth="0.8" />
+                                <line x1="-7" y1="-36.5" x2="-8" y2="-29.5" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+                                <line x1="7" y1="-36.5" x2="8" y2="-29.5" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+                                {/* Phong linh ngọc châu treo đầu đao */}
+                                <circle cx="-26.5" cy="-33" r="1.2" fill={cfg.starGlow} />
+                                <circle cx="26.5" cy="-33" r="1.2" fill={cfg.starGlow} />
 
-                                <path d="M -38 -1 Q -18 -10 0 -10 Q 18 -10 38 -1 Q 26 5 0 3.5 Q -26 5 -38 -1 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="1.5" />
-                                <path d="M -34 -1.5 Q -16 -8 0 -8 Q 16 -8 34 -1.5" fill="none" stroke={highlight} strokeWidth="1" />
-                                <path d="M -38 -1 Q -47 -6 -45 -12 Q -38 -6 -33.5 -2.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.9" />
-                                <path d="M 38 -1 Q 47 -6 45 -12 Q 38 -6 33.5 -2.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.9" />
-                                <rect x="-24" y="3.5" width="48" height="12" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="1" rx="1" />
-                                <rect x="-22" y="4.5" width="3" height="10" fill={cfg.border} />
-                                <rect x="19" y="4.5" width="3" height="10" fill={cfg.border} />
-                                <rect x="-5" y="4.5" width="10" height="10" fill={cfg.primary} opacity="0.85" rx="1" />
+                                {/* Đấu củng đỡ mái tầng 3 */}
+                                <rect x="-8.5" y="-29.2" width="17" height="1.6" fill={cfg.border} />
+                                <rect x="-6" y="-28.2" width="2.5" height="1.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="3.5" y="-28.2" width="2.5" height="1.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
 
-                                <path d="M -44 4.5 Q -32 0.5 -22 2.5 L -22 13.5 L -44 13.5 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="0.9" />
-                                <rect x="-42" y="5.5" width="18" height="8" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.8" rx="1" />
-                                <circle cx="-33" cy="2.5" r="2.2" fill={cfg.starGlow} stroke={cfg.border} strokeWidth="0.5" />
+                                {/* Cổ các tầng 3 (Upper Chamber) */}
+                                <rect x="-8.5" y="-27.6" width="17" height="6.6" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.8" rx="0.8" />
+                                {/* Cửa sổ cách song hoàng kim */}
+                                <rect x="-4" y="-26.2" width="8" height="4.5" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.6" rx="0.5" />
+                                <line x1="0" y1="-26.2" x2="0" y2="-21.7" stroke={cfg.border} strokeWidth="0.5" />
+                                <line x1="-4" y1="-23.9" x2="4" y2="-23.9" stroke={cfg.border} strokeWidth="0.5" />
+                                {/* Cột trụ chu hồng mạ vàng */}
+                                <rect x="-8" y="-27.6" width="1.8" height="6.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="6.2" y="-27.6" width="1.8" height="6.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
 
-                                <path d="M 44 4.5 Q 32 0.5 22 2.5 L 22 13.5 L 44 13.5 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="0.9" />
-                                <rect x="24" y="5.5" width="18" height="8" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.8" rx="1" />
-                                <circle cx="33" cy="2.5" r="2.2" fill={cfg.starGlow} stroke={cfg.border} strokeWidth="0.5" />
+                                {/* ── TẦNG 2: TRUNG ĐIỆN (MIDDLE TIER: Y = -21 -> -8) ── */}
+                                {/* Mái tầng 2: Phi thiềm tầng giữa xoè rộng hơn */}
+                                <path
+                                  d="M 0 -21 C -9 -18 -20 -15.5 -26 -13 C -31 -11 -34 -10 -36 -15.5 C -33 -8.5 -21 -8 -11 -8.2 Q 0 -8.2 0 -8.2 Q 0 -8.2 11 -8.2 C 21 -8 33 -8.5 36 -15.5 C 34 -10 31 -11 26 -13 C 20 -15.5 9 -18 0 -21 Z"
+                                  fill={cfg.roofFill}
+                                  stroke={cfg.border}
+                                  strokeWidth="1.2"
+                                />
+                                <path d="M 0 -21 C -10 -18 -22 -15 -33 -12.5" fill="none" stroke={highlight} strokeWidth="0.9" />
+                                <path d="M 0 -21 C 10 -18 22 -15 33 -12.5" fill="none" stroke={highlight} strokeWidth="0.9" />
+                                <line x1="-12" y1="-18" x2="-13.5" y2="-8.5" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+                                <line x1="12" y1="-18" x2="13.5" y2="-8.5" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+                                <circle cx="-35" cy="-12.5" r="1.3" fill={cfg.starGlow} />
+                                <circle cx="35" cy="-12.5" r="1.3" fill={cfg.starGlow} />
 
-                                <rect x="-36" y="14.5" width="72" height="4.5" rx="2" fill="rgba(8,14,26,0.98)" stroke={cfg.border} strokeWidth="1.3" />
+                                {/* Đấu củng tầng 2 */}
+                                <rect x="-14.5" y="-8.2" width="29" height="1.8" fill={cfg.border} />
+                                <rect x="-11" y="-7" width="2.8" height="1.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="-1.4" y="-7" width="2.8" height="1.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="8.2" y="-7" width="2.8" height="1.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+
+                                {/* Cổ các tầng 2 (Middle Chamber) */}
+                                <rect x="-14.5" y="-6.4" width="29" height="7.2" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.8" rx="0.8" />
+                                {/* Cách song 3 gian */}
+                                <rect x="-10" y="-5.2" width="5.5" height="5" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.5" />
+                                <rect x="-3" y="-5.2" width="6" height="5" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.5" />
+                                <rect x="4.5" y="-5.2" width="5.5" height="5" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.5" />
+                                {/* 4 Cột trụ mạ vàng */}
+                                <rect x="-14" y="-6.4" width="2" height="7.2" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="-4.5" y="-6.4" width="1.5" height="7.2" fill={cfg.border} />
+                                <rect x="3" y="-6.4" width="1.5" height="7.2" fill={cfg.border} />
+                                <rect x="12" y="-6.4" width="2" height="7.2" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+
+                                {/* ── TẦNG 1: HẠ ĐIỆN ĐẠI CUNG (MAIN GRAND TIER: Y = 0.8 -> 14.5) ── */}
+                                {/* Mái hạ điện: Đại phi thiềm sải cánh cực đại */}
+                                <path
+                                  d="M 0 0.8 C -12 3.5 -26 6.5 -34 9 C -40 11 -44 11.5 -48 6 C -44 14.5 -28 14.5 -14 14.2 Q 0 14.2 0 14.2 Q 0 14.2 14 14.2 C 28 14.5 44 14.5 48 6 C 44 11.5 40 11.5 34 9 C 26 6.5 12 3.5 0 0.8 Z"
+                                  fill={cfg.roofFill}
+                                  stroke={cfg.border}
+                                  strokeWidth="1.3"
+                                />
+                                <path d="M 0 0.8 C -14 4 -28 7 -44 10.5" fill="none" stroke={highlight} strokeWidth="1" />
+                                <path d="M 0 0.8 C 14 4 28 7 44 10.5" fill="none" stroke={highlight} strokeWidth="1" />
+                                <line x1="-16" y1="4" x2="-18" y2="14" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6" />
+                                <line x1="-28" y1="7" x2="-30" y2="14" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6" />
+                                <line x1="16" y1="4" x2="18" y2="14" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6" />
+                                <line x1="28" y1="7" x2="30" y2="14" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6" />
+                                <circle cx="-47" cy="8.5" r="1.4" fill={cfg.starGlow} />
+                                <circle cx="47" cy="8.5" r="1.4" fill={cfg.starGlow} />
+
+                                {/* Hàng đấu củng đại điện */}
+                                <rect x="-22" y="14" width="44" height="2" fill={cfg.border} />
+                                <rect x="-19" y="15.2" width="3" height="1.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="-10" y="15.2" width="3" height="1.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="-1.5" y="15.2" width="3" height="1.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="7" y="15.2" width="3" height="1.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="16" y="15.2" width="3" height="1.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+
+                                {/* Thân Chính Điện (Grand Hall Sanctum) */}
+                                <rect x="-22" y="16" width="44" height="7.5" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.9" rx="0.5" />
+                                {/* Cách song hai bên */}
+                                <rect x="-18" y="17" width="7" height="5.5" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.4" />
+                                <line x1="-14.5" y1="17" x2="-14.5" y2="22.5" stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="11" y="17" width="7" height="5.5" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.4" />
+                                <line x1="14.5" y1="17" x2="14.5" y2="22.5" stroke={cfg.border} strokeWidth="0.4" />
+
+                                {/* Cổng Chính Điện (Chu Môn Hoàng Kim với ánh quang linh lực) */}
+                                <rect x="-5" y="16.5" width="10" height="7" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.7" rx="1" />
+                                <ellipse cx="0" cy="20" rx="3.5" ry="3" fill={cfg.starGlow} opacity="0.45" filter="url(#glassGlow)" />
+                                <line x1="0" y1="16.5" x2="0" y2="23.5" stroke={cfg.border} strokeWidth="0.6" />
+                                <circle cx="-2" cy="20" r="0.7" fill={cfg.border} />
+                                <circle cx="2" cy="20" r="0.7" fill={cfg.border} />
+
+                                {/* 4 Đại trụ chu hồng */}
+                                <rect x="-21" y="16" width="2.4" height="7.5" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="-8" y="16" width="2" height="7.5" fill={cfg.border} />
+                                <rect x="6" y="16" width="2" height="7.5" fill={cfg.border} />
+                                <rect x="18.6" y="16" width="2.4" height="7.5" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+
+                                {/* Tả Hữu Dực Điện (Side Wing Pavilions) */}
+                                <g>
+                                  {/* Mái Dực Điện Trái */}
+                                  <path d="M -22 14.5 C -30 11.5 -38 10 -43 7 C -42 14 -32 14.5 -22 15 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="0.8" />
+                                  <rect x="-38" y="14.5" width="16" height="6.5" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.7" rx="0.5" />
+                                  <rect x="-35" y="15.5" width="10" height="4.5" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.4" />
+                                  <circle cx="-42" cy="9.5" r="1.2" fill={cfg.starGlow} />
+
+                                  {/* Mái Dực Điện Phải */}
+                                  <path d="M 22 14.5 C 30 11.5 38 10 43 7 C 42 14 32 14.5 22 15 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="0.8" />
+                                  <rect x="22" y="14.5" width="16" height="6.5" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.7" rx="0.5" />
+                                  <rect x="25" y="15.5" width="10" height="4.5" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.4" />
+                                  <circle cx="42" cy="9.5" r="1.2" fill={cfg.starGlow} />
+                                </g>
+
+                                {/* ── BẠCH NGỌC TU DI TỌA (CARVED LOTUS PLINTH: Y = 23.5 -> 27) ── */}
+                                {/* Tầng 1: Lan can ngọc thạch */}
+                                <rect x="-34" y="23.5" width="68" height="1.4" fill={cfg.border} />
+                                {[-30, -20, -10, 0, 10, 20, 30].map(vx => (
+                                  <g key={`vongtru-${vx}`}>
+                                    <rect x={vx - 0.7} y="22.3" width="1.4" height="2.2" fill={cfg.border} />
+                                    <circle cx={vx} cy="21.8" r="0.9" fill={cfg.starGlow} />
+                                  </g>
+                                ))}
+
+                                {/* Tầng 2: Đài sen phù điêu (Lotus Petal Dais) */}
+                                <rect x="-38" y="24.8" width="76" height="2.2" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.8" rx="0.6" />
+                                <path
+                                  d="M -34 25.8 Q -30 24.8 -26 25.8 Q -22 24.8 -18 25.8 Q -14 24.8 -10 25.8 Q -6 24.8 -2 25.8 Q 2 24.8 6 25.8 Q 10 24.8 14 25.8 Q 18 24.8 22 25.8 Q 26 24.8 30 25.8 Q 34 24.8 38 25.8"
+                                  fill="none"
+                                  stroke={cfg.border}
+                                  strokeWidth="0.6"
+                                  opacity="0.85"
+                                />
+
+                                {/* Tầng 3: Chân đế đá hắc ngọc mạ viền */}
+                                <rect x="-42" y="27" width="84" height="2.4" fill="rgba(6, 10, 18, 0.98)" stroke={cfg.border} strokeWidth="1" rx="1" />
+
+                                {/* Cuộn mây tường vân tiên gia hai bên góc đế */}
+                                <path d="M -42 28.5 C -46 28.5 -48 26.5 -45 25 C -42 23.5 -38 25.5 -40 28.5 Z" fill={cfg.primary} opacity="0.85" stroke={cfg.border} strokeWidth="0.5" />
+                                <circle cx="-45.5" cy="25.5" r="1.1" fill={cfg.starGlow} />
+                                <path d="M 42 28.5 C 46 28.5 48 26.5 45 25 C 42 23.5 38 25.5 40 28.5 Z" fill={cfg.primary} opacity="0.85" stroke={cfg.border} strokeWidth="0.5" />
+                                <circle cx="45.5" cy="25.5" r="1.1" fill={cfg.starGlow} />
                               </g>
                             )}
 
-                            {/* TYPE 5 & 4: TIÊN CUNG THÁI ẤT / TỬ VÂN BẢO ĐIỆN */}
+                            {/* TYPE 5 & 4: TIÊN CUNG THÁI ẤT / TỬ VÂN BẢO ĐIỆN (TIÊN PHẨM & CỰC PHẨM: 2 TẦNG PHI THIỀM) */}
                             {(cfg.type === 5 || cfg.type === 4) && (
                               <g>
-                                <path d="M -24 -20 Q -12 -29 0 -29 Q 12 -29 24 -20 Q 16 -15 0 -16.5 Q -16 -15 -24 -20 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="1.4" />
-                                <path d="M -20 -20.5 Q -10 -26 0 -26 Q 10 -26 20 -20.5" fill="none" stroke={highlight} strokeWidth="0.9" />
-                                <path d="M -24 -20 Q -31 -25 -29 -30 Q -24 -25 -19.5 -21.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.8" />
-                                <path d="M 24 -20 Q 31 -25 29 -30 Q 24 -25 19.5 -21.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.8" />
-                                <circle cx="-27" cy="-28.5" r="1.3" fill={cfg.starGlow} />
-                                <circle cx="27" cy="-28.5" r="1.3" fill={cfg.starGlow} />
-                                <rect x="-14" y="-16.5" width="28" height="9" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="1" rx="1" />
-                                <rect x="-2" y="-16.5" width="4" height="9" fill={cfg.primary} opacity="0.85" />
+                                {/* Đỉnh tháp liên hoa */}
+                                <polygon points="-2.5,-29 2.5,-29 0,-32" fill={cfg.border} />
+                                <circle cx="0" cy="-32.5" r="1.4" fill={cfg.starGlow} />
 
-                                <path d="M -34 -4 Q -16 -13 0 -13 Q 16 -13 34 -4 Q 24 1.5 0 0 Q -24 1.5 -34 -4 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="1.5" />
-                                <path d="M -30 -4.5 Q -14 -10.5 0 -10.5 Q 14 -10.5 30 -4.5" fill="none" stroke={highlight} strokeWidth="1" />
-                                <path d="M -34 -4 Q -42 -9 -40 -15 Q -34 -9 -29.5 -5.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.9" />
-                                <path d="M 34 -4 Q 42 -9 40 -15 Q 34 -9 29.5 -5.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.9" />
-                                <rect x="-22" y="0" width="44" height="14" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="1" rx="1" />
-                                <rect x="-20" y="1" width="3" height="12" fill={cfg.border} />
-                                <rect x="17" y="1" width="3" height="12" fill={cfg.border} />
-                                <rect x="-4" y="1" width="8" height="12" fill={cfg.primary} opacity="0.85" rx="1" />
+                                {/* ── TẦNG 2: THƯỢNG ĐIỆN (Y = -29 -> -16) ── */}
+                                <path
+                                  d="M 0 -29 C -7 -26 -16 -24 -22 -22 C -27 -20 -30 -19 -32 -24 C -29 -18 -18 -17.5 -10 -17.5 Q 0 -17.5 0 -17.5 Q 0 -17.5 10 -17.5 C 18 -17.5 29 -18 32 -24 C 30 -19 27 -20 22 -22 C 16 -24 7 -26 0 -29 Z"
+                                  fill={cfg.roofFill}
+                                  stroke={cfg.border}
+                                  strokeWidth="1.2"
+                                />
+                                <path d="M 0 -29 C -8 -26 -18 -23.5 -29 -21" fill="none" stroke={highlight} strokeWidth="0.8" />
+                                <path d="M 0 -29 C 8 -26 18 -23.5 29 -21" fill="none" stroke={highlight} strokeWidth="0.8" />
+                                <line x1="-9" y1="-26" x2="-10.5" y2="-18" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+                                <line x1="9" y1="-26" x2="10.5" y2="-18" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+                                <circle cx="-31" cy="-21" r="1.2" fill={cfg.starGlow} />
+                                <circle cx="31" cy="-21" r="1.2" fill={cfg.starGlow} />
 
-                                <path d="M -42 2.5 Q -30 -1.5 -20 0.5 L -20 12.5 L -42 12.5 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="0.9" />
-                                <rect x="-40" y="3.5" width="18" height="8" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.8" rx="1" />
-                                <circle cx="-31" cy="0.5" r="2.2" fill={cfg.starGlow} stroke={cfg.border} strokeWidth="0.5" />
+                                {/* Đấu củng tầng thượng */}
+                                <rect x="-11" y="-17.5" width="22" height="1.6" fill={cfg.border} />
+                                <rect x="-8" y="-16.5" width="2.5" height="1.4" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="5.5" y="-16.5" width="2.5" height="1.4" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
 
-                                <path d="M 42 2.5 Q 30 -1.5 20 0.5 L 20 12.5 L 42 12.5 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="0.9" />
-                                <rect x="22" y="3.5" width="18" height="8" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.8" rx="1" />
-                                <circle cx="31" cy="0.5" r="2.2" fill={cfg.starGlow} stroke={cfg.border} strokeWidth="0.5" />
+                                {/* Thân tầng thượng */}
+                                <rect x="-11" y="-15.5" width="22" height="7.5" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.8" rx="0.6" />
+                                <rect x="-6" y="-14.2" width="12" height="5" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.4" />
+                                <line x1="0" y1="-14.2" x2="0" y2="-9.2" stroke={cfg.border} strokeWidth="0.5" />
+                                <rect x="-10.5" y="-15.5" width="1.8" height="7.5" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="8.7" y="-15.5" width="1.8" height="7.5" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
 
-                                <rect x="-34" y="14.5" width="68" height="4.5" rx="2" fill="rgba(8,14,26,0.98)" stroke={cfg.border} strokeWidth="1.3" />
+                                {/* ── TẦNG 1: HẠ ĐIỆN ĐẠI CUNG (Y = -8 -> 8) ── */}
+                                <path
+                                  d="M 0 -8 C -11 -5 -24 -2.5 -32 0 C -38 2 -42 2.5 -45 -3 C -42 5 -27 5.5 -13 5.2 Q 0 5.2 0 5.2 Q 0 5.2 13 5.2 C 27 5.5 42 5 45 -3 C 42 2.5 38 2 32 0 C 24 -2.5 11 -5 0 -8 Z"
+                                  fill={cfg.roofFill}
+                                  stroke={cfg.border}
+                                  strokeWidth="1.3"
+                                />
+                                <path d="M 0 -8 C -13 -5 -26 -2 -41 1" fill="none" stroke={highlight} strokeWidth="1" />
+                                <path d="M 0 -8 C 13 -5 26 -2 41 1" fill="none" stroke={highlight} strokeWidth="1" />
+                                <line x1="-15" y1="-5" x2="-17" y2="5" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6" />
+                                <line x1="15" y1="-5" x2="17" y2="5" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6" />
+                                <circle cx="-44" cy="-0.5" r="1.3" fill={cfg.starGlow} />
+                                <circle cx="44" cy="-0.5" r="1.3" fill={cfg.starGlow} />
+
+                                {/* Đấu củng đại điện */}
+                                <rect x="-20" y="5.2" width="40" height="1.8" fill={cfg.border} />
+                                <rect x="-16" y="6.2" width="3" height="1.5" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="-1.5" y="6.2" width="3" height="1.5" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="13" y="6.2" width="3" height="1.5" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+
+                                {/* Thân Chính Điện */}
+                                <rect x="-20" y="7" width="40" height="9" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.8" rx="0.5" />
+                                <rect x="-16" y="8.2" width="6" height="6.5" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.4" />
+                                <rect x="10" y="8.2" width="6" height="6.5" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.4" />
+
+                                {/* Cổng chính điện son đỏ */}
+                                <rect x="-5" y="7.5" width="10" height="8.5" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.7" rx="0.8" />
+                                <ellipse cx="0" cy="11.8" rx="3" ry="2.5" fill={cfg.starGlow} opacity="0.4" filter="url(#glassGlow)" />
+                                <line x1="0" y1="7.5" x2="0" y2="16" stroke={cfg.border} strokeWidth="0.6" />
+
+                                {/* Cột trụ */}
+                                <rect x="-19" y="7" width="2.2" height="9" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="-7.5" y="7" width="1.8" height="9" fill={cfg.border} />
+                                <rect x="5.7" y="7" width="1.8" height="9" fill={cfg.border} />
+                                <rect x="16.8" y="7" width="2.2" height="9" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+
+                                {/* Dực điện hai bên */}
+                                <path d="M -20 6 C -28 3 -36 2 -40 -1 C -39 6 -30 6.5 -20 6.5 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="0.7" />
+                                <rect x="-36" y="6" width="16" height="8" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.6" rx="0.4" />
+                                <circle cx="-39" cy="1.5" r="1.1" fill={cfg.starGlow} />
+
+                                <path d="M 20 6 C 28 3 36 2 40 -1 C 39 6 30 6.5 20 6.5 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="0.7" />
+                                <rect x="20" y="6" width="16" height="8" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.6" rx="0.4" />
+                                <circle cx="39" cy="1.5" r="1.1" fill={cfg.starGlow} />
+
+                                {/* ── BẠCH NGỌC ĐÀI (PLINTH: Y = 16 -> 20) ── */}
+                                <rect x="-30" y="16" width="60" height="1.4" fill={cfg.border} />
+                                {[-24, -12, 0, 12, 24].map(vx => (
+                                  <circle key={`vongtru5-${vx}`} cx={vx} cy="15" r="0.8" fill={cfg.starGlow} />
+                                ))}
+                                <rect x="-34" y="17.4" width="68" height="2" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.7" rx="0.5" />
+                                <rect x="-38" y="19.4" width="76" height="2.2" fill="rgba(6, 10, 18, 0.98)" stroke={cfg.border} strokeWidth="1" rx="0.8" />
+                                <path d="M -38 20.8 C -41 20.8 -43 19 -40 18 C -38 17 -34 18.5 -36 20.8 Z" fill={cfg.primary} opacity="0.8" />
+                                <path d="M 38 20.8 C 41 20.8 43 19 40 18 C 38 17 34 18.5 36 20.8 Z" fill={cfg.primary} opacity="0.8" />
                               </g>
                             )}
 
-                            {/* TYPE 3: LAM VÂN THÁNH ĐIỆN */}
+                            {/* TYPE 3: LAM VÂN THÁNH ĐIỆN (THƯỢNG PHẨM: 2 TẦNG THANH TÚ) */}
                             {cfg.type === 3 && (
                               <g>
-                                <path d="M -22 -18 Q -11 -27 0 -27 Q 11 -27 22 -18 Q 15 -13 0 -14.5 Q -15 -13 -22 -18 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="1.4" />
-                                <path d="M -18 -18.5 Q -9 -24 0 -24 Q 9 -24 18 -18.5" fill="none" stroke={highlight} strokeWidth="0.9" />
-                                <path d="M -22 -18 Q -29 -23 -27 -28 Q -22 -23 -17.5 -19.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.8" />
-                                <path d="M 22 -18 Q 29 -23 27 -28 Q 22 -23 17.5 -19.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.8" />
-                                <rect x="-14" y="-14.5" width="28" height="9" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="1" rx="1" />
-                                <rect x="-2" y="-14.5" width="4" height="9" fill={cfg.primary} opacity="0.85" />
+                                <polygon points="-2,-27 2,-27 0,-29.5" fill={cfg.border} />
+                                <circle cx="0" cy="-30" r="1.2" fill={cfg.starGlow} />
 
-                                <path d="M -32 -2 Q -16 -11 0 -11 Q 16 -11 32 -2 Q 22 3.5 0 2 Q -22 3.5 -32 -2 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="1.5" />
-                                <path d="M -28 -2.5 Q -14 -8.5 0 -8.5 Q 14 -8.5 28 -2.5" fill="none" stroke={highlight} strokeWidth="1" />
-                                <path d="M -32 -2 Q -40 -7 -38 -13 Q -32 -7 -27.5 -3.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.9" />
-                                <path d="M 32 -2 Q 40 -7 38 -13 Q 32 -7 27.5 -3.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.9" />
-                                <rect x="-22" y="2" width="44" height="12" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="1" rx="1" />
-                                <rect x="-20" y="3" width="3" height="10" fill={cfg.border} />
-                                <rect x="17" y="3" width="3" height="10" fill={cfg.border} />
-                                <rect x="-4" y="3" width="8" height="10" fill={cfg.primary} opacity="0.85" rx="1" />
+                                {/* Mái thượng */}
+                                <path
+                                  d="M 0 -27 C -6 -24.5 -14 -22.5 -19 -20.5 C -24 -19 -27 -18 -29 -22.5 C -26 -17 -16 -16.5 -9 -16.5 Q 0 -16.5 0 -16.5 Q 0 -16.5 9 -16.5 C 16 -16.5 26 -17 29 -22.5 C 27 -18 24 -19 19 -20.5 C 14 -22.5 6 -24.5 0 -27 Z"
+                                  fill={cfg.roofFill}
+                                  stroke={cfg.border}
+                                  strokeWidth="1.2"
+                                />
+                                <path d="M 0 -27 C -7 -24.5 -15 -22.5 -26 -19.5" fill="none" stroke={highlight} strokeWidth="0.8" />
+                                <path d="M 0 -27 C 7 -24.5 15 -22.5 26 -19.5" fill="none" stroke={highlight} strokeWidth="0.8" />
+                                <circle cx="-28" cy="-19.5" r="1.1" fill={cfg.starGlow} />
+                                <circle cx="28" cy="-19.5" r="1.1" fill={cfg.starGlow} />
 
-                                <rect x="-28" y="14.5" width="56" height="4.5" rx="2" fill="rgba(8,14,26,0.98)" stroke={cfg.border} strokeWidth="1.3" />
+                                <rect x="-10" y="-16.5" width="20" height="1.4" fill={cfg.border} />
+                                <rect x="-10" y="-15.1" width="20" height="6.6" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.7" rx="0.5" />
+                                <rect x="-5" y="-14" width="10" height="4.5" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.4" />
+                                <rect x="-9.5" y="-15.1" width="1.6" height="6.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="7.9" y="-15.1" width="1.6" height="6.6" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+
+                                {/* Mái hạ */}
+                                <path
+                                  d="M 0 -8.5 C -10 -6 -21 -3.5 -29 -1 C -35 1 -38 1.5 -41 -3.5 C -38 4 -24 4.5 -12 4.2 Q 0 4.2 0 4.2 Q 0 4.2 12 4.2 C 24 4.5 38 4 41 -3.5 C 38 1.5 35 1 29 -1 C 21 -3.5 10 -6 0 -8.5 Z"
+                                  fill={cfg.roofFill}
+                                  stroke={cfg.border}
+                                  strokeWidth="1.3"
+                                />
+                                <path d="M 0 -8.5 C -12 -6 -24 -3 -37 0" fill="none" stroke={highlight} strokeWidth="0.9" />
+                                <path d="M 0 -8.5 C 12 -6 24 -3 37 0" fill="none" stroke={highlight} strokeWidth="0.9" />
+                                <circle cx="-40" cy="-1.5" r="1.2" fill={cfg.starGlow} />
+                                <circle cx="40" cy="-1.5" r="1.2" fill={cfg.starGlow} />
+
+                                <rect x="-18" y="4.2" width="36" height="1.6" fill={cfg.border} />
+                                <rect x="-18" y="5.8" width="36" height="8.5" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.8" rx="0.5" />
+                                <rect x="-14" y="7" width="5.5" height="6" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.4" />
+                                <rect x="8.5" y="7" width="5.5" height="6" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.4" />
+
+                                {/* Cửa chính */}
+                                <rect x="-4.5" y="6.5" width="9" height="7.8" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.6" rx="0.6" />
+                                <ellipse cx="0" cy="10.5" rx="2.5" ry="2" fill={cfg.starGlow} opacity="0.4" filter="url(#glassGlow)" />
+                                <line x1="0" y1="6.5" x2="0" y2="14.3" stroke={cfg.border} strokeWidth="0.5" />
+
+                                <rect x="-17.5" y="5.8" width="2" height="8.5" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="15.5" y="5.8" width="2" height="8.5" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+
+                                {/* Đài ngọc */}
+                                <rect x="-24" y="14.3" width="48" height="1.3" fill={cfg.border} />
+                                <rect x="-28" y="15.6" width="56" height="2" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.7" rx="0.5" />
+                                <rect x="-32" y="17.6" width="64" height="2.2" fill="rgba(6, 10, 18, 0.98)" stroke={cfg.border} strokeWidth="0.9" rx="0.7" />
                               </g>
                             )}
 
-                            {/* TYPE 2: THANH TRÚC CUNG */}
+                            {/* TYPE 2: BÍCH NGỌC TIÊN ĐÌNH (TRUNG PHẨM: 1 TẦNG MAI ĐAO HOÀNG TRÁNG) */}
                             {cfg.type === 2 && (
                               <g>
-                                <path d="M -30 -6 Q -14 -17 0 -17 Q 14 -17 30 -6 Q 20 0 0 -1.5 Q -20 0 -30 -6 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="1.5" />
-                                <path d="M -25 -6.5 Q -12 -14 0 -14 Q 12 -14 25 -6.5" fill="none" stroke={highlight} strokeWidth="1" />
-                                <path d="M -30 -6 Q -38 -11 -36 -16 Q -30 -11 -25.5 -7.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.9" />
-                                <path d="M 30 -6 Q 38 -11 36 -16 Q 30 -11 25.5 -7.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.9" />
-                                <rect x="-22" y="-1.5" width="44" height="16" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="1" rx="1" />
-                                <rect x="-19" y="-0.5" width="3" height="14" fill={cfg.border} />
-                                <rect x="16" y="-0.5" width="3" height="14" fill={cfg.border} />
-                                <rect x="-5" y="-0.5" width="10" height="14" fill={cfg.primary} opacity="0.8" rx="1" />
+                                <polygon points="-2,-17 2,-17 0,-19.5" fill={cfg.border} />
+                                <circle cx="0" cy="-20" r="1.1" fill={cfg.starGlow} />
 
-                                <rect x="-26" y="14.5" width="52" height="4.5" rx="2" fill="rgba(8,14,26,0.98)" stroke={cfg.border} strokeWidth="1.3" />
+                                <path
+                                  d="M 0 -17 C -10 -13.5 -22 -10.5 -30 -7.5 C -36 -5 -39 -4.5 -42 -9.5 C -39 -2.5 -25 -2 -13 -2.2 Q 0 -2.2 0 -2.2 Q 0 -2.2 13 -2.2 C 25 -2 39 -2.5 42 -9.5 C 39 -4.5 36 -5 30 -7.5 C 22 -10.5 10 -13.5 0 -17 Z"
+                                  fill={cfg.roofFill}
+                                  stroke={cfg.border}
+                                  strokeWidth="1.3"
+                                />
+                                <path d="M 0 -17 C -13 -13.5 -25 -10 -38 -6.5" fill="none" stroke={highlight} strokeWidth="0.9" />
+                                <path d="M 0 -17 C 13 -13.5 25 -10 38 -6.5" fill="none" stroke={highlight} strokeWidth="0.9" />
+                                <circle cx="-41" cy="-7.5" r="1.2" fill={cfg.starGlow} />
+                                <circle cx="41" cy="-7.5" r="1.2" fill={cfg.starGlow} />
+
+                                <rect x="-18" y="-2.2" width="36" height="1.6" fill={cfg.border} />
+                                <rect x="-18" y="-0.6" width="36" height="14.8" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.8" rx="0.6" />
+                                <rect x="-14" y="1" width="6" height="10" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.5" />
+                                <rect x="8" y="1" width="6" height="10" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.5" rx="0.5" />
+
+                                <rect x="-5" y="0.5" width="10" height="13.7" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.6" rx="0.7" />
+                                <ellipse cx="0" cy="7" rx="3" ry="3" fill={cfg.starGlow} opacity="0.35" filter="url(#glassGlow)" />
+                                <line x1="0" y1="0.5" x2="0" y2="14.2" stroke={cfg.border} strokeWidth="0.5" />
+
+                                <rect x="-17.5" y="-0.6" width="2.2" height="14.8" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+                                <rect x="15.3" y="-0.6" width="2.2" height="14.8" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.4" />
+
+                                <rect x="-22" y="14.2" width="44" height="1.4" fill={cfg.border} />
+                                <rect x="-26" y="15.6" width="52" height="2" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.7" rx="0.5" />
+                                <rect x="-30" y="17.6" width="60" height="2.2" fill="rgba(6, 10, 18, 0.98)" stroke={cfg.border} strokeWidth="0.9" rx="0.7" />
                               </g>
                             )}
 
-                            {/* TYPE 1: BẠCH NGỌC THẠCH MIẾU */}
+                            {/* TYPE 1: BẠCH NGỌC THẠCH MIẾU (HẠ PHẨM & CUNG HƯ: THANH CỔ NGUYÊN BẢN) */}
                             {cfg.type === 1 && (
                               <g>
-                                <path d="M -26 -4 Q -12 -13 0 -13 Q 12 -13 26 -4 Q 18 0.5 0 -1 Q -18 0.5 -26 -4 Z" fill={cfg.roofFill} stroke={cfg.border} strokeWidth="1.4" />
-                                <path d="M -21 -4.5 Q -10 -10.5 0 -10.5 Q 10 -10.5 21 -4.5" fill="none" stroke={highlight} strokeWidth="0.8" />
-                                <path d="M -26 -4 Q -32 -8 -31 -12 Q -26 -8 -22.5 -5.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.8" />
-                                <path d="M 26 -4 Q 32 -8 31 -12 Q 26 -8 22.5 -5.5 Z" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.8" />
-                                <rect x="-18" y="-1" width="36" height="15" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="1" rx="1" />
-                                <rect x="-16" y="0" width="2.5" height="13" fill={cfg.border} />
-                                <rect x="13.5" y="0" width="2.5" height="13" fill={cfg.border} />
-                                <rect x="-4" y="0" width="8" height="13" fill={cfg.primary} opacity="0.75" rx="1" />
+                                <polygon points="-1.5,-13 1.5,-13 0,-15" fill={cfg.border} />
+                                <circle cx="0" cy="-15.5" r="0.9" fill={cfg.starGlow} />
 
-                                <rect x="-22" y="14.5" width="44" height="4.5" rx="2" fill="rgba(8,14,26,0.98)" stroke={cfg.border} strokeWidth="1.1" />
+                                <path
+                                  d="M 0 -13 C -8 -10 -18 -8 -25 -5.5 C -29 -3.5 -32 -3 -34 -7 C -32 -1.5 -21 -1 -11 -1.2 Q 0 -1.2 0 -1.2 Q 0 -1.2 11 -1.2 C 21 -1 32 -1.5 34 -7 C 32 -3 29 -3.5 25 -5.5 C 18 -8 8 -10 0 -13 Z"
+                                  fill={cfg.roofFill}
+                                  stroke={cfg.border}
+                                  strokeWidth="1.2"
+                                />
+                                <path d="M 0 -13 C -10 -10 -20 -7.5 -31 -4.5" fill="none" stroke={highlight} strokeWidth="0.8" />
+                                <path d="M 0 -13 C 10 -10 20 -7.5 31 -4.5" fill="none" stroke={highlight} strokeWidth="0.8" />
+                                <circle cx="-33" cy="-5" r="1.1" fill={cfg.starGlow} />
+                                <circle cx="33" cy="-5" r="1.1" fill={cfg.starGlow} />
+
+                                <rect x="-15" y="-1.2" width="30" height="1.4" fill={cfg.border} />
+                                <rect x="-15" y="0.2" width="30" height="14" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.7" rx="0.5" />
+                                <rect x="-11" y="1.5" width="5" height="9" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.4" rx="0.4" />
+                                <rect x="6" y="1.5" width="5" height="9" fill="rgba(6, 12, 22, 0.95)" stroke={cfg.border} strokeWidth="0.4" rx="0.4" />
+
+                                <rect x="-4" y="1" width="8" height="13.2" fill={cfg.primary} stroke={cfg.border} strokeWidth="0.5" rx="0.5" />
+                                <line x1="0" y1="1" x2="0" y2="14.2" stroke={cfg.border} strokeWidth="0.4" />
+
+                                <rect x="-14.5" y="0.2" width="1.8" height="14" fill={cfg.border} />
+                                <rect x="12.7" y="0.2" width="1.8" height="14" fill={cfg.border} />
+
+                                <rect x="-18" y="14.2" width="36" height="1.3" fill={cfg.border} />
+                                <rect x="-22" y="15.5" width="44" height="2" fill={cfg.chamberBg} stroke={cfg.border} strokeWidth="0.6" rx="0.5" />
+                                <rect x="-26" y="17.5" width="52" height="2" fill="rgba(6, 10, 18, 0.98)" stroke={cfg.border} strokeWidth="0.8" rx="0.6" />
                               </g>
                             )}
                           </g>

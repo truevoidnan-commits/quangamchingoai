@@ -3801,6 +3801,53 @@ export function feedExpToLinhTang(tangIndex, expAmount) {
 }
 
 /**
+ * Đánh rơi Kiếp của một Đạo Anh xuống bằng với mức Kiếp thấp nhất hiện tại,
+ * đồng thời bơm đầy thanh tiến độ (100%) của mức Kiếp mới.
+ */
+export function dropDaoAnhKiep(daoAnhId) {
+  const state = getCultivationState();
+  if (state.realm !== 'nguyen_anh' && state.realm !== 'gia_anh') {
+    throw new Error('Chỉ có thể đánh rơi kiếp ở cảnh giới Giả Anh / Nguyên Anh.');
+  }
+
+  const daoAnhs = state.daoAnhs || [];
+  const activeDaoAnhs = daoAnhs.filter(d => (d.currentKiep || 0) < 5);
+  
+  if (activeDaoAnhs.length === 0) {
+    throw new Error('Không có Đạo Anh nào chưa đạt Đại Viên Mãn để tính toán Kiếp thấp nhất.');
+  }
+
+  const minKiep = Math.min(...activeDaoAnhs.map(d => d.currentKiep || 0));
+  
+  const targetIdx = daoAnhs.findIndex(d => d.id === daoAnhId);
+  if (targetIdx === -1) {
+    throw new Error('Không tìm thấy Đạo Anh.');
+  }
+
+  const currentKiep = daoAnhs[targetIdx].currentKiep || 0;
+  if (currentKiep <= minKiep) {
+    throw new Error('Đạo Anh này đã ở mức Kiếp thấp nhất trong trận pháp.');
+  }
+
+  // Đánh rơi Kiếp
+  daoAnhs[targetIdx].currentKiep = minKiep;
+  
+  // Nạp đầy thanh tiến độ (100%) ở mốc Kiếp mới
+  const newMaxExp = KIEP_EXP_REQUIREMENTS[minKiep] || 5000;
+  daoAnhs[targetIdx].maxExp = newMaxExp;
+  daoAnhs[targetIdx].currentExp = newMaxExp;
+  daoAnhs[targetIdx].currentThienMenh = newMaxExp;
+
+  state.logs.unshift({
+    text: `⬇️ ĐÁNH RƠI KIẾP! [${daoAnhs[targetIdx].name}] đã tự phế tu vi, lui về Kiếp ${minKiep + 1} với thanh tiến độ đầy 100% để chuẩn bị Vạn Kiếp Tề Thăng cùng các Đạo Anh khác!`,
+    time: Date.now()
+  });
+
+  saveCultivationState(state);
+  return state;
+}
+
+/**
  * Dùng 1 Thiên Đạo Phôi từ túi đồ để hoàn tất Thiên Đạo tức thì
  */
 export function attachThienDaoFromInventory(tangIndex) {

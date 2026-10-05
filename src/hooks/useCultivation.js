@@ -43,6 +43,7 @@ import {
   attemptTribulationAll,
   swapDaoAnhPositions,
   fillAllDaoAnhThienMenh,
+  dropDaoAnhKiep,
   getRealmDisplayName,
   getLampPalaceName,
   getPalaceNameFromArtifact,
@@ -350,6 +351,12 @@ export function useCultivation() {
     return res;
   }, []);
 
+  const handleDropDaoAnhKiep = useCallback((daoAnhId) => {
+    const next = dropDaoAnhKiep(daoAnhId);
+    setCultivation({ ...next });
+    return next;
+  }, []);
+
   const handleUnlockNextPhapKhieu = useCallback(() => {
     const res = unlockNextPhapKhieu();
     setCultivation({ ...res });
@@ -435,6 +442,7 @@ export function useCultivation() {
     attemptTribulationSingle: handleTribulationSingle,
     attemptTribulationAll: handleTribulationAll,
     swapDaoAnhPositions: handleSwapDaoAnhPositions,
+    dropDaoAnhKiep: handleDropDaoAnhKiep,
     fillAllDaoAnhThienMenh: handleFillAllDaoAnhThienMenh,
     fillAllDaoAnhExp: handleFillAllDaoAnhThienMenh,
     chooseSwitchDaoAnhAfter80: handleSwitchDaoAnhAfter80,
