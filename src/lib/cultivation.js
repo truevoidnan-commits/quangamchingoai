@@ -3532,7 +3532,7 @@ export function getLinhTangNameFromDaoAnh(da, index) {
  * Đột phá từ Nguyên Anh Đại Viên Mãn lên Linh Tàng Kỳ:
  * Tuyển chọn 5 Đạo Anh nổi bật nhất làm nguyên liệu chính đúc nên 5 Bí Tàng
  */
-export function breakthroughToLinhTang() {
+export function breakthroughToLinhTang(selectedDaoAnhIds) {
   const state = getCultivationState();
   if (state.realm !== 'nguyen_anh' && state.realm !== 'gia_anh') {
     throw new Error('Chưa đạt cảnh giới Nguyên Anh để đột phá Linh Tàng.');
