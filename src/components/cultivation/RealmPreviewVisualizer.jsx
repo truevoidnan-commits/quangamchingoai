@@ -1627,7 +1627,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
     galleryModalOpen: contextGalleryModalOpen,
     setGalleryModalOpen: contextSetGalleryModalOpen,
     anchorModalPalace: contextAnchorModalPalace,
-    setAnchorModalPalace: contextSetAnchorModalPalace
+    setAnchorModalPalace: contextSetAnchorModalPalace,
+    dropDaoAnhKiep
   } = useCultivationContext();
 
   const cultivation = propCultivation || contextCultivation;
@@ -6345,6 +6346,10 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               const percent = Math.min(100, Math.floor((curExp / maxExp) * 100));
               const canTribulate = !isMax && percent >= 80;
 
+              const activeDaoAnhsForModal = cultivation?.daoAnhs?.filter(d => (d.currentKiep || 0) < 5) || [];
+              const modalMinKiep = activeDaoAnhsForModal.length > 0 ? Math.min(...activeDaoAnhsForModal.map(d => d.currentKiep || 0)) : 0;
+              const modalCanDropKiep = !isMax && curKiep > modalMinKiep;
+
               const modalArch = (() => {
                 const t = (matchedDaoAnh.title || matchedDaoAnh.name || '').toLowerCase();
                 if (t.includes('thần ma') || t.includes('ma công') || t.includes('tâm ma')) return { type: 'demon_god', color: '#c084fc', glow: '#ef4444', name: 'Đạo Ma Thần Thể' };
@@ -6527,41 +6532,75 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                         </div>
                       </div>
 
-                      {/* Các Nút Thao Tác: Độ Kiếp khi đủ điều kiện */}
+                      {/* Các Nút Thao Tác */}
                       {!isMax && (
-                        <div style={{ display: 'flex', gap: 12, marginTop: 6, width: '100%' }}>
-                          {canTribulate ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 6, width: '100%' }}>
+                          <div style={{ display: 'flex', gap: 12, width: '100%' }}>
+                            {canTribulate ? (
+                              <button
+                                onClick={() => {
+                                  const daId = matchedDaoAnh?.id !== undefined ? matchedDaoAnh.id : (matchedDaoAnh?.palaceIndex !== undefined ? matchedDaoAnh.palaceIndex : focusedDaoAnhId);
+                                  if (typeof attemptTribulationSingle === 'function') {
+                                    try {
+                                      attemptTribulationSingle(daId);
+                                    } catch (err) {
+                                      console.error('Tribulation error:', err);
+                                      alert(err.message || 'Lỗi khi tiến hành độ kiếp');
+                                    }
+                                  }
+                                }}
+                                style={{
+                                  flex: 1,
+                                  padding: '12px 16px',
+                                  borderRadius: 8,
+                                  background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+                                  border: '1px solid #f0abfc',
+                                  color: '#ffffff',
+                                  fontSize: 13,
+                                  fontWeight: 900,
+                                  cursor: 'pointer',
+                                  boxShadow: '0 0 18px rgba(240, 171, 252, 0.55)'
+                                }}
+                              >
+                                ⚡ Tiến Hành Độ Kiếp ({percent}%)
+                              </button>
+                            ) : (
+                              <div style={{ textAlign: 'center', width: '100%', fontSize: 12, color: 'rgba(255,255,255,0.5)', padding: '6px 0' }}>
+                                Đang thai nghén tích lũy linh lực qua đọc sách & Tụ Linh Trận ({percent}% / 80% để độ kiếp)
+                              </div>
+                            )}
+                          </div>
+
+                          {modalCanDropKiep && (
                             <button
                               onClick={() => {
                                 const daId = matchedDaoAnh?.id !== undefined ? matchedDaoAnh.id : (matchedDaoAnh?.palaceIndex !== undefined ? matchedDaoAnh.palaceIndex : focusedDaoAnhId);
-                                if (typeof attemptTribulationSingle === 'function') {
-                                  try {
-                                    attemptTribulationSingle(daId);
-                                  } catch (err) {
-                                    console.error('Tribulation error:', err);
-                                    alert(err.message || 'Lỗi khi tiến hành độ kiếp');
+                                try {
+                                  if (dropDaoAnhKiep) {
+                                    dropDaoAnhKiep(daId);
                                   }
+                                } catch (e) {
+                                  alert(e.message || 'Không thể đánh rơi kiếp');
                                 }
                               }}
                               style={{
-                                flex: 1,
-                                padding: '12px 16px',
+                                width: '100%',
+                                padding: '10px 14px',
                                 borderRadius: 8,
-                                background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-                                border: '1px solid #f0abfc',
-                                color: '#ffffff',
-                                fontSize: 13,
-                                fontWeight: 900,
+                                background: 'rgba(239, 68, 68, 0.15)',
+                                border: '1px solid rgba(239, 68, 68, 0.4)',
+                                color: '#fca5a5',
+                                fontSize: 12.5,
+                                fontWeight: 700,
                                 cursor: 'pointer',
-                                boxShadow: '0 0 18px rgba(240, 171, 252, 0.55)'
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 6,
                               }}
                             >
-                              ⚡ Tiến Hành Độ Kiếp ({percent}%)
+                              <span>⬇️ ĐÁNH RƠI VỀ KIẾP {modalMinKiep + 1}</span>
                             </button>
-                          ) : (
-                            <div style={{ textAlign: 'center', width: '100%', fontSize: 12, color: 'rgba(255,255,255,0.5)', padding: '6px 0' }}>
-                              Đang thai nghén tích lũy linh lực qua đọc sách & Tụ Linh Trận ({percent}% / 80% để độ kiếp)
-                            </div>
                           )}
                         </div>
                       )}
