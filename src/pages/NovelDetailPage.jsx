@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getNovel, getChapters, deleteChapterDB, searchChapters } from '../lib/db';
 import { getReadingProgress, updateLibraryItem } from '../lib/storage';
 import Footer from '../components/layout/Footer';
+import GlobalReplaceModal from '../components/reader/GlobalReplaceModal';
 import styles from './NovelDetailPage.module.css';
 
 export default function NovelDetailPage() {
@@ -24,6 +25,9 @@ export default function NovelDetailPage() {
   // Jump to chapter state
   const [jumpInput, setJumpInput] = useState('');
   const [highlightedChapterId, setHighlightedChapterId] = useState(null);
+
+  // Global find & replace modal state
+  const [globalReplaceOpen, setGlobalReplaceOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -379,22 +383,34 @@ export default function NovelDetailPage() {
           </div>
         )}
 
-        {/* Search bar inside novel */}
-        <div className={styles.novelSearchWrap}>
-          <span className={styles.searchIcon}>🔍</span>
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Nhập từ khoá / cụm từ để tìm trong nội dung tất cả các chương..."
-            className={styles.novelSearchInput}
-            id="novel-content-search"
-          />
-          {searchQuery && (
-            <button className={styles.searchClearIcon} onClick={() => setSearchQuery('')} title="Xóa tìm kiếm">
-              ✕
-            </button>
-          )}
+        {/* Search bar inside novel & Global Replace */}
+        <div className={styles.searchRowWithTools}>
+          <div className={styles.novelSearchWrap}>
+            <span className={styles.searchIcon}>🔍</span>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Nhập từ khoá / cụm từ để tìm trong nội dung tất cả các chương..."
+              className={styles.novelSearchInput}
+              id="novel-content-search"
+            />
+            {searchQuery && (
+              <button className={styles.searchClearIcon} onClick={() => setSearchQuery('')} title="Xóa tìm kiếm">
+                ✕
+              </button>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className={styles.globalReplaceTriggerBtn}
+            onClick={() => setGlobalReplaceOpen(true)}
+            title="Tìm và thay thế một cụm từ trên toàn bộ truyện"
+          >
+            <span>🔁</span>
+            <span>Thay thế toàn truyện</span>
+          </button>
         </div>
 
         {/* SEARCH MODE RESULTS */}
@@ -514,6 +530,31 @@ export default function NovelDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Global Replace Modal */}
+      <GlobalReplaceModal
+        isOpen={globalReplaceOpen}
+        onClose={() => setGlobalReplaceOpen(false)}
+        novelId={activeNovelId}
+        novelTitle={novel?.title}
+        initialSearchText={searchQuery}
+        onSuccess={async (res) => {
+          // Tải lại danh sách chương
+          const chs = await getChapters(activeNovelId);
+          setChapters(chs);
+          // Nếu đang tìm kiếm, kích hoạt tìm kiếm lại
+          if (searchQuery.trim()) {
+            const query = searchQuery.trim();
+            setIsSearching(true);
+            searchChapters(activeNovelId, query)
+              .then(results => {
+                setSearchResults(results);
+                setIsSearching(false);
+              })
+              .catch(() => setIsSearching(false));
+          }
+        }}
+      />
     </div>
   );
 }

@@ -15,6 +15,7 @@ import { findDaoAnhDefinition } from '../lib/daoAnhData';
 import { DaoAnh80Modal, DaoAnhFullModal } from '../components/cultivation/DaoAnhPromptModal';
 import SelectionToolbar from '../components/reader/SelectionToolbar';
 import ChapterTextEditModal from '../components/reader/ChapterTextEditModal';
+import GlobalReplaceModal from '../components/reader/GlobalReplaceModal';
 import selectionStyles from '../components/reader/SelectionEditor.module.css';
 import styles from './ReaderPage.module.css';
 
@@ -55,6 +56,7 @@ export default function ReaderPage() {
   const [activeEditTarget, setActiveEditTarget] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [initialEditScope, setInitialEditScope] = useState('single');
+  const [globalReplaceOpen, setGlobalReplaceOpen] = useState(false);
   const [editorToast, setEditorToast] = useState(null);
   const historyStackRef = useRef([]);
 
@@ -525,6 +527,44 @@ export default function ReaderPage() {
     let updatedContent = chapter.content;
     let updatedTitle = chapter.title;
 
+    // Nếu phạm vi là TOÀN BỘ TRUYỆN
+    if (scope === 'novel') {
+      try {
+        const { replaceTextInNovel } = await import('../lib/db');
+        const res = await replaceTextInNovel(activeNovelId, selectedText, newText, {
+          matchCase: true,
+          inTitle: true,
+        });
+
+        // Cập nhật chương hiện tại nếu có thay đổi
+        if (res.modifiedChapters && res.modifiedChapters.length > 0) {
+          const cur = res.modifiedChapters.find(c => c.id === chapter.id);
+          if (cur) {
+            setChapter(cur);
+          }
+        }
+
+        // Xóa vùng chọn trên trình duyệt
+        if (window.getSelection) {
+          window.getSelection().removeAllRanges();
+        }
+        setSelectionData(null);
+        setEditModalOpen(false);
+        setActiveEditTarget(null);
+
+        const isDeleted = !newText || newText.trim() === '';
+        const message = isDeleted
+          ? `🗑️ Đã xóa ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`
+          : `✨ Đã thay thế ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`;
+
+        setEditorToast({ message });
+      } catch (err) {
+        console.error('Lỗi thay thế toàn bộ truyện:', err);
+        alert('Không thể thực hiện thay thế toàn truyện: ' + (err.message || err));
+      }
+      return;
+    }
+
     if (scope === 'all') {
       // Thay thế hoặc xóa toàn bộ lần xuất hiện trong chương
       updatedContent = updatedContent.replaceAll(selectedText, newText);
@@ -691,6 +731,14 @@ export default function ReaderPage() {
                 </span>
               )}
             </div>
+            <button
+              className={styles.topBtn}
+              onClick={() => setGlobalReplaceOpen(true)}
+              title="Tìm & Thay thế toàn bộ truyện"
+              aria-label="Tìm & Thay thế toàn bộ truyện"
+            >
+              🔁
+            </button>
             <button
               className={styles.topBtn}
               onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}
@@ -931,11 +979,31 @@ export default function ReaderPage() {
         isOpen={editModalOpen}
         targetData={activeEditTarget}
         initialScope={initialEditScope}
+        novelId={activeNovelId}
         onSave={applyTextChange}
         onDelete={({ scope }) => applyTextChange({ newText: '', scope })}
         onClose={() => {
           setEditModalOpen(false);
           setActiveEditTarget(null);
+        }}
+      />
+
+      {/* Global Find & Replace Modal for entire novel */}
+      <GlobalReplaceModal
+        isOpen={globalReplaceOpen}
+        onClose={() => setGlobalReplaceOpen(false)}
+        novelId={activeNovelId}
+        novelTitle={novel?.title}
+        onSuccess={(res) => {
+          if (res.modifiedChapters && res.modifiedChapters.length > 0 && chapter) {
+            const cur = res.modifiedChapters.find(c => c.id === chapter.id);
+            if (cur) {
+              setChapter(cur);
+            }
+          }
+          setEditorToast({
+            message: `✨ Đã thay thế ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`,
+          });
         }}
       />
 

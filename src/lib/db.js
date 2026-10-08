@@ -207,3 +207,135 @@ export async function searchAllNovels(query) {
      (n.description && n.description.toLowerCase().includes(q)))
   );
 }
+
+// ---- Novel-wide Find & Replace ----
+
+export async function countMatchesInNovel(novelId, searchText, options = {}) {
+  if (!novelId || !searchText || !searchText.trim()) {
+    return { matchCount: 0, matchingChapters: 0, totalChapters: 0 };
+  }
+  const { matchCase = true, inTitle = true } = options;
+  const chapters = await getChapters(novelId);
+  if (!chapters || chapters.length === 0) {
+    return { matchCount: 0, matchingChapters: 0, totalChapters: 0 };
+  }
+
+  let matchCount = 0;
+  let matchingChapters = 0;
+
+  for (const ch of chapters) {
+    let chMatches = 0;
+    const content = ch.content || '';
+    const title = ch.title || '';
+
+    if (matchCase) {
+      if (content.includes(searchText)) {
+        chMatches += content.split(searchText).length - 1;
+      }
+      if (inTitle && title.includes(searchText)) {
+        chMatches += title.split(searchText).length - 1;
+      }
+    } else {
+      const escaped = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'gi');
+      const contentMatches = content.match(regex);
+      if (contentMatches) chMatches += contentMatches.length;
+
+      if (inTitle) {
+        const titleMatches = title.match(regex);
+        if (titleMatches) chMatches += titleMatches.length;
+      }
+    }
+
+    if (chMatches > 0) {
+      matchCount += chMatches;
+      matchingChapters++;
+    }
+  }
+
+  return {
+    matchCount,
+    matchingChapters,
+    totalChapters: chapters.length,
+  };
+}
+
+export async function replaceTextInNovel(novelId, searchText, replaceText = '', options = {}) {
+  if (!novelId || !searchText) {
+    throw new Error('Thiếu thông tin truyện hoặc cụm từ tìm kiếm.');
+  }
+
+  const { matchCase = true, inTitle = true } = options;
+  const chapters = await getChapters(novelId);
+  if (!chapters || chapters.length === 0) {
+    return {
+      totalChapters: 0,
+      modifiedChaptersCount: 0,
+      totalReplacements: 0,
+      modifiedChapters: [],
+    };
+  }
+
+  let totalReplacements = 0;
+  const modifiedChapters = [];
+
+  for (const ch of chapters) {
+    let contentChanged = false;
+    let titleChanged = false;
+    let newContent = ch.content || '';
+    let newTitle = ch.title || '';
+
+    if (matchCase) {
+      if (newContent.includes(searchText)) {
+        const count = newContent.split(searchText).length - 1;
+        totalReplacements += count;
+        newContent = newContent.replaceAll(searchText, replaceText);
+        contentChanged = true;
+      }
+      if (inTitle && newTitle.includes(searchText)) {
+        const count = newTitle.split(searchText).length - 1;
+        totalReplacements += count;
+        newTitle = newTitle.replaceAll(searchText, replaceText);
+        titleChanged = true;
+      }
+    } else {
+      const escaped = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'gi');
+
+      const contentMatches = newContent.match(regex);
+      if (contentMatches && contentMatches.length > 0) {
+        totalReplacements += contentMatches.length;
+        newContent = newContent.replace(regex, replaceText);
+        contentChanged = true;
+      }
+
+      if (inTitle) {
+        const titleMatches = newTitle.match(regex);
+        if (titleMatches && titleMatches.length > 0) {
+          totalReplacements += titleMatches.length;
+          newTitle = newTitle.replace(regex, replaceText);
+          titleChanged = true;
+        }
+      }
+    }
+
+    if (contentChanged || titleChanged) {
+      modifiedChapters.push({
+        ...ch,
+        content: newContent,
+        title: newTitle,
+      });
+    }
+  }
+
+  if (modifiedChapters.length > 0) {
+    await saveChaptersBulk(modifiedChapters);
+  }
+
+  return {
+    totalChapters: chapters.length,
+    modifiedChaptersCount: modifiedChapters.length,
+    totalReplacements,
+    modifiedChapters,
+  };
+}

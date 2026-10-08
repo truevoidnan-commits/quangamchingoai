@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { countMatchesInNovel } from '../../lib/db';
 import styles from './SelectionEditor.module.css';
 
 export default function ChapterTextEditModal({
   isOpen,
   targetData,
   initialScope = 'single',
+  novelId,
   onSave,
   onDelete,
   onClose,
@@ -12,12 +14,39 @@ export default function ChapterTextEditModal({
   const [newText, setNewText] = useState('');
   const [scope, setScope] = useState(initialScope);
   const [snapshotOriginal, setSnapshotOriginal] = useState('');
+  const [novelStats, setNovelStats] = useState(null);
+  const [loadingNovelStats, setLoadingNovelStats] = useState(false);
   const textareaRef = useRef(null);
 
   const selectedText = snapshotOriginal || targetData?.selectedText || '';
   const matchCount = targetData?.matchCount || 1;
   const startParaIndex = targetData?.startParaIndex;
   const isTitle = targetData?.isTitle || false;
+
+  // Query novel-wide occurrences when open
+  useEffect(() => {
+    if (isOpen && targetData?.selectedText && novelId) {
+      let cancelled = false;
+      setLoadingNovelStats(true);
+      countMatchesInNovel(novelId, targetData.selectedText)
+        .then(stats => {
+          if (!cancelled) {
+            setNovelStats(stats);
+            setLoadingNovelStats(false);
+          }
+        })
+        .catch(err => {
+          console.error('Lỗi kiểm tra số lượng khớp toàn truyện:', err);
+          if (!cancelled) setLoadingNovelStats(false);
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    } else {
+      setNovelStats(null);
+    }
+  }, [isOpen, targetData?.selectedText, novelId]);
 
   // Initialize only once upon opening the modal
   useEffect(() => {
@@ -205,11 +234,35 @@ export default function ChapterTextEditModal({
                   className={styles.scopeRadio}
                 />
                 <span>
-                  <strong>Thay thế toàn bộ trong chương</strong>
+                  <strong>Thay thế toàn bộ trong chương này</strong>
                   {' '}
                   <span className={styles.scopeHighlightCount}>
                     ({matchCount} lần xuất hiện trùng khớp)
                   </span>
+                </span>
+              </label>
+            )}
+
+            {novelId && (
+              <label className={styles.scopeOption}>
+                <input
+                  type="radio"
+                  name="editScope"
+                  value="novel"
+                  checked={scope === 'novel'}
+                  onChange={() => setScope('novel')}
+                  className={styles.scopeRadio}
+                />
+                <span>
+                  <strong style={{ color: '#38bdf8' }}>Thay thế trong TOÀN BỘ TRUYỆN</strong>
+                  {' '}
+                  {loadingNovelStats ? (
+                    <span style={{ color: '#94a3b8', fontSize: 11.5 }}>(Đang quét toàn bộ chương...)</span>
+                  ) : novelStats ? (
+                    <span className={styles.scopeHighlightCount} style={{ borderColor: 'rgba(255, 204, 0, 0.45)', color: '#ffcc00' }}>
+                      ({novelStats.matchCount} lần trong {novelStats.matchingChapters} chương)
+                    </span>
+                  ) : null}
                 </span>
               </label>
             )}
@@ -223,9 +276,9 @@ export default function ChapterTextEditModal({
               type="button"
               className={styles.btnDeleteDirect}
               onClick={handleDelete}
-              title="Xóa hẳn đoạn này khỏi chương"
+              title={scope === 'novel' ? 'Xóa cụm từ này khỏi toàn bộ các chương trong truyện' : 'Xóa hẳn đoạn này'}
             >
-              🗑️ Xóa hẳn đoạn này
+              🗑️ {scope === 'novel' ? 'Xóa khỏi TOÀN BỘ TRUYỆN' : (scope === 'all' ? 'Xóa toàn bộ trong chương' : 'Xóa hẳn đoạn này')}
             </button>
           </div>
 
@@ -239,11 +292,14 @@ export default function ChapterTextEditModal({
             </button>
             <button
               type="button"
-              className={styles.btnSave}
+              className={`${styles.btnSave} ${scope === 'novel' ? styles.btnNovelScope : ''}`}
               onClick={handleSave}
               title="Lưu thay đổi (Ctrl + Enter)"
             >
-              💾 {newText === '' ? 'Lưu (Xóa rỗng)' : 'Lưu Thay Đổi'}
+              💾 {newText === ''
+                ? (scope === 'novel' ? 'Xác nhận Xóa toàn bộ truyện' : (scope === 'all' ? 'Xác nhận Xóa toàn chương' : 'Lưu (Xóa rỗng)'))
+                : (scope === 'novel' ? 'Thay thế TOÀN BỘ TRUYỆN' : (scope === 'all' ? 'Thay thế toàn chương' : 'Lưu Thay Đổi'))
+              }
             </button>
           </div>
         </div>

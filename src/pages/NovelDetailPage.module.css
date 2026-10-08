@@ -238,6 +238,44 @@
   margin-bottom: 18px;
 }
 
+.searchRowWithTools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.searchRowWithTools .novelSearchWrap {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.globalReplaceTriggerBtn {
+  background: rgba(34, 195, 240, 0.12);
+  border: 1px solid rgba(34, 195, 240, 0.4);
+  color: #38bdf8;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  height: 42px;
+  box-sizing: border-box;
+}
+
+.globalReplaceTriggerBtn:hover {
+  background: rgba(34, 195, 240, 0.25);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+  transform: translateY(-1px);
+}
+
 .searchIcon {
   position: absolute;
   left: 14px;
@@ -694,6 +732,14 @@
   }
   .progressActions button,
   .heroActions button {
+    width: 100%;
+  }
+  .searchRowWithTools {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .globalReplaceTriggerBtn {
+    justify-content: center;
     width: 100%;
   }
 }
