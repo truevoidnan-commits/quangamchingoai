@@ -274,11 +274,16 @@ export default function ReaderPage() {
   }, [chapter?.id, loading, activeNovelId, searchKeyword]);
 
   // Chu kỳ ngộ đạo 60s lặp lại liên tục (cứ 60s tăng tu vi âm thầm & bắt đầu vòng mới)
-  const [cycleSeconds, setCycleSeconds] = useState(0);
+  const [cycleSeconds, setCycleSeconds] = useState(() => { const saved = localStorage.getItem('cultivation_pending_seconds'); return saved && !isNaN(parseInt(saved, 10)) ? parseInt(saved, 10) : 0; });
+
+  // Lưu lại thời gian ngộ đạo vào localStorage để không bị mất khi thoát trang
+  useEffect(() => {
+    localStorage.setItem('cultivation_pending_seconds', cycleSeconds.toString());
+  }, [cycleSeconds]);
 
   // Reset timer on chapter change & save reading progress (KHÔNG đè scrollTop = 0 lên vị trí đang đọc)
   useEffect(() => {
-    setCycleSeconds(0);
+    // setCycleSeconds(0); // Không reset khi chuyển chương để cộng dồn
     if (chapter) {
       const existing = getReadingProgress(activeNovelId);
       if (existing?.chapterId !== chapter.id) {
