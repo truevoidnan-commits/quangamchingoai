@@ -851,6 +851,32 @@ export default function ReaderPage() {
 
         {!loading && chapter && (
           <>
+            <nav className={styles.chapterNavTop}>
+              <button
+                className={styles.navBtn}
+                style={{ color: prevChapter ? theme.accent : `${theme.text}40`, borderColor: prevChapter ? `${theme.accent}50` : `${theme.text}20` }}
+                onClick={() => goToChapter(prevChapter)}
+                disabled={!prevChapter}
+              >
+                ← Chương trước
+              </button>
+              <button
+                className={styles.tocBtn}
+                onClick={() => setTocOpen(true)}
+                style={{ color: theme.accent, borderColor: `${theme.accent}40` }}
+              >
+                📋
+              </button>
+              <button
+                className={styles.navBtn}
+                style={{ color: nextChapter ? theme.accent : `${theme.text}40`, borderColor: nextChapter ? `${theme.accent}50` : `${theme.text}20` }}
+                onClick={() => goToChapter(nextChapter)}
+                disabled={!nextChapter}
+              >
+                Chương sau →
+              </button>
+            </nav>
+
             <h2
               className={styles.chapterTitle}
               style={{ color: theme.accent, fontFamily: fontCss }}

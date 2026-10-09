@@ -408,6 +408,14 @@
   border-top: 1px solid;
 }
 
+.chapterNavTop {
+  width: 100%;
+  padding: 0 0 32px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .navBtn {
   flex: 1;
   background: transparent;
