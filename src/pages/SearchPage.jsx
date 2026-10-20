@@ -93,8 +93,8 @@ export default function SearchPage() {
                   role="button"
                   tabIndex={0}
                 >
-                  {novel.coverUrl ? (
-                    <img src={novel.coverUrl} alt={novel.title} className={styles.thumb} />
+                  {(novel.coverThumb || novel.coverUrl) ? (
+                    <img src={novel.coverThumb || novel.coverUrl} alt={novel.title} className={styles.thumb} />
                   ) : (
                     <div className={styles.thumbDefault}>{novel.title.charAt(0)}</div>
                   )}

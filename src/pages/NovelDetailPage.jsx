@@ -163,9 +163,9 @@ export default function NovelDetailPage() {
     <div className={styles.page}>
       {/* Hero */}
       <div className={styles.hero}>
-        {novel.coverUrl ? (
+        {(novel.coverUrl || novel.coverThumb) ? (
           <div className={styles.heroBgWrap}>
-            <img src={novel.coverUrl} className={styles.heroBg} alt="" aria-hidden="true" />
+            <img src={novel.coverUrl || novel.coverThumb} className={styles.heroBg} alt="" aria-hidden="true" />
             <div className={styles.heroBgOverlay} />
           </div>
         ) : (
@@ -190,8 +190,8 @@ export default function NovelDetailPage() {
           <div className={styles.heroMain}>
             {/* Cover */}
             <div className={styles.coverWrap}>
-              {novel.coverUrl ? (
-                <img src={novel.coverUrl} alt={novel.title} className={styles.cover} />
+              {(novel.coverUrl || novel.coverThumb) ? (
+                <img src={novel.coverUrl || novel.coverThumb} alt={novel.title} className={styles.cover} />
               ) : (
                 <div className={styles.coverDefault}>
                   <span className={styles.coverChar}>{novel.title.charAt(0)}</span>

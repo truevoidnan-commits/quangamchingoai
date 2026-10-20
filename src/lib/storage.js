@@ -135,30 +135,65 @@ export function getHiddenLibrary() {
 }
 
 export function saveLibrary(library) {
-  localStorage.setItem(LIBRARY_KEY, JSON.stringify(library));
+  if (!Array.isArray(library)) return;
+  // Lớp phòng thủ: loại bỏ trường coverUrl dạng data: URL (Base64 lớn) trước khi ghi vào localStorage
+  const sanitized = library.map((item) => {
+    if (!item) return item;
+    const clean = { ...item };
+    if (clean.coverUrl && /^data:/i.test(clean.coverUrl)) {
+      delete clean.coverUrl;
+    }
+    return clean;
+  });
+
+  try {
+    localStorage.setItem(LIBRARY_KEY, JSON.stringify(sanitized));
+  } catch (err) {
+    const isQuota =
+      err?.name === 'QuotaExceededError' ||
+      err?.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+      err?.code === 22 ||
+      err?.code === 1014 ||
+      err?.number === -2147024882 ||
+      /quota/i.test(err?.message || '');
+    if (isQuota) {
+      throw new Error(
+        'Bộ nhớ trình duyệt (localStorage) đã đầy. Vui lòng xóa bớt truyện không đọc hoặc giải phóng dữ liệu duyệt web để tiếp tục.'
+      );
+    }
+    throw err;
+  }
 }
 
 export function addToLibrary(item) {
   const library = getLibrary({ includeHidden: true });
-  const exists = library.findIndex(n => n.id === item.id);
+  const cleanItem = { ...item };
+  if (cleanItem.coverUrl && /^data:/i.test(cleanItem.coverUrl)) {
+    delete cleanItem.coverUrl;
+  }
+  const exists = library.findIndex((n) => n.id === cleanItem.id);
   if (exists !== -1) {
-    library[exists] = { ...library[exists], ...item };
+    library[exists] = { ...library[exists], ...cleanItem };
   } else {
-    library.unshift(item);
+    library.unshift(cleanItem);
   }
   saveLibrary(library);
 }
 
 export function removeFromLibrary(id) {
-  const library = getLibrary({ includeHidden: true }).filter(n => n.id !== id);
+  const library = getLibrary({ includeHidden: true }).filter((n) => n.id !== id);
   saveLibrary(library);
 }
 
 export function updateLibraryItem(id, updates) {
   const library = getLibrary({ includeHidden: true });
-  const idx = library.findIndex(n => n.id === id);
+  const idx = library.findIndex((n) => n.id === id);
   if (idx !== -1) {
-    library[idx] = { ...library[idx], ...updates };
+    const cleanUpdates = { ...updates };
+    if (cleanUpdates.coverUrl && /^data:/i.test(cleanUpdates.coverUrl)) {
+      delete cleanUpdates.coverUrl;
+    }
+    library[idx] = { ...library[idx], ...cleanUpdates };
     saveLibrary(library);
   }
 }

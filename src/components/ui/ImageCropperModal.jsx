@@ -97,8 +97,8 @@ export default function ImageCropperModal({ imageSrc, onCrop, onClose }) {
   const handleApply = () => {
     if (!imgElement) return;
 
-    const OUTPUT_W = 900;
-    const OUTPUT_H = 1200; // Exact 3:4 HD ratio
+    const OUTPUT_W = 600;
+    const OUTPUT_H = 800; // Exact 3:4 HD ratio
 
     const canvas = document.createElement('canvas');
     canvas.width = OUTPUT_W;
@@ -130,7 +130,7 @@ export default function ImageCropperModal({ imageSrc, onCrop, onClose }) {
     ctx.restore();
 
     // Export as high quality JPEG
-    const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
     onCrop(croppedDataUrl);
     onClose();
   };

@@ -815,38 +815,4 @@ export async function parseNovelFile(file) {
   throw new Error('Định dạng file không được hỗ trợ. Vui lòng dùng .txt hoặc .epub');
 }
 
-/**
- * Resize ảnh bìa về kích thước chuẩn sắc nét HD (tối đa 900x1200), giữ độ nét cao và không bị nhòe trên mobile
- */
-export function resizeCoverImage(file, maxWidth = 900, maxHeight = 1200) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let { width, height } = img;
-
-        const ratio = Math.min(maxWidth / width, maxHeight / height);
-        if (ratio < 1) {
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-          ctx.drawImage(img, 0, 0, width, height);
-        }
-        resolve(canvas.toDataURL('image/jpeg', 0.92));
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+export { resizeCoverImage, makeCoverThumb } from './coverImage.js';

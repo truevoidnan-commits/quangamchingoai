@@ -17,6 +17,7 @@ import SearchPage from './pages/SearchPage';
 
 import { preloadCoreArtifactIcons } from './lib/artifactIcons';
 import { startBackgroundPrefetch } from './lib/backgroundPrefetch';
+import { runMigrationV2 } from './lib/migration';
 
 function ScrollRestorer() {
   const { pathname } = useLocation();
@@ -30,6 +31,7 @@ function ScrollRestorer() {
   useEffect(() => {
     preloadCoreArtifactIcons();
     startBackgroundPrefetch();
+    runMigrationV2().catch(() => {});
   }, []);
   return null;
 }

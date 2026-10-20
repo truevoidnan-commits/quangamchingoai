@@ -20,6 +20,7 @@ import { sampleNovel, sampleCatalogEntry, sampleChapters } from '../lib/sampleDa
 import { saveNovel, saveChaptersBulk } from '../lib/db';
 import { addToLibrary } from '../lib/storage';
 import { useCultivation } from '../hooks/useCultivation';
+import { runMigrationV2 } from '../lib/migration';
 import styles from './LibraryPage.module.css';
 
 export default function LibraryPage() {
@@ -71,9 +72,34 @@ export default function LibraryPage() {
     }
   }, []);
 
-  // Load library
+  // Load library & run migration v2
   useEffect(() => {
+    let active = true;
+
+    const pendingRecovery = sessionStorage.getItem('tcl_pending_recovery_toast');
+    if (pendingRecovery) {
+      sessionStorage.removeItem('tcl_pending_recovery_toast');
+      showToast(`Đã khôi phục ${pendingRecovery} truyện`);
+      refreshLibrary();
+    }
+
+    runMigrationV2()
+      .then((res) => {
+        if (!active) return;
+        if (res && res.recoveredCount > 0) {
+          showToast(`Đã khôi phục ${res.recoveredCount} truyện`);
+          refreshLibrary();
+        }
+      })
+      .catch((err) => {
+        console.warn('[LibraryPage] Lỗi migration v2:', err);
+      });
+
     refreshLibrary();
+
+    return () => {
+      active = false;
+    };
   }, [seeded, refreshLibrary]);
 
   // Split into visible and hidden novels

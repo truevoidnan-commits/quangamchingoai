@@ -8,6 +8,7 @@ export const sampleNovel = {
   title: 'Phàm Nhân Tu Tiên',
   description:
     'Một câu chuyện kể về hành trình tu tiên của Hàn Lập, xuất thân từ gia đình nghèo khó nơi thôn dã, từng bước bước lên con đường bất tử đầy chông gai và hiểm nguy. Đây là truyện tiêu biểu của thể loại tu tiên xứ Trung, nổi tiếng với hệ thống tu luyện chi tiết và tình tiết phát triển chậm mà chắc.',
+  coverThumb: '',
   coverUrl: '',
   chapterCount: 3,
   createdAt: Date.now() - 86400000,

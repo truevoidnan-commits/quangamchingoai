@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getNovel, saveNovel } from '../lib/db';
 import { updateLibraryItem } from '../lib/storage';
-import { resizeCoverImage } from '../lib/chapterParser';
+import { resizeCoverImage, makeCoverThumb } from '../lib/chapterParser';
 import Footer from '../components/layout/Footer';
 import ImageCropperModal from '../components/ui/ImageCropperModal';
 import styles from './AddNovelPage.module.css'; // Reuse same styles
@@ -60,20 +60,36 @@ export default function EditNovelPage() {
   };
 
   const handleSave = async () => {
+    if (saving) return;
     if (!title.trim()) { alert('Vui lòng nhập tên truyện.'); return; }
     if (!novelId) { alert('Không tìm thấy thông tin truyện để sửa.'); return; }
     setSaving(true);
     try {
+      // 1. Tạo thumbnail ảnh bìa trước
+      let coverThumb = '';
+      if (coverUrl) {
+        if (/^https?:\/\//i.test(coverUrl)) {
+          coverThumb = coverUrl;
+        } else {
+          coverThumb = await makeCoverThumb(coverUrl, 240, 320, 0.7);
+        }
+      }
+
       const existing = await getNovel(novelId);
       const updated = {
         ...(existing || {}),
         id: novelId,
         title: title.trim(),
         description: description.trim(),
-        coverUrl,
+        coverUrl, // Full ảnh chất lượng cao lưu trong IndexedDB
+        coverThumb,
       };
       await saveNovel(updated);
-      updateLibraryItem(novelId, { title: updated.title, coverUrl: updated.coverUrl });
+      updateLibraryItem(novelId, {
+        title: updated.title,
+        coverThumb,
+        coverUrl: /^https?:\/\//i.test(coverUrl) ? coverUrl : undefined,
+      });
       navigate(`/novel/${novelId}`);
     } catch (err) {
       alert('Lỗi khi lưu: ' + err.message);
@@ -169,7 +185,7 @@ export default function EditNovelPage() {
 
         <div className={styles.actions}>
           <button className="btn-ghost" onClick={() => navigate(-1)}>Hủy</button>
-          <button className="btn-gold" onClick={handleSave} disabled={saving} id="btn-update-novel">
+          <button className="btn-gold" onClick={handleSave} disabled={saving || !title.trim()} id="btn-update-novel">
             {saving ? '⏳ Đang lưu...' : '💾 Cập nhật'}
           </button>
         </div>

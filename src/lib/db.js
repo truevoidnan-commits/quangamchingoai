@@ -3,7 +3,7 @@
  * Stores: novels, chapters
  */
 import { openDB } from 'idb';
-import { getHiddenLibrary } from './storage';
+import { getHiddenLibrary } from './storage.js';
 
 const DB_NAME = 'thien-co-lau';
 const DB_VERSION = 1;

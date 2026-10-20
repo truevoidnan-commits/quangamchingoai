@@ -81,8 +81,8 @@ export default function NovelCard({
         tabIndex={0}
       >
         <div className={styles.listCover}>
-          {novel.coverUrl ? (
-            <img src={novel.coverUrl} alt={novel.title} loading="lazy" />
+          {(novel.coverThumb || novel.coverUrl) ? (
+            <img src={novel.coverThumb || novel.coverUrl} alt={novel.title} loading="lazy" />
           ) : (
             <DefaultCover title={novel.title} />
           )}
@@ -137,8 +137,8 @@ export default function NovelCard({
     >
       {/* Cover */}
       <div className={styles.cover}>
-        {novel.coverUrl ? (
-          <img src={novel.coverUrl} alt={novel.title} className={styles.coverImg} loading="lazy" />
+        {(novel.coverThumb || novel.coverUrl) ? (
+            <img src={novel.coverThumb || novel.coverUrl} alt={novel.title} className={styles.coverImg} loading="lazy" />
         ) : (
           <DefaultCover title={novel.title} />
         )}

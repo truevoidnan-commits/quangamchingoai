@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { nanoid } from '../lib/nanoid';
-import { saveNovel, saveChaptersBulk } from '../lib/db';
+import { saveNovel, saveChaptersBulk, deleteNovelDB } from '../lib/db';
 import { addToLibrary } from '../lib/storage';
-import { parseNovelFile, resizeCoverImage, analyzeChapterSequence } from '../lib/chapterParser';
+import { parseNovelFile, resizeCoverImage, makeCoverThumb, analyzeChapterSequence } from '../lib/chapterParser';
 import Footer from '../components/layout/Footer';
 import ImageCropperModal from '../components/ui/ImageCropperModal';
 import styles from './AddNovelPage.module.css';
@@ -93,21 +93,35 @@ export default function AddNovelPage() {
   }, []);
 
   const handleSave = async () => {
+    if (saving) return;
     if (!title.trim()) {
       alert('Vui lòng nhập tên truyện.');
       return;
     }
     setSaving(true);
     try {
+      // 1. Tạo thumbnail ảnh bìa trước
+      let coverThumb = '';
+      if (coverUrl) {
+        if (/^https?:\/\//i.test(coverUrl)) {
+          coverThumb = coverUrl;
+        } else {
+          coverThumb = await makeCoverThumb(coverUrl, 240, 320, 0.7);
+        }
+      }
+
       const novelId = nanoid();
       const novel = {
         id: novelId,
         title: title.trim(),
         description: description.trim(),
         coverUrl,
+        coverThumb,
         chapterCount: parsedChapters.length,
         createdAt: Date.now(),
+        isHidden: isVaultParam,
       };
+      // 2. Ghi IndexedDB
       await saveNovel(novel);
 
       if (parsedChapters.length > 0) {
@@ -119,13 +133,25 @@ export default function AddNovelPage() {
         await saveChaptersBulk(chapters);
       }
 
-      addToLibrary({
-        id: novelId,
-        title: novel.title,
-        coverUrl: novel.coverUrl,
-        chapterCount: parsedChapters.length,
-        isHidden: isVaultParam,
-      });
+      // 3. Ghi catalog localStorage (kèm rollback nếu lỗi)
+      try {
+        addToLibrary({
+          id: novelId,
+          title: novel.title,
+          coverThumb,
+          coverUrl: /^https?:\/\//i.test(novel.coverUrl) ? novel.coverUrl : undefined,
+          chapterCount: parsedChapters.length,
+          isHidden: isVaultParam,
+        });
+      } catch (catalogErr) {
+        console.error('Lỗi khi ghi danh mục, đang rollback xóa truyện khỏi IndexedDB:', catalogErr);
+        try {
+          await deleteNovelDB(novelId);
+        } catch (delErr) {
+          console.error('Lỗi rollback deleteNovelDB:', delErr);
+        }
+        throw catalogErr;
+      }
 
       navigate(`/novel/${novelId}`);
     } catch (err) {
