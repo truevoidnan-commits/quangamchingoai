@@ -6,6 +6,7 @@ import RealmPreviewVisualizer from '../components/cultivation/RealmPreviewVisual
 import DaoAnhGalleryModal from '../components/cultivation/DaoAnhGalleryModal';
 import TribulationModal from '../components/cultivation/TribulationModal';
 import BreakthroughModal from '../components/cultivation/BreakthroughModal';
+import CultivationBackupModal from '../components/cultivation/CultivationBackupModal';
 import { DaoAnh80Modal, DaoAnhFullModal } from '../components/cultivation/DaoAnhPromptModal';
 import { getRealmDisplayName } from '../lib/cultivation';
 import { findDaoAnhDefinition } from '../lib/daoAnhData';
@@ -31,6 +32,7 @@ export default function CultivationWorkspace() {
   const [mobileTab, setMobileTab] = useState('visualizer'); // 'visualizer' | 'actions' | 'realm'
   const [tribulationModalData, setTribulationModalData] = useState(null);
   const [breakthroughModalData, setBreakthroughModalData] = useState(null);
+  const [backupModalOpen, setBackupModalOpen] = useState(false);
 
   const handleGoToTribulation = () => {
     if (dismissPromptAllDaoAnhFull) dismissPromptAllDaoAnhFull();
@@ -131,6 +133,30 @@ export default function CultivationWorkspace() {
           title="Mở Tàng Bảo Điện (Mệnh Đăng, Bảo Vật Trấn Áp & Túi Đồ)"
         >
           <span>🏛️ TÀNG BẢO ĐIỆN</span>
+        </button>
+        {/* Dedicated Xuất Sao Lưu Tu Vi Button */}
+        <button
+          onClick={() => setBackupModalOpen(true)}
+          style={{
+            marginTop: 8,
+            padding: '8px 12px',
+            borderRadius: 8,
+            background: 'rgba(56, 189, 248, 0.08)',
+            border: '1px solid rgba(56, 189, 248, 0.3)',
+            color: '#38bdf8',
+            fontSize: 11.5,
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            width: '100%',
+            transition: 'all 0.2s ease',
+          }}
+          title="Xuất sao lưu tu vi (Chỉ đọc, tải file JSON hoặc sao chép vào Ghi chú)"
+        >
+          <span>📦 XUẤT SAO LƯU TU VI</span>
         </button>
 
         {/* Quick Tu Linh Tran */}
@@ -244,6 +270,12 @@ export default function CultivationWorkspace() {
         />
       )}
 
+    
+      {/* MODAL XUẤT SAO LƯU TU VI */}
+      <CultivationBackupModal
+        isOpen={backupModalOpen}
+        onClose={() => setBackupModalOpen(false)}
+      />
     </div>
   );
 }

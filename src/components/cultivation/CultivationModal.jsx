@@ -8,11 +8,13 @@ import TribulationModal from './TribulationModal';
 import ArtifactIcon from './ArtifactIcon';
 import DaoAnhAvatarRenderer from './DaoAnhAvatarRenderer';
 import DaoAnhGalleryModal from './DaoAnhGalleryModal';
+import CultivationBackupModal from './CultivationBackupModal';
 import { findDaoAnhDefinition } from '../../lib/daoAnhData';
 import styles from './CultivationModal.module.css';
 
 export default function CultivationModal({ isOpen, onClose }) {
   const [daoAnhGalleryOpen, setDaoAnhGalleryOpen] = useState(false);
+  const [backupModalOpen, setBackupModalOpen] = useState(false);
   const {
     cultivation,
     displayName,
@@ -121,12 +123,37 @@ export default function CultivationModal({ isOpen, onClose }) {
         <div className={styles.realmHeroCard}>
           <div className={styles.realmGlowCircle} />
 
-          <div className={styles.realmBadge}>
-            {cultivation.realm === 'ngung_khi' && 'CẢNH GIỚI: NGƯNG KHÍ'}
-            {cultivation.realm === 'truc_co' && 'CẢNH GIỚI: TRÚC CƠ'}
-            {cultivation.realm === 'kim_dan' && 'CẢNH GIỚI: KIM ĐAN'}
-            {cultivation.realm === 'gia_anh' && 'CẢNH GIỚI: GIẢ ANH'}
-            {cultivation.realm === 'nguyen_anh' && 'CẢNH GIỚI: NGUYÊN ANH'}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 6, zIndex: 2 }}>
+            <div className={styles.realmBadge}>
+              {cultivation.realm === 'ngung_khi' && 'CẢNH GIỚI: NGƯNG KHÍ'}
+              {cultivation.realm === 'truc_co' && 'CẢNH GIỚI: TRÚC CƠ'}
+              {cultivation.realm === 'kim_dan' && 'CẢNH GIỚI: KIM ĐAN'}
+              {cultivation.realm === 'gia_anh' && 'CẢNH GIỚI: GIẢ ANH'}
+              {cultivation.realm === 'nguyen_anh' && 'CẢNH GIỚI: NGUYÊN ANH'}
+              {cultivation.realm === 'linh_tang' && 'CẢNH GIỚI: LINH TÀNG'}
+            </div>
+            <button
+              type="button"
+              onClick={() => setBackupModalOpen(true)}
+              style={{
+                background: 'rgba(56, 189, 248, 0.12)',
+                border: '1px solid rgba(56, 189, 248, 0.35)',
+                color: '#7dd3fc',
+                borderRadius: 6,
+                padding: '4px 10px',
+                fontSize: 11.5,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                transition: 'all 0.2s',
+              }}
+              title="Xuất sao lưu tu vi (Chỉ đọc, an toàn 100%)"
+            >
+              <span>📦</span>
+              <span>Sao Lưu Tu Vi</span>
+            </button>
           </div>
 
           <h2 className={styles.realmTitle}>{displayName}</h2>
@@ -1373,6 +1400,10 @@ export default function CultivationModal({ isOpen, onClose }) {
       <DaoAnhGalleryModal
         isOpen={daoAnhGalleryOpen}
         onClose={() => setDaoAnhGalleryOpen(false)}
+      />
+      <CultivationBackupModal
+        isOpen={backupModalOpen}
+        onClose={() => setBackupModalOpen(false)}
       />
     </BottomSheet>
   );

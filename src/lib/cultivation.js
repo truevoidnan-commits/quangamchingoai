@@ -20,6 +20,33 @@
  * - LƯU Ý: Một khi chọn hấp thụ thì KHÔNG HOÀN TRẢ!
  */
 
+export const ACTIVE_PROFILE_KEY = 'tcl_active_profile';
+
+export function getActiveProfile() {
+  try {
+    const p = localStorage.getItem(ACTIVE_PROFILE_KEY);
+    return p === 'sandbox' ? 'sandbox' : 'real';
+  } catch {
+    return 'real';
+  }
+}
+
+export function setActiveProfile(profile) {
+  const target = profile === 'sandbox' ? 'sandbox' : 'real';
+  try {
+    localStorage.setItem(ACTIVE_PROFILE_KEY, target);
+  } catch {}
+  return target;
+}
+
+export function getCultivationKey(type = 'state', profile = getActiveProfile()) {
+  const isSandbox = profile === 'sandbox';
+  if (type === 'pending_seconds') {
+    return isSandbox ? 'cultivation_pending_seconds__sandbox' : 'cultivation_pending_seconds';
+  }
+  return isSandbox ? 'tcl_cultivation_state_v3__sandbox' : 'tcl_cultivation_state_v3';
+}
+
 const CULTIVATION_KEY = 'tcl_cultivation_state_v3';
 
 export const MIN_EXP_PER_CYCLE = 50; // Random từ 50 đến 100 Tu Vi mỗi chu kỳ 60s
@@ -570,7 +597,7 @@ export function getDaoAnhTheme(daoAnh, state) {
  */
 export function getCultivationState() {
   try {
-    const raw = localStorage.getItem(CULTIVATION_KEY);
+    const raw = localStorage.getItem(getCultivationKey('state'));
     if (!raw) return DEFAULT_STATE;
     const parsed = JSON.parse(raw);
     const state = { ...DEFAULT_STATE, ...parsed };
@@ -789,7 +816,7 @@ export function getCultivationState() {
       if (parsed.pityReadingCycles !== 0) {
         state.pityReadingCycles = 0;
         try {
-          localStorage.setItem(CULTIVATION_KEY, JSON.stringify(state));
+          localStorage.setItem(getCultivationKey('state'), JSON.stringify(state));
         } catch (_) {}
       } else {
         state.pityReadingCycles = 0;
@@ -817,7 +844,7 @@ export function getCultivationState() {
  */
 export function saveCultivationState(state) {
   try {
-    localStorage.setItem(CULTIVATION_KEY, JSON.stringify(state));
+    localStorage.setItem(getCultivationKey('state'), JSON.stringify(state));
     window.dispatchEvent(new CustomEvent('cultivation_updated', { detail: state }));
   } catch (err) {}
 }

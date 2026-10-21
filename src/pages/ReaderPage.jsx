@@ -5,6 +5,7 @@ import { getReadingProgress, saveReadingProgress } from '../lib/storage';
 import { useReadingSettings } from '../hooks/useReadingSettings';
 import { READING_THEMES, FONT_OPTIONS } from '../hooks/useReadingSettings';
 import { useCultivation } from '../hooks/useCultivation';
+import { getCultivationKey } from '../lib/cultivation';
 import CultivationModal from '../components/cultivation/CultivationModal';
 import BreakthroughModal from '../components/cultivation/BreakthroughModal';
 import TableOfContents from '../components/reader/TableOfContents';
@@ -274,11 +275,11 @@ export default function ReaderPage() {
   }, [chapter?.id, loading, activeNovelId, searchKeyword]);
 
   // Chu kỳ ngộ đạo 60s lặp lại liên tục (cứ 60s tăng tu vi âm thầm & bắt đầu vòng mới)
-  const [cycleSeconds, setCycleSeconds] = useState(() => { const saved = localStorage.getItem('cultivation_pending_seconds'); return saved && !isNaN(parseInt(saved, 10)) ? parseInt(saved, 10) : 0; });
+  const [cycleSeconds, setCycleSeconds] = useState(() => { const saved = localStorage.getItem(getCultivationKey('pending_seconds')); return saved && !isNaN(parseInt(saved, 10)) ? parseInt(saved, 10) : 0; });
 
   // Lưu lại thời gian ngộ đạo vào localStorage để không bị mất khi thoát trang
   useEffect(() => {
-    localStorage.setItem('cultivation_pending_seconds', cycleSeconds.toString());
+    localStorage.setItem(getCultivationKey('pending_seconds'), cycleSeconds.toString());
   }, [cycleSeconds]);
 
   // Reset timer on chapter change & save reading progress (KHÔNG đè scrollTop = 0 lên vị trí đang đọc)
