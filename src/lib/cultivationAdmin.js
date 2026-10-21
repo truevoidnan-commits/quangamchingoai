@@ -603,14 +603,45 @@ export function importSandboxJSON(jsonStr) {
     throw new Error('Dữ liệu JSON phải là một đối tượng (Object) hợp lệ.');
   }
 
-  parsed.logs = [
+  // 1. Nhận diện định dạng: file sao lưu bọc ({ profile, exportedAt, pending, state })
+  // hoặc định dạng state trực tiếp
+  let targetState;
+  let targetPending = null;
+
+  if (parsed.state && typeof parsed.state === 'object' && !Array.isArray(parsed.state)) {
+    targetState = { ...parsed.state };
+    if (typeof parsed.pending === 'number' && !isNaN(parsed.pending)) {
+      targetPending = parsed.pending;
+    }
+  } else {
+    targetState = { ...parsed };
+    if (typeof targetState.pending === 'number' && !isNaN(targetState.pending)) {
+      targetPending = targetState.pending;
+    }
+  }
+
+  // 2. Kiểm tra tính hợp lệ của state: bắt buộc có realm (chuỗi) và totalExp (số)
+  if (!targetState.realm || typeof targetState.realm !== 'string') {
+    throw new Error('Dữ liệu không hợp lệ: Thiếu trường cảnh giới (realm) hoặc realm không phải là chuỗi hợp lệ.');
+  }
+  if (typeof targetState.totalExp !== 'number' || isNaN(targetState.totalExp)) {
+    throw new Error('Dữ liệu không hợp lệ: Thiếu trường tu vi (totalExp) hoặc totalExp không phải là số hợp lệ.');
+  }
+
+  // 3. Nếu có trường pending (số), ghi nhận vào pending_seconds của sandbox
+  if (targetPending !== null) {
+    localStorage.setItem(getCultivationKey('pending_seconds', 'sandbox'), targetPending.toString());
+  }
+
+  // 4. Bổ sung nhật ký nạp dữ liệu Sandbox
+  targetState.logs = [
     {
       text: `🛠️ [ADMIN SANDBOX] Đã nạp dữ liệu từ file JSON bên ngoài.`,
       time: Date.now(),
     },
-    ...(parsed.logs || []),
+    ...(targetState.logs || []),
   ];
 
-  saveCultivationState(parsed);
-  return parsed;
+  saveCultivationState(targetState);
+  return targetState;
 }

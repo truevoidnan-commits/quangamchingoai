@@ -198,7 +198,21 @@ export default function AdminSandboxModal({ isOpen, onClose }) {
       showFeedback('Vui lòng dán chuỗi JSON vào ô văn bản trước khi nạp.', 'error');
       return;
     }
-    if (!window.confirm('Nạp cấu hình JSON này vào Hồ Sơ Thử Nghiệm?')) return;
+
+    let parsedPreview;
+    try {
+      parsedPreview = JSON.parse(jsonInput);
+    } catch (err) {
+      showFeedback('Cú pháp JSON không hợp lệ: ' + err.message, 'error');
+      return;
+    }
+
+    let confirmMsg = 'Nạp cấu hình JSON này vào Hồ Sơ Thử Nghiệm?';
+    if (parsedPreview && parsedPreview.profile === 'real') {
+      confirmMsg = 'Đây là bản sao lưu hồ sơ Thật, nạp vào Sandbox (không ảnh hưởng hồ sơ Thật)?';
+    }
+
+    if (!window.confirm(confirmMsg)) return;
 
     try {
       importSandboxJSON(jsonInput);
