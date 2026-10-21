@@ -326,14 +326,14 @@ export const LIFE_LAMPS = [
     poem: 'Thiên mệnh sở quy, vạn kiếp bất hủ.',
   },
   {
-    id: 'cuu_khieu_linh_lung',
-    name: 'Cửu Khiếu Linh Lung Đăng',
-    shortName: 'Linh Lung Đăng',
+    id: 'hoang_tuyen_bi_ngan',
+    name: 'Hoàng Tuyền Bỉ Ngạn Đăng',
+    shortName: 'Bỉ Ngạn Đăng',
     tier: 'than_pham',
-    icon: '💎',
+    icon: '🌺',
     color: '#ef4444',
-    desc: 'Đèn ngọc chín khiếu phát ra ánh sáng thất sắc thông thiên, giúp thần thức thấu suốt tam giới không góc khuất.',
-    poem: 'Cửu khiếu linh lung, đắc ngộ đại đạo.',
+    desc: 'Ngọn đèn thắp sáng bờ Vong Xuyên u minh, hoa bỉ ngạn nở rộ dẫn lối u hồn, trấn định sinh tử vạn kiếp bất diệt.',
+    poem: 'Hoàng tuyền bỉ ngạn, hoa khai vô lệ.',
   },
   {
     id: 'thien_dao_chi_ton',
@@ -399,7 +399,7 @@ export const SUPPRESSING_ARTIFACTS = [
   { id: 'mac_sat_tien_phach', name: 'Mặc Sát Tiên Phách', shortName: 'Mặc Sát Phách', tier: 'than_pham', type: 'Tuyệt Thế Sát Phách', icon: '⚔️', color: '#ef4444', desc: 'Hồn phách ngưng kết từ hắc ám sát khí thượng cổ của tiên nhân, chém tan mọi tà niệm ma chướng trong đan điện.', poem: 'Mặc sát nhất kiếm, tiên phách vô song.' },
   { id: 'huyen_hoang_diet_the_bien', name: 'Huyền Hoàng Diệt Thế Biến', shortName: 'Diệt Thế Biến', tier: 'than_pham', type: 'Huyền Hoàng Tuyệt Kỹ', icon: '🌍', color: '#ef4444', desc: 'Khí Huyền Hoàng hủy thiên diệt địa dung hợp vào thân thể, mang sức mạnh nghiền nát tinh cầu.', poem: 'Huyền hoàng biến ảo, diệt thế trùng sinh.' },
   { id: 'am_duong_hon_don_nguyen_can', name: 'Âm Dương Hỗn Độn Nguyên Căn', shortName: 'Hỗn Độn Nguyên Căn', tier: 'than_pham', type: 'Tiên Thiên Đạo Căn', icon: '☯️', color: '#ef4444', desc: 'Gốc rễ đạo căn sinh ra từ khí hỗn độn âm dương sơ khai, cung cấp linh nguyên bất tận cho thiên cung.', poem: 'Âm dương hỗn độn, đạo căn vĩnh hằng.' },
-  { id: 'luc_dao_luan_hoi_tien_can', name: 'Lục Đạo Luân Hồi Tiên Căn', shortName: 'Luân Hồi Tiên Căn', tier: 'than_pham', type: 'Luân Hồi Thần Vật', icon: '🏛️', color: '#ef4444', desc: 'Tiên căn nắm giữ bí mật sáu cõi luân hồi, giúp tu sĩ vĩnh viễn không bị thoái lui cảnh giới.', poem: 'Lục đạo tiên căn, vạn kiếp bất diệt.' },
+  { id: 'de_kiem', name: 'Đế Kiếm', shortName: 'Đế Kiếm', tier: 'than_pham', type: 'Chí Tôn Đế Binh', icon: '🗡️', color: '#ef4444', desc: 'Thanh kiếm chí tôn của Chấp Kiếm Đại Đế, trên thân khắc họa Nhật Nguyệt Sơn Hà cùng thệ ước nhân tộc, Bạch Kim Thần Long quấn quanh chém tan dị tộc và trấn áp Thần Linh tàn diện.', poem: 'Đế kiếm xuất vỏ, chư thiên thần phục.' },
   { id: 'tam_sinh_luan_hoi_an', name: 'Tam Sinh Luân Hồi Ấn', shortName: 'Tam Sinh Ấn', tier: 'than_pham', type: 'Luân Hồi Chí Bảo', icon: '🔱', color: '#ef4444', desc: 'Con dấu luân hồi kết tinh từ nhân quả ba đời tiền kiếp - hiện thế - tương lai, trấn định linh hồn tuyệt đối.', poem: 'Tam sinh ấn tích, định đoạn tiền trần.' },
   { id: 'tran_nguc_minh_vuong_the', name: 'Trấn Ngục Minh Vương Thể', shortName: 'Minh Vương Thể', tier: 'than_pham', type: 'Chí Tôn Thể Thuật', icon: '🥋', color: '#ef4444', desc: 'Thể chất thần thoại trấn áp vạn ngục u minh, thể phách kiên cố bất hoại trước lôi kiếp tam tai.', poem: 'Minh vương trấn ngục, vạn ma phủ phục.' },
   { id: 'thai_so_than_vuong_the', name: 'Thái Sơ Thần Vương Thể', shortName: 'Thần Vương Thể', tier: 'than_pham', type: 'Thần Vương Đạo Thể', icon: '👑', color: '#ef4444', desc: 'Thần thể tối thượng của Thần Vương thời Thái Sơ, mỗi bước đi chấn động mười phương tinh không.', poem: 'Thái sơ thần vương, ngạo thị chư thiên.' },
@@ -593,6 +593,225 @@ export function getDaoAnhTheme(daoAnh, state) {
 /**
  * Lấy state tu vi từ LocalStorage
  */
+export const LEGACY_ITEM_MAP = {
+  artifacts: { luc_dao_luan_hoi_tien_can: 'de_kiem' },
+  lamps: { cuu_khieu_linh_lung: 'hoang_tuyen_bi_ngan' },
+};
+
+/**
+ * Tự động chuyển đổi dữ liệu cũ (Legacy Items Migration)
+ * - cuu_khieu_linh_lung -> hoang_tuyen_bi_ngan
+ * - luc_dao_luan_hoi_tien_can -> de_kiem
+ */
+export function migrateLegacyItems(state) {
+  let hasChanged = false;
+  const convertedOldNames = [];
+  const convertedNewNames = [];
+
+  const recordConversion = (oldName, newName) => {
+    hasChanged = true;
+    if (oldName && !convertedOldNames.includes(oldName)) {
+      convertedOldNames.push(oldName);
+      convertedNewNames.push(newName);
+    }
+  };
+
+  const deKiemDef = (SUPPRESSING_ARTIFACTS || []).find(a => a.id === 'de_kiem');
+  const hoangTuyenDef = (LIFE_LAMPS || []).find(l => l.id === 'hoang_tuyen_bi_ngan');
+
+  // 1. inventoryArtifacts
+  if (Array.isArray(state.inventoryArtifacts)) {
+    state.inventoryArtifacts = state.inventoryArtifacts.map(art => {
+      if (typeof art === 'string' && art === 'luc_dao_luan_hoi_tien_can') {
+        recordConversion('Lục Đạo Luân Hồi Tiên Căn', 'Đế Kiếm');
+        return 'de_kiem';
+      }
+      if (art && typeof art === 'object' && art.id === 'luc_dao_luan_hoi_tien_can') {
+        recordConversion(art.name || 'Lục Đạo Luân Hồi Tiên Căn', deKiemDef ? deKiemDef.name : 'Đế Kiếm');
+        return {
+          ...art,
+          id: 'de_kiem',
+          name: deKiemDef?.name || 'Đế Kiếm',
+          shortName: deKiemDef?.shortName || 'Đế Kiếm',
+          tier: deKiemDef?.tier || 'than_pham',
+          type: deKiemDef?.type || 'Chí Tôn Đế Binh',
+          icon: deKiemDef?.icon || '🗡️',
+          color: deKiemDef?.color || '#ef4444',
+          desc: deKiemDef?.desc || art.desc,
+          poem: deKiemDef?.poem || art.poem,
+        };
+      }
+      return art;
+    });
+  }
+
+  // 2. inventoryLamps
+  if (Array.isArray(state.inventoryLamps)) {
+    state.inventoryLamps = state.inventoryLamps.map(lamp => {
+      if (typeof lamp === 'string' && lamp === 'cuu_khieu_linh_lung') {
+        recordConversion('Cửu Khiếu Linh Lung Đăng', 'Hoàng Tuyền Bỉ Ngạn Đăng');
+        return 'hoang_tuyen_bi_ngan';
+      }
+      if (lamp && typeof lamp === 'object' && lamp.id === 'cuu_khieu_linh_lung') {
+        recordConversion(lamp.name || 'Cửu Khiếu Linh Lung Đăng', hoangTuyenDef ? hoangTuyenDef.name : 'Hoàng Tuyền Bỉ Ngạn Đăng');
+        return {
+          ...lamp,
+          id: 'hoang_tuyen_bi_ngan',
+          name: hoangTuyenDef?.name || 'Hoàng Tuyền Bỉ Ngạn Đăng',
+          shortName: hoangTuyenDef?.shortName || 'Bỉ Ngạn Đăng',
+          tier: hoangTuyenDef?.tier || 'than_pham',
+          icon: hoangTuyenDef?.icon || '🌺',
+          color: hoangTuyenDef?.color || '#ef4444',
+          desc: hoangTuyenDef?.desc || lamp.desc,
+          poem: hoangTuyenDef?.poem || lamp.poem,
+        };
+      }
+      return lamp;
+    });
+  }
+
+  // 3. absorbedLamps
+  if (Array.isArray(state.absorbedLamps)) {
+    state.absorbedLamps = state.absorbedLamps.map(lId => {
+      if (lId === 'cuu_khieu_linh_lung') {
+        recordConversion('Cửu Khiếu Linh Lung Đăng', 'Hoàng Tuyền Bỉ Ngạn Đăng');
+        return 'hoang_tuyen_bi_ngan';
+      }
+      return lId;
+    });
+  }
+
+  // 4. palaceAnchors
+  if (state.palaceAnchors && typeof state.palaceAnchors === 'object') {
+    for (const [pIdx, anchor] of Object.entries(state.palaceAnchors)) {
+      if (typeof anchor === 'string' && anchor === 'luc_dao_luan_hoi_tien_can') {
+        recordConversion('Lục Đạo Luân Hồi Tiên Căn', 'Đế Kiếm');
+        state.palaceAnchors[pIdx] = 'de_kiem';
+      } else if (anchor && typeof anchor === 'object' && anchor.id === 'luc_dao_luan_hoi_tien_can') {
+        recordConversion(anchor.name || 'Lục Đạo Luân Hồi Tiên Căn', deKiemDef ? deKiemDef.name : 'Đế Kiếm');
+        anchor.id = 'de_kiem';
+        anchor.name = deKiemDef?.name || 'Đế Kiếm';
+        anchor.shortName = deKiemDef?.shortName || 'Đế Kiếm';
+        anchor.type = deKiemDef?.type || 'Chí Tôn Đế Binh';
+        anchor.tier = deKiemDef?.tier || 'than_pham';
+        anchor.icon = deKiemDef?.icon || '🗡️';
+        anchor.color = deKiemDef?.color || '#ef4444';
+        if (anchor.palaceName === 'Lục Đạo Luân Hồi Cung' || !anchor.palaceName) {
+          anchor.palaceName = 'Đế Kiếm Cung';
+        }
+      } else if (anchor && typeof anchor === 'object' && anchor.id === 'cuu_khieu_linh_lung') {
+        recordConversion(anchor.name || 'Cửu Khiếu Linh Lung Đăng', 'Hoàng Tuyền Bỉ Ngạn Đăng');
+        anchor.id = 'hoang_tuyen_bi_ngan';
+        anchor.name = hoangTuyenDef?.name || 'Hoàng Tuyền Bỉ Ngạn Đăng';
+        anchor.shortName = hoangTuyenDef?.shortName || 'Bỉ Ngạn Đăng';
+        if (anchor.palaceName === 'Cửu Khiếu Linh Lung Cung' || !anchor.palaceName) {
+          anchor.palaceName = 'Hoàng Tuyền Bỉ Ngạn Cung';
+        }
+      }
+    }
+  }
+
+  // 5. daoAnhs
+  if (Array.isArray(state.daoAnhs)) {
+    for (const da of state.daoAnhs) {
+      if (!da) continue;
+      if (
+        da.sourceId === 'cuu_khieu_linh_lung' ||
+        da.lampId === 'cuu_khieu_linh_lung' ||
+        da.artifactId === 'cuu_khieu_linh_lung' ||
+        da.id === 'da_cuu_khieu_linh_lung' ||
+        da.id === 'da_3_cuu_khieu'
+      ) {
+        recordConversion(da.name || 'Cửu Khiếu Linh Lung Đạo Anh', 'Hoàng Tuyền Bỉ Ngạn Đạo Anh');
+        if (da.sourceId === 'cuu_khieu_linh_lung') da.sourceId = 'hoang_tuyen_bi_ngan';
+        if (da.lampId === 'cuu_khieu_linh_lung') da.lampId = 'hoang_tuyen_bi_ngan';
+        if (da.artifactId === 'cuu_khieu_linh_lung') da.artifactId = 'hoang_tuyen_bi_ngan';
+        if (da.id === 'da_cuu_khieu_linh_lung') da.id = 'da_hoang_tuyen_bi_ngan';
+        if (da.id === 'da_3_cuu_khieu') da.id = 'da_3_hoang_tuyen';
+        da.name = 'Hoàng Tuyền Bỉ Ngạn Đạo Anh';
+        da.palaceName = 'Hoàng Tuyền Bỉ Ngạn Cung';
+        if (da.element === 'Thất Sắc Thần Thể' || (da.element && da.element.includes('Cửu Khiếu'))) {
+          da.element = 'U Minh Thần Thể';
+        }
+      } else if (
+        da.sourceId === 'luc_dao_luan_hoi_tien_can' ||
+        da.artifactId === 'luc_dao_luan_hoi_tien_can' ||
+        da.lampId === 'luc_dao_luan_hoi_tien_can' ||
+        da.id === 'da_luc_dao_luan_hoi_tien_can'
+      ) {
+        recordConversion(da.name || 'Luân Hồi Tiên Căn Đạo Anh', 'Đế Kiếm Đạo Anh');
+        if (da.sourceId === 'luc_dao_luan_hoi_tien_can') da.sourceId = 'de_kiem';
+        if (da.artifactId === 'luc_dao_luan_hoi_tien_can') da.artifactId = 'de_kiem';
+        if (da.lampId === 'luc_dao_luan_hoi_tien_can') da.lampId = 'de_kiem';
+        if (da.id === 'da_luc_dao_luan_hoi_tien_can') da.id = 'da_de_kiem';
+        da.name = 'Đế Kiếm Đạo Anh';
+        da.palaceName = 'Đế Kiếm Cung';
+        if (da.element && (da.element.includes('Luân Hồi Tiên Căn') || da.element.includes('Lục Đạo'))) {
+          da.element = 'Chí Tôn Kiếm Thể';
+        }
+      }
+    }
+  }
+
+  // 6. linhTangs
+  if (Array.isArray(state.linhTangs)) {
+    for (const t of state.linhTangs) {
+      if (!t) continue;
+      if (
+        t.sourceLampId === 'cuu_khieu_linh_lung' ||
+        t.lampId === 'cuu_khieu_linh_lung' ||
+        t.assignedLampId === 'cuu_khieu_linh_lung' ||
+        t.artId === 'cuu_khieu_linh_lung' ||
+        t.sourceDaoAnhId === 'da_cuu_khieu_linh_lung' ||
+        t.sourceDaoAnhId === 'da_3_cuu_khieu'
+      ) {
+        recordConversion('Cửu Khiếu Linh Lung', 'Hoàng Tuyền Bỉ Ngạn');
+        if (t.sourceLampId === 'cuu_khieu_linh_lung') t.sourceLampId = 'hoang_tuyen_bi_ngan';
+        if (t.lampId === 'cuu_khieu_linh_lung') t.lampId = 'hoang_tuyen_bi_ngan';
+        if (t.assignedLampId === 'cuu_khieu_linh_lung') t.assignedLampId = 'hoang_tuyen_bi_ngan';
+        if (t.artId === 'cuu_khieu_linh_lung') t.artId = 'hoang_tuyen_bi_ngan';
+        if (t.sourceDaoAnhId === 'da_cuu_khieu_linh_lung') t.sourceDaoAnhId = 'da_hoang_tuyen_bi_ngan';
+        if (t.sourceDaoAnhId === 'da_3_cuu_khieu') t.sourceDaoAnhId = 'da_3_hoang_tuyen';
+        if (t.sourceDaoAnhName) t.sourceDaoAnhName = t.sourceDaoAnhName.replace(/Cửu Khiếu Linh Lung/g, 'Hoàng Tuyền Bỉ Ngạn');
+        if (t.name) t.name = t.name.replace(/Cửu Khiếu Linh Lung/g, 'Hoàng Tuyền Bỉ Ngạn');
+        if (t.originName) t.originName = t.originName.replace(/Cửu Khiếu Linh Lung/g, 'Hoàng Tuyền Bỉ Ngạn');
+      }
+      if (
+        t.sourceArtifactId === 'luc_dao_luan_hoi_tien_can' ||
+        t.artifactId === 'luc_dao_luan_hoi_tien_can' ||
+        t.artId === 'luc_dao_luan_hoi_tien_can' ||
+        t.sourceDaoAnhId === 'da_luc_dao_luan_hoi_tien_can'
+      ) {
+        recordConversion('Lục Đạo Luân Hồi Tiên Căn', 'Đế Kiếm');
+        if (t.sourceArtifactId === 'luc_dao_luan_hoi_tien_can') t.sourceArtifactId = 'de_kiem';
+        if (t.artifactId === 'luc_dao_luan_hoi_tien_can') t.artifactId = 'de_kiem';
+        if (t.artId === 'luc_dao_luan_hoi_tien_can') t.artId = 'de_kiem';
+        if (t.sourceDaoAnhId === 'da_luc_dao_luan_hoi_tien_can') t.sourceDaoAnhId = 'da_de_kiem';
+        if (t.sourceDaoAnhName) t.sourceDaoAnhName = t.sourceDaoAnhName.replace(/Luân Hồi Tiên Căn|Lục Đạo Luân Hồi Tiên Căn/g, 'Đế Kiếm');
+        if (t.name && (t.name.includes('Tiên Căn') || t.sourceArtifactId === 'de_kiem')) {
+          t.name = t.name.replace(/Luân Hồi Tiên Căn|Lục Đạo Luân Hồi Tiên Căn/g, 'Đế Kiếm');
+        }
+        if (t.originName && (t.originName.includes('Tiên Căn') || t.sourceArtifactId === 'de_kiem')) {
+          t.originName = t.originName.replace(/Luân Hồi Tiên Căn|Lục Đạo Luân Hồi Tiên Căn/g, 'Đế Kiếm');
+        }
+      }
+    }
+  }
+
+  if (hasChanged) {
+    if (!state.logs) state.logs = [];
+    const oldText = convertedOldNames.join(', ');
+    const newText = convertedNewNames.join(', ');
+    state.logs.unshift({
+      text: `Thần vật ${oldText} đã hóa thành ${newText}`,
+      time: Date.now(),
+    });
+    saveCultivationState(state);
+  }
+
+  return hasChanged;
+}
+
 export function getCultivationState() {
   try {
     const raw = localStorage.getItem(getCultivationKey('state'));
@@ -601,6 +820,9 @@ export function getCultivationState() {
     const state = { ...DEFAULT_STATE, ...parsed };
     if (typeof state._rev !== 'number' || isNaN(state._rev)) state._rev = 0;
     if (typeof state._updatedAt !== 'number' || isNaN(state._updatedAt)) state._updatedAt = 0;
+
+    // Tự động chuyển đổi dữ liệu cũ (Legacy Items Migration)
+    migrateLegacyItems(state);
 
     if (!state.linhTangs) state.linhTangs = [];
     if (!state.assignedHuyenLo) state.assignedHuyenLo = {};
@@ -850,7 +1072,9 @@ export function saveCultivationState(state) {
     state._rev = currentRev + 1;
     state._updatedAt = Date.now();
     localStorage.setItem(getCultivationKey('state'), JSON.stringify(state));
-    window.dispatchEvent(new CustomEvent('cultivation_updated', { detail: state }));
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('cultivation_updated', { detail: state }));
+    }
   } catch (err) {}
 }
 
@@ -2018,7 +2242,7 @@ export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = 
     'mac_sat_tien_phach': 'Mặc Sát Tiên Phách Cung',
     'huyen_hoang_diet_the_bien': 'Huyền Hoàng Diệt Thế Cung',
     'am_duong_hon_don_nguyen_can': 'Âm Dương Hỗn Độn Cung',
-    'luc_dao_luan_hoi_tien_can': 'Lục Đạo Luân Hồi Cung',
+    'de_kiem': 'Đế Kiếm Cung',
     'tam_sinh_luan_hoi_an': 'Tam Sinh Luân Hồi Cung',
     'tran_nguc_minh_vuong_the': 'Trấn Ngục Minh Vương Cung',
     'thai_so_than_vuong_the': 'Thái Sơ Thần Vương Cung',
@@ -3459,7 +3683,8 @@ export function getProminentDaoAnhs(daoAnhs, count = 5) {
   const PRIORITY_ID_MAP = {
     thien_dao_chi_ton: 100000,
     khoi_nguyen_thoi_khong: 95000,
-    luc_dao_luan_hoi_tien_can: 90000,
+    hoang_tuyen_bi_ngan: 90000,
+    de_kiem: 88000,
     am_duong_hon_don_nguyen_can: 85000,
     hong_mong_bat_diet: 80000,
     toi_cao_thien_menh: 75000,

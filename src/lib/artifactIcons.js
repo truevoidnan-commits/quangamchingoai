@@ -21,7 +21,6 @@ export const THAN_PHAM_AI_ICONS = {
   mac_sat_tien_phach:           bundledIcons['art_mac_sat_tien_phach'] || '',
   huyen_hoang_diet_the_bien:    bundledIcons['art_huyen_hoang_diet_the_bien'] || '',
   am_duong_hon_don_nguyen_can:  bundledIcons['art_am_duong_hon_don_nguyen_can'] || '',
-  luc_dao_luan_hoi_tien_can:    bundledIcons['art_luc_dao_luan_hoi_tien_can'] || '',
   tam_sinh_luan_hoi_an:         bundledIcons['art_tam_sinh_luan_hoi_an'] || '',
   tran_nguc_minh_vuong_the:     bundledIcons['art_tran_nguc_minh_vuong_the'] || '',
   thai_so_than_vuong_the:       bundledIcons['art_thai_so_than_vuong_the'] || '',
@@ -37,6 +36,7 @@ export const THAN_PHAM_AI_ICONS = {
   tam_thu_dao:                  bundledIcons['art_tam_thu_dao'] || '',
   thuong_thuong_hac_huyet:      bundledIcons['art_thuong_thuong_hac_huyet'] || '',
   diet_the_loi_viem_dong:       bundledIcons['art_diet_the_loi_viem_dong'] || '',
+  de_kiem:                      bundledIcons['art_de_kiem'] || '',
 };
 
 /** Map of Thần Phẩm Life Lamp IDs to bundled JPG icons (18 Chí Tôn Mệnh Đăng) */
@@ -53,7 +53,7 @@ export const LAMP_THAN_PHAM_AI_ICONS = {
   khoi_nguyen_thoi_khong:       bundledIcons['lamp_khoi_nguyen_thoi_khong'] || '',
   tinh_ha_dich_dao:             bundledIcons['lamp_tinh_ha_dich_dao'] || '',
   toi_cao_thien_menh:           bundledIcons['lamp_toi_cao_thien_menh'] || '',
-  cuu_khieu_linh_lung:          bundledIcons['lamp_cuu_khieu_linh_lung'] || '',
+  hoang_tuyen_bi_ngan:          bundledIcons['lamp_hoang_tuyen_bi_ngan'] || '',
   thien_dao_chi_ton:            bundledIcons['lamp_thien_dao_chi_ton'] || '',
   nguyen_gioi_hon_co:           bundledIcons['lamp_nguyen_gioi_hon_co'] || '',
   cam_ky_cuc_dao:               bundledIcons['lamp_cam_ky_cuc_dao'] || '',

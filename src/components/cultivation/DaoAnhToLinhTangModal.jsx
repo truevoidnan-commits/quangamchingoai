@@ -67,11 +67,13 @@ export default function DaoAnhToLinhTangModal({
     const nameLower = (da.name || '').toLowerCase();
     if (nameLower.includes('thiên đạo')) return LAMP_THAN_PHAM_AI_ICONS['thien_dao_chi_ton'] || '';
     if (nameLower.includes('thời không')) return LAMP_THAN_PHAM_AI_ICONS['khoi_nguyen_thoi_khong'] || '';
-    if (nameLower.includes('luân hồi')) return LAMP_THAN_PHAM_AI_ICONS['luc_dao_luan_hoi_tien_can'] || '';
+    if (nameLower.includes('hoàng tuyền') || nameLower.includes('bỉ ngạn')) return LAMP_THAN_PHAM_AI_ICONS['hoang_tuyen_bi_ngan'] || '';
+    if (nameLower.includes('đế kiếm')) return THAN_PHAM_AI_ICONS['de_kiem'] || '';
+    if (nameLower.includes('luân hồi')) return THAN_PHAM_AI_ICONS['tam_sinh_luan_hoi_an'] || '';
     if (nameLower.includes('hỗn độn')) return THAN_PHAM_AI_ICONS['am_duong_hon_don_nguyen_can'] || '';
     if (nameLower.includes('hồng mông')) return LAMP_THAN_PHAM_AI_ICONS['hong_mong_bat_diet'] || '';
     if (nameLower.includes('tạo hóa')) return THAN_PHAM_AI_ICONS['tao_hoa_ngoc_diep'] || '';
-    if (nameLower.includes('kiếm')) return THAN_PHAM_AI_ICONS['thao_tu_kiem_quyet'] || '';
+    if (nameLower.includes('kiếm')) return THAN_PHAM_AI_ICONS['de_kiem'] || THAN_PHAM_AI_ICONS['thao_tu_kiem_quyet'] || '';
     return THAN_PHAM_AI_ICONS['tam_sinh_luan_hoi_an'] || '';
   };
 

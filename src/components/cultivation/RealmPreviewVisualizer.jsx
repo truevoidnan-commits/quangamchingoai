@@ -4549,7 +4549,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                     // MAPPING ẢNH GEN AI
                     const lampGenMap = {
-                      'cuu_chuyen_luan_hoi': getAssetUrl('icons/than_pham/lamp_cuu_chuyen_luan_hoi.jpg'),
+                      'hoang_tuyen_bi_ngan': getAssetUrl('icons/than_pham/lamp_hoang_tuyen_bi_ngan.jpg'),
+          'cuu_chuyen_luan_hoi': getAssetUrl('icons/than_pham/lamp_cuu_chuyen_luan_hoi.jpg'),
                       'hon_don_so_khai': getAssetUrl('icons/than_pham/lamp_hon_don_so_khai.jpg'),
                       'hong_mong_bat_diet': getAssetUrl('icons/than_pham/lamp_hong_mong_bat_diet.jpg'),
                       'khoi_nguyen_thoi_khong': getAssetUrl('icons/than_pham/lamp_khoi_nguyen_thoi_khong.jpg'),
@@ -5541,7 +5542,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           'hong_tran_ngung_vong_anh_hao_nguyet': getAssetUrl('icons/than_pham/art_hong_tran_ngung_vong_anh_hao_nguyet.jpg'),
           'huyen_hoang_diet_the_bien': getAssetUrl('icons/than_pham/art_huyen_hoang_diet_the_bien.jpg'),
           'kim_o_luyen_van_linh': getAssetUrl('icons/than_pham/art_kim_o_luyen_van_linh.jpg'),
-          'luc_dao_luan_hoi_tien_can': getAssetUrl('icons/than_pham/art_luc_dao_luan_hoi_tien_can.jpg'),
+          'de_kiem': getAssetUrl('icons/than_pham/art_de_kiem.jpg'),
           'mac_sat_tien_phach': getAssetUrl('icons/than_pham/art_mac_sat_tien_phach.jpg'),
           'ngu_hanh_dai_dong_thien': getAssetUrl('icons/than_pham/art_ngu_hanh_dai_dong_thien.jpg'),
           'nguyen_gioi_hon_co': getAssetUrl('icons/than_pham/art_nguyen_gioi_hon_co.jpg'),

@@ -162,7 +162,7 @@ export function applyRealmPreset(presetId) {
   const baseLamps = [
     'thien_dao_chi_ton',
     'khoi_nguyen_thoi_khong',
-    'cuu_khieu_linh_lung',
+    'hoang_tuyen_bi_ngan',
     'am_duong_hon_don_nguyen_can',
     'hong_mong_bat_diet',
   ];
@@ -201,13 +201,13 @@ export function applyRealmPreset(presetId) {
       maxThienMenh: 10000,
     },
     {
-      id: 'da_3_cuu_khieu',
+      id: 'da_3_hoang_tuyen',
       palaceIndex: 2,
-      palaceName: 'Cửu Khiếu Linh Lung Cung',
-      name: 'Cửu Khiếu Linh Lung Đạo Anh',
-      element: 'Thất Sắc Thần Thể',
+      palaceName: 'Hoàng Tuyền Bỉ Ngạn Cung',
+      name: 'Hoàng Tuyền Bỉ Ngạn Đạo Anh',
+      element: 'U Minh Thần Thể',
       fromLamp: true,
-      lampId: 'cuu_khieu_linh_lung',
+      lampId: 'hoang_tuyen_bi_ngan',
       artifactId: null,
       tier: 'than_pham',
       currentKiep: 0,

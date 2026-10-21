@@ -46,10 +46,10 @@ const SACRED_GATE_ARTIFACTS = [
     desc: 'Phôi kiếm sát phạt cực hạn trảm toái hư không quy tắc, vạn kiếp bất diệt' 
   },
   { 
-    id: 'luc_dao_luan_hoi_tien_can', 
-    name: 'Lục Đạo Luân Hồi Tiên Căn', 
-    artId: 'luc_dao_luan_hoi_tien_can', 
-    desc: 'Nắm giữ sinh tử luân hồi, chuyển biến sinh mệnh thành bất hủ chi tạng' 
+    id: 'de_kiem', 
+    name: 'Đế Kiếm', 
+    artId: 'de_kiem', 
+    desc: 'Thanh kiếm chí tôn khắc họa Nhật Nguyệt Sơn Hà, trấn áp Thần Linh tàn diện' 
   },
   { 
     id: 'tam_sinh_luan_hoi_an', 
@@ -110,9 +110,15 @@ function resolveGateArtwork(tang, isThanTang, isGateOpen) {
       if (userImages['world_kiem_thai']) return userImages['world_kiem_thai'];
       return THAN_PHAM_AI_ICONS['thao_tu_kiem_quyet'] || '';
     }
+    if (nameLower.includes('hoàng tuyền') || nameLower.includes('bỉ ngạn')) {
+      return LAMP_THAN_PHAM_AI_ICONS['hoang_tuyen_bi_ngan'] || '';
+    }
+    if (nameLower.includes('đế kiếm')) {
+      return THAN_PHAM_AI_ICONS['de_kiem'] || '';
+    }
     if (nameLower.includes('luân hồi')) {
       if (userImages['world_luan_hoi']) return userImages['world_luan_hoi'];
-      return THAN_PHAM_AI_ICONS['luc_dao_luan_hoi_tien_can'] || '';
+      return THAN_PHAM_AI_ICONS['tam_sinh_luan_hoi_an'] || '';
     }
     if (nameLower.includes('tạo hóa')) {
       if (userImages['world_tao_hoa']) return userImages['world_tao_hoa'];
