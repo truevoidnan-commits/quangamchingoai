@@ -19,6 +19,29 @@ export default function Header() {
           </Link>
 
           <div className={styles.headerRight}>
+            {/* Cloud Sync Button */}
+            <Link
+              to="/sync"
+              title="Đồng Bộ Cloud"
+              aria-label="Đồng Bộ Cloud"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                borderRadius: '16px',
+                fontSize: '0.82rem',
+                background: 'rgba(56, 189, 248, 0.12)',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                color: '#38bdf8',
+                textDecoration: 'none',
+                fontWeight: '500',
+              }}
+            >
+              <span>☁️</span>
+              <span>Đồng bộ</span>
+            </Link>
+
             {/* Cultivation Pill Button */}
             <Link
               to="/cultivation"

@@ -4,11 +4,18 @@
  */
 import { openDB } from 'idb';
 import { getHiddenLibrary } from './storage.js';
+import { markNovelDirty, recordNovelTombstone, setSyncBypassDirty } from './sync/syncLedger.js';
+
+export { setSyncBypassDirty };
 
 const DB_NAME = 'thien-co-lau';
 const DB_VERSION = 1;
 
 let dbPromise = null;
+
+export function setDBPromiseForTesting(p) {
+  dbPromise = p;
+}
 
 function getDB() {
   if (!dbPromise) {
@@ -70,12 +77,15 @@ export async function getNovel(id) {
   return novel;
 }
 
-export async function saveNovel(novel) {
+export async function saveNovel(novel, options = {}) {
   const db = await getDB();
   await db.put('novels', novel);
+  if (!options?.skipDirty && novel?.id) {
+    markNovelDirty(novel.id, novel.updatedAt || Date.now());
+  }
 }
 
-export async function deleteNovelDB(id) {
+export async function deleteNovelDB(id, options = {}) {
   const db = await getDB();
   const tx = db.transaction(['novels', 'chapters'], 'readwrite');
   // Delete novel
@@ -88,6 +98,9 @@ export async function deleteNovelDB(id) {
     cursor = await cursor.continue();
   }
   await tx.done;
+  if (!options?.skipDirty && id) {
+    recordNovelTombstone(id, Date.now());
+  }
 }
 
 // ---- Chapter CRUD ----
@@ -103,19 +116,27 @@ export async function getChapter(id) {
   return db.get('chapters', id);
 }
 
-export async function saveChapter(chapter) {
+export async function saveChapter(chapter, options = {}) {
   const db = await getDB();
   await db.put('chapters', chapter);
+  if (!options?.skipDirty && chapter?.novelId) {
+    markNovelDirty(chapter.novelId, Date.now());
+  }
 }
 
-export async function saveChaptersBulk(chapters) {
+export async function saveChaptersBulk(chapters, options = {}) {
   const db = await getDB();
   const tx = db.transaction('chapters', 'readwrite');
   await Promise.all(chapters.map(ch => tx.store.put(ch)));
   await tx.done;
+  if (!options?.skipDirty && Array.isArray(chapters) && chapters.length > 0) {
+    const novelIds = new Set(chapters.map(c => c?.novelId).filter(Boolean));
+    const now = Date.now();
+    novelIds.forEach(nId => markNovelDirty(nId, now));
+  }
 }
 
-export async function deleteChapterDB(id, novelId = null) {
+export async function deleteChapterDB(id, novelId = null, options = {}) {
   const db = await getDB();
   const tx = db.transaction(['novels', 'chapters'], 'readwrite');
   await tx.objectStore('chapters').delete(id);
@@ -130,9 +151,12 @@ export async function deleteChapterDB(id, novelId = null) {
     }
   }
   await tx.done;
+  if (!options?.skipDirty && novelId) {
+    markNovelDirty(novelId, Date.now());
+  }
 }
 
-export async function deleteAllChapters(novelId) {
+export async function deleteAllChapters(novelId, options = {}) {
   const db = await getDB();
   const tx = db.transaction(['novels', 'chapters'], 'readwrite');
   const index = tx.objectStore('chapters').index('novelId');
@@ -148,6 +172,9 @@ export async function deleteAllChapters(novelId) {
     await tx.objectStore('novels').put(novel);
   }
   await tx.done;
+  if (!options?.skipDirty && novelId) {
+    markNovelDirty(novelId, Date.now());
+  }
 }
 
 // ---- Full-text search ----

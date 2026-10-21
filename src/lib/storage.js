@@ -26,6 +26,35 @@ export function hasVaultPassword() {
   return Boolean(localStorage.getItem(VAULT_PWD_KEY));
 }
 
+export const VAULT_PWD_UPDATED_AT_KEY = 'tcl_vault_pwd_updated_at';
+
+export function getVaultPasswordInfo() {
+  try {
+    return {
+      hash: localStorage.getItem(VAULT_PWD_KEY) || null,
+      hint: localStorage.getItem(VAULT_HINT_KEY) || null,
+      updatedAt: parseInt(localStorage.getItem(VAULT_PWD_UPDATED_AT_KEY) || '0', 10) || 0,
+    };
+  } catch {
+    return { hash: null, hint: null, updatedAt: 0 };
+  }
+}
+
+export function setVaultPasswordRaw({ hash, hint, updatedAt }) {
+  if (!hash) return;
+  try {
+    localStorage.setItem(VAULT_PWD_KEY, hash);
+    if (hint && hint.trim()) {
+      localStorage.setItem(VAULT_HINT_KEY, hint.trim());
+    } else {
+      localStorage.removeItem(VAULT_HINT_KEY);
+    }
+    if (updatedAt) {
+      localStorage.setItem(VAULT_PWD_UPDATED_AT_KEY, String(updatedAt));
+    }
+  } catch {}
+}
+
 export function setVaultPassword(password, hint = '') {
   if (!password || !password.trim()) return false;
   const hashed = hashString(password.trim());
@@ -35,6 +64,7 @@ export function setVaultPassword(password, hint = '') {
   } else {
     localStorage.removeItem(VAULT_HINT_KEY);
   }
+  localStorage.setItem(VAULT_PWD_UPDATED_AT_KEY, String(Date.now()));
   return true;
 }
 
@@ -167,7 +197,7 @@ export function saveLibrary(library) {
 
 export function addToLibrary(item) {
   const library = getLibrary({ includeHidden: true });
-  const cleanItem = { ...item };
+  const cleanItem = { ...item, updatedAt: item.updatedAt || Date.now() };
   if (cleanItem.coverUrl && /^data:/i.test(cleanItem.coverUrl)) {
     delete cleanItem.coverUrl;
   }
@@ -189,7 +219,7 @@ export function updateLibraryItem(id, updates) {
   const library = getLibrary({ includeHidden: true });
   const idx = library.findIndex((n) => n.id === id);
   if (idx !== -1) {
-    const cleanUpdates = { ...updates };
+    const cleanUpdates = { ...updates, updatedAt: updates.updatedAt || Date.now() };
     if (cleanUpdates.coverUrl && /^data:/i.test(cleanUpdates.coverUrl)) {
       delete cleanUpdates.coverUrl;
     }
@@ -229,7 +259,8 @@ export function getReadingProgress(novelId) {
 }
 
 export function saveReadingProgress(novelId, progress) {
-  localStorage.setItem(`${PROGRESS_KEY}_${novelId}`, JSON.stringify(progress));
+  const dataToSave = { ...progress, updatedAt: progress?.updatedAt || Date.now() };
+  localStorage.setItem(`${PROGRESS_KEY}_${novelId}`, JSON.stringify(dataToSave));
 }
 
 // ---- Reading Settings ----
@@ -252,6 +283,7 @@ export function getReadingSettings() {
 }
 
 export function saveReadingSettings(settings) {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  const dataToSave = { ...settings, updatedAt: settings?.updatedAt || Date.now() };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(dataToSave));
 }
 

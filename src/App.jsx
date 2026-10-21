@@ -14,6 +14,7 @@ import AddNovelPage from './pages/AddNovelPage';
 import EditNovelPage from './pages/EditNovelPage';
 import AddChapterPage from './pages/AddChapterPage';
 import SearchPage from './pages/SearchPage';
+import SyncPage from './pages/SyncPage';
 
 import { preloadCoreArtifactIcons } from './lib/artifactIcons';
 import { startBackgroundPrefetch } from './lib/backgroundPrefetch';
@@ -101,6 +102,7 @@ function MainLayout() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/cultivation" element={<CultivationWorkspace />} />
           <Route path="/sanctum" element={<SanctumPage />} />
+          <Route path="/sync" element={<SyncPage />} />
         </Routes>
       </main>
     </>

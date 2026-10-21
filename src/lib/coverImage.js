@@ -55,6 +55,10 @@ export function makeCoverThumb(source, w = 240, h = 320, quality = 0.7) {
       return resolve(source);
     }
 
+    if (typeof document === 'undefined' || typeof Image === 'undefined') {
+      return resolve(source.startsWith('data:') ? '' : source);
+    }
+
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
