@@ -9,6 +9,7 @@ import ArtifactIcon from './ArtifactIcon';
 import DaoAnhAvatarRenderer from './DaoAnhAvatarRenderer';
 import DaoAnhGalleryModal from './DaoAnhGalleryModal';
 import { findDaoAnhDefinition } from '../../lib/daoAnhData';
+import ProfileSwitcher from './ProfileSwitcher';
 import styles from './CultivationModal.module.css';
 
 export default function CultivationModal({ isOpen, onClose }) {
@@ -121,12 +122,16 @@ export default function CultivationModal({ isOpen, onClose }) {
         <div className={styles.realmHeroCard}>
           <div className={styles.realmGlowCircle} />
 
-          <div className={styles.realmBadge}>
-            {cultivation.realm === 'ngung_khi' && 'CẢNH GIỚI: NGƯNG KHÍ'}
-            {cultivation.realm === 'truc_co' && 'CẢNH GIỚI: TRÚC CƠ'}
-            {cultivation.realm === 'kim_dan' && 'CẢNH GIỚI: KIM ĐAN'}
-            {cultivation.realm === 'gia_anh' && 'CẢNH GIỚI: GIẢ ANH'}
-            {cultivation.realm === 'nguyen_anh' && 'CẢNH GIỚI: NGUYÊN ANH'}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 6, zIndex: 2 }}>
+            <div className={styles.realmBadge}>
+              {cultivation.realm === 'ngung_khi' && 'CẢNH GIỚI: NGƯNG KHÍ'}
+              {cultivation.realm === 'truc_co' && 'CẢNH GIỚI: TRÚC CƠ'}
+              {cultivation.realm === 'kim_dan' && 'CẢNH GIỚI: KIM ĐAN'}
+              {cultivation.realm === 'gia_anh' && 'CẢNH GIỚI: GIẢ ANH'}
+              {cultivation.realm === 'nguyen_anh' && 'CẢNH GIỚI: NGUYÊN ANH'}
+              {cultivation.realm === 'linh_tang' && 'CẢNH GIỚI: LINH TÀNG'}
+            </div>
+            <ProfileSwitcher compact />
           </div>
 
           <h2 className={styles.realmTitle}>{displayName}</h2>

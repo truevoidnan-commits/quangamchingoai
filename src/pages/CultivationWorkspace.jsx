@@ -10,6 +10,7 @@ import { DaoAnh80Modal, DaoAnhFullModal } from '../components/cultivation/DaoAnh
 import { getRealmDisplayName } from '../lib/cultivation';
 import { findDaoAnhDefinition } from '../lib/daoAnhData';
 import { useNavigate } from 'react-router-dom';
+import ProfileSwitcher from '../components/cultivation/ProfileSwitcher';
 
 export default function CultivationWorkspace() {
   const { 
@@ -99,6 +100,11 @@ export default function CultivationWorkspace() {
           <span style={{ fontFamily: 'var(--font-serif)', fontSize: 13.5, fontWeight: 700, letterSpacing: 1, color: 'var(--text-main)' }}>
             QUAY LẠI
           </span>
+        </div>
+
+        {/* Profile Switcher (Real vs Sandbox) */}
+        <div style={{ marginBottom: 14 }}>
+          <ProfileSwitcher />
         </div>
 
         <div style={{ fontSize: 11, letterSpacing: 1.5, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>

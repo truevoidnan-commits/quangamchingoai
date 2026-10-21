@@ -20,7 +20,32 @@
  * - LƯU Ý: Một khi chọn hấp thụ thì KHÔNG HOÀN TRẢ!
  */
 
-const CULTIVATION_KEY = 'tcl_cultivation_state_v3';
+export const ACTIVE_PROFILE_KEY = 'tcl_active_profile';
+
+export function getActiveProfile() {
+  try {
+    const p = localStorage.getItem(ACTIVE_PROFILE_KEY);
+    return p === 'sandbox' ? 'sandbox' : 'real';
+  } catch {
+    return 'real';
+  }
+}
+
+export function setActiveProfile(profile) {
+  const target = profile === 'sandbox' ? 'sandbox' : 'real';
+  try {
+    localStorage.setItem(ACTIVE_PROFILE_KEY, target);
+  } catch {}
+  return target;
+}
+
+export function getCultivationKey(type = 'state', profile = getActiveProfile()) {
+  const isSandbox = profile === 'sandbox';
+  if (type === 'pending_seconds') {
+    return isSandbox ? 'cultivation_pending_seconds__sandbox' : 'cultivation_pending_seconds';
+  }
+  return isSandbox ? 'tcl_cultivation_state_v3__sandbox' : 'tcl_cultivation_state_v3';
+}
 
 export const MIN_EXP_PER_CYCLE = 50; // Random từ 50 đến 100 Tu Vi mỗi chu kỳ 60s
 export const MAX_EXP_PER_CYCLE = 100;
@@ -301,14 +326,14 @@ export const LIFE_LAMPS = [
     poem: 'Thiên mệnh sở quy, vạn kiếp bất hủ.',
   },
   {
-    id: 'cuu_khieu_linh_lung',
-    name: 'Cửu Khiếu Linh Lung Đăng',
-    shortName: 'Linh Lung Đăng',
+    id: 'hoang_tuyen_bi_ngan',
+    name: 'Hoàng Tuyền Bỉ Ngạn Đăng',
+    shortName: 'Bỉ Ngạn Đăng',
     tier: 'than_pham',
-    icon: '💎',
+    icon: '🌺',
     color: '#ef4444',
-    desc: 'Đèn ngọc chín khiếu phát ra ánh sáng thất sắc thông thiên, giúp thần thức thấu suốt tam giới không góc khuất.',
-    poem: 'Cửu khiếu linh lung, đắc ngộ đại đạo.',
+    desc: 'Ngọn đèn thắp sáng bờ Vong Xuyên u minh, hoa bỉ ngạn nở rộ dẫn lối u hồn, trấn định sinh tử vạn kiếp bất diệt.',
+    poem: 'Hoàng tuyền bỉ ngạn, hoa khai vô lệ.',
   },
   {
     id: 'thien_dao_chi_ton',
@@ -374,7 +399,6 @@ export const SUPPRESSING_ARTIFACTS = [
   { id: 'mac_sat_tien_phach', name: 'Mặc Sát Tiên Phách', shortName: 'Mặc Sát Phách', tier: 'than_pham', type: 'Tuyệt Thế Sát Phách', icon: '⚔️', color: '#ef4444', desc: 'Hồn phách ngưng kết từ hắc ám sát khí thượng cổ của tiên nhân, chém tan mọi tà niệm ma chướng trong đan điện.', poem: 'Mặc sát nhất kiếm, tiên phách vô song.' },
   { id: 'huyen_hoang_diet_the_bien', name: 'Huyền Hoàng Diệt Thế Biến', shortName: 'Diệt Thế Biến', tier: 'than_pham', type: 'Huyền Hoàng Tuyệt Kỹ', icon: '🌍', color: '#ef4444', desc: 'Khí Huyền Hoàng hủy thiên diệt địa dung hợp vào thân thể, mang sức mạnh nghiền nát tinh cầu.', poem: 'Huyền hoàng biến ảo, diệt thế trùng sinh.' },
   { id: 'am_duong_hon_don_nguyen_can', name: 'Âm Dương Hỗn Độn Nguyên Căn', shortName: 'Hỗn Độn Nguyên Căn', tier: 'than_pham', type: 'Tiên Thiên Đạo Căn', icon: '☯️', color: '#ef4444', desc: 'Gốc rễ đạo căn sinh ra từ khí hỗn độn âm dương sơ khai, cung cấp linh nguyên bất tận cho thiên cung.', poem: 'Âm dương hỗn độn, đạo căn vĩnh hằng.' },
-  { id: 'luc_dao_luan_hoi_tien_can', name: 'Lục Đạo Luân Hồi Tiên Căn', shortName: 'Luân Hồi Tiên Căn', tier: 'than_pham', type: 'Luân Hồi Thần Vật', icon: '🏛️', color: '#ef4444', desc: 'Tiên căn nắm giữ bí mật sáu cõi luân hồi, giúp tu sĩ vĩnh viễn không bị thoái lui cảnh giới.', poem: 'Lục đạo tiên căn, vạn kiếp bất diệt.' },
   { id: 'tam_sinh_luan_hoi_an', name: 'Tam Sinh Luân Hồi Ấn', shortName: 'Tam Sinh Ấn', tier: 'than_pham', type: 'Luân Hồi Chí Bảo', icon: '🔱', color: '#ef4444', desc: 'Con dấu luân hồi kết tinh từ nhân quả ba đời tiền kiếp - hiện thế - tương lai, trấn định linh hồn tuyệt đối.', poem: 'Tam sinh ấn tích, định đoạn tiền trần.' },
   { id: 'tran_nguc_minh_vuong_the', name: 'Trấn Ngục Minh Vương Thể', shortName: 'Minh Vương Thể', tier: 'than_pham', type: 'Chí Tôn Thể Thuật', icon: '🥋', color: '#ef4444', desc: 'Thể chất thần thoại trấn áp vạn ngục u minh, thể phách kiên cố bất hoại trước lôi kiếp tam tai.', poem: 'Minh vương trấn ngục, vạn ma phủ phục.' },
   { id: 'thai_so_than_vuong_the', name: 'Thái Sơ Thần Vương Thể', shortName: 'Thần Vương Thể', tier: 'than_pham', type: 'Thần Vương Đạo Thể', icon: '👑', color: '#ef4444', desc: 'Thần thể tối thượng của Thần Vương thời Thái Sơ, mỗi bước đi chấn động mười phương tinh không.', poem: 'Thái sơ thần vương, ngạo thị chư thiên.' },
@@ -390,6 +414,7 @@ export const SUPPRESSING_ARTIFACTS = [
   { id: 'tam_thu_dao', name: 'Tam Thu Đao', shortName: 'Tam Thu Đao', tier: 'than_pham', type: 'Tuế Nguyệt Thần Binh', icon: '🗡️', color: '#ef4444', desc: 'Chiến đao ngưng tụ đao ý ba mùa thu của trời đất, một đao xuất vạn diệp lạc, chặt đứt thọ nguyên và ngưng đọng thời không.', poem: 'Nhất đao xuất vạn diệp lạc, tam thu tận định càn khôn.' },
   { id: 'thuong_thuong_hac_huyet', name: 'Thượng Thương Hắc Huyết', shortName: 'Hắc Huyết', tier: 'than_pham', type: 'Hắc Ám Đầu Nguồn', icon: '🩸', color: '#ef4444', desc: 'Một giọt máu rơi ra từ thượng thương, đầu nguồn hắc ám.', poem: 'Thượng thương hắc huyết, vạn giới trầm luân.' },
   { id: 'diet_the_loi_viem_dong', name: 'Diệt Thế Lôi Viêm Đồng', shortName: 'Lôi Viêm Đồng', tier: 'than_pham', type: 'Thần Thông Cực Hạn Nhãn Đồng', icon: '👁️', color: '#ef4444', desc: 'Đồng tử thần thoại ngưng tụ lôi đình và ngọn lửa diệt thế, một ánh nhìn thiêu rụi hư không và cấm chế.', poem: 'Lôi viêm đồng tử, chiếu rọi chư thiên.' },
+  { id: 'de_kiem', name: 'Đế Kiếm', shortName: 'Đế Kiếm', tier: 'than_pham', type: 'Chí Tôn Đế Binh', icon: '🗡️', color: '#ef4444', desc: 'Thanh kiếm chí tôn của Chấp Kiếm Đại Đế, trên thân khắc họa Nhật Nguyệt Sơn Hà cùng thệ ước nhân tộc, Bạch Kim Thần Long quấn quanh chém tan dị tộc và trấn áp Thần Linh tàn diện.', poem: 'Đế kiếm xuất vỏ, chư thiên thần phục.' },
 ];const DEFAULT_STATE = {
   totalExp: 0,
   expCurrentRealm: 0,
@@ -450,6 +475,10 @@ export const SUPPRESSING_ARTIFACTS = [
   assignedHuyenLo: {},          // Ghép cặp Mệnh Đăng (Hỏa Lò) 1-1 với Tòa { [tangIndex]: lampId }
   inventoryThienDaoPhoi: 0,     // Số lượng Thiên Đạo Phôi trong túi trữ vật (kỳ ngộ khi đọc truyện)
   targetLinhTangIndex: 1,       // Tòa đang ưu tiên nhận EXP Dưỡng Đạo khi đọc truyện
+
+  // Revision tracking & update timestamp
+  _rev: 0,
+  _updatedAt: 0,
 
   // Lịch sử tu tiên
   logs: [
@@ -570,10 +599,12 @@ export function getDaoAnhTheme(daoAnh, state) {
  */
 export function getCultivationState() {
   try {
-    const raw = localStorage.getItem(CULTIVATION_KEY);
-    if (!raw) return DEFAULT_STATE;
+    const raw = localStorage.getItem(getCultivationKey('state'));
+    if (!raw) return { ...DEFAULT_STATE, _rev: 0, _updatedAt: 0 };
     const parsed = JSON.parse(raw);
     const state = { ...DEFAULT_STATE, ...parsed };
+    if (typeof state._rev !== 'number' || isNaN(state._rev)) state._rev = 0;
+    if (typeof state._updatedAt !== 'number' || isNaN(state._updatedAt)) state._updatedAt = 0;
 
     if (!state.linhTangs) state.linhTangs = [];
     if (!state.assignedHuyenLo) state.assignedHuyenLo = {};
@@ -789,7 +820,9 @@ export function getCultivationState() {
       if (parsed.pityReadingCycles !== 0) {
         state.pityReadingCycles = 0;
         try {
-          localStorage.setItem(CULTIVATION_KEY, JSON.stringify(state));
+          state._rev = (typeof state._rev === 'number' && !isNaN(state._rev) ? state._rev : 0) + 1;
+          state._updatedAt = Date.now();
+          localStorage.setItem(getCultivationKey('state'), JSON.stringify(state));
         } catch (_) {}
       } else {
         state.pityReadingCycles = 0;
@@ -817,7 +850,10 @@ export function getCultivationState() {
  */
 export function saveCultivationState(state) {
   try {
-    localStorage.setItem(CULTIVATION_KEY, JSON.stringify(state));
+    const currentRev = typeof state._rev === 'number' && !isNaN(state._rev) ? state._rev : 0;
+    state._rev = currentRev + 1;
+    state._updatedAt = Date.now();
+    localStorage.setItem(getCultivationKey('state'), JSON.stringify(state));
     window.dispatchEvent(new CustomEvent('cultivation_updated', { detail: state }));
   } catch (err) {}
 }
@@ -1986,7 +2022,6 @@ export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = 
     'mac_sat_tien_phach': 'Mặc Sát Tiên Phách Cung',
     'huyen_hoang_diet_the_bien': 'Huyền Hoàng Diệt Thế Cung',
     'am_duong_hon_don_nguyen_can': 'Âm Dương Hỗn Độn Cung',
-    'luc_dao_luan_hoi_tien_can': 'Lục Đạo Luân Hồi Cung',
     'tam_sinh_luan_hoi_an': 'Tam Sinh Luân Hồi Cung',
     'tran_nguc_minh_vuong_the': 'Trấn Ngục Minh Vương Cung',
     'thai_so_than_vuong_the': 'Thái Sơ Thần Vương Cung',
@@ -2002,6 +2037,7 @@ export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = 
     'tam_thu_dao': 'Tam Thu Đao Cung',
     'thuong_thuong_hac_huyet': 'Thượng Thương Hắc Huyết Cung',
     'diet_the_loi_viem_dong': 'Diệt Thế Lôi Viêm Cung',
+    'de_kiem': 'Đế Kiếm Cung',
   };
 
   if (artifact.id && customMap[artifact.id]) {
@@ -3427,7 +3463,8 @@ export function getProminentDaoAnhs(daoAnhs, count = 5) {
   const PRIORITY_ID_MAP = {
     thien_dao_chi_ton: 100000,
     khoi_nguyen_thoi_khong: 95000,
-    luc_dao_luan_hoi_tien_can: 90000,
+    hoang_tuyen_bi_ngan: 90000,
+    de_kiem: 88000,
     am_duong_hon_don_nguyen_can: 85000,
     hong_mong_bat_diet: 80000,
     toi_cao_thien_menh: 75000,
