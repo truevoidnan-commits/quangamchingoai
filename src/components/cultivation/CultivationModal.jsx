@@ -9,6 +9,7 @@ import ArtifactIcon from './ArtifactIcon';
 import DaoAnhAvatarRenderer from './DaoAnhAvatarRenderer';
 import DaoAnhGalleryModal from './DaoAnhGalleryModal';
 import CultivationBackupModal from './CultivationBackupModal';
+import ProfileSwitcher from './ProfileSwitcher';
 import { findDaoAnhDefinition } from '../../lib/daoAnhData';
 import styles from './CultivationModal.module.css';
 
@@ -132,28 +133,31 @@ export default function CultivationModal({ isOpen, onClose }) {
               {cultivation.realm === 'nguyen_anh' && 'CẢNH GIỚI: NGUYÊN ANH'}
               {cultivation.realm === 'linh_tang' && 'CẢNH GIỚI: LINH TÀNG'}
             </div>
-            <button
-              type="button"
-              onClick={() => setBackupModalOpen(true)}
-              style={{
-                background: 'rgba(56, 189, 248, 0.12)',
-                border: '1px solid rgba(56, 189, 248, 0.35)',
-                color: '#7dd3fc',
-                borderRadius: 6,
-                padding: '4px 10px',
-                fontSize: 11.5,
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-                transition: 'all 0.2s',
-              }}
-              title="Xuất sao lưu tu vi (Chỉ đọc, an toàn 100%)"
-            >
-              <span>📦</span>
-              <span>Sao Lưu Tu Vi</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ProfileSwitcher compact />
+              <button
+                type="button"
+                onClick={() => setBackupModalOpen(true)}
+                style={{
+                  background: 'rgba(56, 189, 248, 0.12)',
+                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                  color: '#7dd3fc',
+                  borderRadius: 6,
+                  padding: '4px 10px',
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  transition: 'all 0.2s',
+                }}
+                title="Xuất sao lưu tu vi (Chỉ đọc, an toàn 100%)"
+              >
+                <span>📦</span>
+                <span>Sao Lưu Tu Vi</span>
+              </button>
+            </div>
           </div>
 
           <h2 className={styles.realmTitle}>{displayName}</h2>

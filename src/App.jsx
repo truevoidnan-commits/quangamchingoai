@@ -18,6 +18,7 @@ import SearchPage from './pages/SearchPage';
 import { preloadCoreArtifactIcons } from './lib/artifactIcons';
 import { startBackgroundPrefetch } from './lib/backgroundPrefetch';
 import { runMigrationV2 } from './lib/migration';
+import SandboxBanner from './components/cultivation/SandboxBanner';
 
 function ScrollRestorer() {
   const { pathname } = useLocation();
@@ -111,6 +112,7 @@ export default function App() {
     <ErrorBoundary>
       <CultivationProvider>
         <ScrollRestorer />
+        <SandboxBanner />
         <MainLayout />
       </CultivationProvider>
     </ErrorBoundary>

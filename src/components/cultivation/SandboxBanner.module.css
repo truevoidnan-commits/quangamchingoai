@@ -1,0 +1,127 @@
+:global(body.has-sandbox-banner) {
+  padding-top: 40px !important;
+}
+
+:global(body.has-sandbox-banner header) {
+  top: 40px !important;
+}
+
+.banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99999;
+  height: 40px;
+  background: linear-gradient(90deg, #991b1b 0%, #c2410c 50%, #b45309 100%);
+  border-bottom: 1px solid rgba(254, 215, 170, 0.4);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 13px;
+  letter-spacing: 0.2px;
+}
+
+.leftInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon {
+  font-size: 15px;
+  animation: pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.85; }
+}
+
+.tag {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fef08a;
+  text-transform: uppercase;
+}
+
+.text {
+  color: #ffffff;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.adminBtn {
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.adminBtn:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.switchBackBtn {
+  background: #ffffff;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.switchBackBtn:hover {
+  background: #fee2e2;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .banner {
+    height: 42px;
+    padding: 0 8px;
+    font-size: 11.5px;
+  }
+  .tag {
+    display: none;
+  }
+  .adminBtn, .switchBackBtn {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+}

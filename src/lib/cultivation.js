@@ -47,8 +47,6 @@ export function getCultivationKey(type = 'state', profile = getActiveProfile()) 
   return isSandbox ? 'tcl_cultivation_state_v3__sandbox' : 'tcl_cultivation_state_v3';
 }
 
-const CULTIVATION_KEY = 'tcl_cultivation_state_v3';
-
 export const MIN_EXP_PER_CYCLE = 50; // Random từ 50 đến 100 Tu Vi mỗi chu kỳ 60s
 export const MAX_EXP_PER_CYCLE = 100;
 export const EXP_PER_CHAPTER = 75; // Giá trị trung bình
@@ -598,9 +596,11 @@ export function getDaoAnhTheme(daoAnh, state) {
 export function getCultivationState() {
   try {
     const raw = localStorage.getItem(getCultivationKey('state'));
-    if (!raw) return DEFAULT_STATE;
+    if (!raw) return { ...DEFAULT_STATE, _rev: 0, _updatedAt: 0 };
     const parsed = JSON.parse(raw);
     const state = { ...DEFAULT_STATE, ...parsed };
+    if (typeof state._rev !== 'number' || isNaN(state._rev)) state._rev = 0;
+    if (typeof state._updatedAt !== 'number' || isNaN(state._updatedAt)) state._updatedAt = 0;
 
     if (!state.linhTangs) state.linhTangs = [];
     if (!state.assignedHuyenLo) state.assignedHuyenLo = {};
@@ -816,6 +816,8 @@ export function getCultivationState() {
       if (parsed.pityReadingCycles !== 0) {
         state.pityReadingCycles = 0;
         try {
+          state._rev = (typeof state._rev === 'number' && !isNaN(state._rev) ? state._rev : 0) + 1;
+          state._updatedAt = Date.now();
           localStorage.setItem(getCultivationKey('state'), JSON.stringify(state));
         } catch (_) {}
       } else {
@@ -844,6 +846,9 @@ export function getCultivationState() {
  */
 export function saveCultivationState(state) {
   try {
+    const currentRev = typeof state._rev === 'number' && !isNaN(state._rev) ? state._rev : 0;
+    state._rev = currentRev + 1;
+    state._updatedAt = Date.now();
     localStorage.setItem(getCultivationKey('state'), JSON.stringify(state));
     window.dispatchEvent(new CustomEvent('cultivation_updated', { detail: state }));
   } catch (err) {}
