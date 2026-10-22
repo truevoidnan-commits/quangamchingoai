@@ -121,6 +121,9 @@ export default function SyncPage() {
 
       if (res.cultivationUpdatedFromCloud) {
         setNeedsReload(true);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       }
     } catch (err) {
       console.warn('Sync error:', err);
@@ -171,14 +174,14 @@ export default function SyncPage() {
       {needsReload && (
         <div className={styles.alertWarning} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            ⚡ <strong>Tu vi đã được cập nhật từ Cloud!</strong> Vui lòng tải lại trang để các đồng hồ và cảnh giới được làm mới hoàn toàn.
+            ⚡ <strong>Tu vi đã được cập nhật từ Cloud!</strong> Đang tự động làm mới trang sau giây lát...
           </div>
           <button
             className={styles.btnOutline}
             style={{ borderColor: '#f59e0b', color: '#f59e0b', whiteSpace: 'nowrap' }}
             onClick={() => window.location.reload()}
           >
-            Tải lại trang ngay
+            Tải lại ngay
           </button>
         </div>
       )}
@@ -286,8 +289,8 @@ export default function SyncPage() {
           {/* Result summary */}
           {syncResult && (
             <div style={{ marginTop: '20px' }}>
-              <div className={styles.cardTitle} style={{ fontSize: '1rem', color: '#38bdf8' }}>
-                🎉 Kết quả đồng bộ:
+              <div className={styles.cardTitle} style={{ fontSize: '1rem', color: syncResult.success ? '#38bdf8' : '#f87171' }}>
+                {syncResult.success ? '🎉 Kết quả đồng bộ:' : '⚠️ Đồng bộ chưa hoàn tất (có lỗi xảy ra):'}
               </div>
               <div className={styles.resultGrid}>
                 <div className={styles.resultStat}>

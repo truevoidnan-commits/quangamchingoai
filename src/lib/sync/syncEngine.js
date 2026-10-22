@@ -39,6 +39,23 @@ const MAX_FILE_SIZE = 45 * 1024 * 1024; // 45MB
 const BUCKET_NAME = 'novels';
 
 /**
+ * Lấy số lượng chương đã đọc chính xác (hỗ trợ cả chaptersReadCount và dict readChapterIds)
+ */
+export function getReadChaptersCount(cultivationState) {
+  if (!cultivationState) return 0;
+  const countFromField = typeof cultivationState.chaptersReadCount === 'number' ? cultivationState.chaptersReadCount : 0;
+  let countFromDict = 0;
+  if (cultivationState.readChapterIds && typeof cultivationState.readChapterIds === 'object') {
+    if (Array.isArray(cultivationState.readChapterIds)) {
+      countFromDict = cultivationState.readChapterIds.length;
+    } else {
+      countFromDict = Object.keys(cultivationState.readChapterIds).length;
+    }
+  }
+  return Math.max(countFromField, countFromDict);
+}
+
+/**
  * Nén danh sách chương thành blob
  */
 export async function compressChapters(chaptersJsonString) {
@@ -132,8 +149,8 @@ export function checkFirstSyncCondition({ cloudNovels = [], cloudCultivation = n
 
   const localExp = localCultivation?.totalExp || 0;
   const cloudExp = cloudCultivation?.state?.totalExp || 0;
-  const localReadCount = (localCultivation?.readChapterIds || []).length;
-  const cloudReadCount = (cloudCultivation?.state?.readChapterIds || []).length;
+  const localReadCount = getReadChaptersCount(localCultivation);
+  const cloudReadCount = getReadChaptersCount(cloudCultivation?.state);
   const isLocalAhead = localExp > cloudExp || localReadCount > cloudReadCount;
 
   // Tìm các cặp truyện nghi trùng (cùng tiêu đề nhưng khác ID)
@@ -182,7 +199,7 @@ export function checkFirstSyncCondition({ cloudNovels = [], cloudCultivation = n
  * Đồng bộ Mật khẩu Mật Thất (user_settings.data.vault)
  */
 export async function syncVaultPassword(supabase, userId, options = {}) {
-  const { data: userSettings } = await supabase
+  const { data: userSettings, error: fetchErr } = await supabase
     .from('user_settings')
     .select('*')
     .eq('user_id', userId)
@@ -201,11 +218,12 @@ export async function syncVaultPassword(supabase, userId, options = {}) {
   if (options.mode === 'local_master') {
     if (localVault.hash) {
       const updatedData = { ...(userSettings?.data || {}), vault: localVault };
-      await supabase.from('user_settings').upsert({
+      const { error: upsertErr } = await supabase.from('user_settings').upsert({
         user_id: userId,
         data: updatedData,
         updated_at: Date.now(),
       }, { onConflict: 'user_id' });
+      if (upsertErr) throw new Error(`Lỗi lưu mật khẩu Mật Thất: ${upsertErr.message}`);
     }
     return;
   }
@@ -217,11 +235,12 @@ export async function syncVaultPassword(supabase, userId, options = {}) {
   if (!cloudVault?.hash && localVault.hash) {
     // Đẩy lên cloud
     const updatedData = { ...(userSettings?.data || {}), vault: localVault };
-    await supabase.from('user_settings').upsert({
+    const { error: upsertErr } = await supabase.from('user_settings').upsert({
       user_id: userId,
       data: updatedData,
       updated_at: Date.now(),
     }, { onConflict: 'user_id' });
+    if (upsertErr) throw new Error(`Lỗi lưu mật khẩu Mật Thất: ${upsertErr.message}`);
   } else if (cloudVault?.hash && !localVault.hash) {
     // Kéo từ cloud về
     setVaultPasswordRaw(cloudVault);
@@ -230,11 +249,12 @@ export async function syncVaultPassword(supabase, userId, options = {}) {
       setVaultPasswordRaw(cloudVault);
     } else if ((localVault.updatedAt || 0) > (cloudVault.updatedAt || 0)) {
       const updatedData = { ...(userSettings?.data || {}), vault: localVault };
-      await supabase.from('user_settings').upsert({
+      const { error: upsertErr } = await supabase.from('user_settings').upsert({
         user_id: userId,
         data: updatedData,
         updated_at: Date.now(),
       }, { onConflict: 'user_id' });
+      if (upsertErr) throw new Error(`Lỗi lưu mật khẩu Mật Thất: ${upsertErr.message}`);
     }
   }
 }
@@ -243,7 +263,7 @@ export async function syncVaultPassword(supabase, userId, options = {}) {
  * Đồng bộ Cài đặt đọc (user_settings.data.reading_settings)
  */
 export async function syncReadingSettings(supabase, userId, options = {}) {
-  const { data: userSettings } = await supabase
+  const { data: userSettings, error: fetchErr } = await supabase
     .from('user_settings')
     .select('*')
     .eq('user_id', userId)
@@ -261,11 +281,12 @@ export async function syncReadingSettings(supabase, userId, options = {}) {
 
   if (options.mode === 'local_master') {
     const updatedData = { ...(userSettings?.data || {}), reading_settings: localSettings };
-    await supabase.from('user_settings').upsert({
+    const { error: upsertErr } = await supabase.from('user_settings').upsert({
       user_id: userId,
       data: updatedData,
       updated_at: Date.now(),
     }, { onConflict: 'user_id' });
+    if (upsertErr) throw new Error(`Lỗi lưu cài đặt đọc: ${upsertErr.message}`);
     return;
   }
 
@@ -273,11 +294,12 @@ export async function syncReadingSettings(supabase, userId, options = {}) {
     saveReadingSettings(cloudSettings);
   } else if (localUpdatedAt > cloudUpdatedAt || (!cloudSettings && localSettings)) {
     const updatedData = { ...(userSettings?.data || {}), reading_settings: localSettings };
-    await supabase.from('user_settings').upsert({
+    const { error: upsertErr } = await supabase.from('user_settings').upsert({
       user_id: userId,
       data: updatedData,
       updated_at: Date.now(),
     }, { onConflict: 'user_id' });
+    if (upsertErr) throw new Error(`Lỗi lưu cài đặt đọc: ${upsertErr.message}`);
   }
 }
 
@@ -285,10 +307,12 @@ export async function syncReadingSettings(supabase, userId, options = {}) {
  * Đồng bộ Tiến độ đọc (progress table)
  */
 export async function syncReadingProgress(supabase, userId, activeNovelIds = [], options = {}) {
-  const { data: cloudProgressList } = await supabase
+  const { data: cloudProgressList, error: fetchErr } = await supabase
     .from('progress')
     .select('*')
     .eq('user_id', userId);
+
+  if (fetchErr) throw new Error(`Lỗi tải tiến độ đọc: ${fetchErr.message}`);
 
   const cloudMap = new Map((cloudProgressList || []).map(p => [p.novel_id, p]));
 
@@ -307,12 +331,13 @@ export async function syncReadingProgress(supabase, userId, activeNovelIds = [],
 
     if (options.mode === 'local_master') {
       if (localProg && localProg.chapterId) {
-        await supabase.from('progress').upsert({
+        const { error: upsertErr } = await supabase.from('progress').upsert({
           user_id: userId,
           novel_id: novelId,
           data: localProg,
           updated_at: localUpdatedAt || Date.now(),
         }, { onConflict: 'user_id,novel_id' });
+        if (upsertErr) throw new Error(`Lỗi lưu tiến độ truyện "${novelId}": ${upsertErr.message}`);
       }
       continue;
     }
@@ -320,12 +345,13 @@ export async function syncReadingProgress(supabase, userId, activeNovelIds = [],
     if (cloudItem && cloudUpdatedAt > localUpdatedAt) {
       saveReadingProgress(novelId, cloudItem.data);
     } else if (localProg?.chapterId && localUpdatedAt > cloudUpdatedAt) {
-      await supabase.from('progress').upsert({
+      const { error: upsertErr } = await supabase.from('progress').upsert({
         user_id: userId,
         novel_id: novelId,
         data: localProg,
         updated_at: localUpdatedAt,
       }, { onConflict: 'user_id,novel_id' });
+      if (upsertErr) throw new Error(`Lỗi lưu tiến độ truyện "${novelId}": ${upsertErr.message}`);
     }
   }
 }
@@ -333,22 +359,30 @@ export async function syncReadingProgress(supabase, userId, activeNovelIds = [],
 /**
  * Đồng bộ Tu Vi (cultivation table) - CHỈ HỒ SƠ THẬT (REAL)
  */
-export async function syncCultivation(supabase, userId, { onConflictCultivation, mode = 'normal' } = {}) {
+export async function syncCultivation(supabase, userId, { onConflictCultivation, mode = 'normal', ledger: passedLedger = null } = {}) {
   // KHẲNG ĐỊNH: Chỉ đồng bộ hồ sơ Thật!
   const currentProfile = getActiveProfile();
   if (currentProfile !== 'real') {
     return { skipped: true, reason: 'Sandbox profile never synced' };
   }
 
-  const { data: cloudCultivation } = await supabase
+  const { data: cloudCultivation, error: fetchErr } = await supabase
     .from('cultivation')
     .select('*')
     .eq('user_id', userId)
     .single();
 
-  const ledger = getSyncLedger();
+  const ledger = passedLedger || getSyncLedger();
   const localState = getCultivationState();
-  const localRev = localState?._rev || 0;
+  let localRev = typeof localState?._rev === 'number' && !isNaN(localState._rev) ? localState._rev : 0;
+  if (localRev === 0 && localState && (localState.totalExp || 0) > 0) {
+    localRev = 1;
+    localState._rev = 1;
+    localState._updatedAt = localState._updatedAt || Date.now();
+    try {
+      localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(localState));
+    } catch {}
+  }
   const lastSyncedRev = ledger.cultivation?.lastSyncedRev || 0;
   const cloudRev = cloudCultivation?.rev || 0;
 
@@ -387,13 +421,17 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
     const payloadState = { ...localState, __meta: { pendingSeconds } };
     const now = Date.now();
 
-    await supabase.from('cultivation').upsert({
+    const { error: upsertErr } = await supabase.from('cultivation').upsert({
       user_id: userId,
       state: payloadState,
       rev: localRev,
       updated_at: now,
       device_id: getDeviceId(),
     }, { onConflict: 'user_id' });
+
+    if (upsertErr) {
+      throw new Error(`Lỗi lưu tu vi lên cloud: ${upsertErr.message}`);
+    }
 
     ledger.cultivation = {
       lastSyncedRev: localRev,
@@ -436,21 +474,21 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
   const isLocalChanged = localRev > lastSyncedRev;
 
   if (isCloudChanged && isLocalChanged) {
-    // CẢ HAI CÙNG ĐỔI -> Hộp thoại chọn bản
-    let choice = 'local';
+    // CẢ HAI CÙNG ĐỔI -> Hộp thoại chọn bản (mặc định 'skip' nếu không có handler)
+    let choice = 'skip';
     if (typeof onConflictCultivation === 'function') {
       choice = await onConflictCultivation({
         local: {
           realm: localState.realm,
           totalExp: localState.totalExp,
-          readChapterCount: (localState.readChapterIds || []).length,
+          readChapterCount: getReadChaptersCount(localState),
           updatedAt: localState._updatedAt || 0,
           rev: localRev,
         },
         cloud: {
           realm: cloudCultivation.state?.realm,
           totalExp: cloudCultivation.state?.totalExp,
-          readChapterCount: (cloudCultivation.state?.readChapterIds || []).length,
+          readChapterCount: getReadChaptersCount(cloudCultivation.state),
           updatedAt: cloudCultivation.updated_at,
           rev: cloudRev,
         },
@@ -460,9 +498,12 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
     if (choice === 'cloud') {
       applyCloudCultivation(cloudCultivation);
       return { updatedFromCloud: true, conflictResolved: true };
-    } else {
+    } else if (choice === 'local') {
       await pushLocalCultivation();
       return { pushedToCloud: true, conflictResolved: true };
+    } else {
+      // Mặc định 'skip', không tự ý ghi đè
+      return { skipped: true, conflict: true };
     }
   }
 
@@ -541,26 +582,47 @@ export async function performSync(supabase, {
   // 3. Xử lý Bia Mộ (Tombstones)
   onProgress({ stage: 'tombstones', message: 'Đang đồng bộ trạng thái xóa truyện...' });
   const cloudNovelsMap = new Map((cloudNovels || []).map(n => [n.id, n]));
+  const errors = [];
 
   // Đẩy bia mộ cục bộ lên cloud
   for (const [tombNovelId, deletedAtMs] of Object.entries(tombstones)) {
     const cloudRow = cloudNovelsMap.get(tombNovelId);
-    if (cloudRow && (!cloudRow.deleted_at || cloudRow.deleted_at < deletedAtMs)) {
-      await supabase
-        .from('novels')
-        .update({ deleted_at: deletedAtMs })
-        .eq('user_id', userId)
-        .eq('id', tombNovelId);
+    let tombSuccess = true;
+    if (cloudRow) {
+      if (!cloudRow.deleted_at || cloudRow.deleted_at < deletedAtMs) {
+        const { error: tombUpdateErr } = await supabase
+          .from('novels')
+          .update({ deleted_at: deletedAtMs })
+          .eq('user_id', userId)
+          .eq('id', tombNovelId);
+
+        if (tombUpdateErr) {
+          errors.push(`Lỗi cập nhật bia mộ cho truyện "${tombNovelId}": ${tombUpdateErr.message}`);
+          tombSuccess = false;
+        }
+      }
 
       // Xóa file nén trong bucket
-      try {
-        await supabase.storage.from(BUCKET_NAME).remove([
-          `${userId}/${tombNovelId}.json.gz`,
-          `${userId}/${tombNovelId}.zip`,
-        ]);
-      } catch (_) {}
+      if (tombSuccess) {
+        try {
+          const { error: removeErr } = await supabase.storage.from(BUCKET_NAME).remove([
+            `${userId}/${tombNovelId}.json.gz`,
+            `${userId}/${tombNovelId}.zip`,
+          ]);
+          if (removeErr) {
+            errors.push(`Lỗi xóa file storage của truyện "${tombNovelId}": ${removeErr.message}`);
+            tombSuccess = false;
+          }
+        } catch (e) {
+          errors.push(`Lỗi xóa file storage của truyện "${tombNovelId}": ${e.message}`);
+          tombSuccess = false;
+        }
+      }
     }
-    removeTombstone(tombNovelId);
+
+    if (tombSuccess) {
+      removeTombstone(tombNovelId);
+    }
   }
 
   // Nhận bia mộ từ cloud xuống cục bộ
@@ -590,13 +652,14 @@ export async function performSync(supabase, {
   let pushedNovels = 0;
   let pulledNovels = 0;
   let conflicts = 0;
-  const errors = [];
 
   for (let i = 0; i < totalCount; i++) {
     const novelId = allNovelIds[i];
+    // Nếu truyện đã có bia mộ hoặc đã xóa trên cloud thì bỏ qua
     if (cloudNovelsMap.get(novelId)?.deleted_at || tombstones[novelId]) {
       continue;
     }
+
     const localItem = localMap.get(novelId);
     const cloudRow = activeCloudMap.get(novelId);
     const novelTitle = localItem?.title || cloudRow?.title || novelId;
@@ -681,10 +744,12 @@ export async function performSync(supabase, {
           .from(BUCKET_NAME)
           .upload(contentPath, blob, { upsert: true, contentType });
 
-        if (uploadErr) throw new Error(`Lỗi upload nội dung: ${uploadErr.message}`);
+        if (uploadErr) {
+          throw new Error(`Lỗi upload nội dung truyện: ${uploadErr.message}`);
+        }
 
         const now = Date.now();
-        await supabase.from('novels').upsert({
+        const { error: upsertErr } = await supabase.from('novels').upsert({
           user_id: userId,
           id: novelId,
           title: localItem.title || '',
@@ -697,6 +762,10 @@ export async function performSync(supabase, {
           updated_at: localItem.updatedAt || now,
           deleted_at: null,
         }, { onConflict: 'user_id,id' });
+
+        if (upsertErr) {
+          throw new Error(`Lỗi lưu thông tin truyện lên cloud: ${upsertErr.message}`);
+        }
 
         ledger.novels[novelId] = {
           lastPulledContentAt: 0,
@@ -739,10 +808,12 @@ export async function performSync(supabase, {
           } finally {
             setSyncBypassDirty(false);
           }
+          if (!ledger.novels[novelId]) ledger.novels[novelId] = {};
+          ledger.novels[novelId].lastSyncedMetaAt = cloudRow.updated_at;
         } else if (mode === 'local_master' || localMetaUpdatedAt > cloudMetaUpdatedAt) {
           // Local metadata thắng
           const n = await getNovel(novelId);
-          await supabase.from('novels').update({
+          const { error: metaUpdateErr } = await supabase.from('novels').update({
             title: localItem.title,
             description: localItem.description,
             cover: n?.coverUrl || '',
@@ -750,6 +821,12 @@ export async function performSync(supabase, {
             chapter_count: localItem.chapterCount,
             updated_at: localMetaUpdatedAt,
           }).eq('user_id', userId).eq('id', novelId);
+
+          if (metaUpdateErr) {
+            throw new Error(`Lỗi cập nhật metadata truyện lên cloud: ${metaUpdateErr.message}`);
+          }
+          if (!ledger.novels[novelId]) ledger.novels[novelId] = {};
+          ledger.novels[novelId].lastSyncedMetaAt = localMetaUpdatedAt;
         }
 
         // B. Xử lý Nội dung chương (Content)
@@ -789,13 +866,17 @@ export async function performSync(supabase, {
           }
 
           const contentPath = `${userId}/${novelId}${ext}`;
-          await supabase.storage.from(BUCKET_NAME).upload(contentPath, blob, { upsert: true, contentType });
+          const { error: uploadErr } = await supabase.storage.from(BUCKET_NAME).upload(contentPath, blob, { upsert: true, contentType });
+          if (uploadErr) throw new Error(`Lỗi upload nội dung truyện: ${uploadErr.message}`);
+
           const now = Date.now();
-          await supabase.from('novels').update({
+          const { error: updateErr } = await supabase.from('novels').update({
             content_path: contentPath,
             content_updated_at: now,
             chapter_count: chapters.length,
           }).eq('user_id', userId).eq('id', novelId);
+
+          if (updateErr) throw new Error(`Lỗi cập nhật dòng truyện lên cloud: ${updateErr.message}`);
 
           ledger.novels[novelId] = {
             ...(ledger.novels[novelId] || {}),
@@ -830,13 +911,17 @@ export async function performSync(supabase, {
             const chapters = await getChapters(novelId);
             const { blob, ext, contentType } = await compressChapters(JSON.stringify(chapters));
             const contentPath = `${userId}/${novelId}${ext}`;
-            await supabase.storage.from(BUCKET_NAME).upload(contentPath, blob, { upsert: true, contentType });
+            const { error: uploadErr } = await supabase.storage.from(BUCKET_NAME).upload(contentPath, blob, { upsert: true, contentType });
+            if (uploadErr) throw new Error(`Lỗi upload giải quyết xung đột: ${uploadErr.message}`);
+
             const now = Date.now();
-            await supabase.from('novels').update({
+            const { error: updateErr } = await supabase.from('novels').update({
               content_path: contentPath,
               content_updated_at: now,
               chapter_count: chapters.length,
             }).eq('user_id', userId).eq('id', novelId);
+
+            if (updateErr) throw new Error(`Lỗi cập nhật giải quyết xung đột: ${updateErr.message}`);
 
             ledger.novels[novelId] = {
               ...(ledger.novels[novelId] || {}),
@@ -875,13 +960,17 @@ export async function performSync(supabase, {
             continue;
           }
           const contentPath = `${userId}/${novelId}${ext}`;
-          await supabase.storage.from(BUCKET_NAME).upload(contentPath, blob, { upsert: true, contentType });
+          const { error: uploadErr } = await supabase.storage.from(BUCKET_NAME).upload(contentPath, blob, { upsert: true, contentType });
+          if (uploadErr) throw new Error(`Lỗi upload nội dung truyện: ${uploadErr.message}`);
+
           const now = Date.now();
-          await supabase.from('novels').update({
+          const { error: updateErr } = await supabase.from('novels').update({
             content_path: contentPath,
             content_updated_at: now,
             chapter_count: chapters.length,
           }).eq('user_id', userId).eq('id', novelId);
+
+          if (updateErr) throw new Error(`Lỗi cập nhật dòng truyện lên cloud: ${updateErr.message}`);
 
           ledger.novels[novelId] = {
             ...(ledger.novels[novelId] || {}),
@@ -945,23 +1034,26 @@ export async function performSync(supabase, {
   onProgress({ stage: 'syncing_cultivation', message: 'Đang đồng bộ tu vi (hồ sơ Thật)...' });
   let cultivationRes = { noop: true };
   try {
-    cultivationRes = await syncCultivation(supabase, userId, { onConflictCultivation, mode });
+    cultivationRes = await syncCultivation(supabase, userId, { onConflictCultivation, mode, ledger });
   } catch (err) {
     errors.push(`Lỗi đồng bộ tu vi: ${err.message}`);
   }
 
-  // Lưu sổ đồng bộ hoàn tất
-  ledger.lastSyncedAt = Date.now();
+  // Lưu sổ đồng bộ hoàn tất: CHỈ ĐẶT lastSyncedAt KHI errors.length === 0
+  const isAllSuccess = errors.length === 0;
+  if (isAllSuccess) {
+    ledger.lastSyncedAt = Date.now();
+  }
   saveSyncLedger(ledger);
 
   return {
-    success: errors.length === 0,
+    success: isAllSuccess,
     pushedNovels,
     pulledNovels,
     conflicts,
     errors,
     cultivationUpdatedFromCloud: Boolean(cultivationRes?.updatedFromCloud),
     cultivationPushedToCloud: Boolean(cultivationRes?.pushedToCloud),
-    lastSyncedAt: ledger.lastSyncedAt,
+    lastSyncedAt: ledger.lastSyncedAt || 0,
   };
 }
