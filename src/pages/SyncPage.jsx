@@ -28,6 +28,7 @@ export default function SyncPage() {
 
   // Conflict resolver promises
   const conflictResolverRef = useRef(null);
+  const progressTimerRef = useRef(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
@@ -39,7 +40,12 @@ export default function SyncPage() {
       setSession(s);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      if (progressTimerRef.current) {
+        clearTimeout(progressTimerRef.current);
+      }
+    };
   }, []);
 
   const handleLogin = async (e) => {
@@ -76,6 +82,10 @@ export default function SyncPage() {
   };
 
   const handleLogout = async () => {
+    if (progressTimerRef.current) {
+      clearTimeout(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
     await supabase.auth.signOut();
     setSession(null);
     setSyncResult(null);
@@ -83,6 +93,10 @@ export default function SyncPage() {
   };
 
   const startSyncProcess = async (firstSyncChoice = null) => {
+    if (progressTimerRef.current) {
+      clearTimeout(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
     setIsSyncing(true);
     setSyncError('');
     setSyncProgress({ percent: 0, message: 'Khởi động quá trình đồng bộ...' });
@@ -92,12 +106,20 @@ export default function SyncPage() {
         firstSyncChoice,
         onProgress: (p) => setSyncProgress(p),
         onConflictNovel: (novelInfo) => {
+          setSyncProgress((prev) => ({
+            percent: prev?.percent || 0,
+            message: 'Đang chờ bạn chọn ở hộp thoại...',
+          }));
           return new Promise((resolve) => {
             setNovelConflictData(novelInfo);
             conflictResolverRef.current = resolve;
           });
         },
         onConflictCultivation: (cultivationInfo) => {
+          setSyncProgress((prev) => ({
+            percent: prev?.percent || 0,
+            message: 'Đang chờ bạn chọn ở hộp thoại...',
+          }));
           return new Promise((resolve) => {
             setCultivationConflictData(cultivationInfo);
             conflictResolverRef.current = resolve;
@@ -107,17 +129,29 @@ export default function SyncPage() {
 
       if (res?.requireFirstSyncChoice) {
         setFirstSyncData(res.firstSyncData);
+        setSyncProgress(null);
         setIsSyncing(false);
         return;
       }
 
       if (res?.cancelled) {
+        setSyncProgress(null);
         setIsSyncing(false);
         return;
       }
 
       setSyncResult(res);
       setLastSyncedAt(res.lastSyncedAt);
+
+      if (res.success) {
+        setSyncProgress({ percent: 100, message: 'Hoàn tất đồng bộ.' });
+        progressTimerRef.current = setTimeout(() => {
+          setSyncProgress(null);
+          progressTimerRef.current = null;
+        }, 2000);
+      } else {
+        setSyncProgress(null);
+      }
 
       if (res.cultivationUpdatedFromCloud) {
         setNeedsReload(true);
@@ -127,6 +161,7 @@ export default function SyncPage() {
       }
     } catch (err) {
       console.warn('Sync error:', err);
+      setSyncProgress(null);
       setSyncError(`Lỗi đồng bộ: ${err.message || 'Đã xảy ra lỗi không xác định.'}`);
     } finally {
       setIsSyncing(false);
@@ -257,7 +292,9 @@ export default function SyncPage() {
             disabled={isSyncing}
             onClick={() => startSyncProcess()}
           >
-            {isSyncing ? '⏳ Đang đồng bộ dữ liệu...' : '☁️ Đồng Bộ Ngay'}
+            {isSyncing
+              ? ((novelConflictData || cultivationConflictData) ? '⏳ Đang chờ bạn chọn ở hộp thoại...' : '⏳ Đang đồng bộ dữ liệu...')
+              : '☁️ Đồng Bộ Ngay'}
           </button>
 
           {/* Progress bar */}
@@ -274,7 +311,7 @@ export default function SyncPage() {
                 />
               </div>
               <div className={styles.progressMessage}>
-                <span>⚙️</span> {syncProgress.message}
+                <span>⚙️</span> {(novelConflictData || cultivationConflictData) ? 'Đang chờ bạn chọn ở hộp thoại...' : syncProgress.message}
               </div>
             </div>
           )}

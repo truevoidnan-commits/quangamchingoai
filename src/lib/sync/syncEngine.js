@@ -541,7 +541,7 @@ export async function performSync(supabase, {
   const localLibrary = getLibrary({ includeHidden: true });
   const localCultivation = getCultivationState();
 
-  onProgress({ stage: 'fetch_cloud', message: 'Đang kết nối Cloud và tải thông tin đồng bộ...' });
+  onProgress({ stage: 'fetch_cloud', percent: 5, message: 'Đang kết nối Cloud và tải thông tin đồng bộ...' });
 
   // 1. Tải metadata truyện & tu vi từ cloud
   const { data: cloudNovels, error: novelsErr } = await supabase
@@ -580,7 +580,7 @@ export async function performSync(supabase, {
   const mode = firstSyncChoice || 'normal';
 
   // 3. Xử lý Bia Mộ (Tombstones)
-  onProgress({ stage: 'tombstones', message: 'Đang đồng bộ trạng thái xóa truyện...' });
+  onProgress({ stage: 'tombstones', percent: 10, message: 'Đang đồng bộ trạng thái xóa truyện...' });
   const cloudNovelsMap = new Map((cloudNovels || []).map(n => [n.id, n]));
   const errors = [];
 
@@ -677,7 +677,7 @@ export async function performSync(supabase, {
     try {
       // TRƯỜNG HỢP 1: Chỉ có ở Cloud -> Kéo về máy
       if (cloudRow && !localItem) {
-        onProgress({ stage: 'pulling_novel', novelTitle, message: `Đang tải nội dung "${novelTitle}" từ cloud...` });
+        onProgress({ stage: 'pulling_novel', novelTitle, percent: progressPct, message: `Đang tải nội dung "${novelTitle}" từ cloud...` });
         const { data: blob, error: downloadErr } = await supabase.storage
           .from(BUCKET_NAME)
           .download(cloudRow.content_path);
@@ -728,7 +728,7 @@ export async function performSync(supabase, {
 
       // TRƯỜNG HỢP 2: Chỉ có ở Local -> Đẩy lên Cloud
       if (localItem && !cloudRow) {
-        onProgress({ stage: 'pushing_novel', novelTitle, message: `Đang tải lên "${novelTitle}" lên cloud...` });
+        onProgress({ stage: 'pushing_novel', novelTitle, percent: progressPct, message: `Đang tải lên "${novelTitle}" lên cloud...` });
         const novel = await getNovel(novelId);
         const chapters = await getChapters(novelId);
         const { blob, ext, contentType } = await compressChapters(JSON.stringify(chapters));
@@ -832,7 +832,7 @@ export async function performSync(supabase, {
         // B. Xử lý Nội dung chương (Content)
         if (mode === 'cloud_master') {
           // Kéo nội dung từ cloud về
-          onProgress({ stage: 'pulling_novel', novelTitle, message: `Đang cập nhật nội dung "${novelTitle}" từ cloud...` });
+          onProgress({ stage: 'pulling_novel', novelTitle, percent: progressPct, message: `Đang cập nhật nội dung "${novelTitle}" từ cloud...` });
           const { data: blob, error: downloadErr } = await supabase.storage
             .from(BUCKET_NAME)
             .download(cloudRow.content_path);
@@ -856,7 +856,7 @@ export async function performSync(supabase, {
 
         if (mode === 'local_master') {
           // Đẩy nội dung local lên cloud
-          onProgress({ stage: 'pushing_novel', novelTitle, message: `Đang ghi đè nội dung "${novelTitle}" lên cloud...` });
+          onProgress({ stage: 'pushing_novel', novelTitle, percent: progressPct, message: `Đang ghi đè nội dung "${novelTitle}" lên cloud...` });
           const chapters = await getChapters(novelId);
           const { blob, ext, contentType } = await compressChapters(JSON.stringify(chapters));
 
@@ -1007,7 +1007,7 @@ export async function performSync(supabase, {
   }
 
   // 5. Đồng bộ Tiến độ đọc
-  onProgress({ stage: 'syncing_progress', message: 'Đang đồng bộ tiến độ đọc...' });
+  onProgress({ stage: 'syncing_progress', percent: 92, message: 'Đang đồng bộ tiến độ đọc...' });
   try {
     await syncReadingProgress(supabase, userId, allNovelIds, { mode });
   } catch (err) {
@@ -1015,7 +1015,7 @@ export async function performSync(supabase, {
   }
 
   // 6. Đồng bộ Cài đặt đọc
-  onProgress({ stage: 'syncing_settings', message: 'Đang đồng bộ cài đặt đọc...' });
+  onProgress({ stage: 'syncing_settings', percent: 95, message: 'Đang đồng bộ cài đặt đọc...' });
   try {
     await syncReadingSettings(supabase, userId, { mode });
   } catch (err) {
@@ -1023,7 +1023,7 @@ export async function performSync(supabase, {
   }
 
   // 7. Đồng bộ Mật khẩu Mật Thất
-  onProgress({ stage: 'syncing_vault', message: 'Đang đồng bộ mật khẩu Mật Thất...' });
+  onProgress({ stage: 'syncing_vault', percent: 97, message: 'Đang đồng bộ mật khẩu Mật Thất...' });
   try {
     await syncVaultPassword(supabase, userId, { mode });
   } catch (err) {
@@ -1031,7 +1031,7 @@ export async function performSync(supabase, {
   }
 
   // 8. Đồng bộ Tu Vi (Chỉ hồ sơ Thật)
-  onProgress({ stage: 'syncing_cultivation', message: 'Đang đồng bộ tu vi (hồ sơ Thật)...' });
+  onProgress({ stage: 'syncing_cultivation', percent: 99, message: 'Đang đồng bộ tu vi (hồ sơ Thật)...' });
   let cultivationRes = { noop: true };
   try {
     cultivationRes = await syncCultivation(supabase, userId, { onConflictCultivation, mode, ledger });
