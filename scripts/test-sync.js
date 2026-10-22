@@ -320,6 +320,7 @@ import {
   syncReadingProgress,
   compressChapters,
   decompressChapters,
+  normalizeTitle,
 } from '../src/lib/sync/syncEngine.js';
 import {
   getSyncLedger,
@@ -353,7 +354,7 @@ import {
   saveCultivationState,
 } from '../src/lib/cultivation.js';
 
-console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST TỰ ĐỘNG SYNC (1-11) ===\n');
+console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST TỰ ĐỘNG SYNC (1-14) ===\n');
 
 // -------------------------------------------------------------
 // TEST 1: Truyện mới ở máy -> Đẩy lên Cloud
@@ -790,4 +791,152 @@ assert(getSyncLedger().lastSyncedAt > 0, 'lastSyncedAt phải được ghi nhậ
 console.log('✓ Test 11 Passed: Khôi phục sau lỗi hoàn hảo, toàn bộ dữ liệu tồn đọng được đồng bộ trọn vẹn lên cloud!');
 
 
-console.log('\n=== TẤT CẢ 11 BÀI TEST ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');
+
+// -------------------------------------------------------------
+// TEST 12: Phục hồi updatedAt cho tiến độ cũ & normalizeTitle
+// -------------------------------------------------------------
+console.log('\n--- Test 12: Tiến độ đọc cũ không có updatedAt được bù và đẩy lên cloud ---');
+
+// Kiểm tra normalizeTitle
+assert.strictEqual(normalizeTitle('Thần Đạo Đan Tôn'), 'than dao dan ton');
+assert.strictEqual(normalizeTitle('  ĐẠI KỶ NGUYÊN (Bản Chuẩn)!! '), 'dai ky nguyen ban chuan');
+assert.strictEqual(normalizeTitle('Đế Bá'), 'de ba');
+assert.strictEqual(normalizeTitle('dế bá'), 'de ba');
+
+// Thêm novel vào local
+await saveNovel({ id: 'nov_prog_old', title: 'Truyện Tiến Độ Cũ 1', totalChapters: 20 });
+addToLibrary({ id: 'nov_prog_old', title: 'Truyện Tiến Độ Cũ 1', totalChapters: 20 });
+await saveNovel({ id: 'nov_prog_old2', title: 'Truyện Tiến Độ Cũ 2', totalChapters: 10 });
+addToLibrary({ id: 'nov_prog_old2', title: 'Truyện Tiến Độ Cũ 2', totalChapters: 10 });
+
+// Giả lập tiến độ đọc cũ KHÔNG có updatedAt
+global.localStorage.setItem('tcl_progress_nov_prog_old', JSON.stringify({ chapterId: 'ch_10', title: 'Chương 10' }));
+// Có scroll_pos với trường time
+global.localStorage.setItem('scroll_pos_nov_prog_old_ch_10', JSON.stringify({ pos: 500, time: 1600000000000 }));
+
+// nov_prog_old2 không có scroll_pos
+global.localStorage.setItem('tcl_progress_nov_prog_old2', JSON.stringify({ chapterId: 'ch_1', title: 'Chương 1' }));
+
+// Đồng bộ tiến độ đọc khi cloud chưa có dòng nào
+const progSyncRes = await syncReadingProgress(supabaseMock, 'user_123', ['nov_prog_old', 'nov_prog_old2'], {});
+assert.strictEqual(progSyncRes.progressPushed, 2, 'Cả 2 tiến độ đọc phải được đẩy lên cloud');
+
+// Kiểm tra local đã được bù updatedAt
+const localProg1 = getReadingProgress('nov_prog_old');
+assert.strictEqual(localProg1.updatedAt, 1600000000000, 'updatedAt phải được lấy từ scroll_pos');
+assert.strictEqual(localProg1.chapterId, 'ch_10', 'Giữ nguyên chapterId');
+
+const localProg2 = getReadingProgress('nov_prog_old2');
+assert(localProg2.updatedAt > 0, 'updatedAt phải được bù bằng Date.now()');
+assert.strictEqual(localProg2.chapterId, 'ch_1', 'Giữ nguyên chapterId');
+
+// Kiểm tra cloud nhận được đúng row
+const cloudProg1 = supabaseMock.tables.progress.get('user_123:nov_prog_old');
+assert(cloudProg1, 'Cloud phải có row progress cho nov_prog_old');
+assert.strictEqual(cloudProg1.data.chapterId, 'ch_10');
+assert.strictEqual(cloudProg1.updated_at, 1600000000000);
+
+const cloudProg2 = supabaseMock.tables.progress.get('user_123:nov_prog_old2');
+assert(cloudProg2, 'Cloud phải có row progress cho nov_prog_old2');
+assert.strictEqual(cloudProg2.data.chapterId, 'ch_1');
+
+console.log('✓ Test 12 Passed: Tiến độ cũ không có updatedAt được bù chính xác và đẩy lên cloud!');
+
+
+// -------------------------------------------------------------
+// TEST 13: Trùng tên chuẩn hóa khác ID bị chặn không đẩy (duplicateSkipped)
+// -------------------------------------------------------------
+console.log('\n--- Test 13: Trùng tên chuẩn hóa khác ID bị chặn không đẩy (duplicateSkipped) ---');
+
+// Giả lập trên cloud có truyện "Thần Đạo Đan Tôn" id: "cloud_tddt"
+supabaseMock.tables.novels.set('user_123:cloud_tddt', {
+  user_id: 'user_123',
+  id: 'cloud_tddt',
+  title: 'Thần Đạo Đan Tôn',
+  content_path: 'user_123/cloud_tddt.json.gz',
+  deleted_at: null,
+  updated_at: Date.now(),
+});
+const { blob: dummyBlob } = await compressChapters(JSON.stringify([{ id: 'ch_tddt_cloud_1', novelId: 'cloud_tddt', title: 'Chương 1', order: 1, content: 'test cloud' }]));
+supabaseMock.storageBuckets.novels.set('user_123/cloud_tddt.json.gz', dummyBlob);
+
+// Giả lập ở local có truyện id: "local_tddt", tên không dấu / chữ hoa "THAN DAO DAN TON"
+await saveNovel({ id: 'local_tddt', title: 'THAN DAO DAN TON', totalChapters: 5 });
+await saveChaptersBulk([{ id: 'ch_tddt_1', novelId: 'local_tddt', title: 'Chương 1', order: 1, content: 'test' }]);
+addToLibrary({ id: 'local_tddt', title: 'THAN DAO DAN TON', totalChapters: 5 });
+markNovelDirty('local_tddt');
+
+// Kiểm tra checkFirstSyncCondition
+const firstSyncCheck = checkFirstSyncCondition({
+  cloudNovels: [{ id: 'cloud_tddt', title: 'Thần Đạo Đan Tôn' }],
+  localLibrary: [{ id: 'local_tddt', title: 'THAN DAO DAN TON' }],
+  cloudCultivation: null,
+  localCultivation: null,
+});
+assert.strictEqual(firstSyncCheck.duplicatePairs.length, 1, 'checkFirstSyncCondition phải phát hiện cặp trùng');
+assert.strictEqual(firstSyncCheck.duplicatePairs[0].localId, 'local_tddt');
+assert.strictEqual(firstSyncCheck.duplicatePairs[0].cloudId, 'cloud_tddt');
+
+// Chạy performSync
+const resDup = await performSync(supabaseMock);
+assert(resDup.duplicateSkipped.length >= 1, 'Phải ghi nhận duplicateSkipped');
+const dupItem = resDup.duplicateSkipped.find(d => d.localId === 'local_tddt');
+assert(dupItem, 'local_tddt phải nằm trong danh sách duplicateSkipped');
+assert.strictEqual(dupItem.cloudId, 'cloud_tddt');
+
+// Đảm bảo local_tddt KHÔNG được đẩy lên cloud
+assert(!supabaseMock.tables.novels.has('user_123:local_tddt'), 'Truyện trùng tên local_tddt không được đẩy lên cloud');
+assert(!supabaseMock.storageBuckets.novels.has('user_123/local_tddt.json.gz'), 'Storage không được upload local_tddt');
+
+// Đảm bảo truyện trên máy không bị tự động xóa
+const localNovelStillExists = await getNovel('local_tddt');
+assert(localNovelStillExists, 'Truyện local không bị tự động xóa khi chưa có tương tác người dùng');
+
+console.log('✓ Test 13 Passed: Trùng tên chuẩn hóa khác ID bị chặn thành công, ghi nhận duplicateSkipped!');
+
+
+// -------------------------------------------------------------
+// TEST 14: Chế độ cloud_master không đẩy local-only và không xóa progress local khi cloud rỗng
+// -------------------------------------------------------------
+console.log('\n--- Test 14: Chế độ cloud_master không đẩy local-only và không xóa progress local khi cloud rỗng ---');
+
+// Tạo truyện local-only không trùng tên ai
+await saveNovel({ id: 'nov_local_master_only', title: 'Truyện Của Riêng Máy Này', totalChapters: 3 });
+addToLibrary({ id: 'nov_local_master_only', title: 'Truyện Của Riêng Máy Này', totalChapters: 3 });
+markNovelDirty('nov_local_master_only');
+
+// Lưu tiến độ đọc cho truyện này
+saveReadingProgress('nov_local_master_only', { chapterId: 'ch_m_2', title: 'Chương 2', updatedAt: Date.now() });
+
+// Trên cloud KHÔNG có truyện này và KHÔNG có progress cho truyện này
+assert(!supabaseMock.tables.novels.has('user_123:nov_local_master_only'));
+assert(!supabaseMock.tables.progress.has('user_123:nov_local_master_only'));
+
+// Chạy sync với mode: 'cloud_master'
+const resMaster = await performSync(supabaseMock, { mode: 'cloud_master' });
+assert(resMaster.localOnlySkipped >= 1, 'localOnlySkipped phải ghi nhận ít nhất 1 truyện');
+assert(!supabaseMock.tables.novels.has('user_123:nov_local_master_only'), 'cloud_master không được đẩy truyện local-only lên cloud');
+
+// Tiến độ đọc của nov_local_master_only trên local KHÔNG bị xóa
+const keptProgress = getReadingProgress('nov_local_master_only');
+assert(keptProgress, 'Tiến độ đọc trên máy phải được giữ nguyên');
+assert.strictEqual(keptProgress.chapterId, 'ch_m_2', 'chapterId phải còn nguyên vẹn');
+
+// Giả lập cloud CÓ progress cho truyện nov_prog_old (được cập nhật trên cloud với chapter mới hơn)
+supabaseMock.tables.progress.set('user_123:nov_prog_old', {
+  user_id: 'user_123',
+  novel_id: 'nov_prog_old',
+  data: { chapterId: 'ch_99', title: 'Chương 99', updatedAt: 2000000000000 },
+  updated_at: 2000000000000,
+});
+
+// Chạy lại cloud_master
+const resMasterPull = await performSync(supabaseMock, { mode: 'cloud_master' });
+assert(resMasterPull.progressPulled >= 1, 'Phải kéo tiến độ đọc từ cloud về khi cloud có');
+const pulledProgress = getReadingProgress('nov_prog_old');
+assert.strictEqual(pulledProgress.chapterId, 'ch_99', 'Tiến độ đã được ghi đè từ cloud');
+
+console.log('✓ Test 14 Passed: cloud_master không đẩy local-only và không xóa progress local khi cloud rỗng!');
+
+
+console.log('\n=== TẤT CẢ 14 BÀI TEST ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');

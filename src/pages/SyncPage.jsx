@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient.js';
 import { performSync, checkFirstSyncCondition } from '../lib/sync/syncEngine.js';
 import { getSyncLedger } from '../lib/sync/syncLedger.js';
+import { deleteNovelDB } from '../lib/db.js';
+import { removeFromLibrary } from '../lib/storage.js';
 import styles from './SyncPage.module.css';
 
 export default function SyncPage() {
@@ -25,6 +27,18 @@ export default function SyncPage() {
   const [showConfirmLocalMaster, setShowConfirmLocalMaster] = useState(false);
   const [novelConflictData, setNovelConflictData] = useState(null);
   const [cultivationConflictData, setCultivationConflictData] = useState(null);
+  const [deletedDuplicateIds, setDeletedDuplicateIds] = useState(new Set());
+
+  const handleDeleteDuplicateLocal = async (localId, title) => {
+    try {
+      await deleteNovelDB(localId);
+      removeFromLibrary(localId);
+      setDeletedDuplicateIds((prev) => new Set([...prev, localId]));
+    } catch (err) {
+      console.error('Lỗi xóa bản trùng trên máy:', err);
+      alert(`Không thể xóa truyện "${title}": ${err.message}`);
+    }
+  };
 
   // Conflict resolver promises
   const conflictResolverRef = useRef(null);
@@ -339,6 +353,14 @@ export default function SyncPage() {
                   <div className={styles.resultName}>Truyện đã tải về</div>
                 </div>
                 <div className={styles.resultStat}>
+                  <div className={styles.resultValue}>{syncResult.progressPushed || 0}</div>
+                  <div className={styles.resultName}>Tiến độ đã đẩy lên</div>
+                </div>
+                <div className={styles.resultStat}>
+                  <div className={styles.resultValue}>{syncResult.progressPulled || 0}</div>
+                  <div className={styles.resultName}>Tiến độ đã tải về</div>
+                </div>
+                <div className={styles.resultStat}>
                   <div className={styles.resultValue}>{syncResult.conflicts || 0}</div>
                   <div className={styles.resultName}>Xung đột đã giải quyết</div>
                 </div>
@@ -356,6 +378,43 @@ export default function SyncPage() {
                     <li key={idx}>{err}</li>
                   ))}
                 </ul>
+              )}
+
+              {syncResult.duplicateSkipped?.length > 0 && (
+                <div className={styles.alertWarning} style={{ marginTop: '16px' }}>
+                  <div style={{ fontWeight: 600, marginBottom: '6px' }}>
+                    ⚠️ Nghi trùng truyện: đã bỏ qua, không đẩy lên
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '10px', lineHeight: '1.4' }}>
+                    Các truyện sau trên máy này có tiêu đề chuẩn hóa trùng với truyện đã có trên Cloud nhưng khác ID. Hệ thống đã giữ lại và không đẩy lên Cloud để tránh nhân đôi. Bạn có thể xóa bản trên máy này nếu muốn:
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.85rem' }}>
+                    {syncResult.duplicateSkipped.map((dup) => (
+                      <li key={dup.localId} style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                        <span>
+                          <strong>"{dup.title}"</strong> (Máy này: <code>{dup.localId}</code> vs Cloud: <code>{dup.cloudId}</code>)
+                        </span>
+                        {deletedDuplicateIds.has(dup.localId) ? (
+                          <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.8rem' }}>Đã xóa khỏi máy</span>
+                        ) : (
+                          <button
+                            className={styles.btnDanger}
+                            style={{ padding: '3px 8px', fontSize: '0.75rem', borderRadius: '4px' }}
+                            onClick={() => handleDeleteDuplicateLocal(dup.localId, dup.title)}
+                          >
+                            🗑️ Xóa bản trên máy này
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {syncResult.localOnlySkipped > 0 && (
+                <div className={styles.alertInfo} style={{ marginTop: '12px', fontSize: '0.85rem' }}>
+                  ℹ️ {syncResult.localOnlySkipped} truyện chỉ có trên máy này, chưa đẩy (chế độ "Lấy Cloud làm gốc" giữ nguyên truyện trên máy; bạn có thể đẩy lên ở lần đồng bộ thường sau đó).
+                </div>
               )}
             </div>
           )}

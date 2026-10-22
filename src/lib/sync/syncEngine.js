@@ -41,6 +41,23 @@ const BUCKET_NAME = 'novels';
 /**
  * Lấy số lượng chương đã đọc chính xác (hỗ trợ cả chaptersReadCount và dict readChapterIds)
  */
+/**
+ * Chuẩn hóa tiêu đề dùng chung:
+ * toLowerCase, bỏ dấu tiếng Việt (normalize NFD và bỏ combining marks, đ -> d),
+ * bỏ ký tự không phải chữ/số, gộp khoảng trắng.
+ */
+export function normalizeTitle(title = '') {
+  if (!title || typeof title !== 'string') return '';
+  return title
+    .toLowerCase()
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'd')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 export function getReadChaptersCount(cultivationState) {
   if (!cultivationState) return 0;
   const countFromField = typeof cultivationState.chaptersReadCount === 'number' ? cultivationState.chaptersReadCount : 0;
@@ -157,16 +174,16 @@ export function checkFirstSyncCondition({ cloudNovels = [], cloudCultivation = n
   const duplicatePairs = [];
   const localTitlesMap = new Map();
   for (const item of localLibrary) {
-    const normTitle = (item.title || '').trim().toLowerCase();
+    const normTitle = normalizeTitle(item.title);
     if (normTitle) localTitlesMap.set(normTitle, item);
   }
 
   for (const cn of cloudActiveNovels) {
-    const normTitle = (cn.title || '').trim().toLowerCase();
+    const normTitle = normalizeTitle(cn.title);
     const localMatch = localTitlesMap.get(normTitle);
     if (localMatch && localMatch.id !== cn.id) {
       duplicatePairs.push({
-        title: cn.title,
+        title: cn.title || localMatch.title,
         localId: localMatch.id,
         cloudId: cn.id,
       });
@@ -315,16 +332,37 @@ export async function syncReadingProgress(supabase, userId, activeNovelIds = [],
   if (fetchErr) throw new Error(`Lỗi tải tiến độ đọc: ${fetchErr.message}`);
 
   const cloudMap = new Map((cloudProgressList || []).map(p => [p.novel_id, p]));
+  let progressPushed = 0;
+  let progressPulled = 0;
 
   for (const novelId of activeNovelIds) {
-    const localProg = getReadingProgress(novelId);
+    let localProg = getReadingProgress(novelId);
+
+    // 1. Phục hồi updatedAt cho tiến độ cũ nếu chưa có
+    if (localProg && localProg.chapterId && !localProg.updatedAt) {
+      let fallbackTime = 0;
+      try {
+        const rawScroll = localStorage.getItem(`scroll_pos_${novelId}_${localProg.chapterId}`);
+        if (rawScroll) {
+          const parsedScroll = JSON.parse(rawScroll);
+          if (typeof parsedScroll.time === 'number' && parsedScroll.time > 0) {
+            fallbackTime = parsedScroll.time;
+          }
+        }
+      } catch {}
+      localProg.updatedAt = fallbackTime || Date.now();
+      saveReadingProgress(novelId, localProg);
+    }
+
     const cloudItem = cloudMap.get(novelId);
     const localUpdatedAt = localProg?.updatedAt || 0;
     const cloudUpdatedAt = cloudItem?.updated_at || 0;
 
+    // 4. Chế độ cloud_master: chỉ ghi đè tiến độ local khi cloud có dòng cho truyện đó; nếu cloud không có dòng thì GIỮ tiến độ local
     if (options.mode === 'cloud_master') {
-      if (cloudItem?.data) {
+      if (cloudItem && cloudItem.data && cloudItem.data.chapterId) {
         saveReadingProgress(novelId, cloudItem.data);
+        progressPulled++;
       }
       continue;
     }
@@ -338,12 +376,27 @@ export async function syncReadingProgress(supabase, userId, activeNovelIds = [],
           updated_at: localUpdatedAt || Date.now(),
         }, { onConflict: 'user_id,novel_id' });
         if (upsertErr) throw new Error(`Lỗi lưu tiến độ truyện "${novelId}": ${upsertErr.message}`);
+        progressPushed++;
       }
       continue;
     }
 
-    if (cloudItem && cloudUpdatedAt > localUpdatedAt) {
-      saveReadingProgress(novelId, cloudItem.data);
+    // 2. Chế độ thường:
+    // Nếu cloud chưa có dòng progress cho truyện đó mà local có chapterId thì luôn đẩy lên, không phụ thuộc vào so sánh thời gian.
+    if (!cloudItem && localProg?.chapterId) {
+      const { error: upsertErr } = await supabase.from('progress').upsert({
+        user_id: userId,
+        novel_id: novelId,
+        data: localProg,
+        updated_at: localUpdatedAt || Date.now(),
+      }, { onConflict: 'user_id,novel_id' });
+      if (upsertErr) throw new Error(`Lỗi lưu tiến độ truyện "${novelId}": ${upsertErr.message}`);
+      progressPushed++;
+    } else if (cloudItem && cloudUpdatedAt > localUpdatedAt) {
+      if (cloudItem.data) {
+        saveReadingProgress(novelId, cloudItem.data);
+        progressPulled++;
+      }
     } else if (localProg?.chapterId && localUpdatedAt > cloudUpdatedAt) {
       const { error: upsertErr } = await supabase.from('progress').upsert({
         user_id: userId,
@@ -352,8 +405,11 @@ export async function syncReadingProgress(supabase, userId, activeNovelIds = [],
         updated_at: localUpdatedAt,
       }, { onConflict: 'user_id,novel_id' });
       if (upsertErr) throw new Error(`Lỗi lưu tiến độ truyện "${novelId}": ${upsertErr.message}`);
+      progressPushed++;
     }
   }
+
+  return { progressPushed, progressPulled };
 }
 
 /**
@@ -528,6 +584,7 @@ export async function performSync(supabase, {
   onConflictNovel = null,
   onConflictCultivation = null,
   firstSyncChoice = null, // 'cloud_master' | 'local_master' | 'cancel'
+  mode: optionsMode = null,
 } = {}) {
   const { data: { session }, error: authErr } = await supabase.auth.getSession();
   if (authErr || !session?.user) {
@@ -577,7 +634,7 @@ export async function performSync(supabase, {
     return { cancelled: true, message: 'Đã hủy đồng bộ theo lựa chọn của người dùng.' };
   }
 
-  const mode = firstSyncChoice || 'normal';
+  const mode = firstSyncChoice || optionsMode || 'normal';
 
   // 3. Xử lý Bia Mộ (Tombstones)
   onProgress({ stage: 'tombstones', percent: 10, message: 'Đang đồng bộ trạng thái xóa truyện...' });
@@ -646,12 +703,23 @@ export async function performSync(supabase, {
   const activeCloudNovels = (cloudNovels || []).filter(n => !n.deleted_at);
   const activeCloudMap = new Map(activeCloudNovels.map(n => [n.id, n]));
 
+  // Chuẩn bị Map tiêu đề chuẩn hóa của các truyện active trên cloud
+  const cloudActiveNormMap = new Map();
+  for (const cn of activeCloudNovels) {
+    const norm = normalizeTitle(cn.title);
+    if (norm && !cloudActiveNormMap.has(norm)) {
+      cloudActiveNormMap.set(norm, cn);
+    }
+  }
+
   const allNovelIds = Array.from(new Set([...localMap.keys(), ...activeCloudMap.keys()]));
   const totalCount = allNovelIds.length;
 
   let pushedNovels = 0;
   let pulledNovels = 0;
   let conflicts = 0;
+  const duplicateSkipped = [];
+  let localOnlySkipped = 0;
 
   for (let i = 0; i < totalCount; i++) {
     const novelId = allNovelIds[i];
@@ -728,6 +796,23 @@ export async function performSync(supabase, {
 
       // TRƯỜNG HỢP 2: Chỉ có ở Local -> Đẩy lên Cloud
       if (localItem && !cloudRow) {
+        // Kiểm tra nếu tiêu đề chuẩn hóa trùng với một truyện chưa xóa trên cloud (ID khác)
+        const normLocalTitle = normalizeTitle(localItem.title);
+        const matchingCloud = normLocalTitle ? cloudActiveNormMap.get(normLocalTitle) : null;
+        if (matchingCloud && matchingCloud.id !== novelId) {
+          duplicateSkipped.push({
+            title: localItem.title || matchingCloud.title,
+            localId: novelId,
+            cloudId: matchingCloud.id,
+          });
+          continue;
+        }
+
+        // Ở chế độ cloud_master, các truyện chỉ có ở local cũng KHÔNG tự đẩy lên
+        if (mode === 'cloud_master') {
+          localOnlySkipped++;
+          continue;
+        }
         onProgress({ stage: 'pushing_novel', novelTitle, percent: progressPct, message: `Đang tải lên "${novelTitle}" lên cloud...` });
         const novel = await getNovel(novelId);
         const chapters = await getChapters(novelId);
@@ -1008,8 +1093,14 @@ export async function performSync(supabase, {
 
   // 5. Đồng bộ Tiến độ đọc
   onProgress({ stage: 'syncing_progress', percent: 92, message: 'Đang đồng bộ tiến độ đọc...' });
+  let progressPushed = 0;
+  let progressPulled = 0;
   try {
-    await syncReadingProgress(supabase, userId, allNovelIds, { mode });
+    const progRes = await syncReadingProgress(supabase, userId, allNovelIds, { mode });
+    if (progRes) {
+      progressPushed = progRes.progressPushed || 0;
+      progressPulled = progRes.progressPulled || 0;
+    }
   } catch (err) {
     errors.push(`Lỗi đồng bộ tiến độ đọc: ${err.message}`);
   }
@@ -1050,7 +1141,11 @@ export async function performSync(supabase, {
     success: isAllSuccess,
     pushedNovels,
     pulledNovels,
+    progressPushed,
+    progressPulled,
     conflicts,
+    duplicateSkipped,
+    localOnlySkipped,
     errors,
     cultivationUpdatedFromCloud: Boolean(cultivationRes?.updatedFromCloud),
     cultivationPushedToCloud: Boolean(cultivationRes?.pushedToCloud),
