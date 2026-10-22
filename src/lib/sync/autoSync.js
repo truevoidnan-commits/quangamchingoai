@@ -16,6 +16,7 @@ import {
   setSyncBypassDirty,
   acquireSyncLock,
   releaseSyncLock,
+  refreshSyncLock,
 } from './syncLedger.js';
 import {
   getActiveProfile,
@@ -45,7 +46,7 @@ import {
   syncNovelMetadata,
 } from './syncEngine.js';
 
-export { pullNovelProgressNow, acquireSyncLock, releaseSyncLock };
+export { pullNovelProgressNow, acquireSyncLock, releaseSyncLock, refreshSyncLock };
 
 export const AUTO_SYNC_KEY = 'tcl_auto_sync';
 export const SYNC_STATUS_KEY = 'tcl_sync_status';
@@ -281,9 +282,10 @@ export async function runAutoSync(customSupabase = null, options = {}) {
   setSyncStatus({ state: 'syncing', message: 'Đang đồng bộ tự động...' });
 
   const errors = [];
+  let ledger = null;
 
   try {
-    const ledger = getSyncLedger();
+    ledger = getSyncLedger();
     const dirty = getDirtyNovels();
     const tombstones = getTombstones();
     const localLibrary = getLibrary({ includeHidden: true });
@@ -507,6 +509,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       }
     }
 
+    refreshSyncLock();
     // 5. Đồng bộ Tu Vi (Cultivation)
     const localState = getCultivationState();
     let localRev = typeof localState?._rev === 'number' ? localState._rev : 0;
@@ -586,6 +589,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       }
     }
 
+    refreshSyncLock();
     // 6. Đồng bộ Tiến độ đọc
     try {
       await syncReadingProgress(client, userId, allNovelIds, { mode: 'normal' });
@@ -594,8 +598,12 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       errors.push(e.message);
     }
 
-    // KIỂM TRA LỖI: nếu có bất kỳ lỗi nào, KHÔNG ghi nhận đã đồng bộ
+    // KIỂM TRA LỖI: nếu có bất kỳ lỗi nào, KHÔNG ghi nhận đã đồng bộ (lastSyncedAt)
+    // nhưng lưu những gì đã thật sự thành công (tu vi, truyện đã đẩy/kéo) để lần sau không bị xung đột giả
     if (errors.length > 0) {
+      if (ledger) {
+        saveSyncLedger(ledger);
+      }
       recordBackoffFailure();
       releaseSyncLock();
       setSyncStatus({
@@ -631,6 +639,11 @@ export async function runAutoSync(customSupabase = null, options = {}) {
     releaseSyncLock();
     return { success: true, parallelDeviceDetected };
   } catch (err) {
+    if (ledger) {
+      try {
+        saveSyncLedger(ledger);
+      } catch {}
+    }
     recordBackoffFailure();
     releaseSyncLock();
     setSyncStatus({

@@ -10,6 +10,7 @@ import {
   setSyncBypassDirty,
   acquireSyncLock,
   releaseSyncLock,
+  refreshSyncLock,
 } from './syncLedger.js';
 import {
   getNovel,
@@ -1039,6 +1040,7 @@ export async function performSync(supabase, {
   let localOnlySkipped = 0;
 
   for (let i = 0; i < totalCount; i++) {
+    refreshSyncLock();
     const novelId = allNovelIds[i];
     // Nếu truyện đã có bia mộ hoặc đã xóa trên cloud thì bỏ qua
     if (cloudNovelsMap.get(novelId)?.deleted_at || tombstones[novelId]) {
@@ -1062,8 +1064,10 @@ export async function performSync(supabase, {
     try {
       // TRƯỜNG HỢP 1: Chỉ có ở Cloud -> Kéo về máy
       if (cloudRow && !localItem) {
+        refreshSyncLock();
         onProgress({ stage: 'pulling_novel', novelTitle, percent: progressPct, message: `Đang tải nội dung "${novelTitle}" từ cloud...` });
         await pullNovelFromCloud(supabase, userId, cloudRow, ledger);
+        refreshSyncLock();
         pulledNovels++;
         continue;
       }
@@ -1099,9 +1103,11 @@ export async function performSync(supabase, {
         }
 
         const contentPath = `${userId}/${novelId}${ext}`;
+        refreshSyncLock();
         const { error: uploadErr } = await supabase.storage
           .from(BUCKET_NAME)
           .upload(contentPath, blob, { upsert: true, contentType });
+        refreshSyncLock();
 
         if (uploadErr) {
           throw new Error(`Lỗi upload nội dung truyện: ${uploadErr.message}`);
@@ -1191,10 +1197,12 @@ export async function performSync(supabase, {
         // B. Xử lý Nội dung chương (Content)
         if (mode === 'cloud_master') {
           // Kéo nội dung từ cloud về
+          refreshSyncLock();
           onProgress({ stage: 'pulling_novel', novelTitle, percent: progressPct, message: `Đang cập nhật nội dung "${novelTitle}" từ cloud...` });
           const { data: blob, error: downloadErr } = await supabase.storage
             .from(BUCKET_NAME)
             .download(cloudRow.content_path);
+          refreshSyncLock();
           if (downloadErr) throw downloadErr;
 
           const chapters = await decompressChapters(blob, cloudRow.content_path);
@@ -1339,9 +1347,11 @@ export async function performSync(supabase, {
           pushedNovels++;
         } else if (!isLocalContentDirty && hasCloudContentChanged) {
           // Chỉ cloud đổi -> Kéo về máy
+          refreshSyncLock();
           const { data: blob, error: downloadErr } = await supabase.storage
             .from(BUCKET_NAME)
             .download(cloudRow.content_path);
+          refreshSyncLock();
           if (downloadErr) throw downloadErr;
 
           const chapters = await decompressChapters(blob, cloudRow.content_path);
@@ -1362,9 +1372,12 @@ export async function performSync(supabase, {
     } catch (err) {
       console.warn(`Lỗi khi xử lý truyện "${novelTitle}":`, err);
       errors.push(`Truyện "${novelTitle}": ${err.message || 'Lỗi không xác định'}`);
+    } finally {
+      refreshSyncLock();
     }
   }
 
+  refreshSyncLock();
   // 5. Đồng bộ Tiến độ đọc
   onProgress({ stage: 'syncing_progress', percent: 92, message: 'Đang đồng bộ tiến độ đọc...' });
   let progressPushed = 0;

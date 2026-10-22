@@ -136,6 +136,7 @@ import {
   setAutoSyncEnabled,
   acquireSyncLock,
   releaseSyncLock,
+  refreshSyncLock,
   getSyncStatus,
   resetBackoff,
   getBackoffDelay,
@@ -172,7 +173,9 @@ class MockSupabaseClient {
       cultivationUpsert: false,
       progressUpsert: false,
       userSettingsUpsert: false,
+      errorOnNovelId: null,
     };
+    this.cultivationUpsertCount = 0;
 
     this.auth = {
       async getSession() {
@@ -204,7 +207,7 @@ class MockSupabaseClient {
         return {
           async upload(path, blob) {
             self.storageUploadCount++;
-            if (self.simulatedErrors.storageUpload) {
+            if (self.simulatedErrors.storageUpload || (self.simulatedErrors.errorOnNovelId && path.includes(self.simulatedErrors.errorOnNovelId))) {
               return { data: null, error: new Error('Simulated storage upload error') };
             }
             bucket.set(path, blob);
@@ -292,8 +295,17 @@ class MockSupabaseClient {
         if (tableName === 'novels' && self.simulatedErrors.novelsUpsert) {
           return { data: null, error: new Error('Simulated novels upsert error') };
         }
-        if (tableName === 'cultivation' && self.simulatedErrors.cultivationUpsert) {
-          return { data: null, error: new Error('Simulated cultivation upsert error') };
+        if (tableName === 'novels' && self.simulatedErrors.errorOnNovelId) {
+          const rowsList = Array.isArray(rowOrRows) ? rowOrRows : [rowOrRows];
+          if (rowsList.some(r => r.id === self.simulatedErrors.errorOnNovelId)) {
+            return { data: null, error: new Error(`Simulated novels upsert error on ${self.simulatedErrors.errorOnNovelId}`) };
+          }
+        }
+        if (tableName === 'cultivation') {
+          self.cultivationUpsertCount++;
+          if (self.simulatedErrors.cultivationUpsert) {
+            return { data: null, error: new Error('Simulated cultivation upsert error') };
+          }
         }
         if (tableName === 'progress' && self.simulatedErrors.progressUpsert) {
           return { data: null, error: new Error('Simulated progress upsert error') };
@@ -378,7 +390,7 @@ import {
   saveCultivationState,
 } from '../src/lib/cultivation.js';
 
-console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST TỰ ĐỘNG SYNC (1-30) ===\n');
+console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST TỰ ĐỘNG SYNC (1-33) ===\n');
 
 // -------------------------------------------------------------
 // TEST 1: Truyện mới ở máy -> Đẩy lên Cloud
@@ -1389,6 +1401,9 @@ resetBackoff();
 global.localStorage.clear();
 mockDB.novels.clear();
 mockDB.chapters.clear();
+supabaseMock.tables.novels.clear();
+supabaseMock.storageBuckets.novels.clear();
+supabaseMock.tables.cultivation.clear();
 setHostOverrideForTesting('test-user.github.io');
 setAutoSyncEnabled(true);
 setActiveProfile('real');
@@ -1542,6 +1557,7 @@ setActiveProfile('real');
 // Xóa các truyện cũ trên cloud để chỉ tập trung test riêng nov_meta_test
 supabaseMock.tables.novels.clear();
 supabaseMock.storageBuckets.novels.clear();
+supabaseMock.tables.cultivation.clear();
 
 // Setup truyện nov_meta_test đã đồng bộ sẵn ở cả 2 bên
 const baseNovel = {
@@ -1634,5 +1650,185 @@ assert.strictEqual(supabaseMock.storageUploadCount, 0, 'Sửa metadata tại Loc
 
 console.log('✓ Test 30 Passed: Sửa metadata hai chiều không tải lại chương (downloadCount = 0, uploadCount = 0)!');
 
-console.log('\n=== TẤT CẢ 30 BÀI TEST (PHASE 1 + PHASE 2) ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');
+
+// -------------------------------------------------------------
+// TEST 31 (a): Tu vi đẩy thành công rồi một truyện lỗi -> Lần sau không báo cultivation_conflict & không đẩy lại
+// -------------------------------------------------------------
+console.log('\n--- Test 31 (a): Tu vi đẩy thành công rồi một truyện lỗi ---');
+releaseSyncLock();
+resetBackoff();
+global.localStorage.clear();
+mockDB.novels.clear();
+mockDB.chapters.clear();
+supabaseMock.tables.novels.clear();
+supabaseMock.storageBuckets.novels.clear();
+supabaseMock.tables.cultivation.clear();
+setHostOverrideForTesting('test-user.github.io');
+setAutoSyncEnabled(true);
+setActiveProfile('real');
+
+// Setup máy: có 1 truyện sẽ lỗi nov_err_31
+const novErr31 = { id: 'nov_err_31', title: 'Truyện Lỗi Sau Tu Vi', description: '', coverUrl: '', updatedAt: 1000 };
+await saveNovel(novErr31);
+await saveChaptersBulk([{ id: 'ch_31_1', novelId: 'nov_err_31', chapterNumber: 1, title: 'C1', content: 'Cont', order: 1 }]);
+addToLibrary({ id: 'nov_err_31', title: 'Truyện Lỗi Sau Tu Vi', chapterCount: 1, updatedAt: 1000 });
+markNovelDirty('nov_err_31');
+
+// Setup tu vi máy: rev = 8, cloud đang là rev = 4
+const cultState31 = { realm: 'Kim Đan Sơ Kỳ', totalExp: 2000, _rev: 8 };
+localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cultState31));
+localStorage.setItem(getCultivationKey('pending_seconds', 'real'), '0');
+
+saveSyncLedger({
+  novels: {},
+  cultivation: { lastSyncedRev: 4, lastSyncedPending: 0, lastCloudUpdatedAt: 500 },
+  lastSyncedAt: 1000,
+});
+
+supabaseMock.tables.cultivation.set('user_123', {
+  user_id: 'user_123',
+  rev: 4,
+  state: { realm: 'Trúc Cơ Hậu Kỳ', totalExp: 1000, _rev: 4 },
+  updated_at: 500,
+});
+
+// Giả lập lỗi khi đẩy nov_err_31 lên cloud
+supabaseMock.simulatedErrors.errorOnNovelId = 'nov_err_31';
+supabaseMock.cultivationUpsertCount = 0;
+
+// Lần chạy 1: Truyện nov_err_31 lỗi, nhưng tu vi vẫn đẩy thành công
+const res31_1 = await runAutoSync(supabaseMock, { force: true });
+assert.strictEqual(res31_1.success, false, 'Lần 1 phải báo lỗi do có truyện lỗi');
+assert(res31_1.errors.length > 0, 'Phải có lỗi trong danh sách errors');
+
+// Kiểm tra: Tu vi trên Cloud đã được cập nhật lên rev 8
+const cloudCult31 = supabaseMock.tables.cultivation.get('user_123');
+assert(cloudCult31, 'Tu vi phải được lưu trên cloud');
+assert.strictEqual(cloudCult31.rev, 8, 'Rev tu vi trên cloud phải là 8');
+
+// Kiểm tra: Ledger đã lưu lastSyncedRev = 8 mặc dù lần chạy có lỗi
+const ledgerAfter31_1 = getSyncLedger();
+assert.strictEqual(ledgerAfter31_1.cultivation.lastSyncedRev, 8, 'Ledger phải ghi nhớ lastSyncedRev = 8');
+assert.strictEqual(ledgerAfter31_1.lastSyncedAt, 1000, 'lastSyncedAt KHÔNG được cập nhật khi có lỗi');
+
+// Lần chạy 2: Hết lỗi truyện
+supabaseMock.simulatedErrors.errorOnNovelId = null;
+resetBackoff();
+const cultUpsertCountBefore = supabaseMock.cultivationUpsertCount;
+
+const res31_2 = await runAutoSync(supabaseMock, { force: true });
+assert.strictEqual(res31_2.success, true, 'Lần 2 phải thành công khi hết lỗi');
+assert.notStrictEqual(res31_2.reason, 'cultivation_conflict', 'KHÔNG được báo cultivation_conflict');
+assert.strictEqual(getSyncStatus().state, 'idle', 'Trạng thái sync phải là idle');
+assert.strictEqual(supabaseMock.cultivationUpsertCount, cultUpsertCountBefore, 'TUYỆT ĐỐI không được đẩy lại tu vi khi không đổi gì');
+console.log('✓ Test 31 Passed: Tu vi đẩy thành công dù truyện lỗi, lần sau không báo xung đột giả và không đẩy lại!');
+
+// -------------------------------------------------------------
+// TEST 32 (b): Truyện A đẩy thành công, truyện B lỗi -> Lần sau A không bị coi là xung đột nội dung
+// -------------------------------------------------------------
+console.log('\n--- Test 32 (b): Truyện A đẩy thành công, truyện B lỗi ---');
+releaseSyncLock();
+resetBackoff();
+global.localStorage.clear();
+mockDB.novels.clear();
+mockDB.chapters.clear();
+supabaseMock.tables.novels.clear();
+supabaseMock.storageBuckets.novels.clear();
+setHostOverrideForTesting('test-user.github.io');
+setAutoSyncEnabled(true);
+setActiveProfile('real');
+
+// Setup máy có 2 truyện A và B
+await saveNovel({ id: 'nov_32_A', title: 'Truyện 32 A', description: 'Mô tả A', coverUrl: '', updatedAt: 1000 });
+await saveChaptersBulk([{ id: 'ch_32_a1', novelId: 'nov_32_A', chapterNumber: 1, title: 'C1', content: 'Nội dung A', order: 1 }]);
+addToLibrary({ id: 'nov_32_A', title: 'Truyện 32 A', chapterCount: 1, updatedAt: 1000 });
+markNovelDirty('nov_32_A');
+
+await saveNovel({ id: 'nov_32_B', title: 'Truyện 32 B', description: 'Mô tả B', coverUrl: '', updatedAt: 1000 });
+await saveChaptersBulk([{ id: 'ch_32_b1', novelId: 'nov_32_B', chapterNumber: 1, title: 'C1', content: 'Nội dung B', order: 1 }]);
+addToLibrary({ id: 'nov_32_B', title: 'Truyện 32 B', chapterCount: 1, updatedAt: 1000 });
+markNovelDirty('nov_32_B');
+
+saveSyncLedger({
+  novels: {},
+  cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 },
+  lastSyncedAt: 1000,
+});
+
+// Giả lập lỗi ở truyện B (errorOnNovelId = 'nov_32_B')
+supabaseMock.simulatedErrors.errorOnNovelId = 'nov_32_B';
+
+// Lần chạy 1: A thành công, B lỗi
+const res32_1 = await runAutoSync(supabaseMock, { force: true });
+assert.strictEqual(res32_1.success, false, 'Lần 1 phải trả false vì truyện B lỗi');
+
+// Kiểm tra truyện A đã lên cloud và ledger đã ghi nhận A
+assert(supabaseMock.tables.novels.get('user_123:nov_32_A'), 'Truyện A phải có trên cloud');
+const ledgerAfter32_1 = getSyncLedger();
+assert(ledgerAfter32_1.novels['nov_32_A']?.lastPushedContentAt > 0, 'Ledger phải lưu lastPushedContentAt của truyện A');
+assert(!getDirtyNovels()['nov_32_A'], 'Dirty flag của truyện A phải được xóa');
+
+// Kiểm tra truyện B chưa xong, dirty vẫn còn
+assert(getDirtyNovels()['nov_32_B'], 'Dirty flag của truyện B vẫn phải giữ nguyên');
+
+// Lần chạy 2: Sửa xong lỗi ở B, chạy lại
+supabaseMock.simulatedErrors.errorOnNovelId = null;
+resetBackoff();
+
+const res32_2 = await runAutoSync(supabaseMock, { force: true });
+assert.strictEqual(res32_2.success, true, 'Lần 2 phải thành công trọn vẹn');
+assert.notStrictEqual(res32_2.reason, 'novel_conflict', 'Truyện A tuyệt đối KHÔNG bị coi là xung đột nội dung!');
+assert.strictEqual(getSyncStatus().state, 'idle');
+assert(supabaseMock.tables.novels.get('user_123:nov_32_B'), 'Truyện B bây giờ cũng đã lên cloud');
+console.log('✓ Test 32 Passed: Truyện A đẩy thành công, B lỗi: lần sau A không bị coi là xung đột nội dung!');
+
+// -------------------------------------------------------------
+// TEST 33 (c): Khóa không hết hạn khi một lần đồng bộ kéo dài hơn 2 phút (dùng đồng hồ giả)
+// -------------------------------------------------------------
+console.log('\n--- Test 33 (c): Khóa không hết hạn khi đồng bộ kéo dài hơn 2 phút ---');
+releaseSyncLock();
+resetBackoff();
+
+const originalDateNow = Date.now;
+try {
+  let fakeTime = 1000000;
+  Date.now = () => fakeTime;
+
+  // 1. Lấy khóa ban đầu tại fakeTime = 1,000,000
+  const lock1 = acquireSyncLock();
+  assert.strictEqual(lock1, true, 'Phải lấy được khóa ban đầu');
+
+  // Kiểm tra không lấy lại được khóa trong cùng thời điểm
+  assert.strictEqual(acquireSyncLock(), false, 'Không thể lấy khóa khi đang có tiến trình chiếm giữ');
+
+  // 2. Trôi qua 80 giây (fakeTime = 1,080,000 < 120,000 timeout)
+  fakeTime += 80000;
+
+  // Gọi refreshSyncLock() (giả lập vừa tải/đẩy xong 1 truyện lớn)
+  refreshSyncLock();
+
+  // 3. Trôi tiếp 80 giây nữa (fakeTime = 1,160,000. Tổng thời gian trôi qua là 160s > 120s / 2 phút!)
+  fakeTime += 80000;
+
+  // Nếu KHÔNG có refreshSyncLock, khóa đã hết hạn ở 120s.
+  // Nhưng VÌ ĐÃ CÓ refreshSyncLock ở thời điểm 80s, khoảng cách hiện tại chỉ là 80s (< 120s).
+  // Do đó acquireSyncLock BẮT BUỘC vẫn phải trả false (khóa không bị cướp)!
+  assert.strictEqual(acquireSyncLock(), false, 'Khóa KHÔNG được hết hạn sau 160 giây (> 2 phút) vì đã được refresh!');
+
+  // 4. Tiếp tục trôi qua 90 giây nữa kèm refresh (fakeTime = 1,250,000)
+  refreshSyncLock();
+  fakeTime += 60000; // Tổng thời gian đã là 220s (~3.7 phút)
+  assert.strictEqual(acquireSyncLock(), false, 'Sau gần 4 phút khóa vẫn được bảo vệ nhờ refresh liên tục');
+
+  // 5. Kết thúc đồng bộ: gọi releaseSyncLock()
+  releaseSyncLock();
+  assert.strictEqual(acquireSyncLock(), true, 'Sau khi releaseSyncLock thì tiến trình khác lấy khóa bình thường');
+  releaseSyncLock();
+} finally {
+  Date.now = originalDateNow;
+}
+console.log('✓ Test 33 Passed: Cơ chế refreshSyncLock giữ khóa liên tục qua các lần đồng bộ dài hơn 2 phút thành công!');
+
+console.log('\n=== TẤT CẢ 33 BÀI TEST (PHASE 1 + PHASE 2) ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');
+
 

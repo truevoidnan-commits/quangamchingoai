@@ -121,6 +121,12 @@ export function acquireSyncLock() {
   }
 }
 
+export function refreshSyncLock() {
+  try {
+    localStorage.setItem(SYNC_LOCK_KEY, String(Date.now()));
+  } catch {}
+}
+
 export function releaseSyncLock() {
   try {
     localStorage.removeItem(SYNC_LOCK_KEY);
