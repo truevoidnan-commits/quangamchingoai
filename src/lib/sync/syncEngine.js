@@ -323,6 +323,81 @@ export async function syncReadingSettings(supabase, userId, options = {}) {
 /**
  * Đồng bộ Tiến độ đọc (progress table)
  */
+/**
+ * Ghi tiến độ nhận từ Cloud vào cả tcl_progress_<id> và scroll_pos_<novelId>_<chapterId>
+ */
+export function applyCloudReadingProgress(novelId, cloudData, cloudUpdatedAt = Date.now()) {
+  if (!novelId || !cloudData) return;
+  saveReadingProgress(novelId, cloudData);
+  if (cloudData.chapterId) {
+    const posData = {
+      percent: typeof cloudData.percent === 'number' ? cloudData.percent : 0,
+      paraIndex: typeof cloudData.paraIndex === 'number' ? cloudData.paraIndex : 0,
+      scrollY: typeof cloudData.scrollTop === 'number' ? cloudData.scrollTop : 0,
+      time: cloudUpdatedAt || cloudData.updatedAt || Date.now(),
+      fromCloud: true,
+    };
+    try {
+      localStorage.setItem(`scroll_pos_${novelId}_${cloudData.chapterId}`, JSON.stringify(posData));
+    } catch {}
+  }
+}
+
+/**
+ * Lấy nhanh 1 dòng progress cho 1 truyện từ Cloud (chờ tối đa 2.5s)
+ */
+export async function pullNovelProgressNow(novelId, customSupabase = null) {
+  if (!novelId) return { updated: false, reason: 'missing_novel_id' };
+  const client = customSupabase || supabase;
+  if (!client || !client.auth) return { updated: false, reason: 'no_client' };
+
+  let session = null;
+  try {
+    const { data } = await client.auth.getSession();
+    session = data?.session;
+  } catch {
+    return { updated: false, reason: 'auth_error' };
+  }
+  if (!session?.user) return { updated: false, reason: 'not_logged_in' };
+  if (getActiveProfile() !== 'real') return { updated: false, reason: 'sandbox_profile' };
+
+  const userId = session.user.id;
+  const localProg = getReadingProgress(novelId);
+  const localUpdatedAt = localProg?.updatedAt || 0;
+
+  try {
+    let timeoutHandle;
+    const fetchPromise = client
+      .from('progress')
+      .select('data, updated_at')
+      .eq('user_id', userId)
+      .eq('novel_id', novelId)
+      .single();
+
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutHandle = setTimeout(() => reject(new Error('Timeout 2.5s')), 2500);
+    });
+
+    const res = await Promise.race([fetchPromise, timeoutPromise]);
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+    const { data: cloudRow, error: fetchErr } = res || {};
+
+    if (fetchErr || !cloudRow) {
+      return { updated: false, data: localProg };
+    }
+
+    const cloudUpdatedAt = cloudRow.updated_at || 0;
+    if (cloudRow.data && (cloudUpdatedAt > localUpdatedAt || !localProg?.chapterId)) {
+      applyCloudReadingProgress(novelId, cloudRow.data, cloudUpdatedAt);
+      return { updated: true, data: cloudRow.data, cloudUpdatedAt };
+    }
+
+    return { updated: false, data: localProg };
+  } catch (err) {
+    return { updated: false, data: localProg, error: err.message };
+  }
+}
+
 export async function syncReadingProgress(supabase, userId, activeNovelIds = [], options = {}) {
   const { data: cloudProgressList, error: fetchErr } = await supabase
     .from('progress')
@@ -361,7 +436,7 @@ export async function syncReadingProgress(supabase, userId, activeNovelIds = [],
     // 4. Chế độ cloud_master: chỉ ghi đè tiến độ local khi cloud có dòng cho truyện đó; nếu cloud không có dòng thì GIỮ tiến độ local
     if (options.mode === 'cloud_master') {
       if (cloudItem && cloudItem.data && cloudItem.data.chapterId) {
-        saveReadingProgress(novelId, cloudItem.data);
+        applyCloudReadingProgress(novelId, cloudItem.data, cloudUpdatedAt);
         progressPulled++;
       }
       continue;
@@ -394,7 +469,7 @@ export async function syncReadingProgress(supabase, userId, activeNovelIds = [],
       progressPushed++;
     } else if (cloudItem && cloudUpdatedAt > localUpdatedAt) {
       if (cloudItem.data) {
-        saveReadingProgress(novelId, cloudItem.data);
+        applyCloudReadingProgress(novelId, cloudItem.data, cloudUpdatedAt);
         progressPulled++;
       }
     } else if (localProg?.chapterId && localUpdatedAt > cloudUpdatedAt) {

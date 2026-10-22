@@ -129,6 +129,18 @@ class MockDB {
 const mockDB = new MockDB();
 
 // Import db.js and set mock
+import { setHostOverrideForTesting, isProductionHost } from '../src/lib/sync/envProtection.js';
+import {
+  runAutoSync,
+  isAutoSyncEnabled,
+  setAutoSyncEnabled,
+  acquireSyncLock,
+  releaseSyncLock,
+  getSyncStatus,
+  resetBackoff,
+  getBackoffDelay,
+} from '../src/lib/sync/autoSync.js';
+import { pullNovelProgressNow } from '../src/lib/sync/syncEngine.js';
 import { setDBPromiseForTesting, getNovel, getChapters } from '../src/lib/db.js';
 setDBPromiseForTesting(Promise.resolve(mockDB));
 
@@ -147,7 +159,9 @@ class MockSupabaseClient {
     this.storageBuckets = {
       novels: new Map(), // key: path -> Blob or Buffer
     };
+    this.lastSelectColumns = {};
     this.simulatedErrors = {
+      novelsSelect: false,
       storageUpload: false,
       storageDownload: false,
       storageRemove: false,
@@ -226,6 +240,7 @@ class MockSupabaseClient {
       pendingUpdate: null,
 
       select(cols = '*') {
+        self.lastSelectColumns[tableName] = cols;
         builder.selectCols = cols;
         return builder;
       },
@@ -243,6 +258,9 @@ class MockSupabaseClient {
       },
       async then(resolve, reject) {
         try {
+          if (tableName === 'novels' && self.simulatedErrors.novelsSelect) {
+            return resolve({ data: null, error: new Error('Simulated novels select error') });
+          }
           let rows = Array.from(table.entries());
           for (const f of builder.filters) {
             rows = rows.filter(([k, r]) => r[f.col] === f.val);
@@ -350,11 +368,12 @@ import {
 import {
   getActiveProfile,
   setActiveProfile,
+  getCultivationState,
   getCultivationKey,
   saveCultivationState,
 } from '../src/lib/cultivation.js';
 
-console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST TỰ ĐỘNG SYNC (1-14) ===\n');
+console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST TỰ ĐỘNG SYNC (1-23) ===\n');
 
 // -------------------------------------------------------------
 // TEST 1: Truyện mới ở máy -> Đẩy lên Cloud
@@ -939,4 +958,226 @@ assert.strictEqual(pulledProgress.chapterId, 'ch_99', 'Tiến độ đã đượ
 console.log('✓ Test 14 Passed: cloud_master không đẩy local-only và không xóa progress local khi cloud rỗng!');
 
 
-console.log('\n=== TẤT CẢ 14 BÀI TEST ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');
+
+// =============================================================
+// PHASE 2 TESTS (15 - 23)
+// =============================================================
+
+// -------------------------------------------------------------
+// TEST 15 (a): Host không phải github.io: auto không chạy
+// -------------------------------------------------------------
+console.log('\n--- Test 15 (a): Host không phải github.io -> auto không chạy ---');
+setHostOverrideForTesting('localhost');
+assert.strictEqual(isProductionHost(), false);
+assert.strictEqual(isAutoSyncEnabled(), false, 'Trên localhost, isAutoSyncEnabled luôn trả về false');
+const resHost1 = await runAutoSync(supabaseMock);
+assert.strictEqual(resHost1.skipped, true);
+assert.strictEqual(resHost1.reason, 'not_production_host');
+
+setHostOverrideForTesting('preview.vercel.app');
+assert.strictEqual(isProductionHost(), false);
+const resHost2 = await runAutoSync(supabaseMock);
+assert.strictEqual(resHost2.skipped, true);
+assert.strictEqual(resHost2.reason, 'not_production_host');
+console.log('✓ Test 15 Passed: Host không phải github.io tự động bỏ qua hoàn toàn!');
+
+// -------------------------------------------------------------
+// TEST 16 (b): Sandbox: auto không chạy
+// -------------------------------------------------------------
+console.log('\n--- Test 16 (b): Hồ sơ Sandbox -> auto không chạy ---');
+setHostOverrideForTesting('my-user.github.io');
+assert.strictEqual(isProductionHost(), true);
+setActiveProfile('sandbox');
+assert.strictEqual(getActiveProfile(), 'sandbox');
+const resSandbox = await runAutoSync(supabaseMock);
+assert.strictEqual(resSandbox.skipped, true);
+assert.strictEqual(resSandbox.reason, 'sandbox_profile');
+setActiveProfile('real');
+console.log('✓ Test 16 Passed: Hồ sơ Sandbox tuyệt đối không bao giờ chạy auto sync!');
+
+// -------------------------------------------------------------
+// TEST 17 (c): Hai lần chạy chồng chỉ chạy một (concurrency lock)
+// -------------------------------------------------------------
+console.log('\n--- Test 17 (c): Hai lần chạy chồng chỉ chạy một (concurrency lock) ---');
+releaseSyncLock();
+const lock1 = acquireSyncLock();
+assert.strictEqual(lock1, true, 'Lần đầu xin lock phải thành công');
+const lock2 = acquireSyncLock();
+assert.strictEqual(lock2, false, 'Lần 2 xin lock khi lock đang giữ phải trả về false');
+const resLocked = await runAutoSync(supabaseMock);
+assert.strictEqual(resLocked.skipped, true);
+assert.strictEqual(resLocked.reason, 'locked');
+releaseSyncLock();
+assert.strictEqual(acquireSyncLock(), true, 'Sau khi nhả lock, xin lock lại thành công');
+releaseSyncLock();
+console.log('✓ Test 17 Passed: Cơ chế khóa chống chạy trùng hoạt động chính xác!');
+
+// -------------------------------------------------------------
+// TEST 18 (d): Xung đột tu vi không bị ghi đè, cờ 🔔 bật
+// -------------------------------------------------------------
+console.log('\n--- Test 18 (d): Xung đột tu vi không bị ghi đè, cờ 🔔 bật ---');
+setHostOverrideForTesting('test.github.io');
+releaseSyncLock();
+resetBackoff();
+
+// Đặt cloud tu vi rev 50, exp 900.000
+supabaseMock.tables.cultivation.set('user_123', {
+  user_id: 'user_123',
+  rev: 50,
+  updated_at: Date.now(),
+  device_id: 'other_device_abc',
+  state: { realm: 'hoa_than', totalExp: 900000, _rev: 50 },
+});
+
+// Đặt ledger lastSyncedRev = 30
+const ledger18 = getSyncLedger();
+ledger18.cultivation = { lastSyncedRev: 30, lastCloudUpdatedAt: Date.now() - 10000 };
+ledger18.lastSyncedAt = Date.now() - 10000;
+saveSyncLedger(ledger18);
+
+// Đặt local tu vi _rev = 45, exp 800.000
+const localState18 = { realm: 'nguyen_anh', totalExp: 800000, _rev: 45 };
+global.localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(localState18));
+
+const resConflict = await runAutoSync(supabaseMock);
+assert.strictEqual(resConflict.attention, true, 'Phải bật cờ attention');
+assert.strictEqual(resConflict.reason, 'cultivation_conflict');
+const currentLocalCult = getCultivationState();
+assert.strictEqual(currentLocalCult.totalExp, 800000, 'Tu vi local KHÔNG bị ghi đè khi xung đột');
+const currentCloudCult = supabaseMock.tables.cultivation.get('user_123');
+assert.strictEqual(currentCloudCult.state.totalExp, 900000, 'Tu vi cloud KHÔNG bị ghi đè khi xung đột');
+assert.strictEqual(getSyncStatus().state, 'attention');
+assert.strictEqual(getSyncStatus().attentionReason, 'cultivation_conflict');
+console.log('✓ Test 18 Passed: Xung đột tu vi không bị ghi đè, cờ 🔔 bật chuẩn xác!');
+
+// -------------------------------------------------------------
+// TEST 19 (e): Fast-forward tu vi có sao lưu (backupCultivationState)
+// -------------------------------------------------------------
+console.log('\n--- Test 19 (e): Fast-forward tu vi có sao lưu ---');
+releaseSyncLock();
+resetBackoff();
+
+// Dọn các bản sao lưu cũ trong mock storage
+for (let i = 0; i < global.localStorage.length; i++) {
+  const k = global.localStorage.key(i);
+  if (k && k.startsWith('tcl_cultivation_backup_')) {
+    global.localStorage.removeItem(k);
+  }
+}
+
+// Đặt local _rev = 50 (bằng lastSyncedRev)
+const localState19 = { realm: 'hoa_than', totalExp: 850000, _rev: 50 };
+global.localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(localState19));
+const ledger19 = getSyncLedger();
+ledger19.cultivation = { lastSyncedRev: 50, lastCloudUpdatedAt: Date.now() - 5000 };
+ledger19.lastSyncedAt = Date.now() - 5000;
+saveSyncLedger(ledger19);
+
+// Đặt cloud rev 60, exp 1.000.000
+supabaseMock.tables.cultivation.set('user_123', {
+  user_id: 'user_123',
+  rev: 60,
+  updated_at: Date.now(),
+  device_id: 'device_phone',
+  state: { realm: 'luyen_hu', totalExp: 1000000, _rev: 60 },
+});
+
+const resFF = await runAutoSync(supabaseMock);
+assert.strictEqual(resFF.success, true);
+const cultAfterFF = getCultivationState();
+assert.strictEqual(cultAfterFF.totalExp, 1000000, 'Local đã fast-forward lên 1.000.000 exp từ Cloud');
+assert.strictEqual(cultAfterFF._rev, 60);
+
+// Kiểm tra bản sao lưu được tạo tự động
+let backupFound = false;
+for (let i = 0; i < global.localStorage.length; i++) {
+  const k = global.localStorage.key(i);
+  if (k && k.startsWith('tcl_cultivation_backup_')) {
+    const bData = JSON.parse(global.localStorage.getItem(k));
+    if (bData && bData.totalExp === 850000) {
+      backupFound = true;
+      break;
+    }
+  }
+}
+assert.strictEqual(backupFound, true, 'Phải có bản sao lưu tu vi trước khi fast-forward');
+console.log('✓ Test 19 Passed: Fast-forward tu vi tự động sao lưu bản local trước khi áp dụng!');
+
+// -------------------------------------------------------------
+// TEST 20 (f): Hỏi thăm nhẹ không select cover
+// -------------------------------------------------------------
+console.log('\n--- Test 20 (f): Hỏi thăm nhẹ không select cover ---');
+releaseSyncLock();
+resetBackoff();
+await runAutoSync(supabaseMock);
+const novelsCols = supabaseMock.lastSelectColumns['novels'];
+assert(novelsCols, 'Phải có truy vấn select bảng novels');
+assert(!novelsCols.includes('cover'), 'Tuyệt đối KHÔNG được select cột cover khi hỏi thăm nhẹ');
+console.log('✓ Test 20 Passed: Kiểm tra cột truy vấn chặt chẽ, hoàn toàn không select cover!');
+
+// -------------------------------------------------------------
+// TEST 21 (g): Lỗi mạng backoff và không ghi nhận đã đồng bộ
+// -------------------------------------------------------------
+console.log('\n--- Test 21 (g): Lỗi mạng backoff và không ghi nhận đã đồng bộ ---');
+releaseSyncLock();
+resetBackoff();
+const lastSyncedBeforeErr = getSyncLedger().lastSyncedAt;
+
+// Bật lỗi select
+supabaseMock.simulatedErrors.novelsSelect = true;
+const resNetErr = await runAutoSync(supabaseMock);
+assert.strictEqual(resNetErr.success, false, 'Khi mạng lỗi, runAutoSync trả success: false');
+assert.strictEqual(getSyncLedger().lastSyncedAt, lastSyncedBeforeErr, 'lastSyncedAt KHÔNG được cập nhật khi lỗi mạng');
+assert(getBackoffDelay() > 0, 'Backoff delay phải lớn hơn 0');
+
+// Gọi lại ngay không force -> phải bị backoff chặn
+const resWaiting = await runAutoSync(supabaseMock);
+assert.strictEqual(resWaiting.skipped, true);
+assert.strictEqual(resWaiting.reason, 'backoff_waiting');
+
+// Tắt lỗi & reset backoff
+supabaseMock.simulatedErrors.novelsSelect = false;
+resetBackoff();
+console.log('✓ Test 21 Passed: Backoff tăng dần chuẩn xác, không ghi nhận đã đồng bộ khi có lỗi!');
+
+// -------------------------------------------------------------
+// TEST 22 (h): pullNovelProgressNow ghi cả tcl_progress và scroll_pos
+// -------------------------------------------------------------
+console.log('\n--- Test 22 (h): pullNovelProgressNow ghi cả tcl_progress và scroll_pos ---');
+supabaseMock.tables.progress.set('user_123:nov_prog_fast', {
+  user_id: 'user_123',
+  novel_id: 'nov_prog_fast',
+  data: { chapterId: 'ch_fast_5', percent: 0.75, paraIndex: 12, scrollTop: 1200 },
+  updated_at: Date.now() + 5000,
+});
+global.localStorage.removeItem('tcl_progress_nov_prog_fast');
+global.localStorage.removeItem('scroll_pos_nov_prog_fast_ch_fast_5');
+
+const pullRes = await pullNovelProgressNow('nov_prog_fast', supabaseMock);
+assert.strictEqual(pullRes.updated, true, 'pullNovelProgressNow phải cập nhật khi cloud mới hơn');
+const localProgPulled = getReadingProgress('nov_prog_fast');
+assert.strictEqual(localProgPulled.chapterId, 'ch_fast_5', 'tcl_progress phải có chapterId mới');
+const savedScrollRaw = global.localStorage.getItem('scroll_pos_nov_prog_fast_ch_fast_5');
+assert(savedScrollRaw, 'scroll_pos phải được ghi vào localStorage');
+const savedScroll = JSON.parse(savedScrollRaw);
+assert.strictEqual(savedScroll.percent, 0.75);
+assert.strictEqual(savedScroll.paraIndex, 12);
+assert.strictEqual(savedScroll.fromCloud, true);
+console.log('✓ Test 22 Passed: pullNovelProgressNow ghi nhận cả tcl_progress và scroll_pos hoàn hảo!');
+
+// -------------------------------------------------------------
+// TEST 23 (i): Lần đầu đồng bộ cả 2 bên có dữ liệu -> không tự chạy, bật cờ 🔔
+// -------------------------------------------------------------
+console.log('\n--- Test 23 (i): Lần đầu đồng bộ cả 2 bên có dữ liệu -> không tự chạy, bật cờ 🔔 ---');
+releaseSyncLock();
+resetBackoff();
+saveSyncLedger({ novels: {}, cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 }, lastSyncedAt: 0 });
+
+const resFirst = await runAutoSync(supabaseMock);
+assert.strictEqual(resFirst.attention, true);
+assert.strictEqual(resFirst.reason, 'first_sync');
+assert.strictEqual(getSyncStatus().state, 'attention');
+assert.strictEqual(getSyncStatus().attentionReason, 'first_sync');
+console.log('✓ Test 23 Passed: Lần đầu đồng bộ được phát hiện an toàn, không tự ý ghi đè, bật cờ 🔔!');
+
+console.log('\n=== TẤT CẢ 23 BÀI TEST (PHASE 1 + PHASE 2) ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');

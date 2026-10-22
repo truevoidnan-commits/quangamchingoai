@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { getNovel, getChapters, getChapter } from '../lib/db';
 import { getReadingProgress, saveReadingProgress } from '../lib/storage';
+import { pullNovelProgressNow } from '../lib/sync/syncEngine.js';
+import { notifyReadingProgressChanged } from '../lib/sync/autoSync.js';
 import { useReadingSettings } from '../hooks/useReadingSettings';
 import { READING_THEMES, FONT_OPTIONS } from '../hooks/useReadingSettings';
 import { useCultivation } from '../hooks/useCultivation';
@@ -60,6 +62,96 @@ export default function ReaderPage() {
   const [globalReplaceOpen, setGlobalReplaceOpen] = useState(false);
   const [editorToast, setEditorToast] = useState(null);
   const historyStackRef = useRef([]);
+  const [pullProgressDone, setPullProgressDone] = useState(false);
+  const [syncToast, setSyncToast] = useState(null);
+  const [newCultivationBanner, setNewCultivationBanner] = useState(false);
+  const lastUserInteractionTimeRef = useRef(0);
+  const prevJumpPosRef = useRef(null);
+
+  // Pull latest progress on mount before restoring position
+  useEffect(() => {
+    let active = true;
+    pullNovelProgressNow(activeNovelId).finally(() => {
+      if (active) setPullProgressDone(true);
+    });
+    return () => { active = false; };
+  }, [activeNovelId]);
+
+  // Track user interaction (scroll, touch, keydown)
+  useEffect(() => {
+    const markInteraction = () => {
+      lastUserInteractionTimeRef.current = Date.now();
+    };
+    window.addEventListener('scroll', markInteraction, { passive: true });
+    window.addEventListener('touchstart', markInteraction, { passive: true });
+    window.addEventListener('keydown', markInteraction, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', markInteraction);
+      window.removeEventListener('touchstart', markInteraction);
+      window.removeEventListener('keydown', markInteraction);
+    };
+  }, []);
+
+  // Tab switch to 'visible': check if cloud has newer progress for this novel
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        pullNovelProgressNow(activeNovelId).then((res) => {
+          if (res?.updated && res?.data) {
+            const cloudProg = res.data;
+            const now = Date.now();
+            const recentlyInteracted = now - lastUserInteractionTimeRef.current < 5000;
+            const curPos = {
+              chapterId: chapter?.id,
+              percent: lastRecordedScrollRef.current?.percent || 0,
+              paraIndex: lastRecordedScrollRef.current?.paraIndex || 0,
+              scrollY: window.scrollY || 0,
+            };
+
+            if (!recentlyInteracted) {
+              prevJumpPosRef.current = curPos;
+              if (cloudProg.chapterId && cloudProg.chapterId !== chapter?.id) {
+                navigate(`/novel/${activeNovelId}/read/${cloudProg.chapterId}`);
+              } else if (typeof cloudProg.paraIndex === 'number' && cloudProg.paraIndex >= 0) {
+                const el = document.getElementById(`para-${cloudProg.paraIndex}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+              setSyncToast({
+                type: 'jumped',
+                message: 'Đã nhảy tới vị trí mới nhất từ thiết bị khác',
+                canRevert: true,
+              });
+            } else {
+              setSyncToast({
+                type: 'proposal',
+                message: 'Có tiến độ mới từ thiết bị khác',
+                targetProgress: cloudProg,
+              });
+            }
+          }
+        }).catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [activeNovelId, chapter?.id, navigate]);
+
+  // Cultivation fast-forward banner listener
+  useEffect(() => {
+    const handleCultUpdated = () => {
+      setNewCultivationBanner(true);
+    };
+    window.addEventListener('cultivation_updated', handleCultUpdated);
+    return () => window.removeEventListener('cultivation_updated', handleCultUpdated);
+  }, []);
+
+  // Auto-dismiss syncToast after 8s
+  useEffect(() => {
+    if (syncToast) {
+      const timer = setTimeout(() => setSyncToast(null), 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [syncToast]);
 
   // Auto-dismiss editor toast after 6s
   useEffect(() => {
@@ -189,6 +281,7 @@ export default function ReaderPage() {
       percent,
       paraIndex: currentParaIndex
     });
+    notifyReadingProgressChanged();
   }, [chapter, activeNovelId]);
 
   const handleGoToCultivationFromReader = useCallback(() => {
@@ -222,7 +315,7 @@ export default function ReaderPage() {
       if (!savedRaw) return;
 
       try {
-        const { percent, scrollY, paraIndex } = JSON.parse(savedRaw);
+        const { percent, scrollY, paraIndex, fromCloud } = JSON.parse(savedRaw);
 
         // 1. Ưu tiên cuộn đến đúng đoạn văn (paragraph) đang đọc dở (chuẩn xác theo getBoundingClientRect)
         if (typeof paraIndex === 'number' && paraIndex >= 0) {
@@ -236,16 +329,16 @@ export default function ReaderPage() {
           }
         }
 
-        // 2. Dự phòng theo % hoặc tọa độ pixel scrollY
+        // 2. Dự phòng theo % (ưu tiên hơn scrollY, KHÔNG dùng scrollY nếu từ Cloud do khác kích thước màn hình)
         const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
         if (maxScroll > 60) {
-          if (typeof scrollY === 'number' && scrollY > 20 && scrollY <= maxScroll) {
-            window.scrollTo({ top: scrollY, behavior: 'instant' });
-            lastRecordedScrollRef.current = { percent: percent || 0, scrollY, paraIndex: paraIndex || 0 };
-          } else if (typeof percent === 'number' && percent > 0.005) {
+          if (typeof percent === 'number' && percent > 0.005) {
             const targetY = Math.min(percent * maxScroll, maxScroll);
             window.scrollTo({ top: targetY, behavior: 'instant' });
             lastRecordedScrollRef.current = { percent, scrollY: targetY, paraIndex: paraIndex || 0 };
+          } else if (!fromCloud && typeof scrollY === 'number' && scrollY > 20 && scrollY <= maxScroll) {
+            window.scrollTo({ top: scrollY, behavior: 'instant' });
+            lastRecordedScrollRef.current = { percent: percent || 0, scrollY, paraIndex: paraIndex || 0 };
           }
         }
       } catch (e) {
@@ -272,7 +365,7 @@ export default function ReaderPage() {
       clearTimeout(timer4);
       clearTimeout(timerDone);
     };
-  }, [chapter?.id, loading, activeNovelId, searchKeyword]);
+  }, [chapter?.id, loading, activeNovelId, searchKeyword, pullProgressDone]);
 
   // Chu kỳ ngộ đạo 60s lặp lại liên tục (cứ 60s tăng tu vi âm thầm & bắt đầu vòng mới)
   const [cycleSeconds, setCycleSeconds] = useState(() => { const saved = localStorage.getItem(getCultivationKey('pending_seconds')); return saved && !isNaN(parseInt(saved, 10)) ? parseInt(saved, 10) : 0; });
@@ -1057,6 +1150,146 @@ export default function ReaderPage() {
             className={selectionStyles.toastCloseBtn}
             onClick={() => setEditorToast(null)}
             title="Đóng thông báo"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Cultivation Fast-Forward Notification Banner */}
+      {newCultivationBanner && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          background: 'linear-gradient(90deg, #1e3a8a, #0369a1)',
+          color: '#fff',
+          padding: '8px 16px',
+          textAlign: 'center',
+          fontSize: '0.88rem',
+          fontWeight: 500,
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+        }}>
+          <span>⚡ Có tu vi mới từ thiết bị khác</span>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              background: '#38bdf8',
+              color: '#0f172a',
+              border: 'none',
+              padding: '4px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.8rem',
+            }}
+          >
+            Áp dụng ngay
+          </button>
+          <button
+            onClick={() => setNewCultivationBanner(false)}
+            style={{
+              background: 'transparent',
+              color: '#cbd5e1',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              marginLeft: '4px',
+            }}
+            title="Đóng"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Cross-device Sync Toast */}
+      {syncToast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '80px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: '#0f172a',
+          color: '#f8fafc',
+          border: '1px solid #38bdf8',
+          padding: '10px 16px',
+          borderRadius: '8px',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+          fontSize: '0.88rem',
+        }}>
+          <span>{syncToast.message}</span>
+          {syncToast.canRevert && prevJumpPosRef.current && (
+            <button
+              onClick={() => {
+                const prev = prevJumpPosRef.current;
+                if (prev) {
+                  if (prev.chapterId && prev.chapterId !== chapter?.id) {
+                    navigate(`/novel/${activeNovelId}/read/${prev.chapterId}`);
+                  } else {
+                    window.scrollTo({ top: prev.scrollY, behavior: 'smooth' });
+                  }
+                }
+                setSyncToast(null);
+              }}
+              style={{
+                background: 'rgba(56, 189, 248, 0.2)',
+                color: '#38bdf8',
+                border: '1px solid #38bdf8',
+                padding: '3px 8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+              }}
+            >
+              Quay lại vị trí cũ
+            </button>
+          )}
+          {syncToast.type === 'proposal' && syncToast.targetProgress && (
+            <button
+              onClick={() => {
+                const target = syncToast.targetProgress;
+                if (target.chapterId && target.chapterId !== chapter?.id) {
+                  navigate(`/novel/${activeNovelId}/read/${target.chapterId}`);
+                } else if (typeof target.paraIndex === 'number' && target.paraIndex >= 0) {
+                  const el = document.getElementById(`para-${target.paraIndex}`);
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                setSyncToast(null);
+              }}
+              style={{
+                background: '#38bdf8',
+                color: '#0f172a',
+                border: 'none',
+                padding: '3px 8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+              }}
+            >
+              Chuyển tới
+            </button>
+          )}
+          <button
+            onClick={() => setSyncToast(null)}
+            style={{
+              background: 'transparent',
+              color: '#94a3b8',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+            }}
           >
             ✕
           </button>

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getSyncStatus } from '../../lib/sync/autoSync.js';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCultivationContext } from '../../context/CultivationContext';
 import styles from './Header.module.css';
@@ -8,6 +9,39 @@ export default function Header() {
   const navigate = useNavigate();
   const isHome = location.pathname === '/';
   const { displayName, cultivation } = useCultivationContext();
+  const [syncStatus, setSyncStatusState] = useState(() => getSyncStatus());
+
+  useEffect(() => {
+    const handleStatus = (e) => {
+      setSyncStatusState(e.detail || getSyncStatus());
+    };
+    window.addEventListener('tcl_sync_status_changed', handleStatus);
+    return () => window.removeEventListener('tcl_sync_status_changed', handleStatus);
+  }, []);
+
+  const getSyncBadge = () => {
+    if (syncStatus.state === 'syncing') {
+      return { icon: '🔄', text: 'Đang sync', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)', border: 'rgba(56, 189, 248, 0.4)' };
+    }
+    if (syncStatus.state === 'offline') {
+      return { icon: '📴', text: 'Offline', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)', border: 'rgba(148, 163, 184, 0.3)' };
+    }
+    if (syncStatus.state === 'attention') {
+      return { icon: '🔔', text: 'Cần xử lý', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.18)', border: 'rgba(251, 191, 36, 0.4)' };
+    }
+    if (syncStatus.state === 'error') {
+      return { icon: '⚠️', text: 'Lỗi sync', color: '#f87171', bg: 'rgba(248, 113, 113, 0.18)', border: 'rgba(248, 113, 113, 0.4)' };
+    }
+    if (syncStatus.lastSyncedAt > 0) {
+      const d = new Date(syncStatus.lastSyncedAt);
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return { icon: '☁️', text: `Sync ${hh}:${mm}`, color: '#34d399', bg: 'rgba(52, 211, 153, 0.12)', border: 'rgba(52, 211, 153, 0.3)' };
+    }
+    return { icon: '☁️', text: 'Đồng bộ', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.12)', border: 'rgba(56, 189, 248, 0.3)' };
+  };
+
+  const syncBadge = getSyncBadge();
 
   return (
     <>
@@ -19,10 +53,10 @@ export default function Header() {
           </Link>
 
           <div className={styles.headerRight}>
-            {/* Cloud Sync Button */}
+            {/* Cloud Sync Button & Status Indicator */}
             <Link
               to="/sync"
-              title="Đồng Bộ Cloud"
+              title={syncStatus.message || `Đồng Bộ Cloud (${syncBadge.text})`}
               aria-label="Đồng Bộ Cloud"
               style={{
                 display: 'inline-flex',
@@ -31,15 +65,19 @@ export default function Header() {
                 padding: '4px 10px',
                 borderRadius: '16px',
                 fontSize: '0.82rem',
-                background: 'rgba(56, 189, 248, 0.12)',
-                border: '1px solid rgba(56, 189, 248, 0.3)',
-                color: '#38bdf8',
+                background: syncBadge.bg,
+                border: `1px solid ${syncBadge.border}`,
+                color: syncBadge.color,
                 textDecoration: 'none',
                 fontWeight: '500',
+                transition: 'all 0.2s ease',
               }}
             >
-              <span>☁️</span>
-              <span>Đồng bộ</span>
+              <span>{syncBadge.icon}</span>
+              <span>{syncBadge.text}</span>
+              {syncStatus.parallelDeviceDetected && (
+                <span title="Thiết bị khác vừa cập nhật tu vi" style={{ fontSize: '0.75rem', marginLeft: '2px' }}>📱</span>
+              )}
             </Link>
 
             {/* Cultivation Pill Button */}

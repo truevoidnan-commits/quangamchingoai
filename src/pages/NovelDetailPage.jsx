@@ -2,6 +2,7 @@ import { useState, useEffect, useTransition, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getNovel, getChapters, deleteChapterDB, searchChapters } from '../lib/db';
 import { getReadingProgress, updateLibraryItem } from '../lib/storage';
+import { pullNovelProgressNow } from '../lib/sync/syncEngine.js';
 import Footer from '../components/layout/Footer';
 import GlobalReplaceModal from '../components/reader/GlobalReplaceModal';
 import styles from './NovelDetailPage.module.css';
@@ -28,6 +29,17 @@ export default function NovelDetailPage() {
 
   // Global find & replace modal state
   const [globalReplaceOpen, setGlobalReplaceOpen] = useState(false);
+  const [progressVer, setProgressVer] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    pullNovelProgressNow(activeNovelId).then(res => {
+      if (active && res?.updated) {
+        setProgressVer(v => v + 1);
+      }
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [activeNovelId]);
 
   useEffect(() => {
     async function load() {

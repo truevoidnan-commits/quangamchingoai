@@ -4,6 +4,8 @@ import { performSync, checkFirstSyncCondition } from '../lib/sync/syncEngine.js'
 import { getSyncLedger } from '../lib/sync/syncLedger.js';
 import { deleteNovelDB } from '../lib/db.js';
 import { removeFromLibrary } from '../lib/storage.js';
+import { isProductionHost } from '../lib/sync/envProtection.js';
+import { isAutoSyncEnabled, setAutoSyncEnabled, getSyncStatus, setConflictDialogOpen } from '../lib/sync/autoSync.js';
 import styles from './SyncPage.module.css';
 
 export default function SyncPage() {
@@ -28,6 +30,21 @@ export default function SyncPage() {
   const [novelConflictData, setNovelConflictData] = useState(null);
   const [cultivationConflictData, setCultivationConflictData] = useState(null);
   const [deletedDuplicateIds, setDeletedDuplicateIds] = useState(new Set());
+  const isProd = isProductionHost();
+  const [autoSyncOn, setAutoSyncOn] = useState(() => isAutoSyncEnabled());
+  const [syncStatus, setSyncStatusState] = useState(() => getSyncStatus());
+
+  useEffect(() => {
+    const handleStatus = (e) => {
+      setSyncStatusState(e.detail || getSyncStatus());
+    };
+    window.addEventListener('tcl_sync_status_changed', handleStatus);
+    return () => window.removeEventListener('tcl_sync_status_changed', handleStatus);
+  }, []);
+
+  useEffect(() => {
+    setConflictDialogOpen(Boolean(firstSyncData || novelConflictData || cultivationConflictData));
+  }, [firstSyncData, novelConflictData, cultivationConflictData]);
 
   const handleDeleteDuplicateLocal = async (localId, title) => {
     try {
@@ -107,6 +124,15 @@ export default function SyncPage() {
   };
 
   const startSyncProcess = async (firstSyncChoice = null) => {
+    if (!isProd && !firstSyncChoice) {
+      const confirmPrompt = window.prompt(
+        'Bạn đang ở môi trường test (localhost/preview). Thao tác này sẽ ghi đè hoặc thay đổi trực tiếp dữ liệu Cloud thật của bạn.\n\nVui lòng nhập chữ DONGBO để xác nhận thực hiện:'
+      );
+      if (confirmPrompt !== 'DONGBO') {
+        alert('Đã hủy đồng bộ vì chưa nhập đúng chữ DONGBO.');
+        return;
+      }
+    }
     if (progressTimerRef.current) {
       clearTimeout(progressTimerRef.current);
       progressTimerRef.current = null;
@@ -299,6 +325,48 @@ export default function SyncPage() {
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Thực Hiện Đồng Bộ</h2>
+          </div>
+
+          {!isProd && (
+            <div className={styles.alertWarning} style={{ marginBottom: '16px' }}>
+              ⚠️ Môi trường test: tự động đồng bộ bị tắt để không ghi đè dữ liệu thật.
+            </div>
+          )}
+
+          {syncStatus.parallelDeviceDetected && (
+            <div className={styles.alertInfo} style={{ marginBottom: '16px', fontSize: '0.85rem' }}>
+              📱 Thiết bị khác vừa cập nhật tu vi trong 2 phút gần đây.
+            </div>
+          )}
+
+          {syncStatus.state === 'attention' && (
+            <div className={styles.alertWarning} style={{ marginBottom: '16px', fontSize: '0.85rem' }}>
+              🔔 {syncStatus.message || 'Cần bạn kiểm tra hoặc xử lý xung đột bên dưới.'}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', marginBottom: '16px', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>Tự động đồng bộ hai chiều</div>
+              <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                {!isProd
+                  ? 'Bị khóa tắt trên môi trường test để bảo vệ dữ liệu Cloud thật'
+                  : 'Tự động đồng bộ tiến độ đọc và tu vi khi chuyển tab hoặc sau khi đọc'}
+              </div>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: !isProd ? 'not-allowed' : 'pointer' }}>
+              <input
+                type="checkbox"
+                disabled={!isProd}
+                checked={autoSyncOn}
+                onChange={(e) => {
+                  const val = e.target.checked;
+                  setAutoSyncEnabled(val);
+                  setAutoSyncOn(val);
+                }}
+                style={{ width: '18px', height: '18px', accentColor: '#38bdf8', cursor: !isProd ? 'not-allowed' : 'pointer' }}
+              />
+            </label>
           </div>
 
           <button

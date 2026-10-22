@@ -20,6 +20,7 @@ import { preloadCoreArtifactIcons } from './lib/artifactIcons';
 import { startBackgroundPrefetch } from './lib/backgroundPrefetch';
 import { runMigrationV2 } from './lib/migration';
 import SandboxBanner from './components/cultivation/SandboxBanner';
+import { initAutoSync, pullCultivationBeforeMeditation } from './lib/sync/autoSync.js';
 
 function ScrollRestorer() {
   const { pathname } = useLocation();
@@ -34,6 +35,9 @@ function ScrollRestorer() {
     preloadCoreArtifactIcons();
     startBackgroundPrefetch();
     runMigrationV2().catch(() => {});
+    pullCultivationBeforeMeditation().finally(() => {
+      initAutoSync();
+    });
   }, []);
   return null;
 }
