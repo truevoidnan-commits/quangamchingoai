@@ -34,6 +34,31 @@ global.IDBKeyRange = {
   only: (val) => ({ lower: val, upper: val }),
 };
 
+// Mock Window & CustomEvent for Node.js
+const eventListeners = {};
+global.window = {
+  addEventListener: (event, handler) => {
+    if (!eventListeners[event]) eventListeners[event] = [];
+    eventListeners[event].push(handler);
+  },
+  removeEventListener: (event, handler) => {
+    if (eventListeners[event]) {
+      eventListeners[event] = eventListeners[event].filter(h => h !== handler);
+    }
+  },
+  dispatchEvent: (evt) => {
+    const handlers = eventListeners[evt.type] || [];
+    handlers.forEach(h => h(evt));
+    return true;
+  }
+};
+global.CustomEvent = class CustomEvent {
+  constructor(type, params = {}) {
+    this.type = type;
+    this.detail = params.detail || null;
+  }
+};
+
 // -------------------------------------------------------------
 // 2. Mock In-Memory IndexedDB for db.js
 // -------------------------------------------------------------
@@ -140,6 +165,10 @@ import {
   getSyncStatus,
   resetBackoff,
   getBackoffDelay,
+  triggerLibraryDebouncedAutoSync,
+  isLibraryDebouncePending,
+  cancelLibraryDebounceTimer,
+  quickSyncCloudMetadata,
 } from '../src/lib/sync/autoSync.js';
 import { pullNovelProgressNow } from '../src/lib/sync/syncEngine.js';
 import { setDBPromiseForTesting, getNovel, getChapters } from '../src/lib/db.js';
@@ -381,6 +410,10 @@ import {
   getReadingSettings,
   setVaultPassword,
   getVaultPasswordInfo,
+  hideNovel,
+  unhideNovel,
+  notifyLibraryChanged,
+  onLibraryChange,
 } from '../src/lib/storage.js';
 import {
   getActiveProfile,
@@ -390,7 +423,7 @@ import {
   saveCultivationState,
 } from '../src/lib/cultivation.js';
 
-console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST TỰ ĐỘNG SYNC (1-33) ===\n');
+console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST TỰ ĐỘNG SYNC (1-36) ===\n');
 
 // -------------------------------------------------------------
 // TEST 1: Truyện mới ở máy -> Đẩy lên Cloud
@@ -1829,6 +1862,206 @@ try {
 }
 console.log('✓ Test 33 Passed: Cơ chế refreshSyncLock giữ khóa liên tục qua các lần đồng bộ dài hơn 2 phút thành công!');
 
-console.log('\n=== TẤT CẢ 33 BÀI TEST (PHASE 1 + PHASE 2) ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');
+// -------------------------------------------------------------
+// TEST 34 (a): Causal timestamp chống lệch đồng hồ:
+// A ẩn -> B nhận -> B hiện -> A nhận, kể cả khi đồng hồ B chậm hơn A 10 phút (mock Date.now)
+// -------------------------------------------------------------
+console.log('\n--- Test 34 (a): Causal timestamp chống lệch đồng hồ: A ẩn -> B nhận -> B hiện -> A nhận ---');
+releaseSyncLock();
+resetBackoff();
+setHostOverrideForTesting('user-test.github.io');
+setActiveProfile('real');
+
+const dateNowOriginal = Date.now;
+try {
+  // 1. Setup ban đầu: Máy A có truyện nov_34 (isHidden: false), đã đồng bộ lên cloud
+  global.localStorage.clear();
+  mockDB.novels.clear();
+  mockDB.chapters.clear();
+  supabaseMock.tables.novels.clear();
+  supabaseMock.storageBuckets.novels.clear();
+  setAutoSyncEnabled(true);
+  setActiveProfile('real');
+  saveSyncLedger({ novels: {}, cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 }, lastSyncedAt: 1000 });
+
+  const novel34 = {
+    id: 'nov_34',
+    title: 'Truyện 34 Causal Clock',
+    description: 'Mô tả truyện 34',
+    coverUrl: '',
+    isHidden: false,
+    updatedAt: 1000,
+  };
+  await saveNovel(novel34);
+  addToLibrary({
+    id: 'nov_34',
+    title: 'Truyện 34 Causal Clock',
+    description: 'Mô tả truyện 34',
+    isHidden: false,
+    chapterCount: 1,
+    updatedAt: 1000,
+  });
+  await saveChaptersBulk([{
+    id: 'ch_34_1',
+    novelId: 'nov_34',
+    chapterNumber: 1,
+    title: 'Chương 1',
+    content: 'Nội dung chương 1',
+    order: 1,
+  }]);
+
+  // Đẩy ban đầu lên cloud
+  const initSync = await runAutoSync(supabaseMock, { force: true });
+  assert.strictEqual(initSync.success, true, 'Setup đẩy truyện 34 lên cloud phải thành công');
+
+  // Lưu snapshot trạng thái Cloud sau init
+  const cloudRowInit = supabaseMock.tables.novels.get('user_123:nov_34');
+  assert(cloudRowInit, 'Cloud phải có nov_34');
+  assert.strictEqual(cloudRowInit.is_hidden, false);
+
+  // 2. Máy A: Lúc 12:10 (mock Time = 1000000), A ẩn truyện
+  let machineATime = 1000000;
+  Date.now = () => machineATime;
+
+  await hideNovel('nov_34');
+  assert.strictEqual(getLibrary({ includeHidden: true })[0].isHidden, true, 'Máy A: truyện phải bị ẩn');
+  assert.strictEqual((await getNovel('nov_34')).isHidden, true, 'Máy A: IndexedDB phải cập nhật isHidden=true');
+  assert.strictEqual(getLibrary({ includeHidden: true })[0].updatedAt, 1000000);
+
+  // Máy A autoSync lên cloud
+  const aSyncRes = await runAutoSync(supabaseMock, { force: true });
+  assert.strictEqual(aSyncRes.success, true, 'Máy A sync ẩn lên cloud phải thành công');
+
+  const cloudRowAfterHide = supabaseMock.tables.novels.get('user_123:nov_34');
+  assert.strictEqual(cloudRowAfterHide.is_hidden, true, 'Cloud phải ghi nhận is_hidden = true');
+  assert.strictEqual(cloudRowAfterHide.updated_at, 1000000, 'Cloud updatedAt phải là 1000000');
+
+  // Lưu trạng thái Local của Máy A (để giả lập sau này A nhận lại từ B)
+  const machineALocalStorage = JSON.stringify(global.localStorage.store);
+  const machineANovels = new Map(mockDB.novels);
+
+  // 3. Giả lập Máy B:
+  // Máy B trước đó đã có truyện 34 (ở trạng thái cũ isHidden: false, updatedAt: 1000)
+  global.localStorage.clear();
+  mockDB.novels.clear();
+  setAutoSyncEnabled(true);
+  setActiveProfile('real');
+  saveSyncLedger({ novels: {}, cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 }, lastSyncedAt: 1000 });
+  await saveNovel({ ...novel34 });
+  addToLibrary({
+    id: 'nov_34',
+    title: 'Truyện 34 Causal Clock',
+    description: 'Mô tả truyện 34',
+    isHidden: false,
+    chapterCount: 1,
+    updatedAt: 1000,
+  });
+
+  // Máy B autoSync kéo từ cloud về
+  const bPullRes = await runAutoSync(supabaseMock, { force: true });
+  assert.strictEqual(bPullRes.success, true, 'Máy B kéo từ cloud phải thành công');
+
+  const bLibAfterPull = getLibrary({ includeHidden: true }).find(n => n.id === 'nov_34');
+  assert.strictEqual(bLibAfterPull.isHidden, true, 'Máy B phải nhận được trạng thái ẩn từ A');
+  assert.strictEqual(bLibAfterPull.updatedAt, 1000000, 'Máy B phải giữ đúng updatedAt của cloud');
+  assert.strictEqual((await getNovel('nov_34')).isHidden, true, 'Máy B IndexedDB phải cập nhật isHidden = true');
+
+  // 4. Máy B unhide truyện, nhưng ĐỒNG HỒ MÁY B CHẬM HƠN A 10 PHÚT!
+  // Đồng hồ máy B: 12:00 (mock Time = 400000, chậm hơn 1000000 những 600,000ms = 10 phút)
+  let machineBTime = 400000;
+  Date.now = () => machineBTime;
+
+  await unhideNovel('nov_34');
+
+  const bLibAfterUnhide = getLibrary({ includeHidden: true }).find(n => n.id === 'nov_34');
+  assert.strictEqual(bLibAfterUnhide.isHidden, false, 'Máy B: truyện phải được hiện');
+  // Causal monotonic timestamp: Math.max(Date.now(), 1000000 + 1) = 1000001 > 1000000!
+  assert.strictEqual(bLibAfterUnhide.updatedAt, 1000001, 'Causal timestamp phải lớn hơn timestamp cũ của A dù đồng hồ B chậm 10 phút!');
+  assert.strictEqual((await getNovel('nov_34')).isHidden, false, 'Máy B: IndexedDB phải cập nhật isHidden = false');
+
+  // Máy B autoSync đẩy lên cloud
+  const bPushRes = await runAutoSync(supabaseMock, { force: true });
+  assert.strictEqual(bPushRes.success, true, 'Máy B sync hiện lên cloud phải thành công');
+
+  const cloudRowAfterUnhide = supabaseMock.tables.novels.get('user_123:nov_34');
+  assert.strictEqual(cloudRowAfterUnhide.is_hidden, false, 'Cloud phải ghi nhận is_hidden = false từ máy B');
+  assert.strictEqual(cloudRowAfterUnhide.updated_at, 1000001, 'Cloud updated_at phải là 1000001');
+
+  // 5. Máy A mở lại (kéo từ cloud về)
+  // Khôi phục localStorage và DB của Máy A trước khi B unhide
+  global.localStorage.store = JSON.parse(machineALocalStorage);
+  mockDB.novels = new Map(machineANovels);
+
+  const aLibBeforePull = getLibrary({ includeHidden: true }).find(n => n.id === 'nov_34');
+  assert.strictEqual(aLibBeforePull.isHidden, true, 'Trước khi kéo, Máy A vẫn đang ở trạng thái ẩn');
+
+  // Máy A autoSync
+  const aPullRes = await runAutoSync(supabaseMock, { force: true });
+  assert.strictEqual(aPullRes.success, true, 'Máy A sync kéo từ cloud phải thành công');
+
+  const aLibAfterPull = getLibrary({ includeHidden: true }).find(n => n.id === 'nov_34');
+  assert.strictEqual(aLibAfterPull.isHidden, false, 'Máy A PHẢI nhận được trạng thái hiện từ B!');
+  assert.strictEqual(aLibAfterPull.updatedAt, 1000001, 'Máy A phải có updatedAt mới nhất = 1000001');
+  assert.strictEqual((await getNovel('nov_34')).isHidden, false, 'Máy A: IndexedDB phải cập nhật isHidden = false');
+} finally {
+  Date.now = dateNowOriginal;
+}
+console.log('✓ Test 34 Passed: Causal timestamp hoạt động hoàn hảo: A ẩn -> B nhận -> B hiện -> A nhận kể cả khi đồng hồ B chậm hơn 10 phút!');
+
+// -------------------------------------------------------------
+// TEST 35 (b): updateLibraryItem dispatch notifyLibraryChanged
+// -------------------------------------------------------------
+console.log('\n--- Test 35 (b): updateLibraryItem dispatch notifyLibraryChanged ---');
+global.localStorage.clear();
+addToLibrary({ id: 'nov_35', title: 'Truyện 35', updatedAt: 1000 });
+
+let windowEventReceived = null;
+let callbackEventReceived = null;
+
+const listener = (e) => {
+  windowEventReceived = e.detail?.novelId;
+};
+window.addEventListener('tcl_library_changed', listener);
+const unsubscribe = onLibraryChange((novelId) => {
+  callbackEventReceived = novelId;
+});
+
+updateLibraryItem('nov_35', { title: 'Truyện 35 Mới' });
+
+window.removeEventListener('tcl_library_changed', listener);
+unsubscribe();
+
+assert.strictEqual(windowEventReceived, 'nov_35', 'window dispatchEvent phải nhận được sự kiện tcl_library_changed với novelId');
+assert.strictEqual(callbackEventReceived, 'nov_35', 'onLibraryChange listener phải nhận được novelId');
+console.log('✓ Test 35 Passed: updateLibraryItem đã dispatch notifyLibraryChanged thành công!');
+
+// -------------------------------------------------------------
+// TEST 36 (c): Không trigger autoSync trên non-github.io hoặc Sandbox
+// -------------------------------------------------------------
+console.log('\n--- Test 36 (c): Không trigger trên non-github.io hoặc Sandbox ---');
+cancelLibraryDebounceTimer();
+
+// 1. Trên non-github.io (localhost)
+setHostOverrideForTesting('localhost');
+setActiveProfile('real');
+triggerLibraryDebouncedAutoSync();
+assert.strictEqual(isLibraryDebouncePending(), false, 'Trên localhost tuyệt đối không được kích hoạt debounce autoSync');
+
+// 2. Trên github.io nhưng là profile Sandbox
+setHostOverrideForTesting('user.github.io');
+setActiveProfile('sandbox');
+triggerLibraryDebouncedAutoSync();
+assert.strictEqual(isLibraryDebouncePending(), false, 'Trong profile Sandbox tuyệt đối không được kích hoạt debounce autoSync');
+
+// 3. Trên github.io và profile Thật (real) -> kích hoạt thành công
+setActiveProfile('real');
+triggerLibraryDebouncedAutoSync();
+assert.strictEqual(isLibraryDebouncePending(), true, 'Trên github.io và profile Thật phải kích hoạt debounce autoSync');
+cancelLibraryDebounceTimer();
+assert.strictEqual(isLibraryDebouncePending(), false, 'Sau khi hủy, timer không còn pending');
+
+console.log('✓ Test 36 Passed: Không bao giờ trigger autoSync trên non-github.io hoặc Sandbox!');
+
+console.log('\n=== TẤT CẢ 36 BÀI TEST (PHASE 1 + PHASE 2 + VAULT & HIDE SYNC) ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');
 
 

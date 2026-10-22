@@ -11,8 +11,6 @@ import {
   hasVaultPassword,
   isVaultSessionUnlocked,
   setVaultSessionUnlocked,
-  isVaultModeActive,
-  setVaultModeActive,
   lockVaultSession,
 } from '../lib/storage';
 import { deleteNovelDB } from '../lib/db';
@@ -37,8 +35,7 @@ export default function LibraryPage() {
   // Hidden Vault States (persisted across session so going back doesn't lock)
   const [isVaultUnlocked, setIsVaultUnlocked] = useState(() => isVaultSessionUnlocked());
   const [isVaultMode, setIsVaultMode] = useState(() => {
-    if (!isVaultSessionUnlocked()) return false;
-    return requestedVault || isVaultModeActive();
+    return requestedVault && isVaultSessionUnlocked();
   });
   const [vaultModalOpen, setVaultModalOpen] = useState(false);
   const [vaultModalMode, setVaultModalMode] = useState('unlock'); // 'unlock' | 'set' | 'change' | 'first_hide'
@@ -53,6 +50,37 @@ export default function LibraryPage() {
   const refreshLibrary = useCallback(() => {
     setAllNovels(getLibrary({ includeHidden: true }));
   }, []);
+
+  // Sync isVaultMode when searchParams changes
+  useEffect(() => {
+    if (requestedVault) {
+      if (isVaultSessionUnlocked()) {
+        setIsVaultUnlocked(true);
+        setIsVaultMode(true);
+      } else {
+        setIsVaultMode(false);
+        if (!hasVaultPassword()) {
+          setVaultModalMode('set');
+        } else {
+          setVaultModalMode('unlock');
+        }
+        setVaultModalOpen(true);
+      }
+    } else {
+      setIsVaultMode(false);
+    }
+  }, [requestedVault]);
+
+  // Listen to background library updates (e.g., from cloud sync)
+  useEffect(() => {
+    const handleLibraryUpdated = () => {
+      refreshLibrary();
+    };
+    window.addEventListener('tcl_library_updated', handleLibraryUpdated);
+    return () => {
+      window.removeEventListener('tcl_library_updated', handleLibraryUpdated);
+    };
+  }, [refreshLibrary]);
 
   // Seed sample data on first load
   useEffect(() => {
@@ -138,14 +166,12 @@ export default function LibraryPage() {
 
   const handleToggleVaultAccess = () => {
     if (isVaultMode) {
-      setIsVaultMode(false);
-      setVaultModeActive(false);
+      navigate('/');
       return;
     }
 
     if (isVaultUnlocked) {
-      setIsVaultMode(true);
-      setVaultModeActive(true);
+      navigate('/?vault=1');
       return;
     }
 
@@ -170,8 +196,7 @@ export default function LibraryPage() {
     } else if (vaultModalMode === 'change') {
       showToast('Đã đổi mật khẩu Mật Thất thành công ✨');
     } else {
-      setIsVaultMode(true);
-      setVaultModeActive(true);
+      navigate('/?vault=1');
       showToast('Đã mở khóa Tàng Kinh Mật Thất 🔓');
     }
   };
@@ -180,6 +205,7 @@ export default function LibraryPage() {
     lockVaultSession();
     setIsVaultUnlocked(false);
     setIsVaultMode(false);
+    navigate('/');
     showToast('Đã đóng & khóa Mật Thất 🔒');
   };
 
@@ -241,7 +267,7 @@ export default function LibraryPage() {
       {/* ===== VAULT TOP BAR (If in Vault Mode) ===== */}
       {isVaultMode && (
         <div className={styles.vaultTopBar}>
-          <button className={styles.vaultBackBtn} onClick={() => setIsVaultMode(false)}>
+          <button className={styles.vaultBackBtn} onClick={() => navigate('/')}>
             ← Về Thư Viện Chính
           </button>
           <div className={styles.vaultRightActions}>
@@ -375,6 +401,9 @@ export default function LibraryPage() {
         onClose={() => {
           setVaultModalOpen(false);
           setNovelToHidePending(null);
+          if (requestedVault && !isVaultSessionUnlocked()) {
+            navigate('/');
+          }
         }}
       />
 

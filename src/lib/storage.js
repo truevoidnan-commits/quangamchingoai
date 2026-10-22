@@ -195,45 +195,94 @@ export function saveLibrary(library) {
   }
 }
 
+// ---- Library change event notification ----
+const _libraryChangeListeners = new Set();
+
+export function onLibraryChange(callback) {
+  _libraryChangeListeners.add(callback);
+  return () => _libraryChangeListeners.delete(callback);
+}
+
+export function notifyLibraryChanged(novelId = null) {
+  _libraryChangeListeners.forEach((fn) => {
+    try { fn(novelId); } catch {}
+  });
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    try {
+      const evt = typeof CustomEvent !== 'undefined'
+        ? new CustomEvent('tcl_library_changed', { detail: { novelId } })
+        : { type: 'tcl_library_changed', detail: { novelId } };
+      window.dispatchEvent(evt);
+    } catch {}
+  }
+}
+
 export function addToLibrary(item) {
   const library = getLibrary({ includeHidden: true });
-  const cleanItem = { ...item, updatedAt: item.updatedAt || Date.now() };
+  const exists = library.findIndex((n) => n.id === item.id);
+  const existingUpdatedAt = exists !== -1 ? (library[exists]?.updatedAt || 0) : 0;
+  const newUpdatedAt = item.updatedAt !== undefined
+    ? item.updatedAt
+    : Math.max(Date.now(), existingUpdatedAt + 1);
+
+  const cleanItem = { ...item, updatedAt: newUpdatedAt };
   if (cleanItem.coverUrl && /^data:/i.test(cleanItem.coverUrl)) {
     delete cleanItem.coverUrl;
   }
-  const exists = library.findIndex((n) => n.id === cleanItem.id);
   if (exists !== -1) {
     library[exists] = { ...library[exists], ...cleanItem };
   } else {
     library.unshift(cleanItem);
   }
   saveLibrary(library);
+  notifyLibraryChanged(cleanItem.id);
 }
 
 export function removeFromLibrary(id) {
   const library = getLibrary({ includeHidden: true }).filter((n) => n.id !== id);
   saveLibrary(library);
+  notifyLibraryChanged(id);
 }
 
 export function updateLibraryItem(id, updates) {
   const library = getLibrary({ includeHidden: true });
   const idx = library.findIndex((n) => n.id === id);
   if (idx !== -1) {
-    const cleanUpdates = { ...updates, updatedAt: updates.updatedAt || Date.now() };
+    const existingUpdatedAt = library[idx]?.updatedAt || 0;
+    const newUpdatedAt = updates.updatedAt !== undefined
+      ? updates.updatedAt
+      : Math.max(Date.now(), existingUpdatedAt + 1);
+
+    const cleanUpdates = { ...updates, updatedAt: newUpdatedAt };
     if (cleanUpdates.coverUrl && /^data:/i.test(cleanUpdates.coverUrl)) {
       delete cleanUpdates.coverUrl;
     }
     library[idx] = { ...library[idx], ...cleanUpdates };
     saveLibrary(library);
+    notifyLibraryChanged(id);
+  }
+}
+
+async function syncNovelIsHiddenToDB(id, isHidden) {
+  try {
+    const { getNovel, saveNovel } = await import('./db.js');
+    const dbNovel = await getNovel(id);
+    if (dbNovel) {
+      await saveNovel({ ...dbNovel, isHidden }, { skipDirty: true });
+    }
+  } catch (err) {
+    // IDB might not be active or available in unit tests
   }
 }
 
 export function hideNovel(id) {
   updateLibraryItem(id, { isHidden: true });
+  return syncNovelIsHiddenToDB(id, true);
 }
 
 export function unhideNovel(id) {
   updateLibraryItem(id, { isHidden: false });
+  return syncNovelIsHiddenToDB(id, false);
 }
 
 export function toggleHideNovel(id) {
@@ -242,6 +291,7 @@ export function toggleHideNovel(id) {
   if (item) {
     const willHide = !item.isHidden;
     updateLibraryItem(id, { isHidden: willHide });
+    syncNovelIsHiddenToDB(id, willHide);
     return willHide;
   }
   return false;
@@ -259,7 +309,13 @@ export function getReadingProgress(novelId) {
 }
 
 export function saveReadingProgress(novelId, progress) {
-  const dataToSave = { ...progress, updatedAt: progress?.updatedAt || Date.now() };
+  const current = getReadingProgress(novelId);
+  const currentUpdatedAt = current?.updatedAt || 0;
+  const newUpdatedAt = progress?.updatedAt !== undefined
+    ? progress.updatedAt
+    : Math.max(Date.now(), currentUpdatedAt + 1);
+
+  const dataToSave = { ...progress, updatedAt: newUpdatedAt };
   localStorage.setItem(`${PROGRESS_KEY}_${novelId}`, JSON.stringify(dataToSave));
 }
 

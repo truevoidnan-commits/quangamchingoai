@@ -14,6 +14,7 @@ import {
   removeTombstone,
   getDeviceId,
   setSyncBypassDirty,
+  isSyncBypassDirty,
   acquireSyncLock,
   releaseSyncLock,
   refreshSyncLock,
@@ -27,8 +28,10 @@ import {
   getLibrary,
   getReadingProgress,
   removeFromLibrary,
+  updateLibraryItem,
 } from '../storage.js';
 import {
+  getNovel,
   saveNovel,
   saveChaptersBulk,
   deleteNovelDB,
@@ -413,6 +416,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       }
     }
 
+    let cloudLibraryModified = false;
     const allNovelIds = Array.from(new Set([...localMap.keys(), ...activeCloudMap.keys()]));
     for (const novelId of allNovelIds) {
       if (cloudNovelsMap.get(novelId)?.deleted_at || tombstones[novelId]) {
@@ -425,6 +429,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       if (cloudRow && !localItem) {
         try {
           await pullNovelFromCloud(client, userId, cloudRow, ledger);
+          cloudLibraryModified = true;
         } catch (e) {
           console.warn('Auto pull novel error:', e.message);
           errors.push(e.message);
@@ -456,7 +461,10 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       if (localItem && cloudRow) {
         // 1. Đồng bộ Metadata hai chiều trước (tiêu đề, mô tả, bìa, is_hidden, chapter_count)
         try {
-          await syncNovelMetadata(client, userId, novelId, localItem, cloudRow, ledger);
+          const metaRes = await syncNovelMetadata(client, userId, novelId, localItem, cloudRow, ledger);
+          if (metaRes?.applied === 'cloud') {
+            cloudLibraryModified = true;
+          }
         } catch (e) {
           console.warn('Auto sync novel metadata error:', e.message);
           errors.push(e.message);
@@ -598,6 +606,12 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       errors.push(e.message);
     }
 
+    if (cloudLibraryModified && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      try {
+        window.dispatchEvent(new CustomEvent('tcl_library_updated'));
+      } catch {}
+    }
+
     // KIỂM TRA LỖI: nếu có bất kỳ lỗi nào, KHÔNG ghi nhận đã đồng bộ (lastSyncedAt)
     // nhưng lưu những gì đã thật sự thành công (tu vi, truyện đã đẩy/kéo) để lần sau không bị xung đột giả
     if (errors.length > 0) {
@@ -654,12 +668,153 @@ export async function runAutoSync(customSupabase = null, options = {}) {
   }
 }
 
+let _libraryDebounceTimer = null;
+
+export function isLibraryDebouncePending() {
+  return _libraryDebounceTimer !== null;
+}
+
+export function cancelLibraryDebounceTimer() {
+  if (_libraryDebounceTimer) {
+    clearTimeout(_libraryDebounceTimer);
+    _libraryDebounceTimer = null;
+  }
+}
+
+/**
+ * Lắng nghe thay đổi thư viện với debounce 8s
+ * Chỉ chạy khi isProductionHost() và isAutoSyncEnabled() và không trong Sandbox
+ */
+export function triggerLibraryDebouncedAutoSync(customSupabase = null) {
+  if (isSyncBypassDirty()) return;
+  if (!isProductionHost() || !isAutoSyncEnabled()) return;
+  if (getActiveProfile() !== 'real') return;
+  if (_libraryDebounceTimer) {
+    clearTimeout(_libraryDebounceTimer);
+  }
+  _libraryDebounceTimer = setTimeout(() => {
+    _libraryDebounceTimer = null;
+    runAutoSync(customSupabase).catch(() => {});
+  }, 8000);
+}
+
+/**
+ * Đẩy nhanh metadata thư viện khi tab ẩn / pagehide (best effort)
+ */
+export async function quickPushLibraryMetadata(customSupabase = null) {
+  if (!isProductionHost() || !isAutoSyncEnabled()) return;
+  if (getActiveProfile() !== 'real') return;
+  const client = customSupabase || supabase;
+  if (!client?.auth) return;
+
+  try {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.user) return;
+    const userId = session.user.id;
+
+    const ledger = getSyncLedger();
+    const library = getLibrary({ includeHidden: true });
+    for (const item of library) {
+      const lastSyncedMetaAt = ledger.novels?.[item.id]?.lastSyncedMetaAt || 0;
+      if ((item.updatedAt || 0) > lastSyncedMetaAt) {
+        const n = await getNovel(item.id);
+        const { error } = await client.from('novels').update({
+          title: item.title,
+          description: item.description || n?.description || '',
+          cover: n?.coverUrl || '',
+          is_hidden: Boolean(item.isHidden),
+          chapter_count: item.chapterCount || (item.totalChapters || 0),
+          updated_at: item.updatedAt,
+        }).eq('user_id', userId).eq('id', item.id);
+
+        if (!error) {
+          if (!ledger.novels) ledger.novels = {};
+          if (!ledger.novels[item.id]) ledger.novels[item.id] = {};
+          ledger.novels[item.id].lastSyncedMetaAt = item.updatedAt;
+          saveSyncLedger(ledger);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Lỗi quickPushLibraryMetadata:', err?.message);
+  }
+}
+
+/**
+ * Kéo nhanh metadata từ cloud khi tab 'visible'
+ */
+export async function quickSyncCloudMetadata(customSupabase = null) {
+  if (!isProductionHost() || !isAutoSyncEnabled()) return false;
+  if (getActiveProfile() !== 'real') return false;
+  const client = customSupabase || supabase;
+  if (!client?.auth) return false;
+
+  try {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.user) return false;
+    const userId = session.user.id;
+
+    const { data: cloudNovels, error } = await client
+      .from('novels')
+      .select('id, title, description, cover, is_hidden, chapter_count, updated_at')
+      .eq('user_id', userId);
+
+    if (error || !cloudNovels) return false;
+
+    let changed = false;
+    const localLibrary = getLibrary({ includeHidden: true });
+    const localMap = new Map(localLibrary.map((n) => [n.id, n]));
+
+    for (const cloudRow of cloudNovels) {
+      const localItem = localMap.get(cloudRow.id);
+      if (localItem) {
+        if ((cloudRow.updated_at || 0) > (localItem.updatedAt || 0)) {
+          setSyncBypassDirty(true);
+          try {
+            updateLibraryItem(cloudRow.id, {
+              title: cloudRow.title,
+              isHidden: Boolean(cloudRow.is_hidden),
+              chapterCount: cloudRow.chapter_count,
+              totalChapters: cloudRow.chapter_count,
+              updatedAt: cloudRow.updated_at,
+            });
+            const n = await getNovel(cloudRow.id);
+            if (n) {
+              n.title = cloudRow.title;
+              n.isHidden = Boolean(cloudRow.is_hidden);
+              await saveNovel(n, { skipDirty: true });
+            }
+          } finally {
+            setSyncBypassDirty(false);
+          }
+          changed = true;
+        }
+      }
+    }
+
+    if (changed && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      try {
+        window.dispatchEvent(new CustomEvent('tcl_library_updated'));
+      } catch {}
+    }
+    return changed;
+  } catch (err) {
+    console.warn('Lỗi quickSyncCloudMetadata:', err?.message);
+    return false;
+  }
+}
+
 /**
  * Trình kích hoạt tự động theo vòng đời ứng dụng
  */
 export function initAutoSync(customSupabase = null) {
   if (_initialized || typeof window === 'undefined') return;
   _initialized = true;
+
+  // 0. Lắng nghe thay đổi thư viện
+  window.addEventListener('tcl_library_changed', () => {
+    triggerLibraryDebouncedAutoSync(customSupabase);
+  });
 
   // 1. Sau khi mở app ~2 giây
   setTimeout(() => {
@@ -669,10 +824,15 @@ export function initAutoSync(customSupabase = null) {
   // 2. Khi tab chuyển 'visible'
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      runAutoSync(customSupabase).catch(() => {});
+      quickSyncCloudMetadata(customSupabase)
+        .then(() => runAutoSync(customSupabase))
+        .catch(() => {});
     } else if (document.visibilityState === 'hidden') {
-      // Khi tab ẩn: quick push progress & cultivation (best effort)
-      quickPushProgressAndCultivation(customSupabase).catch(() => {});
+      // Khi tab ẩn: quick push progress, cultivation & library metadata (best effort)
+      Promise.allSettled([
+        quickPushProgressAndCultivation(customSupabase),
+        quickPushLibraryMetadata(customSupabase),
+      ]).catch(() => {});
     }
   });
 
@@ -683,7 +843,10 @@ export function initAutoSync(customSupabase = null) {
 
   // 4. Sự kiện 'pagehide'
   window.addEventListener('pagehide', () => {
-    quickPushProgressAndCultivation(customSupabase).catch(() => {});
+    Promise.allSettled([
+      quickPushProgressAndCultivation(customSupabase),
+      quickPushLibraryMetadata(customSupabase),
+    ]).catch(() => {});
   });
 
   // 5. Mỗi 3 phút khi tab đang hiện

@@ -1,7 +1,7 @@
 import { useState, useEffect, useTransition, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getNovel, getChapters, deleteChapterDB, searchChapters } from '../lib/db';
-import { getReadingProgress, updateLibraryItem } from '../lib/storage';
+import { getReadingProgress, updateLibraryItem, getLibrary } from '../lib/storage';
 import { pullNovelProgressNow } from '../lib/sync/syncEngine.js';
 import Footer from '../components/layout/Footer';
 import GlobalReplaceModal from '../components/reader/GlobalReplaceModal';
@@ -186,18 +186,23 @@ export default function NovelDetailPage() {
 
         <div className={styles.heroContent}>
           {/* Back */}
-          <button
-            className={`btn-ghost ${styles.backBtn}`}
-            onClick={() => {
-              if (novel?.isHidden) {
-                navigate('/?vault=1');
-              } else {
-                navigate('/');
-              }
-            }}
-          >
-            {novel?.isHidden ? '← Mật Thất' : '← Thư viện'}
-          </button>
+          {(() => {
+            const isVaultNovel = Boolean(getLibrary({ includeHidden: true }).find((n) => n.id === activeNovelId)?.isHidden);
+            return (
+              <button
+                className={`btn-ghost ${styles.backBtn}`}
+                onClick={() => {
+                  if (isVaultNovel) {
+                    navigate('/?vault=1');
+                  } else {
+                    navigate('/');
+                  }
+                }}
+              >
+                {isVaultNovel ? '← Mật Thất' : '← Thư viện'}
+              </button>
+            );
+          })()}
 
           <div className={styles.heroMain}>
             {/* Cover */}

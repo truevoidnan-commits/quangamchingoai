@@ -3,7 +3,7 @@
  * Stores: novels, chapters
  */
 import { openDB } from 'idb';
-import { getHiddenLibrary } from './storage.js';
+import { getHiddenLibrary, notifyLibraryChanged } from './storage.js';
 import { markNovelDirty, recordNovelTombstone, setSyncBypassDirty } from './sync/syncLedger.js';
 
 export { setSyncBypassDirty };
@@ -101,6 +101,7 @@ export async function deleteNovelDB(id, options = {}) {
   if (!options?.skipDirty && id) {
     recordNovelTombstone(id, Date.now());
   }
+  notifyLibraryChanged(id);
 }
 
 // ---- Chapter CRUD ----
