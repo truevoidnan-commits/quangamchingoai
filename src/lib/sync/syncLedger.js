@@ -103,3 +103,26 @@ export function removeTombstone(novelId) {
     }
   } catch (e) {}
 }
+
+export const SYNC_LOCK_KEY = 'tcl_sync_lock_ts';
+
+export function acquireSyncLock() {
+  try {
+    const lockRaw = localStorage.getItem(SYNC_LOCK_KEY);
+    const lockTs = parseInt(lockRaw || '0', 10);
+    const now = Date.now();
+    if (lockTs > 0 && now - lockTs < 120000) {
+      return false;
+    }
+    localStorage.setItem(SYNC_LOCK_KEY, String(now));
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+export function releaseSyncLock() {
+  try {
+    localStorage.removeItem(SYNC_LOCK_KEY);
+  } catch {}
+}

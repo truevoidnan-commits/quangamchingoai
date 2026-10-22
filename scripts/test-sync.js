@@ -150,6 +150,8 @@ setDBPromiseForTesting(Promise.resolve(mockDB));
 class MockSupabaseClient {
   constructor(userId = 'test_user_uuid') {
     this.userId = userId;
+    this.storageUploadCount = 0;
+    this.storageDownloadCount = 0;
     this.tables = {
       novels: new Map(), // key: user_id:id -> row
       progress: new Map(), // key: user_id:novel_id -> row
@@ -201,6 +203,7 @@ class MockSupabaseClient {
         self.storageBuckets[bucketName] = bucket;
         return {
           async upload(path, blob) {
+            self.storageUploadCount++;
             if (self.simulatedErrors.storageUpload) {
               return { data: null, error: new Error('Simulated storage upload error') };
             }
@@ -208,6 +211,7 @@ class MockSupabaseClient {
             return { data: { path }, error: null };
           },
           async download(path) {
+            self.storageDownloadCount++;
             if (self.simulatedErrors.storageDownload) {
               return { data: null, error: new Error('Simulated storage download error') };
             }
@@ -358,6 +362,7 @@ import {
 import {
   addToLibrary,
   getLibrary,
+  updateLibraryItem,
   saveReadingProgress,
   getReadingProgress,
   saveReadingSettings,
@@ -373,7 +378,7 @@ import {
   saveCultivationState,
 } from '../src/lib/cultivation.js';
 
-console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST TỰ ĐỘNG SYNC (1-23) ===\n');
+console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST TỰ ĐỘNG SYNC (1-30) ===\n');
 
 // -------------------------------------------------------------
 // TEST 1: Truyện mới ở máy -> Đẩy lên Cloud
@@ -1180,4 +1185,454 @@ assert.strictEqual(getSyncStatus().state, 'attention');
 assert.strictEqual(getSyncStatus().attentionReason, 'first_sync');
 console.log('✓ Test 23 Passed: Lần đầu đồng bộ được phát hiện an toàn, không tự ý ghi đè, bật cờ 🔔!');
 
-console.log('\n=== TẤT CẢ 23 BÀI TEST (PHASE 1 + PHASE 2) ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');
+
+// -------------------------------------------------------------
+// TEST 24 (a): Ẩn truyện ở máy A, chạy autoSync, máy B autoSync thấy truyện bị ẩn
+// -------------------------------------------------------------
+console.log('\n--- Test 24 (a): Ẩn truyện ở máy A, chạy autoSync, máy B autoSync thấy truyện bị ẩn ---');
+releaseSyncLock();
+resetBackoff();
+setHostOverrideForTesting('test-user.github.io');
+setAutoSyncEnabled(true);
+setActiveProfile('real');
+saveSyncLedger({ novels: {}, cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 }, lastSyncedAt: 1000 });
+
+// Setup Máy A có truyện nov_hide_test
+const novHideA = {
+  id: 'nov_hide_test',
+  title: 'Bạch Nguyệt Quang',
+  description: 'Mô tả truyện',
+  coverUrl: 'data:image/png;base64,coverA',
+  isHidden: false,
+  updatedAt: 1000,
+};
+await saveNovel(novHideA);
+await saveChaptersBulk([
+  { id: 'ch_h_1', novelId: 'nov_hide_test', chapterNumber: 1, title: 'Chương 1', content: 'Chương 1', order: 1 }
+]);
+addToLibrary({
+  id: 'nov_hide_test',
+  title: 'Bạch Nguyệt Quang',
+  chapterCount: 1,
+  coverThumb: 'thumb_a',
+  isHidden: false,
+  updatedAt: 1000,
+});
+
+// Đẩy lên cloud lần đầu
+await runAutoSync(supabaseMock, { force: true });
+assert.strictEqual(supabaseMock.tables.novels.get('user_123:nov_hide_test').is_hidden, false);
+
+// Máy A ẩn truyện
+updateLibraryItem('nov_hide_test', { isHidden: true, updatedAt: 2000 });
+const novADb = await getNovel('nov_hide_test');
+novADb.isHidden = true;
+novADb.updatedAt = 2000;
+await saveNovel(novADb);
+
+// Máy A chạy autoSync -> đẩy trạng thái ẩn lên cloud
+await runAutoSync(supabaseMock, { force: true });
+const cloudHideRow = supabaseMock.tables.novels.get('user_123:nov_hide_test');
+assert.strictEqual(cloudHideRow.is_hidden, true, 'Cloud phải cập nhật is_hidden = true');
+assert.strictEqual(cloudHideRow.updated_at, 2000);
+
+// Giả lập chuyển sang Máy B:
+// Máy B hiện đang có truyện nov_hide_test với isHidden = false và updatedAt = 1000
+global.localStorage.clear();
+mockDB.novels.clear();
+mockDB.chapters.clear();
+releaseSyncLock();
+resetBackoff();
+setHostOverrideForTesting('test-user.github.io');
+setAutoSyncEnabled(true);
+setActiveProfile('real');
+
+await saveNovel({
+  id: 'nov_hide_test',
+  title: 'Bạch Nguyệt Quang',
+  description: 'Mô tả truyện',
+  coverUrl: 'data:image/png;base64,coverA',
+  isHidden: false,
+  updatedAt: 1000,
+});
+await saveChaptersBulk([
+  { id: 'ch_h_1', novelId: 'nov_hide_test', chapterNumber: 1, title: 'Chương 1', content: 'Chương 1', order: 1 }
+]);
+addToLibrary({
+  id: 'nov_hide_test',
+  title: 'Bạch Nguyệt Quang',
+  chapterCount: 1,
+  coverThumb: 'thumb_a',
+  isHidden: false,
+  updatedAt: 1000,
+});
+saveSyncLedger({
+  novels: {
+    nov_hide_test: {
+      lastPulledContentAt: 1000,
+      lastPushedContentAt: 1000,
+      lastSyncedMetaAt: 1000,
+    },
+  },
+  cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 },
+  lastSyncedAt: 1000,
+});
+
+// Máy B chạy autoSync
+await runAutoSync(supabaseMock, { force: true });
+
+// Kiểm tra Máy B: truyện phải được ẩn cả trong Library và IndexedDB
+const libB = getLibrary({ includeHidden: true });
+const itemB = libB.find(x => x.id === 'nov_hide_test');
+assert(itemB, 'Truyện phải có trong thư viện máy B');
+assert.strictEqual(itemB.isHidden, true, 'Máy B thư viện phải thấy truyện bị ẩn (isHidden = true)');
+
+const dbNovelB = await getNovel('nov_hide_test');
+assert(dbNovelB, 'Truyện phải có trong DB máy B');
+assert.strictEqual(dbNovelB.isHidden, true, 'Máy B DB phải thấy truyện bị ẩn (isHidden = true)');
+console.log('✓ Test 24 Passed: Ẩn truyện ở máy A, máy B autoSync thấy truyện bị ẩn hoàn hảo!');
+
+// -------------------------------------------------------------
+// TEST 25 (b): Truyện mới ẩn ở máy A đẩy lên có is_hidden=true
+// -------------------------------------------------------------
+console.log('\n--- Test 25 (b): Truyện mới ẩn ở máy A đẩy lên có is_hidden=true ---');
+releaseSyncLock();
+resetBackoff();
+global.localStorage.clear();
+mockDB.novels.clear();
+mockDB.chapters.clear();
+setHostOverrideForTesting('test-user.github.io');
+setAutoSyncEnabled(true);
+setActiveProfile('real');
+saveSyncLedger({ novels: {}, cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 }, lastSyncedAt: 1000 });
+
+const novNewHidden = {
+  id: 'nov_secret_99',
+  title: 'Bí Kíp Thượng Cổ',
+  description: 'Bí kíp tuyệt mật không thể công khai',
+  coverUrl: 'data:image/jpeg;base64,secretcoverdata',
+  isHidden: true,
+  chapterCount: 1,
+  updatedAt: Date.now(),
+};
+await saveNovel(novNewHidden);
+await saveChaptersBulk([
+  { id: 'ch_sec_1', novelId: 'nov_secret_99', chapterNumber: 1, title: 'Chương 1', content: 'Tuyệt kỹ thượng thừa', order: 1 }
+]);
+addToLibrary({
+  id: 'nov_secret_99',
+  title: 'Bí Kíp Thượng Cổ',
+  description: 'Bí kíp tuyệt mật không thể công khai',
+  chapterCount: 1,
+  coverThumb: 'thumb_secret',
+  isHidden: true,
+  updatedAt: Date.now(),
+});
+
+await runAutoSync(supabaseMock, { force: true });
+
+const cloudSecretRow = supabaseMock.tables.novels.get('user_123:nov_secret_99');
+assert(cloudSecretRow, 'Dòng truyện bí mật phải tồn tại trên Cloud');
+assert.strictEqual(cloudSecretRow.is_hidden, true, 'Truyện mới ẩn đẩy lên BẮT BUỘC có is_hidden = true');
+assert.strictEqual(cloudSecretRow.title, 'Bí Kíp Thượng Cổ');
+assert.strictEqual(cloudSecretRow.description, 'Bí kíp tuyệt mật không thể công khai');
+assert.strictEqual(cloudSecretRow.cover, 'data:image/jpeg;base64,secretcoverdata', 'Phải có cover đầy đủ');
+assert.strictEqual(cloudSecretRow.chapter_count, 1);
+assert(supabaseMock.storageBuckets.novels.has(cloudSecretRow.content_path), 'Nội dung truyện phải được tải lên storage');
+console.log('✓ Test 25 Passed: Truyện mới ẩn ở máy A đẩy lên có is_hidden=true, bìa và mô tả đầy đủ!');
+
+// -------------------------------------------------------------
+// TEST 26 (c): Truyện mới từ Cloud về máy B hiển thị đúng trong thư viện (có bìa, tên, trạng thái ẩn)
+// -------------------------------------------------------------
+console.log('\n--- Test 26 (c): Truyện mới từ Cloud về máy B hiển thị đúng trong thư viện ---');
+releaseSyncLock();
+resetBackoff();
+global.localStorage.clear();
+mockDB.novels.clear();
+mockDB.chapters.clear();
+setHostOverrideForTesting('test-user.github.io');
+setAutoSyncEnabled(true);
+setActiveProfile('real');
+saveSyncLedger({ novels: {}, cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 }, lastSyncedAt: 1000 });
+
+// Máy B ban đầu trống, Cloud đã có nov_secret_99 từ Test 25
+await runAutoSync(supabaseMock, { force: true });
+
+const libPullB = getLibrary({ includeHidden: true });
+const pulledItem = libPullB.find(x => x.id === 'nov_secret_99');
+assert(pulledItem, 'Thư viện máy B phải nhận được truyện mới từ cloud');
+assert.strictEqual(pulledItem.title, 'Bí Kíp Thượng Cổ');
+assert.strictEqual(pulledItem.isHidden, true, 'Trạng thái ẩn phải là true');
+assert(pulledItem.coverThumb !== undefined, 'Phải có coverThumb trong thư viện');
+
+const pulledDbNov = await getNovel('nov_secret_99');
+assert(pulledDbNov, 'IndexedDB phải có truyện');
+assert.strictEqual(pulledDbNov.isHidden, true);
+assert.strictEqual(pulledDbNov.coverUrl, 'data:image/jpeg;base64,secretcoverdata');
+assert.strictEqual(pulledDbNov.description, 'Bí kíp tuyệt mật không thể công khai');
+
+const pulledChaps = await getChapters('nov_secret_99');
+assert.strictEqual(pulledChaps.length, 1);
+assert.strictEqual(pulledChaps[0].content, 'Tuyệt kỹ thượng thừa');
+
+const ledgerB = getSyncLedger();
+assert(ledgerB.novels['nov_secret_99'].lastPulledContentAt > 0, 'Ledger phải ghi nhận đã kéo');
+assert(!getDirtyNovels()['nov_secret_99'], 'Dirty flag phải được xóa');
+console.log('✓ Test 26 Passed: Truyện mới từ Cloud về máy B hiển thị đúng trong thư viện (có bìa, tên, trạng thái ẩn)!');
+
+// -------------------------------------------------------------
+// TEST 27 (d): Mock Supabase trả {error} ở upsert truyện: dirty không bị xóa, ledger không đổi, syncStatus thành error
+// -------------------------------------------------------------
+console.log('\n--- Test 27 (d): Mock Supabase trả {error} ở upsert truyện ---');
+releaseSyncLock();
+resetBackoff();
+global.localStorage.clear();
+mockDB.novels.clear();
+mockDB.chapters.clear();
+setHostOverrideForTesting('test-user.github.io');
+setAutoSyncEnabled(true);
+setActiveProfile('real');
+saveSyncLedger({ novels: {}, cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 }, lastSyncedAt: 1000 });
+
+const novErrTest = {
+  id: 'nov_upsert_fail',
+  title: 'Truyện Lỗi Upsert',
+  description: 'Mô tả',
+  coverUrl: '',
+  updatedAt: 5000,
+};
+await saveNovel(novErrTest);
+await saveChaptersBulk([
+  { id: 'ch_err_1', novelId: 'nov_upsert_fail', chapterNumber: 1, title: 'C1', content: 'Nội dung', order: 1 }
+]);
+addToLibrary({
+  id: 'nov_upsert_fail',
+  title: 'Truyện Lỗi Upsert',
+  chapterCount: 1,
+  updatedAt: 5000,
+});
+markNovelDirty('nov_upsert_fail');
+
+const ledgerBeforeErr = JSON.stringify(getSyncLedger());
+
+// Kích hoạt lỗi upsert truyện
+supabaseMock.simulatedErrors.novelsUpsert = true;
+
+const resErrUpsert = await runAutoSync(supabaseMock, { force: true });
+assert.strictEqual(resErrUpsert.success, false, 'Khi có lỗi ghi Supabase, runAutoSync phải trả success: false');
+assert(getDirtyNovels()['nov_upsert_fail'], 'Dirty flag TUYỆT ĐỐI KHÔNG được xóa khi upsert lỗi');
+assert.strictEqual(JSON.stringify(getSyncLedger()), ledgerBeforeErr, 'Ledger TUYỆT ĐỐI KHÔNG được cập nhật khi có lỗi');
+assert.strictEqual(getSyncStatus().state, 'error', 'syncStatus phải chuyển thành error');
+
+// Phục hồi lỗi
+supabaseMock.simulatedErrors.novelsUpsert = false;
+resetBackoff();
+console.log('✓ Test 27 Passed: Mock Supabase {error} được xử lý nghiêm ngặt: dirty giữ nguyên, ledger không đổi, syncStatus = error!');
+
+// -------------------------------------------------------------
+// TEST 28 (e): Đồng bộ tay đang chạy thì autoSync bỏ qua (báo locked) và ngược lại
+// -------------------------------------------------------------
+console.log('\n--- Test 28 (e): Đồng bộ tay đang chạy thì autoSync bỏ qua (báo locked) và ngược lại ---');
+releaseSyncLock();
+resetBackoff();
+
+// 1. Giả lập manual sync đang giữ khóa -> autoSync phải bỏ qua
+const lockGotten = acquireSyncLock();
+assert.strictEqual(lockGotten, true, 'Phải lấy được khóa ban đầu');
+
+const resAutoSkipped = await runAutoSync(supabaseMock);
+assert.strictEqual(resAutoSkipped.skipped, true);
+assert.strictEqual(resAutoSkipped.reason, 'locked');
+
+// 2. Giả lập autoSync đang giữ khóa (hoặc tab khác) -> performSync phải báo locked
+const resManualLocked = await performSync(supabaseMock);
+assert.strictEqual(resManualLocked.locked, true, 'performSync phải trả locked: true khi đã có khóa');
+assert.strictEqual(resManualLocked.success, false);
+assert(resManualLocked.message.includes('Đang có một lần đồng bộ khác chạy'));
+
+// 3. Giải phóng khóa -> cả hai đều có thể chạy lại
+releaseSyncLock();
+assert.strictEqual(acquireSyncLock(), true);
+releaseSyncLock();
+console.log('✓ Test 28 Passed: Khóa dùng chung giữa autoSync và performSync hoạt động trơn tru!');
+
+// -------------------------------------------------------------
+// TEST 29 (f): Chỉ pending_seconds thay đổi: đẩy lên Cloud và máy B nhận được
+// -------------------------------------------------------------
+console.log('\n--- Test 29 (f): Chỉ pending_seconds thay đổi: đẩy lên Cloud và máy B nhận được ---');
+releaseSyncLock();
+resetBackoff();
+global.localStorage.clear();
+mockDB.novels.clear();
+mockDB.chapters.clear();
+setHostOverrideForTesting('test-user.github.io');
+setAutoSyncEnabled(true);
+setActiveProfile('real');
+
+// Khởi tạo tu vi máy A: rev = 10, pending = 60
+const cultStateA = { realm: 'Luyện Khí Tầng 3', totalExp: 350, _rev: 10 };
+localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cultStateA));
+localStorage.setItem(getCultivationKey('pending_seconds', 'real'), '60');
+saveSyncLedger({
+  novels: {},
+  cultivation: { lastSyncedRev: 10, lastSyncedPending: 60, lastPendingPushAt: 0, lastCloudUpdatedAt: 1000 },
+  lastSyncedAt: 1000,
+});
+
+// Giả lập Cloud đang có cùng rev = 10 và pending = 60
+supabaseMock.tables.cultivation.set('user_123', {
+  user_id: 'user_123',
+  rev: 10,
+  state: { ...cultStateA, __meta: { pendingSeconds: 60 } },
+  updated_at: 1000,
+});
+
+// Người dùng ngồi thiền tiếp ở máy A: pending_seconds tăng lên 180 (rev vẫn là 10)
+localStorage.setItem(getCultivationKey('pending_seconds', 'real'), '180');
+
+// Máy A chạy autoSync (với force)
+await runAutoSync(supabaseMock, { force: true });
+
+// Kiểm tra Cloud nhận được pendingSeconds = 180
+const cloudCultRow = supabaseMock.tables.cultivation.get('user_123');
+assert(cloudCultRow, 'Dòng tu vi trên cloud phải tồn tại');
+assert.strictEqual(cloudCultRow.rev, 10, 'Rev không đổi');
+assert.strictEqual(cloudCultRow.state.__meta.pendingSeconds, 180, 'Cloud phải nhận pendingSeconds = 180');
+
+// Kiểm tra ledger máy A
+assert.strictEqual(getSyncLedger().cultivation.lastSyncedPending, 180);
+
+// Giả lập Máy B: local pending = 60, lastSyncedPending = 60 (chưa bị lệch)
+global.localStorage.clear();
+releaseSyncLock();
+resetBackoff();
+setHostOverrideForTesting('test-user.github.io');
+setAutoSyncEnabled(true);
+setActiveProfile('real');
+
+localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cultStateA));
+localStorage.setItem(getCultivationKey('pending_seconds', 'real'), '60');
+saveSyncLedger({
+  novels: {},
+  cultivation: { lastSyncedRev: 10, lastSyncedPending: 60, lastPendingPushAt: 0, lastCloudUpdatedAt: 1000 },
+  lastSyncedAt: 1000,
+});
+
+// Máy B chạy autoSync -> nhận pending 180 từ Cloud
+await runAutoSync(supabaseMock, { force: true });
+
+const pulledPendingB = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')) || '0', 10);
+assert.strictEqual(pulledPendingB, 180, 'Máy B phải nhận đúng số giây đang thiền 180 từ Cloud');
+assert.strictEqual(getSyncLedger().cultivation.lastSyncedPending, 180);
+console.log('✓ Test 29 Passed: Chỉ pending_seconds thay đổi được đẩy lên Cloud và máy B nhận được chính xác!');
+
+// -------------------------------------------------------------
+// TEST 30 (g): Sửa metadata (đổi tên) không tải lại chương
+// -------------------------------------------------------------
+console.log('\n--- Test 30 (g): Sửa metadata (đổi tên) không tải lại chương ---');
+releaseSyncLock();
+resetBackoff();
+global.localStorage.clear();
+mockDB.novels.clear();
+mockDB.chapters.clear();
+setHostOverrideForTesting('test-user.github.io');
+setAutoSyncEnabled(true);
+setActiveProfile('real');
+
+// Xóa các truyện cũ trên cloud để chỉ tập trung test riêng nov_meta_test
+supabaseMock.tables.novels.clear();
+supabaseMock.storageBuckets.novels.clear();
+
+// Setup truyện nov_meta_test đã đồng bộ sẵn ở cả 2 bên
+const baseNovel = {
+  id: 'nov_meta_test',
+  title: 'Tiêu Đề Cũ',
+  description: 'Mô tả gốc',
+  coverUrl: 'data:image/jpeg;base64,mockcover',
+  chapterCount: 2,
+  updatedAt: 1000,
+};
+await saveNovel(baseNovel);
+await saveChaptersBulk([
+  { id: 'ch_m_1', novelId: 'nov_meta_test', chapterNumber: 1, title: 'C1', content: 'Chương 1 nội dung dài...', order: 1 },
+  { id: 'ch_m_2', novelId: 'nov_meta_test', chapterNumber: 2, title: 'C2', content: 'Chương 2 nội dung dài...', order: 2 },
+]);
+addToLibrary({
+  id: 'nov_meta_test',
+  title: 'Tiêu Đề Cũ',
+  description: 'Mô tả gốc',
+  chapterCount: 2,
+  coverThumb: 'thumb_old',
+  updatedAt: 1000,
+});
+
+supabaseMock.tables.novels.set('user_123:nov_meta_test', {
+  user_id: 'user_123',
+  id: 'nov_meta_test',
+  title: 'Tiêu Đề Cũ',
+  description: 'Mô tả gốc',
+  cover: 'data:image/jpeg;base64,mockcover',
+  is_hidden: false,
+  chapter_count: 2,
+  content_path: 'user_123/nov_meta_test.json.gz',
+  content_updated_at: 1000,
+  updated_at: 1000,
+});
+supabaseMock.storageBuckets.novels.set('user_123/nov_meta_test.json.gz', Buffer.from('mock zipped chapters'));
+
+saveSyncLedger({
+  novels: {
+    nov_meta_test: {
+      lastPulledContentAt: 1000,
+      lastPushedContentAt: 1000,
+      lastSyncedMetaAt: 1000,
+    },
+  },
+  cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 },
+  lastSyncedAt: 1000,
+});
+clearNovelDirty('nov_meta_test');
+
+// Đặt lại bộ đếm storage
+supabaseMock.storageUploadCount = 0;
+supabaseMock.storageDownloadCount = 0;
+
+// TRƯỜNG HỢP 1: Cloud sửa tiêu đề (updated_at = 2000 > local 1000)
+const cloudRow = supabaseMock.tables.novels.get('user_123:nov_meta_test');
+cloudRow.title = 'Tiêu Đề Mới Từ Cloud';
+cloudRow.updated_at = 2000;
+
+await runAutoSync(supabaseMock, { force: true });
+
+// Local phải cập nhật tiêu đề mới
+const localLibUpdated = getLibrary().find(x => x.id === 'nov_meta_test');
+assert.strictEqual(localLibUpdated.title, 'Tiêu Đề Mới Từ Cloud');
+const localDbUpdated = await getNovel('nov_meta_test');
+assert.strictEqual(localDbUpdated.title, 'Tiêu Đề Mới Từ Cloud');
+
+// KHÔNG ĐƯỢC phép tải lại file chương từ storage
+assert.strictEqual(supabaseMock.storageDownloadCount, 0, 'Sửa metadata từ Cloud tuyệt đối không được download nội dung chương');
+
+// TRƯỜNG HỢP 2: Local sửa tiêu đề (updatedAt = 3000 > cloud 2000)
+updateLibraryItem('nov_meta_test', {
+  title: 'Tiêu Đề Mới Đổi Tại Local',
+  updatedAt: 3000,
+});
+localDbUpdated.title = 'Tiêu Đề Mới Đổi Tại Local';
+localDbUpdated.updatedAt = 3000;
+await saveNovel(localDbUpdated);
+
+await runAutoSync(supabaseMock, { force: true });
+
+// Cloud phải cập nhật tiêu đề mới
+const cloudRowAfterLocal = supabaseMock.tables.novels.get('user_123:nov_meta_test');
+assert.strictEqual(cloudRowAfterLocal.title, 'Tiêu Đề Mới Đổi Tại Local');
+assert.strictEqual(cloudRowAfterLocal.updated_at, 3000);
+
+// KHÔNG ĐƯỢC phép upload lại file chương lên storage
+assert.strictEqual(supabaseMock.storageUploadCount, 0, 'Sửa metadata tại Local tuyệt đối không được upload lại nội dung chương');
+
+console.log('✓ Test 30 Passed: Sửa metadata hai chiều không tải lại chương (downloadCount = 0, uploadCount = 0)!');
+
+console.log('\n=== TẤT CẢ 30 BÀI TEST (PHASE 1 + PHASE 2) ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');
+

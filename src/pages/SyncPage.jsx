@@ -167,6 +167,13 @@ export default function SyncPage() {
         },
       });
 
+      if (res?.locked) {
+        alert(res.message || 'Đang có một lần đồng bộ khác chạy, thử lại sau giây lát.');
+        setSyncProgress(null);
+        setIsSyncing(false);
+        return;
+      }
+
       if (res?.requireFirstSyncChoice) {
         setFirstSyncData(res.firstSyncData);
         setSyncProgress(null);

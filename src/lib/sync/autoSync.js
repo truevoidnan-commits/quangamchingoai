@@ -14,6 +14,8 @@ import {
   removeTombstone,
   getDeviceId,
   setSyncBypassDirty,
+  acquireSyncLock,
+  releaseSyncLock,
 } from './syncLedger.js';
 import {
   getActiveProfile,
@@ -26,27 +28,26 @@ import {
   removeFromLibrary,
 } from '../storage.js';
 import {
-  getNovel,
-  getChapters,
   saveNovel,
   saveChaptersBulk,
   deleteNovelDB,
 } from '../db.js';
 import {
   backupCultivationState,
-  compressChapters,
   decompressChapters,
   normalizeTitle,
   checkFirstSyncCondition,
   applyCloudReadingProgress,
   syncReadingProgress,
   pullNovelProgressNow,
+  pullNovelFromCloud,
+  pushNovelToCloud,
+  syncNovelMetadata,
 } from './syncEngine.js';
 
-export { pullNovelProgressNow };
+export { pullNovelProgressNow, acquireSyncLock, releaseSyncLock };
 
 export const AUTO_SYNC_KEY = 'tcl_auto_sync';
-export const SYNC_LOCK_KEY = 'tcl_sync_lock_ts';
 export const SYNC_STATUS_KEY = 'tcl_sync_status';
 
 const BACKOFF_DELAYS = [30000, 60000, 120000, 300000, 900000]; // 30s, 1p, 2p, 5p, 15p
@@ -94,31 +95,6 @@ export function setAutoSyncEnabled(enabled) {
   } catch {
     return false;
   }
-}
-
-/**
- * Khóa chống chạy trùng giữa nhiều tab hoặc giữa đồng bộ tay và tự động.
- */
-export function acquireSyncLock() {
-  try {
-    const lockRaw = localStorage.getItem(SYNC_LOCK_KEY);
-    const lockTs = parseInt(lockRaw || '0', 10);
-    const now = Date.now();
-    // Nếu lock cũ chưa quá 2 phút thì bị coi là đang bị chiếm giữ
-    if (lockTs > 0 && now - lockTs < 120000) {
-      return false;
-    }
-    localStorage.setItem(SYNC_LOCK_KEY, String(now));
-    return true;
-  } catch {
-    return true;
-  }
-}
-
-export function releaseSyncLock() {
-  try {
-    localStorage.removeItem(SYNC_LOCK_KEY);
-  } catch {}
 }
 
 /**
@@ -190,6 +166,8 @@ export async function pullCultivationBeforeMeditation(customSupabase = null, { t
   const localState = getCultivationState();
   const localRev = typeof localState?._rev === 'number' ? localState._rev : 0;
   const lastSyncedRev = ledger.cultivation?.lastSyncedRev || 0;
+  const lastSyncedPending = ledger.cultivation?.lastSyncedPending ?? 0;
+  const localPending = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')) || '0', 10) || 0;
 
   try {
     let timeoutId;
@@ -217,16 +195,24 @@ export async function pullCultivationBeforeMeditation(customSupabase = null, { t
     if (isCloudNewer && isLocalUnchanged && cloudCult.state) {
       backupCultivationState(localState);
       const cloudState = { ...cloudCult.state };
-      const pendingSeconds = cloudState.__meta?.pendingSeconds ?? 0;
+      const cloudPending = cloudState.__meta?.pendingSeconds ?? 0;
       delete cloudState.__meta;
 
+      let targetPending = localPending;
+      if (localPending === lastSyncedPending) {
+        targetPending = cloudPending;
+        try {
+          localStorage.setItem(getCultivationKey('pending_seconds', 'real'), String(cloudPending));
+        } catch {}
+      }
+
       try {
-        localStorage.setItem(getCultivationKey('pending_seconds', 'real'), String(pendingSeconds));
         localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cloudState));
       } catch {}
 
       ledger.cultivation = {
         lastSyncedRev: cloudRev,
+        lastSyncedPending: targetPending,
         lastCloudUpdatedAt: cloudCult.updated_at || Date.now(),
       };
       saveSyncLedger(ledger);
@@ -294,6 +280,8 @@ export async function runAutoSync(customSupabase = null, options = {}) {
   const userId = session.user.id;
   setSyncStatus({ state: 'syncing', message: 'Đang đồng bộ tự động...' });
 
+  const errors = [];
+
   try {
     const ledger = getSyncLedger();
     const dirty = getDirtyNovels();
@@ -307,7 +295,10 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       .select('id, updated_at, content_updated_at, deleted_at, title, chapter_count')
       .eq('user_id', userId);
 
-    if (novelsErr) throw novelsErr;
+    if (novelsErr) {
+      errors.push(`Lỗi tải danh sách truyện từ Cloud: ${novelsErr.message}`);
+      throw novelsErr;
+    }
 
     const { data: cloudCultivation, error: cultErr } = await client
       .from('cultivation')
@@ -361,15 +352,28 @@ export async function runAutoSync(customSupabase = null, options = {}) {
             .update({ deleted_at: deletedAtMs })
             .eq('user_id', userId)
             .eq('id', tombNovelId);
-          if (tombUpdateErr) tombSuccess = false;
+          if (tombUpdateErr) {
+            console.warn(`Lỗi cập nhật bia mộ cho truyện "${tombNovelId}":`, tombUpdateErr.message);
+            errors.push(`Lỗi cập nhật bia mộ: ${tombUpdateErr.message}`);
+            tombSuccess = false;
+          }
         }
         if (tombSuccess) {
           try {
-            await client.storage.from('novels').remove([
+            const { error: removeErr } = await client.storage.from('novels').remove([
               `${userId}/${tombNovelId}.json.gz`,
               `${userId}/${tombNovelId}.zip`,
             ]);
-          } catch {}
+            if (removeErr) {
+              console.warn(`Lỗi xóa storage của truyện "${tombNovelId}":`, removeErr.message);
+              errors.push(`Lỗi xóa storage: ${removeErr.message}`);
+              tombSuccess = false;
+            }
+          } catch (e) {
+            console.warn('Lỗi storage remove:', e.message);
+            errors.push(e.message);
+            tombSuccess = false;
+          }
         }
       }
       if (tombSuccess) {
@@ -415,33 +419,18 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       const localItem = localMap.get(novelId);
       const cloudRow = activeCloudMap.get(novelId);
 
-      // A. Chỉ có ở Cloud -> Kéo về máy
+      // A. Chỉ có ở Cloud -> Kéo về máy đầy đủ
       if (cloudRow && !localItem) {
         try {
-          const { data: blob, error: downloadErr } = await client.storage
-            .from('novels')
-            .download(`${userId}/${novelId}.json.gz`);
-          if (!downloadErr && blob) {
-            const rawChapters = await decompressChapters(blob, `${novelId}.json.gz`);
-            await saveNovel({
-              id: cloudRow.id,
-              title: cloudRow.title,
-              totalChapters: cloudRow.chapter_count || rawChapters.length,
-              updatedAt: cloudRow.updated_at || Date.now(),
-            });
-            await saveChaptersBulk(rawChapters);
-            ledger.novels[novelId] = {
-              lastPushedContentAt: cloudRow.content_updated_at || cloudRow.updated_at || Date.now(),
-              lastPulledAt: Date.now(),
-            };
-          }
+          await pullNovelFromCloud(client, userId, cloudRow, ledger);
         } catch (e) {
-          console.warn('Auto pull novel error:', e);
+          console.warn('Auto pull novel error:', e.message);
+          errors.push(e.message);
         }
         continue;
       }
 
-      // B. Chỉ có ở Local -> Kiểm tra trùng tiêu đề & Đẩy lên Cloud
+      // B. Chỉ có ở Local -> Kiểm tra trùng tiêu đề & Đẩy lên Cloud đầy đủ
       if (localItem && !cloudRow) {
         const normLocalTitle = normalizeTitle(localItem.title);
         const matchingCloud = normLocalTitle ? cloudActiveNormMap.get(normLocalTitle) : null;
@@ -452,45 +441,26 @@ export async function runAutoSync(customSupabase = null, options = {}) {
           continue;
         }
 
-        // Tự động đẩy truyện mới
         try {
-          const novel = await getNovel(novelId);
-          const chapters = await getChapters(novelId);
-          const chaptersJson = JSON.stringify(chapters || []);
-          const { blob, ext, contentType } = await compressChapters(chaptersJson);
-          const storagePath = `${userId}/${novelId}${ext}`;
-
-          const { error: upErr } = await client.storage
-            .from('novels')
-            .upload(storagePath, blob, { contentType, upsert: true });
-
-          if (!upErr) {
-            const nowTime = Date.now();
-            await client.from('novels').upsert({
-              id: novelId,
-              user_id: userId,
-              title: localItem.title || novel?.title || 'Chưa đặt tên',
-              chapter_count: (chapters || []).length,
-              content_path: storagePath,
-              content_updated_at: nowTime,
-              updated_at: nowTime,
-              deleted_at: null,
-            }, { onConflict: 'user_id,id' });
-
-            clearNovelDirty(novelId);
-            ledger.novels[novelId] = {
-              lastPushedContentAt: nowTime,
-              lastPulledAt: nowTime,
-            };
-          }
+          await pushNovelToCloud(client, userId, novelId, localItem, ledger);
         } catch (e) {
-          console.warn('Auto push novel error:', e);
+          console.warn('Auto push novel error:', e.message);
+          errors.push(e.message);
         }
         continue;
       }
 
-      // C. Cả 2 bên đều có: Kiểm tra xung đột nội dung
+      // C. Cả 2 bên đều có:
       if (localItem && cloudRow) {
+        // 1. Đồng bộ Metadata hai chiều trước (tiêu đề, mô tả, bìa, is_hidden, chapter_count)
+        try {
+          await syncNovelMetadata(client, userId, novelId, localItem, cloudRow, ledger);
+        } catch (e) {
+          console.warn('Auto sync novel metadata error:', e.message);
+          errors.push(e.message);
+        }
+
+        // 2. Kiểm tra xung đột và thay đổi Nội dung chương (Content)
         const localDirty = Boolean(dirty[novelId]);
         const novelLedger = ledger.novels[novelId] || {};
         const cloudContentChanged = (cloudRow.content_updated_at || 0) > (novelLedger.lastPushedContentAt || 0);
@@ -503,46 +473,36 @@ export async function runAutoSync(customSupabase = null, options = {}) {
         }
 
         if (localDirty && !cloudContentChanged) {
-          // Chỉ máy sửa -> Đẩy lên
+          // Chỉ máy sửa nội dung chương -> Tải lên Cloud
           try {
-            const novel = await getNovel(novelId);
-            const chapters = await getChapters(novelId);
-            const { blob, ext, contentType } = await compressChapters(JSON.stringify(chapters || []));
-            const storagePath = `${userId}/${novelId}${ext}`;
-            const { error: upErr } = await client.storage
-              .from('novels')
-              .upload(storagePath, blob, { contentType, upsert: true });
-            if (!upErr) {
-              const nowTime = Date.now();
-              await client.from('novels').upsert({
-                id: novelId,
-                user_id: userId,
-                title: localItem.title || novel?.title || '',
-                chapter_count: (chapters || []).length,
-                content_path: storagePath,
-                content_updated_at: nowTime,
-                updated_at: nowTime,
-                deleted_at: null,
-              }, { onConflict: 'user_id,id' });
-              clearNovelDirty(novelId);
-              novelLedger.lastPushedContentAt = nowTime;
-              ledger.novels[novelId] = novelLedger;
-            }
-          } catch (e) {}
+            await pushNovelToCloud(client, userId, novelId, localItem, ledger);
+          } catch (e) {
+            console.warn('Auto upload novel content error:', e.message);
+            errors.push(e.message);
+          }
         } else if (!localDirty && cloudContentChanged) {
-          // Chỉ cloud sửa -> Tải về
+          // Chỉ cloud sửa nội dung chương -> Tải nội dung từ Cloud về
           try {
             const { data: blob, error: downloadErr } = await client.storage
               .from('novels')
               .download(`${userId}/${novelId}.json.gz`);
-            if (!downloadErr && blob) {
+            if (downloadErr) throw downloadErr;
+            if (blob) {
               const rawChapters = await decompressChapters(blob, `${novelId}.json.gz`);
-              await saveChaptersBulk(rawChapters);
+              setSyncBypassDirty(true);
+              try {
+                await saveChaptersBulk(rawChapters, { skipDirty: true });
+              } finally {
+                setSyncBypassDirty(false);
+              }
               novelLedger.lastPushedContentAt = cloudRow.content_updated_at;
               novelLedger.lastPulledAt = Date.now();
               ledger.novels[novelId] = novelLedger;
             }
-          } catch (e) {}
+          } catch (e) {
+            console.warn('Auto download novel content error:', e.message);
+            errors.push(e.message);
+          }
         }
       }
     }
@@ -551,29 +511,45 @@ export async function runAutoSync(customSupabase = null, options = {}) {
     const localState = getCultivationState();
     let localRev = typeof localState?._rev === 'number' ? localState._rev : 0;
     const lastSyncedRev = ledger.cultivation?.lastSyncedRev || 0;
+    const lastSyncedPending = ledger.cultivation?.lastSyncedPending ?? 0;
     const cloudRev = cloudCultivation?.rev || 0;
+    const localPending = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')) || '0', 10) || 0;
 
-    const isCloudChanged = cloudRev > lastSyncedRev;
-    const isLocalChanged = localRev > lastSyncedRev;
+    const cloudPending = cloudCultivation?.state?.__meta?.pendingSeconds ?? 0;
+    const isCloudRevChanged = cloudRev > lastSyncedRev;
+    const isCloudPendingChanged = cloudRev === lastSyncedRev && (cloudCultivation?.updated_at || 0) > (ledger.cultivation?.lastCloudUpdatedAt || 0) && cloudPending !== lastSyncedPending;
+    const isCloudChanged = isCloudRevChanged || isCloudPendingChanged;
 
-    if (isCloudChanged && isLocalChanged) {
+    const isLocalRevChanged = localRev > lastSyncedRev;
+    const isLocalPendingChanged = localPending !== lastSyncedPending;
+    const isLocalChanged = isLocalRevChanged || isLocalPendingChanged;
+
+    if (isCloudRevChanged && isLocalRevChanged) {
       // Cả hai cùng sửa tu vi -> XUNG ĐỘT, KHÔNG ghi đè, bật cờ 🔔
       hasAttention = true;
       attentionReason = 'cultivation_conflict';
-    } else if (isCloudChanged && !isLocalChanged && cloudCultivation?.state) {
+    } else if (isCloudChanged && !isLocalRevChanged && cloudCultivation?.state) {
       // Cloud mới hơn -> Fast-forward (sao lưu trước khi áp dụng)
       backupCultivationState(localState);
       const cloudState = { ...cloudCultivation.state };
-      const pendingSeconds = cloudState.__meta?.pendingSeconds ?? 0;
+      const cloudPending = cloudState.__meta?.pendingSeconds ?? 0;
       delete cloudState.__meta;
 
+      let targetPending = localPending;
+      if (localPending === lastSyncedPending) {
+        targetPending = cloudPending;
+        try {
+          localStorage.setItem(getCultivationKey('pending_seconds', 'real'), String(cloudPending));
+        } catch {}
+      }
+
       try {
-        localStorage.setItem(getCultivationKey('pending_seconds', 'real'), String(pendingSeconds));
         localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cloudState));
       } catch {}
 
       ledger.cultivation = {
         lastSyncedRev: cloudRev,
+        lastSyncedPending: targetPending,
         lastCloudUpdatedAt: cloudCultivation.updated_at || Date.now(),
       };
 
@@ -581,27 +557,32 @@ export async function runAutoSync(customSupabase = null, options = {}) {
         window.dispatchEvent(new CustomEvent('cultivation_updated', { detail: cloudState }));
       }
     } else if (!isCloudChanged && isLocalChanged) {
-      // Local mới hơn -> Đẩy lên Cloud
-      let pendingSec = 0;
-      try {
-        pendingSec = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')) || '0', 10) || 0;
-      } catch {}
-      const payloadState = { ...localState, __meta: { pendingSeconds: pendingSec } };
-      const nowTime = Date.now();
+      // Local mới hơn (rev hoặc pendingSeconds)
+      const lastPendingPushAt = ledger.cultivation?.lastPendingPushAt || 0;
+      const canPush = isLocalRevChanged || (now - lastPendingPushAt >= 60000) || options.force;
+      if (canPush) {
+        const payloadState = { ...localState, __meta: { pendingSeconds: localPending } };
+        const nowTime = Date.now();
 
-      const { error: cultUpsertErr } = await client.from('cultivation').upsert({
-        user_id: userId,
-        state: payloadState,
-        rev: localRev,
-        updated_at: nowTime,
-        device_id: getDeviceId(),
-      }, { onConflict: 'user_id' });
+        const { error: cultUpsertErr } = await client.from('cultivation').upsert({
+          user_id: userId,
+          state: payloadState,
+          rev: localRev,
+          updated_at: nowTime,
+          device_id: getDeviceId(),
+        }, { onConflict: 'user_id' });
 
-      if (!cultUpsertErr) {
-        ledger.cultivation = {
-          lastSyncedRev: localRev,
-          lastCloudUpdatedAt: nowTime,
-        };
+        if (!cultUpsertErr) {
+          ledger.cultivation = {
+            lastSyncedRev: localRev,
+            lastSyncedPending: localPending,
+            lastCloudUpdatedAt: nowTime,
+            lastPendingPushAt: nowTime,
+          };
+        } else {
+          console.warn('Lỗi upsert tu vi lên cloud:', cultUpsertErr.message);
+          errors.push(`Lỗi cập nhật tu vi lên cloud: ${cultUpsertErr.message}`);
+        }
       }
     }
 
@@ -609,7 +590,19 @@ export async function runAutoSync(customSupabase = null, options = {}) {
     try {
       await syncReadingProgress(client, userId, allNovelIds, { mode: 'normal' });
     } catch (e) {
-      console.warn('Auto sync reading progress error:', e);
+      console.warn('Auto sync reading progress error:', e.message);
+      errors.push(e.message);
+    }
+
+    // KIỂM TRA LỖI: nếu có bất kỳ lỗi nào, KHÔNG ghi nhận đã đồng bộ
+    if (errors.length > 0) {
+      recordBackoffFailure();
+      releaseSyncLock();
+      setSyncStatus({
+        state: 'error',
+        message: errors[0],
+      });
+      return { success: false, errors };
     }
 
     // Ghi nhận hoàn tất vào ledger
@@ -715,25 +708,40 @@ async function quickPushProgressAndCultivation(customSupabase = null) {
     if (!session?.user) return;
     const userId = session.user.id;
 
-    // Đẩy tu vi nếu dirty
+    // Đẩy tu vi nếu dirty hoặc pendingSeconds thay đổi
     const ledger = getSyncLedger();
     const localState = getCultivationState();
     const localRev = typeof localState?._rev === 'number' ? localState._rev : 0;
     const lastSyncedRev = ledger.cultivation?.lastSyncedRev || 0;
+    const lastSyncedPending = ledger.cultivation?.lastSyncedPending ?? 0;
+    const localPending = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')) || '0', 10) || 0;
 
-    if (localRev > lastSyncedRev) {
-      let pendingSec = 0;
-      try {
-        pendingSec = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')) || '0', 10) || 0;
-      } catch {}
+    const revChanged = localRev > lastSyncedRev;
+    const pendingChanged = localPending !== lastSyncedPending;
+
+    if (revChanged || pendingChanged) {
       const nowTime = Date.now();
-      await client.from('cultivation').upsert({
+      const { error: cultErr } = await client.from('cultivation').upsert({
         user_id: userId,
-        state: { ...localState, __meta: { pendingSeconds: pendingSec } },
+        state: { ...localState, __meta: { pendingSeconds: localPending } },
         rev: localRev,
         updated_at: nowTime,
         device_id: getDeviceId(),
       }, { onConflict: 'user_id' });
+
+      if (!cultErr) {
+        ledger.cultivation = {
+          ...ledger.cultivation,
+          lastSyncedRev: localRev,
+          lastSyncedPending: localPending,
+          lastCloudUpdatedAt: nowTime,
+        };
+        saveSyncLedger(ledger);
+      } else {
+        console.warn('Lỗi quick push tu vi:', cultErr.message);
+      }
     }
-  } catch {}
+  } catch (err) {
+    console.warn('Lỗi quickPushProgressAndCultivation:', err.message);
+  }
 }

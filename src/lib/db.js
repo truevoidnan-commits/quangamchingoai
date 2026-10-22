@@ -80,7 +80,7 @@ export async function getNovel(id) {
 export async function saveNovel(novel, options = {}) {
   const db = await getDB();
   await db.put('novels', novel);
-  if (!options?.skipDirty && novel?.id) {
+  if (options?.markDirty && !options?.skipDirty && novel?.id) {
     markNovelDirty(novel.id, novel.updatedAt || Date.now());
   }
 }
