@@ -473,3 +473,44 @@
     font-size: 13px;
   }
 }
+
+@media (max-width: 600px) {
+  .topBarInner {
+    padding: 0 8px;
+    gap: 4px;
+  }
+  .topBtn {
+    width: 32px;
+    height: 32px;
+    font-size: 15px;
+  }
+  .meditationBadgeWrap {
+    min-width: 0;
+    flex-shrink: 1;
+  }
+  .meditationBadge {
+    padding: 2px 6px;
+    font-size: 10.5px;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 370px) {
+  .topBarInner {
+    padding: 0 4px;
+    gap: 2px;
+  }
+  .topBtn {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+  .meditationBadge {
+    max-width: 80px;
+    padding: 2px 4px;
+    font-size: 9.5px;
+  }
+}

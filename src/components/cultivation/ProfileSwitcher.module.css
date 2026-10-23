@@ -1,12 +1,13 @@
 .switcherContainer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
   padding: 8px 12px;
   border-radius: 8px;
   transition: all 0.25s ease;
   user-select: none;
+  min-width: 0;
 }
 
 .realContainer {
@@ -34,6 +35,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .profileLabel {
@@ -42,6 +44,10 @@
   letter-spacing: 0.8px;
   font-weight: 700;
   color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .profileValue {
@@ -50,6 +56,17 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.profileValue span:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .realText {
@@ -61,10 +78,11 @@
 }
 
 .switchBtn {
+  width: 100%;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #f1f5f9;
-  padding: 5px 10px;
+  padding: 6px 10px;
   border-radius: 6px;
   font-size: 11.5px;
   font-weight: 700;
@@ -72,13 +90,22 @@
   transition: all 0.2s;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .switchBtn:hover {
   background: rgba(255, 255, 255, 0.18);
   transform: translateY(-1px);
+}
+
+.switchBtn span:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .compactSwitcher {
@@ -92,6 +119,7 @@
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .compactReal {

@@ -46,12 +46,88 @@
     0 0 3px #ffcc00,
     0 0 10px rgba(255, 204, 0, 0.75),
     0 0 20px rgba(255, 180, 0, 0.35);
+  white-space: nowrap;
 }
 
 .headerRight {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+}
+
+/* Sync Button */
+.syncBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 0.82rem;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.syncBtn:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.syncState_syncing {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.syncState_offline {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.syncState_attention {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.18);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
+.syncState_error {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.18);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+}
+
+.syncState_synced {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.syncState_idle {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.syncIcon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.syncTextFull {
+  display: inline;
+}
+
+.syncTextShort {
+  display: none;
+}
+
+.syncParallelIcon {
+  font-size: 0.75rem;
+  margin-left: 2px;
 }
 
 /* Cultivation Pill Button */
@@ -70,6 +146,8 @@
   box-shadow: 0 0 10px rgba(255, 204, 0, 0.2);
   transition: all var(--transition-fast);
   white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
 }
 .cultivationBadge:hover {
   transform: translateY(-1px);
@@ -80,11 +158,16 @@
 
 .badgeIcon {
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 .badgeText {
   font-weight: 600;
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .compact .inner {
@@ -99,11 +182,25 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .navBtn {
   font-size: 13px;
   padding: 6px 14px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navBtnIcon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.navBtnText {
+  display: inline;
 }
 
 .neonLine {
@@ -114,14 +211,53 @@
 
 @media (max-width: 600px) {
   .inner {
-    padding: 0 12px;
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .headerRight {
+    gap: 6px;
+  }
+  .logo {
+    gap: 6px;
   }
   .logoText {
-    font-size: 15px;
-    letter-spacing: 0.04em;
+    font-size: 14px;
+    letter-spacing: 0.03em;
   }
+  /* Ở trang con (không phải trang chủ) trên màn hẹp: logo chỉ hiện biểu tượng ✦ (ẩn chữ THIÊN CƠ LÂU) để đủ chỗ */
+  .compact .logoText {
+    display: none;
+  }
+
+  /* Sync button on mobile */
+  .syncBtn {
+    padding: 4px 7px;
+    font-size: 0.78rem;
+    gap: 3px;
+  }
+  .syncTextFull {
+    display: none;
+  }
+  .syncTextShort {
+    display: inline;
+  }
+
+  /* Nhãn cảnh giới: max-width khoảng 46vw (hoặc phù hợp), overflow: hidden, text-overflow: ellipsis trên .badgeText */
   .cultivationBadge {
     padding: 4px 8px;
     font-size: 11px;
+    max-width: 46vw;
+    gap: 4px;
+  }
+
+  /* Nút "📖 Thư viện" (chỉ hiện khi không ở trang chủ): trên màn hẹp chỉ hiện biểu tượng 📖, giữ aria-label "Thư viện", vùng bấm tối thiểu 36x36px */
+  .navBtn {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 6px;
+    font-size: 15px;
+  }
+  .navBtnText {
+    display: none;
   }
 }
