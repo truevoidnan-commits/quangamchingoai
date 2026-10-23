@@ -53,13 +53,16 @@ import {
   logSyncEvent,
   recordSyncSuccess,
   recordSyncFailure,
+  classifyErrorCode,
 } from './syncLog.js';
 
 export { pullNovelProgressNow, acquireSyncLock, releaseSyncLock, refreshSyncLock };
 
 export const AUTO_SYNC_KEY = 'tcl_auto_sync';
 export const SYNC_STATUS_KEY = 'tcl_sync_status';
-export const SYNC_HEARTBEAT_TIMEOUT_MS = 120000; // 2 phút
+export const SYNC_LOCK_TIMEOUT_MS = 120000; // 2 phút
+export const SYNC_STATUS_STALE_MS = 5 * 60 * 1000; // 5 phút
+export const SYNC_HEARTBEAT_TIMEOUT_MS = SYNC_LOCK_TIMEOUT_MS; // alias tương thích ngược
 
 const BACKOFF_DELAYS = [30000, 60000, 120000, 300000, 900000]; // 30s, 1p, 2p, 5p, 15p
 let _backoffIndex = 0;
@@ -129,23 +132,24 @@ export function getSyncStatus() {
     };
   }
 
-  // B. TRẠNG THÁI KẸT: nếu state là 'syncing' nhưng khóa tcl_sync_lock_ts đã hết hạn hoặc heartbeat cũ quá ngưỡng
+  // B. TRẠNG THÁI KẸT: nếu state là 'syncing' nhưng khóa tcl_sync_lock_ts đã hết hạn VÀ heartbeat cũ quá ngưỡng 5 phút
   if (status.state === 'syncing') {
     const now = Date.now();
     let lockActive = false;
     try {
       const lockRaw = localStorage.getItem(SYNC_LOCK_KEY);
       const lockTs = parseInt(lockRaw || '0', 10);
-      if (lockTs > 0 && now - lockTs < SYNC_HEARTBEAT_TIMEOUT_MS) {
+      if (lockTs > 0 && now - lockTs < SYNC_LOCK_TIMEOUT_MS) {
         lockActive = true;
       }
     } catch {}
 
     const heartbeatActive = Boolean(
-      status.heartbeatAt && now - status.heartbeatAt < SYNC_HEARTBEAT_TIMEOUT_MS
+      status.heartbeatAt && now - status.heartbeatAt < SYNC_STATUS_STALE_MS
     );
 
-    if (!lockActive || !heartbeatActive) {
+    // Chỉ xóa trạng thái 'syncing' khi CẢ HAI: lock hết hạn VÀ heartbeat của status > SYNC_STATUS_STALE_MS
+    if (!lockActive && !heartbeatActive) {
       status = {
         ...status,
         state: 'idle',
@@ -753,7 +757,9 @@ export async function runAutoSync(customSupabase = null, options = {}) {
 
       if (task.type === 'pull') {
         try {
+          refreshSyncLock();
           await pullNovelFromCloud(client, userId, task.cloudRow, ledger);
+          refreshSyncLock();
           cloudLibraryModified = true;
           newlyPulledNovels.push(task.novelId);
           saveSyncLedger(ledger);
@@ -785,7 +791,9 @@ export async function runAutoSync(customSupabase = null, options = {}) {
         }
 
         try {
+          refreshSyncLock();
           const pushRes = await pushNovelToCloud(client, userId, task.novelId, task.localItem, ledger);
+          refreshSyncLock();
           saveSyncLedger(ledger);
           logSyncEvent({
             level: 'info',
@@ -805,7 +813,9 @@ export async function runAutoSync(customSupabase = null, options = {}) {
 
       if (task.type === 'push_dirty') {
         try {
+          refreshSyncLock();
           const pushRes = await pushNovelToCloud(client, userId, task.novelId, task.localItem, ledger);
+          refreshSyncLock();
           saveSyncLedger(ledger);
           logSyncEvent({
             level: 'info',
@@ -830,13 +840,16 @@ export async function runAutoSync(customSupabase = null, options = {}) {
             .download(`${userId}/${task.novelId}.json.gz`);
           if (downloadErr) throw downloadErr;
           if (blob) {
+            refreshSyncLock();
             const rawChapters = await decompressChapters(blob, `${task.novelId}.json.gz`);
+            refreshSyncLock();
             setSyncBypassDirty(true);
             try {
               await saveChaptersBulk(rawChapters, { skipDirty: true });
             } finally {
               setSyncBypassDirty(false);
             }
+            refreshSyncLock();
             const novelLedger = ledger.novels[task.novelId] || {};
             novelLedger.lastPushedContentAt = task.cloudRow.content_updated_at;
             novelLedger.lastPulledAt = Date.now();
@@ -891,7 +904,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
         saveSyncLedger(ledger);
       }
       recordBackoffFailure();
-      recordSyncFailure(errors[0]);
+      recordSyncFailure(errors);
       releaseSyncLock();
       setSyncStatus({
         state: 'error',
@@ -901,6 +914,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
         level: 'error',
         src: syncSource,
         evt: 'sync_failed',
+        code: classifyErrorCode(errors[0]),
         msg: errors[0],
         ms: Date.now() - syncStartTime,
       });
@@ -948,7 +962,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       } catch {}
     }
     recordBackoffFailure();
-    recordSyncFailure(err.message);
+    recordSyncFailure(err);
     releaseSyncLock();
     setSyncStatus({
       state: 'error',
@@ -958,6 +972,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       level: 'error',
       src: syncSource,
       evt: 'sync_failed',
+      code: classifyErrorCode(err),
       msg: err.message,
       ms: Date.now() - syncStartTime,
     });

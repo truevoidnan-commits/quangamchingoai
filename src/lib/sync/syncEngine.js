@@ -2,6 +2,7 @@ import {
   logSyncEvent,
   recordSyncSuccess,
   recordSyncFailure,
+  classifyErrorCode,
 } from './syncLog.js';
 import { setSyncStatus } from './autoSync.js';
 import JSZip from 'jszip';
@@ -712,7 +713,9 @@ export async function pullNovelFromCloud(supabase, userId, cloudRow, ledger = nu
 
   if (downloadErr) throw new Error(`Lỗi tải nội dung truyện "${cloudRow.title}": ${downloadErr.message}`);
 
+  refreshSyncLock();
   const chapters = await decompressChapters(blob, contentPath);
+  refreshSyncLock();
 
   let coverUrl = cloudRow.cover;
   let description = cloudRow.description;
@@ -746,7 +749,9 @@ export async function pullNovelFromCloud(supabase, userId, cloudRow, ledger = nu
       updatedAt: cloudRow.updated_at,
     }, { skipDirty: true });
 
+    refreshSyncLock();
     await saveChaptersBulk(chapters, { skipDirty: true });
+    refreshSyncLock();
 
     addToLibrary({
       id: cloudRow.id,
@@ -778,8 +783,11 @@ export async function pullNovelFromCloud(supabase, userId, cloudRow, ledger = nu
  */
 export async function pushNovelToCloud(supabase, userId, novelId, localItem, ledger = null) {
   const novel = await getNovel(novelId);
+  refreshSyncLock();
   const chapters = await getChapters(novelId);
+  
   const { blob, ext, contentType } = await compressChapters(JSON.stringify(chapters || []));
+  refreshSyncLock();
 
   if (blob.size > MAX_FILE_SIZE) {
     const mbSize = (blob.size / (1024 * 1024)).toFixed(1);
@@ -1365,8 +1373,11 @@ export async function performSync(supabase, {
         if (item.type === 'push_new') {
           onProgress({ stage: 'pushing_novel', novelTitle: isHidden ? `Truyện ẩn ${i + 1}/${totalHeavy}` : novelTitle, percent: progressPct, message: `Đang tải lên ${displayTitle} lên cloud...` });
           const novel = await getNovel(item.novelId);
+          refreshSyncLock();
           const chapters = await getChapters(item.novelId);
+          
           const { blob, ext, contentType } = await compressChapters(JSON.stringify(chapters));
+          refreshSyncLock();
 
           if (blob.size > MAX_FILE_SIZE) {
             const mbSize = (blob.size / (1024 * 1024)).toFixed(1);
@@ -1433,10 +1444,14 @@ export async function performSync(supabase, {
           refreshSyncLock();
           if (downloadErr) throw downloadErr;
 
+          refreshSyncLock();
           const chapters = await decompressChapters(blob, item.cloudRow.content_path);
+          refreshSyncLock();
           setSyncBypassDirty(true);
           try {
-            await saveChaptersBulk(chapters, { skipDirty: true });
+            refreshSyncLock();
+    await saveChaptersBulk(chapters, { skipDirty: true });
+    refreshSyncLock();
           } finally {
             setSyncBypassDirty(false);
           }
@@ -1461,8 +1476,11 @@ export async function performSync(supabase, {
 
         if (item.type === 'push_master') {
           onProgress({ stage: 'pushing_novel', novelTitle: isHidden ? `Truyện ẩn ${i + 1}/${totalHeavy}` : novelTitle, percent: progressPct, message: `Đang ghi đè nội dung ${displayTitle} lên cloud...` });
+          refreshSyncLock();
           const chapters = await getChapters(item.novelId);
+          
           const { blob, ext, contentType } = await compressChapters(JSON.stringify(chapters));
+          refreshSyncLock();
 
           if (blob.size > MAX_FILE_SIZE) {
             errors.push(`Truyện "${novelTitle}" vượt quá 45MB. Bỏ qua.`);
@@ -1515,8 +1533,11 @@ export async function performSync(supabase, {
           }
 
           if (choice === 'local') {
-            const chapters = await getChapters(item.novelId);
-            const { blob, ext, contentType } = await compressChapters(JSON.stringify(chapters));
+            refreshSyncLock();
+          const chapters = await getChapters(item.novelId);
+          
+          const { blob, ext, contentType } = await compressChapters(JSON.stringify(chapters));
+          refreshSyncLock();
             const contentPath = `${userId}/${item.novelId}${ext}`;
             const { error: uploadErr } = await supabase.storage.from(BUCKET_NAME).upload(contentPath, blob, { upsert: true, contentType });
             if (uploadErr) throw new Error(`Lỗi upload giải quyết xung đột: ${uploadErr.message}`);
@@ -1552,10 +1573,14 @@ export async function performSync(supabase, {
               .download(item.cloudRow.content_path);
             if (downloadErr) throw downloadErr;
 
-            const chapters = await decompressChapters(blob, item.cloudRow.content_path);
+            refreshSyncLock();
+          const chapters = await decompressChapters(blob, item.cloudRow.content_path);
+          refreshSyncLock();
             setSyncBypassDirty(true);
             try {
-              await saveChaptersBulk(chapters, { skipDirty: true });
+              refreshSyncLock();
+    await saveChaptersBulk(chapters, { skipDirty: true });
+    refreshSyncLock();
             } finally {
               setSyncBypassDirty(false);
             }
@@ -1580,8 +1605,11 @@ export async function performSync(supabase, {
         }
 
         if (item.type === 'push_dirty') {
+          refreshSyncLock();
           const chapters = await getChapters(item.novelId);
+          
           const { blob, ext, contentType } = await compressChapters(JSON.stringify(chapters));
+          refreshSyncLock();
           if (blob.size > MAX_FILE_SIZE) {
             errors.push(`Truyện "${novelTitle}" vượt quá 45MB. Bỏ qua.`);
             continue;
@@ -1626,10 +1654,14 @@ export async function performSync(supabase, {
           refreshSyncLock();
           if (downloadErr) throw downloadErr;
 
+          refreshSyncLock();
           const chapters = await decompressChapters(blob, item.cloudRow.content_path);
+          refreshSyncLock();
           setSyncBypassDirty(true);
           try {
-            await saveChaptersBulk(chapters, { skipDirty: true });
+            refreshSyncLock();
+    await saveChaptersBulk(chapters, { skipDirty: true });
+    refreshSyncLock();
           } finally {
             setSyncBypassDirty(false);
           }
@@ -1695,12 +1727,13 @@ export async function performSync(supabase, {
         count: pushedNovels + pulledNovels,
       });
     } else {
-      recordSyncFailure(errors[0]);
+      recordSyncFailure(errors);
       setSyncStatus({ state: 'error', message: errors[0] });
       logSyncEvent({
         level: 'error',
         src: 'manual',
         evt: 'sync_failed',
+        code: classifyErrorCode(errors[0]),
         msg: errors[0],
         ms: Date.now() - syncStartTime,
       });

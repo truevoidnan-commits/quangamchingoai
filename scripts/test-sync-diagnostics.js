@@ -164,6 +164,8 @@ import {
   getSyncStatus,
   setSyncStatus,
   SYNC_STATUS_KEY,
+  SYNC_LOCK_TIMEOUT_MS,
+  SYNC_STATUS_STALE_MS,
   SYNC_HEARTBEAT_TIMEOUT_MS,
 } from '../src/lib/sync/autoSync.js';
 import {
@@ -199,6 +201,9 @@ import {
   recordSyncSuccess,
   recordSyncFailure,
   isSupabasePausedSuspected,
+  classifyErrorCode,
+  isNetworkOrServerError,
+  isAuthError,
   SYNC_LOG_KEY,
   LAST_SUCCESS_KEY,
   CONSECUTIVE_FAILURES_KEY,
@@ -670,8 +675,8 @@ async function runDiagnosticsTests() {
       JSON.stringify({
         state: 'syncing',
         message: 'Đang tải truyện...',
-        startedAt: now - 300000,
-        heartbeatAt: now - 150000,
+        startedAt: now - 400000,
+        heartbeatAt: now - 360000,
       })
     );
     // Không có tcl_sync_lock_ts
@@ -793,7 +798,196 @@ async function runDiagnosticsTests() {
     console.log('✓ Test 8 Passed: Cảnh báo tạm dừng hoạt động chuẩn xác theo số lần và thời gian!');
   }
 
-  console.log('\n=== TẤT CẢ 8 BÀI TEST CHẨN ĐOÁN & ƯU TIÊN ĐỒNG BỘ ĐÃ HOÀN TẤT XUẤT SẮC 100%! ===');
+  // -----------------------------------------------------------
+  // TEST 9: Lỗi dữ liệu lặp lại 5 lần (truyện > 45MB) trải dài > 1h
+  // -> isSupabasePausedSuspected() vẫn false
+  // -----------------------------------------------------------
+  console.log('\n--- Test 9: Lỗi dữ liệu lặp lại 5 lần (>45MB) trải dài > 1h -> không nghi ngờ Supabase tạm dừng ---');
+  {
+    global.localStorage.clear();
+    const twoHoursAgo = Date.now() - (2 * 3600 * 1000);
+    global.localStorage.setItem(LAST_SUCCESS_KEY, String(twoHoursAgo));
+
+    for (let i = 0; i < 5; i++) {
+      recordSyncFailure(new Error('Truyện "Tiên Nghịch" có dung lượng nén (48.5MB) vượt quá 45MB. Bỏ qua truyện này.'));
+    }
+
+    assert.strictEqual(
+      isSupabasePausedSuspected(),
+      false,
+      'Lỗi dữ liệu (vượt quá 45MB) 5 lần không được xem là lỗi mạng, không nghi ngờ máy chủ tạm dừng'
+    );
+    assert.strictEqual(
+      parseInt(global.localStorage.getItem(CONSECUTIVE_FAILURES_KEY) || '0', 10),
+      0,
+      'Bộ đếm lỗi mạng liên tiếp phải bằng 0'
+    );
+    console.log('✓ Test 9 Passed: 5 lần lỗi dung lượng >45MB không kích hoạt cảnh báo tạm dừng!');
+  }
+
+  // -----------------------------------------------------------
+  // TEST 10: Lỗi 'Failed to fetch' hoặc HTTP 503 lặp lại 3 lần trải dài > 1 giờ
+  // -> isSupabasePausedSuspected() trả về true; gọi recordSyncSuccess() thì trả về false
+  // -----------------------------------------------------------
+  console.log('\n--- Test 10: Lỗi "Failed to fetch" / HTTP 503 lặp lại 3 lần > 1h -> true; recordSyncSuccess() -> false ---');
+  {
+    global.localStorage.clear();
+    const twoHoursAgo = Date.now() - (2 * 3600 * 1000);
+    global.localStorage.setItem(LAST_SUCCESS_KEY, String(twoHoursAgo));
+
+    recordSyncFailure(new Error('TypeError: Failed to fetch'));
+    recordSyncFailure(new Error('HTTP 503 Service Unavailable'));
+    recordSyncFailure(new Error('Network request failed: project is paused'));
+
+    assert.strictEqual(
+      isSupabasePausedSuspected(),
+      true,
+      'Lỗi fetch/503 lặp lại 3 lần qua 1h phải nghi ngờ tạm dừng'
+    );
+
+    recordSyncSuccess();
+    assert.strictEqual(
+      isSupabasePausedSuspected(),
+      false,
+      'Sau khi đồng bộ thành công, cảnh báo phải tắt hoàn toàn'
+    );
+    console.log('✓ Test 10 Passed: Lỗi fetch/503 3 lần kích hoạt cảnh báo và tắt sau khi sync thành công!');
+  }
+
+  // -----------------------------------------------------------
+  // TEST 11: Vòng đồng bộ có 1 lỗi dung lượng + 1 lỗi fetch -> vẫn được tính là lỗi mạng
+  // -----------------------------------------------------------
+  console.log('\n--- Test 11: Vòng đồng bộ có 1 lỗi dung lượng + 1 lỗi fetch -> tính là lỗi mạng ---');
+  {
+    global.localStorage.clear();
+    const mixedErrors = [
+      new Error('Truyện "Phàm Nhân Tu Tiên" vượt quá 45MB'),
+      new Error('Failed to fetch from storage bucket'),
+    ];
+
+    recordSyncFailure(mixedErrors);
+
+    assert.strictEqual(
+      parseInt(global.localStorage.getItem(CONSECUTIVE_FAILURES_KEY) || '0', 10),
+      1,
+      'Khi có ít nhất một lỗi mạng trong danh sách errors, bộ đếm lỗi mạng phải tăng lên 1'
+    );
+    console.log('✓ Test 11 Passed: Mảng lỗi hỗn hợp (dung lượng + fetch) được nhận diện chính xác là có lỗi mạng!');
+  }
+
+  // -----------------------------------------------------------
+  // TEST 12: Truyện có tên chứa chữ "Author" gây lỗi -> không bị nhận nhầm là auth error
+  // -----------------------------------------------------------
+  console.log('\n--- Test 12: Truyện có tên chứa chữ "Author" gặp lỗi mạng -> không bị nhầm là auth error ---');
+  {
+    global.localStorage.clear();
+    const twoHoursAgo = Date.now() - (2 * 3600 * 1000);
+    global.localStorage.setItem(LAST_SUCCESS_KEY, String(twoHoursAgo));
+
+    const errWithAuthor = new Error('Truyện "Author of the End": Failed to fetch');
+    assert.strictEqual(isAuthError(errWithAuthor), false, '"Author of the End" không được xem là auth error');
+    assert.strictEqual(isNetworkOrServerError(errWithAuthor), true, 'Phải nhận diện là network error');
+
+    recordSyncFailure(errWithAuthor);
+    assert.strictEqual(
+      parseInt(global.localStorage.getItem(CONSECUTIVE_FAILURES_KEY) || '0', 10),
+      1,
+      'Lỗi của truyện chứa "Author" phải làm tăng bộ đếm lỗi mạng'
+    );
+    console.log('✓ Test 12 Passed: Truyện có tên "Author" không bị nhầm lẫn với lỗi xác thực!');
+  }
+
+  // -----------------------------------------------------------
+  // TEST 13: Giả lập sync_failed với truyện ẩn "Bí Mật Của Tôi"
+  // -> toàn bộ chuỗi JSON trong tcl_sync_log KHÔNG chứa "Bí Mật Của Tôi"
+  // -----------------------------------------------------------
+  console.log('\n--- Test 13: Toàn bộ nhật ký tcl_sync_log KHÔNG bao giờ chứa tên truyện ẩn ---');
+  {
+    global.localStorage.clear();
+    clearSyncLogs();
+
+    const hiddenTitle = 'Bí Mật Của Tôi';
+    const errorMsg = `Truyện "${hiddenTitle}": 500 Internal Server Error`;
+
+    logSyncEvent({
+      level: 'error',
+      src: 'auto',
+      evt: 'sync_failed',
+      novelId: 'secret_nov_123',
+      code: classifyErrorCode(errorMsg),
+      msg: errorMsg,
+    });
+
+    const rawLogs = global.localStorage.getItem(SYNC_LOG_KEY) || '';
+    assert(
+      !rawLogs.includes(hiddenTitle),
+      `Chuỗi tcl_sync_log tuyệt đối không được chứa tên "${hiddenTitle}"`
+    );
+    assert(
+      rawLogs.includes('[truyện]'),
+      'Tên truyện trong ngoặc kép phải được thay bằng [truyện]'
+    );
+    const parsedLogs = getSyncLogs();
+    assert.strictEqual(parsedLogs[0].code, 'server', 'Mã lỗi phải được phân loại là server');
+    assert(
+      parsedLogs[0].msg.includes('"[truyện]"'),
+      'Thông điệp đã parse phải chứa "[truyện]"'
+    );
+    console.log('✓ Test 13 Passed: Tiêu đề truyện ẩn được che thành "[truyện]" hoàn toàn trong tcl_sync_log!');
+  }
+
+  // -----------------------------------------------------------
+  // TEST 14: getSyncStatus với heartbeat 3 phút (lock còn hạn) KHÔNG xóa;
+  // heartbeat 6 phút BỊ xóa về idle
+  // -----------------------------------------------------------
+  console.log('\n--- Test 14: getSyncStatus với heartbeat 3 phút (không xóa) vs 6 phút (bị xóa về idle) ---');
+  {
+    global.localStorage.clear();
+    clearSyncLogs();
+
+    const now = Date.now();
+
+    // 1. Heartbeat 3 phút trước (180.000 ms), lock còn hạn -> KHÔNG bị xóa
+    global.localStorage.setItem(SYNC_LOCK_KEY, String(now - 30000)); // lock 30s trước (< 2 phút)
+    global.localStorage.setItem(
+      SYNC_STATUS_KEY,
+      JSON.stringify({
+        state: 'syncing',
+        message: 'Đang nén truyện nặng...',
+        heartbeatAt: now - (3 * 60 * 1000), // 3 phút trước (< 5 phút)
+      })
+    );
+
+    const status3Min = getSyncStatus();
+    assert.strictEqual(
+      status3Min.state,
+      'syncing',
+      'Heartbeat cách đây 3 phút (< 5 phút) và lock còn hạn KHÔNG được xóa về idle'
+    );
+
+    // 2. Heartbeat 6 phút trước (360.000 ms), lock hết hạn (> 2 phút) -> BỊ xóa về idle
+    global.localStorage.setItem(SYNC_LOCK_KEY, String(now - (6 * 60 * 1000))); // lock 6 phút trước
+    global.localStorage.setItem(
+      SYNC_STATUS_KEY,
+      JSON.stringify({
+        state: 'syncing',
+        message: 'Đang tải truyện...',
+        heartbeatAt: now - (6 * 60 * 1000), // 6 phút trước (> 5 phút)
+      })
+    );
+
+    const status6Min = getSyncStatus();
+    assert.strictEqual(
+      status6Min.state,
+      'idle',
+      'Heartbeat cách đây 6 phút (> 5 phút) và lock hết hạn PHẢI bị xóa về idle'
+    );
+    assert(status6Min.message.includes('gián đoạn'), 'Thông báo phải nêu rõ bị gián đoạn');
+
+    console.log('✓ Test 14 Passed: Ngưỡng 5 phút tách biệt chuẩn xác: 3 phút giữ nguyên, 6 phút dọn về idle!');
+  }
+
+  console.log('\n=== TẤT CẢ 14 BÀI TEST CHẨN ĐOÁN & ƯU TIÊN ĐỒNG BỘ ĐÃ HOÀN TẤT XUẤT SẮC 100%! ===');
 }
 
 runDiagnosticsTests().catch(err => {

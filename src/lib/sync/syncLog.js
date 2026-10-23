@@ -13,7 +13,172 @@ export const MAX_LOG_ENTRIES = 200;
 export const MAX_LOG_BYTES = 40960; // ~40KB
 
 /**
+ * Kiểm tra xem một lỗi có phải lỗi mạng hoặc lỗi máy chủ hay không.
+ * Chỉ trả về true cho:
+ * - 'Failed to fetch', 'NetworkError', 'fetch failed', 'Load failed', 'network request failed'
+ * - 'timeout', 'timed out', 'ECONN', 'connection reset'
+ * - Mã HTTP 5xx (500-599 gồm 502, 503, 504, 520-540)
+ * - 'Bad Gateway', 'Service Unavailable', 'Gateway Timeout'
+ * - 'project is paused', 'paused'
+ */
+export function isNetworkOrServerError(err) {
+  if (!err) return false;
+
+  // 1. Mã HTTP status nếu có
+  const status = Number(err?.status || err?.statusCode || err?.code);
+  if (!isNaN(status) && status >= 500 && status <= 599) {
+    return true;
+  }
+
+  const msg = (typeof err === 'string' ? err : String(err?.message || err || '')).toLowerCase();
+
+  // 2. Mã HTTP 5xx trong chuỗi lỗi
+  if (/\b5\d{2}\b/.test(msg)) {
+    return true;
+  }
+
+  // 3. Các mẫu lỗi mạng hoặc máy chủ được chỉ định
+  const networkPatterns = [
+    'failed to fetch',
+    'networkerror',
+    'network error',
+    'fetch failed',
+    'load failed',
+    'network request failed',
+    'timed out',
+    'timeout',
+    'econn',
+    'connection reset',
+    'bad gateway',
+    'service unavailable',
+    'gateway timeout',
+    'project is paused',
+    'paused',
+  ];
+
+  for (const pattern of networkPatterns) {
+    if (msg.includes(pattern)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Kiểm tra xem lỗi có phải là lỗi xác thực (Auth/JWT/Login/Permission) hay không.
+ * Tránh dò substring 'auth' chung chung để không nhận nhầm tiêu đề truyện chứa chữ 'author', v.v.
+ */
+export function isAuthError(err) {
+  if (!err) return false;
+
+  const status = Number(err?.status || err?.statusCode);
+  if (status === 401 || status === 403) return true;
+
+  const msg = (typeof err === 'string' ? err : String(err?.message || err || '')).toLowerCase();
+
+  if (/\b(401|403)\b/.test(msg)) return true;
+  if (msg.includes('jwt')) return true;
+  if (msg.includes('invalid login')) return true;
+  if (msg.includes('not logged in') || msg.includes('not_logged_in')) return true;
+  if (msg.includes('chưa đăng nhập')) return true;
+  if (msg.includes('invalid token') || msg.includes('token expired') || msg.includes('invalid claim')) return true;
+  if (msg.includes('unauthorized') || msg.includes('forbidden')) return true;
+  // Chỉ kiểm tra từ 'auth' độc lập (word boundary), không khớp 'author'
+  if (/\bauth\b/.test(msg)) return true;
+
+  return false;
+}
+
+/**
+ * Phân loại mã lỗi ngắn cho log event:
+ * 'network' | 'server' | 'size_limit' | 'upload' | 'download' | 'db' | 'unknown'
+ */
+export function classifyErrorCode(errOrMsg) {
+  if (!errOrMsg) return 'unknown';
+
+  const status = Number(errOrMsg?.status || errOrMsg?.statusCode || errOrMsg?.code);
+  const msg = (typeof errOrMsg === 'string' ? errOrMsg : String(errOrMsg?.message || errOrMsg || '')).toLowerCase();
+
+  // 1. Quá giới hạn kích thước file
+  if (
+    msg.includes('45mb') ||
+    msg.includes('dung lượng') ||
+    msg.includes('vượt quá') ||
+    msg.includes('quá lớn') ||
+    msg.includes('payload too large') ||
+    msg.includes('entity too large') ||
+    msg.includes('413')
+  ) {
+    return 'size_limit';
+  }
+
+  // 2. Lỗi máy chủ (HTTP 5xx, Paused)
+  if (
+    (!isNaN(status) && status >= 500 && status <= 599) ||
+    /\b5\d{2}\b/.test(msg) ||
+    msg.includes('bad gateway') ||
+    msg.includes('service unavailable') ||
+    msg.includes('gateway timeout') ||
+    msg.includes('project is paused') ||
+    msg.includes('paused') ||
+    msg.includes('server error')
+  ) {
+    return 'server';
+  }
+
+  // 3. Lỗi mạng kết nối
+  if (
+    msg.includes('failed to fetch') ||
+    msg.includes('networkerror') ||
+    msg.includes('network error') ||
+    msg.includes('fetch failed') ||
+    msg.includes('load failed') ||
+    msg.includes('network request failed') ||
+    msg.includes('timed out') ||
+    msg.includes('timeout') ||
+    msg.includes('econn') ||
+    msg.includes('connection reset') ||
+    msg.includes('offline')
+  ) {
+    return 'network';
+  }
+
+  // 4. Lỗi IndexedDB / bộ nhớ cục bộ
+  if (
+    msg.includes('indexeddb') ||
+    msg.includes('quotaexceeded') ||
+    msg.includes('database') ||
+    msg.includes('cơ sở dữ liệu') ||
+    msg.includes('idb')
+  ) {
+    return 'db';
+  }
+
+  // 5. Lỗi tải lên (upload / push)
+  if (
+    msg.includes('upload') ||
+    msg.includes('tải lên') ||
+    msg.includes('push')
+  ) {
+    return 'upload';
+  }
+
+  // 6. Lỗi tải về (download / pull)
+  if (
+    msg.includes('download') ||
+    msg.includes('tải về') ||
+    msg.includes('pull')
+  ) {
+    return 'download';
+  }
+
+  return 'unknown';
+}
+
+/**
  * Lọc và làm sạch chuỗi lỗi hoặc tin nhắn trước khi ghi vào nhật ký:
+ * - Thay mọi đoạn trong ngoặc kép "..." của dạng Truyện "<tên>": ... thành "[truyện]"
  * - Ẩn token Bearer, JWT, chuỗi sb_..., base64 dài (>=30 ký tự)
  * - Ẩn email
  * - Cắt tối đa 160 ký tự
@@ -21,6 +186,10 @@ export const MAX_LOG_BYTES = 40960; // ~40KB
 export function sanitizeLogMessage(str) {
   if (str === null || str === undefined) return '';
   let msg = typeof str === 'string' ? str : String(str);
+
+  // 0. Thay mọi đoạn tiêu đề trong ngoặc kép / ngoặc trích dẫn thành "[truyện]"
+  // Ví dụ: Truyện "Bí Mật Của Tôi": Lỗi tải lên -> Truyện "[truyện]": Lỗi tải lên
+  msg = msg.replace(/["“”«»][^"“”«»]*["“”«»]/g, '"[truyện]"');
 
   // 1. Ẩn Bearer token
   msg = msg.replace(/Bearer\s+[A-Za-z0-9_\-\.]+/gi, 'Bearer [đã ẩn]');
@@ -96,6 +265,8 @@ export function logSyncEvent({
     }
     if (code !== undefined && code !== null) {
       entry.code = String(code).slice(0, 30);
+    } else if (msg && validLevel === 'error') {
+      entry.code = classifyErrorCode(msg);
     }
     if (msg) {
       entry.msg = sanitizeLogMessage(msg);
@@ -212,28 +383,32 @@ export function recordSyncSuccess() {
 
 /**
  * Ghi nhận thất bại đồng bộ để theo dõi nghi vấn Supabase bị tạm dừng.
- * Chỉ ghi nhận khi:
- * - Thiết bị đang online (navigator.onLine !== false)
- * - Lỗi không phải là lỗi xác thực (auth/login/jwt/token)
+ * - Nhận một lỗi đơn lẻ hoặc một mảng các lỗi (errors array).
+ * - Phân loại từng lỗi: Chỉ tăng bộ đếm khi có ÍT NHẤT một lỗi là network/server VÀ không phải auth error.
+ * - Các lỗi dữ liệu đơn thuần (vượt quá 45MB, xung đột, parse) KHÔNG tăng bộ đếm nhưng cũng KHÔNG reset bộ đếm.
+ * - Bỏ qua khi thiết bị đang offline (navigator.onLine === false).
  */
-export function recordSyncFailure(err) {
+export function recordSyncFailure(errOrErrors) {
   try {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       return; // Đang offline cục bộ, không tính lỗi mạng máy chủ
     }
 
-    const msg = String(err?.message || err || '').toLowerCase();
-    const isAuth =
-      msg.includes('auth') ||
-      msg.includes('jwt') ||
-      msg.includes('login') ||
-      msg.includes('đăng nhập') ||
-      msg.includes('token') ||
-      msg.includes('bảo mật') ||
-      msg.includes('not_logged_in');
+    if (!errOrErrors) return;
 
-    if (isAuth) {
-      return; // Lỗi phiên hoặc quyền hạn, không tính lỗi máy chủ tạm dừng
+    const list = Array.isArray(errOrErrors) ? errOrErrors : [errOrErrors];
+    if (list.length === 0) return;
+
+    // Phân loại từng lỗi:
+    // Cần có ÍT NHẤT một lỗi là network/server VÀ không phải là lỗi auth
+    const hasNetworkFailure = list.some((err) => {
+      if (isAuthError(err)) return false;
+      return isNetworkOrServerError(err);
+    });
+
+    if (!hasNetworkFailure) {
+      // Các lỗi dữ liệu đơn thuần không làm tăng bộ đếm nhưng cũng KHÔNG reset bộ đếm.
+      return;
     }
 
     const cur = parseInt(localStorage.getItem(CONSECUTIVE_FAILURES_KEY) || '0', 10);
