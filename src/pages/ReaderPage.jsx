@@ -19,6 +19,12 @@ import { DaoAnh80Modal, DaoAnhFullModal } from '../components/cultivation/DaoAnh
 import SelectionToolbar from '../components/reader/SelectionToolbar';
 import ChapterTextEditModal from '../components/reader/ChapterTextEditModal';
 import GlobalReplaceModal from '../components/reader/GlobalReplaceModal';
+import {
+  expandSelectionToWordBoundaries,
+  getPreciseSelectionSetting,
+  setPreciseSelectionSetting,
+  escapeRegExp,
+} from '../lib/selectionUtils';
 import selectionStyles from '../components/reader/SelectionEditor.module.css';
 import styles from './ReaderPage.module.css';
 
@@ -61,6 +67,21 @@ export default function ReaderPage() {
   const [initialEditScope, setInitialEditScope] = useState('single');
   const [globalReplaceOpen, setGlobalReplaceOpen] = useState(false);
   const [editorToast, setEditorToast] = useState(null);
+  const [preciseSelection, setPreciseSelection] = useState(() => getPreciseSelectionSetting());
+
+  useEffect(() => {
+    const handlePreciseChange = (e) => {
+      if (e?.detail && typeof e.detail.enabled === 'boolean') {
+        setPreciseSelection(e.detail.enabled);
+      } else {
+        setPreciseSelection(getPreciseSelectionSetting());
+      }
+    };
+    window.addEventListener('tcl_precise_selection_changed', handlePreciseChange);
+    return () => {
+      window.removeEventListener('tcl_precise_selection_changed', handlePreciseChange);
+    };
+  }, []);
   const historyStackRef = useRef([]);
   const [pullProgressDone, setPullProgressDone] = useState(false);
   const [syncToast, setSyncToast] = useState(null);
@@ -503,7 +524,8 @@ export default function ReaderPage() {
     }
 
     // Tự động mở rộng vùng bôi đen ra toàn bộ chữ (tránh đứt đoạn như "guy" thay vì "nguyệt")
-    const range = expandSelectionToWordBoundaries(sel);
+    const isPrecise = getPreciseSelectionSetting();
+    const range = expandSelectionToWordBoundaries(sel, isPrecise);
     if (!range) return;
 
     const rawText = sel.toString();
@@ -524,7 +546,7 @@ export default function ReaderPage() {
     }
 
     // Tọa độ hiển thị thanh công cụ nổi ngay trên đoạn chữ (trên desktop)
-    const toolbarWidth = 280;
+    const toolbarWidth = 360;
     let x = rect.left + rect.width / 2;
     x = Math.max(16 + toolbarWidth / 2, Math.min(window.innerWidth - 16 - toolbarWidth / 2, x));
 
@@ -538,7 +560,7 @@ export default function ReaderPage() {
     // Đếm số lần xuất hiện trong chương
     let matchCount = 0;
     if (chapter?.content) {
-      const escaped = rawText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escaped = escapeRegExp(rawText);
       try {
         const matches = chapter.content.match(new RegExp(escaped, 'g'));
         matchCount = matches ? matches.length : 0;
@@ -1091,6 +1113,11 @@ export default function ReaderPage() {
           position={selectionData.position}
           selectedText={selectionData.selectedText}
           matchCount={selectionData.matchCount}
+          preciseSelection={preciseSelection}
+          onTogglePreciseSelection={(val) => {
+            setPreciseSelection(val);
+            setPreciseSelectionSetting(val);
+          }}
           onOpenEdit={() => handleOpenEdit('single')}
           onOpenReplaceAll={() => handleOpenEdit('all')}
           onDeleteDirect={() => {
@@ -1293,62 +1320,11 @@ function getTextOffsetInNode(rootEl, targetNode, targetOffset) {
   return charCount;
 }
 
-/**
- * Tự động mở rộng vùng bôi đen ra toàn bộ chữ (không bị đứt đoạn như "guy" thay vì "nguyệt")
- */
-function expandSelectionToWordBoundaries(sel) {
-  if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
-  const range = sel.getRangeAt(0);
-
-  const isWordChar = (ch) => {
-    if (!ch) return false;
-    return !/[\s,.;:!?"'()\[\]{}…—\-\/\\«»“”‘’]/.test(ch);
-  };
-
-  let startContainer = range.startContainer;
-  let startOffset = range.startOffset;
-  let endContainer = range.endContainer;
-  let endOffset = range.endOffset;
-
-  let changed = false;
-
-  // 1. Mở rộng biên đầu lùi về đầu chữ
-  if (startContainer.nodeType === Node.TEXT_NODE) {
-    const text = startContainer.textContent || '';
-    while (startOffset > 0 && isWordChar(text[startOffset - 1])) {
-      startOffset--;
-      changed = true;
-    }
-  }
-
-  // 2. Mở rộng biên cuối tiến tới hết chữ
-  if (endContainer.nodeType === Node.TEXT_NODE) {
-    const text = endContainer.textContent || '';
-    while (endOffset < text.length && isWordChar(text[endOffset])) {
-      endOffset++;
-      changed = true;
-    }
-  }
-
-  if (changed) {
-    try {
-      const newRange = document.createRange();
-      newRange.setStart(startContainer, startOffset);
-      newRange.setEnd(endContainer, endOffset);
-      sel.removeAllRanges();
-      sel.addRange(newRange);
-      return newRange;
-    } catch (e) {
-      return range;
-    }
-  }
-
-  return range;
-}
+// expandSelectionToWordBoundaries is imported from ../lib/selectionUtils
 
 function highlightText(text, keyword, markClassName) {
   if (!keyword || !text) return text;
-  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escaped = escapeRegExp(keyword);
   const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
   return parts.map((part, i) =>
     part.toLowerCase() === keyword.toLowerCase() ? (

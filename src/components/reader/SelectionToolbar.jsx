@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import { getPreciseSelectionSetting, setPreciseSelectionSetting } from '../../lib/selectionUtils';
 import styles from './SelectionEditor.module.css';
 
 export default function SelectionToolbar({
   position,
   selectedText,
   matchCount = 1,
+  preciseSelection,
+  onTogglePreciseSelection,
   onOpenEdit,
   onOpenReplaceAll,
   onDeleteDirect,
@@ -12,8 +15,22 @@ export default function SelectionToolbar({
 }) {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [localPrecise, setLocalPrecise] = useState(() => getPreciseSelectionSetting());
 
   if (!position) return null;
+
+  const isPreciseActive = typeof preciseSelection === 'boolean' ? preciseSelection : localPrecise;
+
+  const handleTogglePrecise = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const nextVal = !isPreciseActive;
+    setLocalPrecise(nextVal);
+    setPreciseSelectionSetting(nextVal);
+    if (onTogglePreciseSelection) {
+      onTogglePreciseSelection(nextVal);
+    }
+  };
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const toolbarStyle = isMobile
@@ -117,6 +134,20 @@ export default function SelectionToolbar({
             title="Sao chép vào khay nhớ tạm"
           >
             {copied ? '✓ Đã chép' : '📋 Sao chép'}
+          </button>
+
+          <button
+            className={`${styles.toolbarBtn} ${styles.toolbarBtnPrecise} ${
+              isPreciseActive ? styles.toolbarBtnPreciseActive : ''
+            }`}
+            onClick={handleTogglePrecise}
+            title={
+              isPreciseActive
+                ? 'Đang bật chọn chính xác từng ký tự (không tự mở rộng ra cả từ). Bấm để tắt.'
+                : 'Bật chọn chính xác từng ký tự (không tự mở rộng ra cả từ)'
+            }
+          >
+            🎯 Chính xác
           </button>
 
           <div className={styles.toolbarDivider} />
