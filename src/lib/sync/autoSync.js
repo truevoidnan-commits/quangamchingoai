@@ -194,11 +194,18 @@ export async function pullCultivationBeforeMeditation(customSupabase = null, { t
     const cloudRev = cloudCult.rev || 0;
     const isCloudNewer = cloudRev > lastSyncedRev;
     const isLocalUnchanged = localRev <= lastSyncedRev;
+    const isOwnDevice = Boolean(cloudCult.device_id && cloudCult.device_id === getDeviceId());
+
+    if (isOwnDevice && cloudRev <= localRev) {
+      return { skipped: true, reason: 'own_device_not_newer' };
+    }
 
     // Fast-forward
     if (isCloudNewer && isLocalUnchanged && cloudCult.state) {
       backupCultivationState(localState);
       const cloudState = { ...cloudCult.state };
+      cloudState._rev = cloudRev;
+      cloudState._updatedAt = cloudCult.updated_at || Date.now();
       const cloudPending = cloudState.__meta?.pendingSeconds ?? 0;
       delete cloudState.__meta;
 
@@ -221,8 +228,13 @@ export async function pullCultivationBeforeMeditation(customSupabase = null, { t
       };
       saveSyncLedger(ledger);
 
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
         window.dispatchEvent(new CustomEvent('cultivation_updated', { detail: cloudState }));
+        if (!isOwnDevice && cloudCult.device_id) {
+          window.dispatchEvent(new CustomEvent('cultivation_cloud_applied', {
+            detail: { rev: cloudRev, fromDeviceId: cloudCult.device_id }
+          }));
+        }
       }
       return { fastForwarded: true, state: cloudState };
     }
@@ -535,37 +547,53 @@ export async function runAutoSync(customSupabase = null, options = {}) {
     const isLocalPendingChanged = localPending !== lastSyncedPending;
     const isLocalChanged = isLocalRevChanged || isLocalPendingChanged;
 
+    const isOwnCultDevice = Boolean(cloudCultivation?.device_id && cloudCultivation.device_id === getDeviceId());
+
     if (isCloudRevChanged && isLocalRevChanged) {
       // Cả hai cùng sửa tu vi -> XUNG ĐỘT, KHÔNG ghi đè, bật cờ 🔔
       hasAttention = true;
       attentionReason = 'cultivation_conflict';
     } else if (isCloudChanged && !isLocalRevChanged && cloudCultivation?.state) {
-      // Cloud mới hơn -> Fast-forward (sao lưu trước khi áp dụng)
-      backupCultivationState(localState);
-      const cloudState = { ...cloudCultivation.state };
-      const cloudPending = cloudState.__meta?.pendingSeconds ?? 0;
-      delete cloudState.__meta;
+      if (isOwnCultDevice && cloudRev <= localRev) {
+        // Chặn tiếng vang: nếu cloud.device_id === getDeviceId() và cloud.rev <= local._rev thì không cần ghi đè local
+        if (!ledger.cultivation) ledger.cultivation = {};
+        ledger.cultivation.lastSyncedRev = Math.max(ledger.cultivation.lastSyncedRev || 0, cloudRev, localRev);
+        ledger.cultivation.lastCloudUpdatedAt = cloudCultivation.updated_at || Date.now();
+      } else {
+        // Cloud mới hơn -> Fast-forward (sao lưu trước khi áp dụng)
+        backupCultivationState(localState);
+        const cloudState = { ...cloudCultivation.state };
+        cloudState._rev = cloudRev;
+        cloudState._updatedAt = cloudCultivation.updated_at || Date.now();
+        const cloudPending = cloudState.__meta?.pendingSeconds ?? 0;
+        delete cloudState.__meta;
 
-      let targetPending = localPending;
-      if (localPending === lastSyncedPending) {
-        targetPending = cloudPending;
+        let targetPending = localPending;
+        if (localPending === lastSyncedPending) {
+          targetPending = cloudPending;
+          try {
+            localStorage.setItem(getCultivationKey('pending_seconds', 'real'), String(cloudPending));
+          } catch {}
+        }
+
         try {
-          localStorage.setItem(getCultivationKey('pending_seconds', 'real'), String(cloudPending));
+          localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cloudState));
         } catch {}
-      }
 
-      try {
-        localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cloudState));
-      } catch {}
+        ledger.cultivation = {
+          lastSyncedRev: cloudRev,
+          lastSyncedPending: targetPending,
+          lastCloudUpdatedAt: cloudCultivation.updated_at || Date.now(),
+        };
 
-      ledger.cultivation = {
-        lastSyncedRev: cloudRev,
-        lastSyncedPending: targetPending,
-        lastCloudUpdatedAt: cloudCultivation.updated_at || Date.now(),
-      };
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cultivation_updated', { detail: cloudState }));
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+          window.dispatchEvent(new CustomEvent('cultivation_updated', { detail: cloudState }));
+          if (!isOwnCultDevice && cloudCultivation?.device_id) {
+            window.dispatchEvent(new CustomEvent('cultivation_cloud_applied', {
+              detail: { rev: cloudRev, fromDeviceId: cloudCultivation.device_id }
+            }));
+          }
+        }
       }
     } else if (!isCloudChanged && isLocalChanged) {
       // Local mới hơn (rev hoặc pendingSeconds)

@@ -64,7 +64,6 @@ export default function ReaderPage() {
   const historyStackRef = useRef([]);
   const [pullProgressDone, setPullProgressDone] = useState(false);
   const [syncToast, setSyncToast] = useState(null);
-  const [newCultivationBanner, setNewCultivationBanner] = useState(false);
   const lastUserInteractionTimeRef = useRef(0);
   const prevJumpPosRef = useRef(null);
 
@@ -136,19 +135,23 @@ export default function ReaderPage() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [activeNovelId, chapter?.id, navigate]);
 
-  // Cultivation fast-forward banner listener
+  // Cultivation fast-forward toast listener from cloud (external devices)
   useEffect(() => {
-    const handleCultUpdated = () => {
-      setNewCultivationBanner(true);
+    const handleCloudApplied = () => {
+      setSyncToast({
+        message: 'Tu vi đã cập nhật từ thiết bị khác',
+        duration: 4000,
+      });
     };
-    window.addEventListener('cultivation_updated', handleCultUpdated);
-    return () => window.removeEventListener('cultivation_updated', handleCultUpdated);
+    window.addEventListener('cultivation_cloud_applied', handleCloudApplied);
+    return () => window.removeEventListener('cultivation_cloud_applied', handleCloudApplied);
   }, []);
 
-  // Auto-dismiss syncToast after 8s
+  // Auto-dismiss syncToast after duration (default 8s)
   useEffect(() => {
     if (syncToast) {
-      const timer = setTimeout(() => setSyncToast(null), 8000);
+      const duration = syncToast.duration || 8000;
+      const timer = setTimeout(() => setSyncToast(null), duration);
       return () => clearTimeout(timer);
     }
   }, [syncToast]);
@@ -1150,59 +1153,6 @@ export default function ReaderPage() {
             className={selectionStyles.toastCloseBtn}
             onClick={() => setEditorToast(null)}
             title="Đóng thông báo"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* Cultivation Fast-Forward Notification Banner */}
-      {newCultivationBanner && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          background: 'linear-gradient(90deg, #1e3a8a, #0369a1)',
-          color: '#fff',
-          padding: '8px 16px',
-          textAlign: 'center',
-          fontSize: '0.88rem',
-          fontWeight: 500,
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '12px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-        }}>
-          <span>⚡ Có tu vi mới từ thiết bị khác</span>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              background: '#38bdf8',
-              color: '#0f172a',
-              border: 'none',
-              padding: '4px 12px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '0.8rem',
-            }}
-          >
-            Áp dụng ngay
-          </button>
-          <button
-            onClick={() => setNewCultivationBanner(false)}
-            style={{
-              background: 'transparent',
-              color: '#cbd5e1',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              marginLeft: '4px',
-            }}
-            title="Đóng"
           >
             ✕
           </button>

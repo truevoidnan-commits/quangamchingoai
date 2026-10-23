@@ -170,6 +170,7 @@ import {
   cancelLibraryDebounceTimer,
   quickSyncCloudMetadata,
   quickPushLibraryMetadata,
+  pullCultivationBeforeMeditation,
 } from '../src/lib/sync/autoSync.js';
 import { pullNovelProgressNow } from '../src/lib/sync/syncEngine.js';
 import { setDBPromiseForTesting, getNovel, getChapters } from '../src/lib/db.js';
@@ -424,6 +425,7 @@ import {
   getTombstones,
   recordNovelTombstone,
   removeTombstone,
+  getDeviceId,
 } from '../src/lib/sync/syncLedger.js';
 import {
   saveNovel,
@@ -2301,6 +2303,163 @@ assert.strictEqual(
 assert.strictEqual(cloudRow40After.title, 'Truyện 40 Đổi Tên', 'Title phải được cập nhật thành công');
 console.log('✓ Test 40 Passed: quickPushLibraryMetadata tuyệt đối không gửi cover rỗng!');
 
-console.log('\n=== TẤT CẢ 40 BÀI TEST (PHASE 1 + PHASE 2 + VAULT & HIDE SYNC + QUICK METADATA SYNC) ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');
+// -------------------------------------------------------------
+// TEST 41 (a): saveCultivationState chỉ phát 'cultivation_updated', KHÔNG phát 'cultivation_cloud_applied'
+// -------------------------------------------------------------
+console.log('\n--- Test 41 (a): saveCultivationState chỉ phát cultivation_updated, KHÔNG phát cultivation_cloud_applied ---');
+let updatedFired41 = false;
+let cloudAppliedFired41 = false;
+
+const onUpdated41a = () => { updatedFired41 = true; };
+const onCloudApplied41a = () => { cloudAppliedFired41 = true; };
+
+global.window.addEventListener('cultivation_updated', onUpdated41a);
+global.window.addEventListener('cultivation_cloud_applied', onCloudApplied41a);
+
+try {
+  const curState = getCultivationState();
+  saveCultivationState(curState);
+  assert.strictEqual(updatedFired41, true, 'saveCultivationState phải phát cultivation_updated');
+  assert.strictEqual(cloudAppliedFired41, false, 'saveCultivationState tuyệt đối KHÔNG phát cultivation_cloud_applied');
+} finally {
+  global.window.removeEventListener('cultivation_updated', onUpdated41a);
+  global.window.removeEventListener('cultivation_cloud_applied', onCloudApplied41a);
+}
+console.log('✓ Test 41 Passed: saveCultivationState chỉ phát cultivation_updated, KHÔNG phát cultivation_cloud_applied!');
+
+// -------------------------------------------------------------
+// TEST 42 (b): fast-forward từ thiết bị khác phát cả hai sự kiện, 'cultivation_cloud_applied' có detail.rev đúng
+// -------------------------------------------------------------
+console.log('\n--- Test 42 (b): Fast-forward từ thiết bị khác phát cả hai sự kiện, cultivation_cloud_applied có detail.rev đúng ---');
+releaseSyncLock();
+resetBackoff();
+supabaseMock.tables.novels.clear();
+mockDB.novels.clear();
+
+let cultUpdatedDetail42 = null;
+let cloudAppliedDetail42 = null;
+
+const onUpdated42b = (e) => { cultUpdatedDetail42 = e.detail; };
+const onCloudApplied42b = (e) => { cloudAppliedDetail42 = e.detail; };
+
+global.window.addEventListener('cultivation_updated', onUpdated42b);
+global.window.addEventListener('cultivation_cloud_applied', onCloudApplied42b);
+
+try {
+  // Local đang ở rev 70
+  const local42 = { realm: 'ngung_khi', totalExp: 500, _rev: 70 };
+  global.localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(local42));
+  saveSyncLedger({
+    novels: {},
+    cultivation: { lastSyncedRev: 70, lastCloudUpdatedAt: Date.now() - 10000 },
+    lastSyncedAt: Date.now() - 10000,
+  });
+
+  // Cloud từ thiết bị khác (device_laptop) có rev 85
+  supabaseMock.tables.cultivation.set('user_123', {
+    user_id: 'user_123',
+    rev: 85,
+    updated_at: Date.now(),
+    device_id: 'device_laptop',
+    state: { realm: 'truc_co', totalExp: 2000, _rev: 85 },
+  });
+
+  const res42 = await runAutoSync(supabaseMock);
+  assert.strictEqual(res42.success, true);
+  assert(cultUpdatedDetail42, 'Phải phát cultivation_updated');
+  assert(cloudAppliedDetail42, 'Phải phát cultivation_cloud_applied');
+  assert.strictEqual(cloudAppliedDetail42.rev, 85, 'detail.rev phải bằng rev của Cloud (85)');
+  assert.strictEqual(cloudAppliedDetail42.fromDeviceId, 'device_laptop', 'detail.fromDeviceId phải là device_laptop');
+} finally {
+  global.window.removeEventListener('cultivation_updated', onUpdated42b);
+  global.window.removeEventListener('cultivation_cloud_applied', onCloudApplied42b);
+}
+console.log('✓ Test 42 Passed: Fast-forward từ thiết bị khác phát cả hai sự kiện với detail.rev chuẩn xác!');
+
+// -------------------------------------------------------------
+// TEST 43 (c): fast-forward khi cloud.device_id trùng thiết bị này không phát 'cultivation_cloud_applied'
+// -------------------------------------------------------------
+console.log('\n--- Test 43 (c): Fast-forward khi cloud.device_id trùng thiết bị này không phát cultivation_cloud_applied ---');
+releaseSyncLock();
+resetBackoff();
+supabaseMock.tables.novels.clear();
+mockDB.novels.clear();
+
+let cloudAppliedFired43 = false;
+const onCloudApplied43c = () => { cloudAppliedFired43 = true; };
+global.window.addEventListener('cultivation_cloud_applied', onCloudApplied43c);
+
+try {
+  const currentDevId = getDeviceId();
+  // Cloud có rev 90 nhưng device_id chính là currentDevId
+  const local43 = { realm: 'truc_co', totalExp: 2000, _rev: 85 };
+  global.localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(local43));
+  saveSyncLedger({
+    novels: {},
+    cultivation: { lastSyncedRev: 85, lastCloudUpdatedAt: Date.now() - 10000 },
+    lastSyncedAt: Date.now() - 10000,
+  });
+
+  supabaseMock.tables.cultivation.set('user_123', {
+    user_id: 'user_123',
+    rev: 90,
+    updated_at: Date.now(),
+    device_id: currentDevId,
+    state: { realm: 'truc_co', totalExp: 2500, _rev: 90 },
+  });
+
+  await runAutoSync(supabaseMock);
+  assert.strictEqual(cloudAppliedFired43, false, 'Không được phát cultivation_cloud_applied khi device_id là chính thiết bị này');
+
+  // Test cả nhánh pullCultivationBeforeMeditation
+  cloudAppliedFired43 = false;
+  await pullCultivationBeforeMeditation(supabaseMock);
+  assert.strictEqual(cloudAppliedFired43, false, 'pullCultivationBeforeMeditation không được phát cultivation_cloud_applied cho chính thiết bị này');
+} finally {
+  global.window.removeEventListener('cultivation_cloud_applied', onCloudApplied43c);
+}
+console.log('✓ Test 43 Passed: Fast-forward khi trùng device_id tuyệt đối không phát cultivation_cloud_applied!');
+
+// -------------------------------------------------------------
+// TEST 44 (d): sau fast-forward, saveCultivationState dùng _rev từ state cloud (rev+1)
+// -------------------------------------------------------------
+console.log('\n--- Test 44 (d): Sau fast-forward, saveCultivationState dùng _rev từ state cloud (rev+1) ---');
+releaseSyncLock();
+resetBackoff();
+supabaseMock.tables.novels.clear();
+mockDB.novels.clear();
+
+// Local trước khi FF đang ở rev 10
+const local44 = { realm: 'ngung_khi', totalExp: 100, _rev: 10 };
+global.localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(local44));
+saveSyncLedger({
+  novels: {},
+  cultivation: { lastSyncedRev: 10, lastCloudUpdatedAt: Date.now() - 10000 },
+  lastSyncedAt: Date.now() - 10000,
+});
+
+// Cloud có rev 100
+supabaseMock.tables.cultivation.set('user_123', {
+  user_id: 'user_123',
+  rev: 100,
+  updated_at: Date.now(),
+  device_id: 'other_device_tablet',
+  state: { realm: 'kim_dan', totalExp: 50000, _rev: 100 },
+});
+
+// Chạy fast-forward từ cloud
+const resFF44 = await runAutoSync(supabaseMock);
+assert.strictEqual(resFF44.success, true);
+
+// Lấy state sau fast-forward và gọi saveCultivationState (mô phỏng chu kỳ ngộ đạo hoặc thao tác tiếp theo)
+const stateAfterFF = getCultivationState();
+assert.strictEqual(stateAfterFF._rev, 100, 'State sau FF phải có _rev = 100 từ Cloud');
+
+saveCultivationState(stateAfterFF);
+const savedState = getCultivationState();
+assert.strictEqual(savedState._rev, 101, 'Sau khi lưu cục bộ kế tiếp, _rev phải là rev Cloud + 1 (100 + 1 = 101)');
+console.log('✓ Test 44 Passed: Sau fast-forward, saveCultivationState sử dụng chuẩn xác _rev từ Cloud (rev+1)!');
+
+console.log('\n=== TẤT CẢ 44 BÀI TEST (PHASE 1 + PHASE 2 + VAULT & HIDE SYNC + QUICK METADATA SYNC + CULTIVATION BANNER FIX) ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');
 
 

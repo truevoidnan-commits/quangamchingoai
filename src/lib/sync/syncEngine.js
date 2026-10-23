@@ -540,6 +540,8 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
   const applyCloudCultivation = (cloudItem) => {
     backupCultivationState(localState);
     const cloudState = { ...(cloudItem.state || {}) };
+    cloudState._rev = cloudItem.rev || cloudState._rev || 0;
+    cloudState._updatedAt = cloudItem.updated_at || Date.now();
     const cloudPending = cloudState.__meta?.pendingSeconds ?? 0;
     delete cloudState.__meta;
 
@@ -558,6 +560,15 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
       lastCloudUpdatedAt: cloudItem.updated_at || Date.now(),
     };
     saveSyncLedger(ledger);
+
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('cultivation_updated', { detail: cloudState }));
+      if (cloudItem.device_id && cloudItem.device_id !== getDeviceId()) {
+        window.dispatchEvent(new CustomEvent('cultivation_cloud_applied', {
+          detail: { rev: cloudItem.rev || 0, fromDeviceId: cloudItem.device_id }
+        }));
+      }
+    }
   };
 
   const pushLocalCultivation = async () => {
