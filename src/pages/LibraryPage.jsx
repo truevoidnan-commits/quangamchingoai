@@ -51,7 +51,7 @@ export default function LibraryPage() {
     setAllNovels(getLibrary({ includeHidden: true }));
   }, []);
 
-  // Sync isVaultMode when searchParams changes
+  // Sync isVaultMode when searchParams or isVaultUnlocked changes
   useEffect(() => {
     if (requestedVault) {
       if (isVaultSessionUnlocked()) {
@@ -69,7 +69,7 @@ export default function LibraryPage() {
     } else {
       setIsVaultMode(false);
     }
-  }, [requestedVault]);
+  }, [requestedVault, isVaultUnlocked]);
 
   // Listen to background library updates (e.g., from cloud sync)
   useEffect(() => {
@@ -196,6 +196,7 @@ export default function LibraryPage() {
     } else if (vaultModalMode === 'change') {
       showToast('Đã đổi mật khẩu Mật Thất thành công ✨');
     } else {
+      setIsVaultMode(true);
       navigate('/?vault=1');
       showToast('Đã mở khóa Tàng Kinh Mật Thất 🔓');
     }

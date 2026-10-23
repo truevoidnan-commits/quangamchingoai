@@ -169,6 +169,7 @@ import {
   isLibraryDebouncePending,
   cancelLibraryDebounceTimer,
   quickSyncCloudMetadata,
+  quickPushLibraryMetadata,
 } from '../src/lib/sync/autoSync.js';
 import { pullNovelProgressNow } from '../src/lib/sync/syncEngine.js';
 import { setDBPromiseForTesting, getNovel, getChapters } from '../src/lib/db.js';
@@ -192,6 +193,8 @@ class MockSupabaseClient {
       novels: new Map(), // key: path -> Blob or Buffer
     };
     this.lastSelectColumns = {};
+    this.selectHistory = [];
+    this.lastUpdatePayload = null;
     this.simulatedErrors = {
       novelsSelect: false,
       storageUpload: false,
@@ -277,18 +280,30 @@ class MockSupabaseClient {
 
       select(cols = '*') {
         self.lastSelectColumns[tableName] = cols;
+        self.selectHistory.push({ tableName, cols, isSingle: false, novelId: null });
         builder.selectCols = cols;
         return builder;
       },
       eq(col, val) {
-        builder.filters.push({ col, val });
+        builder.filters.push({ col, val, op: 'eq' });
+        if (col === 'id' && self.selectHistory.length > 0) {
+          self.selectHistory[self.selectHistory.length - 1].novelId = val;
+        }
+        return builder;
+      },
+      lt(col, val) {
+        builder.filters.push({ col, val, op: 'lt' });
         return builder;
       },
       single() {
         builder.isSingle = true;
+        if (self.selectHistory.length > 0) {
+          self.selectHistory[self.selectHistory.length - 1].isSingle = true;
+        }
         return builder;
       },
       update(updates) {
+        self.lastUpdatePayload = updates;
         builder.pendingUpdate = updates;
         return builder;
       },
@@ -299,7 +314,11 @@ class MockSupabaseClient {
           }
           let rows = Array.from(table.entries());
           for (const f of builder.filters) {
-            rows = rows.filter(([k, r]) => r[f.col] === f.val);
+            if (f.op === 'lt') {
+              rows = rows.filter(([k, r]) => (r[f.col] || 0) < f.val);
+            } else {
+              rows = rows.filter(([k, r]) => r[f.col] === f.val);
+            }
           }
           if (builder.pendingUpdate) {
             if (tableName === 'novels' && self.simulatedErrors.novelsUpdate) {
@@ -310,7 +329,18 @@ class MockSupabaseClient {
             }
             return resolve({ data: builder.pendingUpdate, error: null });
           }
-          const dataRows = rows.map(([k, r]) => r);
+          const selectedColsList = builder.selectCols && builder.selectCols !== '*'
+            ? builder.selectCols.split(',').map(c => c.trim())
+            : null;
+
+          const dataRows = rows.map(([k, r]) => {
+            if (!selectedColsList) return { ...r };
+            const projected = {};
+            for (const col of selectedColsList) {
+              projected[col] = r[col];
+            }
+            return projected;
+          });
           if (builder.isSingle) {
             resolve({ data: dataRows[0] || null, error: null });
           } else {
@@ -423,7 +453,7 @@ import {
   saveCultivationState,
 } from '../src/lib/cultivation.js';
 
-console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST TỰ ĐỘNG SYNC (1-36) ===\n');
+console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST TỰ ĐỘNG SYNC (1-40) ===\n');
 
 // -------------------------------------------------------------
 // TEST 1: Truyện mới ở máy -> Đẩy lên Cloud
@@ -2062,6 +2092,215 @@ assert.strictEqual(isLibraryDebouncePending(), false, 'Sau khi hủy, timer khô
 
 console.log('✓ Test 36 Passed: Không bao giờ trigger autoSync trên non-github.io hoặc Sandbox!');
 
-console.log('\n=== TẤT CẢ 36 BÀI TEST (PHASE 1 + PHASE 2 + VAULT & HIDE SYNC) ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');
+// -------------------------------------------------------------
+// TEST 37 (a): quickSyncCloudMetadata không select cover/description và chỉ gọi tải đầy đủ cho truyện thật sự đổi
+// -------------------------------------------------------------
+console.log('\n--- Test 37 (a): quickSyncCloudMetadata không select cover/description và chỉ gọi tải đầy đủ cho truyện đổi ---');
+releaseSyncLock();
+resetBackoff();
+setHostOverrideForTesting('user-test.github.io');
+setAutoSyncEnabled(true);
+setActiveProfile('real');
+
+global.localStorage.clear();
+mockDB.novels.clear();
+mockDB.chapters.clear();
+supabaseMock.tables.novels.clear();
+saveSyncLedger({ novels: {}, cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 }, lastSyncedAt: 1000 });
+
+// Setup trên cloud 2 truyện:
+// nov_37_1: updated_at 1000 (khớp với máy A, không đổi)
+supabaseMock.tables.novels.set('user_123:nov_37_1', {
+  user_id: 'user_123',
+  id: 'nov_37_1',
+  title: 'Truyện 37_1 Không Đổi',
+  description: 'Mô tả 1',
+  cover: 'cover1.jpg',
+  is_hidden: false,
+  chapter_count: 5,
+  updated_at: 1000,
+});
+
+// nov_37_2: updated_at 2000 (cloud mới hơn máy A có updatedAt 1000)
+supabaseMock.tables.novels.set('user_123:nov_37_2', {
+  user_id: 'user_123',
+  id: 'nov_37_2',
+  title: 'Truyện 37_2 Đã Đổi',
+  description: 'Mô tả 2 Mới',
+  cover: 'cover2_new.jpg',
+  is_hidden: true,
+  chapter_count: 6,
+  updated_at: 2000,
+});
+
+// Setup trên máy A:
+addToLibrary({ id: 'nov_37_1', title: 'Truyện 37_1 Không Đổi', updatedAt: 1000 });
+addToLibrary({ id: 'nov_37_2', title: 'Truyện 37_2 Cũ', updatedAt: 1000 });
+await saveNovel({ id: 'nov_37_1', title: 'Truyện 37_1 Không Đổi', updatedAt: 1000 });
+await saveNovel({ id: 'nov_37_2', title: 'Truyện 37_2 Cũ', updatedAt: 1000 });
+
+// Reset lịch sử select của mock
+supabaseMock.selectHistory = [];
+
+await quickSyncCloudMetadata(supabaseMock);
+
+// 1. Kiểm tra truy vấn danh sách ban đầu KHÔNG select cover và description
+const listQuery = supabaseMock.selectHistory.find(q => q.tableName === 'novels' && !q.isSingle);
+assert(listQuery, 'Phải có truy vấn select danh sách bảng novels');
+assert(!listQuery.cols.includes('cover'), 'Truy vấn danh sách KHÔNG được select cover');
+assert(!listQuery.cols.includes('description'), 'Truy vấn danh sách KHÔNG được select description');
+assert(listQuery.cols.includes('id') && listQuery.cols.includes('updated_at'), 'Truy vấn danh sách phải select id và updated_at');
+
+// 2. Kiểm tra chỉ gọi tải đầy đủ cho truyện thật sự đổi (nov_37_2), nov_37_1 KHÔNG được tải riêng
+const singleQueries = supabaseMock.selectHistory.filter(q => q.tableName === 'novels' && q.isSingle);
+assert.strictEqual(singleQueries.length, 1, 'Chỉ được gọi truy vấn tải đầy đủ cho đúng 1 truyện thật sự đổi');
+assert.strictEqual(singleQueries[0].novelId, 'nov_37_2', 'Truyện được tải đầy đủ phải là nov_37_2');
+
+// 3. Kiểm tra máy A đã nhận được dữ liệu của nov_37_2 và ledger được lưu
+const lib37_2 = getLibrary({ includeHidden: true }).find(n => n.id === 'nov_37_2');
+assert.strictEqual(lib37_2.title, 'Truyện 37_2 Đã Đổi');
+assert.strictEqual(lib37_2.isHidden, true);
+assert.strictEqual(lib37_2.updatedAt, 2000);
+
+const ledger37 = getSyncLedger();
+assert.strictEqual(ledger37.novels?.['nov_37_2']?.lastSyncedMetaAt, 2000, 'Ledger phải ghi nhận lastSyncedMetaAt sau khi áp dụng');
+console.log('✓ Test 37 Passed: quickSyncCloudMetadata không select cover/description và chỉ tải đầy đủ truyện thật sự đổi!');
+
+// -------------------------------------------------------------
+// TEST 38 (b): máy B đổi cover/description ở cloud: máy A sau quickSync + runAutoSync nhận được cover và description mới
+// -------------------------------------------------------------
+console.log('\n--- Test 38 (b): Máy B đổi cover/description ở cloud -> Máy A nhận được ---');
+global.localStorage.clear();
+mockDB.novels.clear();
+saveSyncLedger({ novels: {}, cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 }, lastSyncedAt: 1000 });
+
+// Setup Máy A có nov_38 với cover và description cũ
+const nov38Old = {
+  id: 'nov_38',
+  title: 'Truyện 38 Bìa & Mô Tả',
+  description: 'Mô tả cũ máy A',
+  coverUrl: 'http://cdn.old/cover_old.jpg',
+  updatedAt: 1000,
+};
+await saveNovel(nov38Old);
+addToLibrary({
+  id: 'nov_38',
+  title: nov38Old.title,
+  description: nov38Old.description,
+  coverThumb: 'data:image/jpeg;base64,thumb_old',
+  updatedAt: 1000,
+});
+
+// Giả lập máy B đổi cover và description trên cloud (updated_at = 3000 > 1000)
+supabaseMock.tables.novels.set('user_123:nov_38', {
+  user_id: 'user_123',
+  id: 'nov_38',
+  title: 'Truyện 38 Bìa & Mô Tả',
+  description: 'Mô tả MỚI toanh từ máy B',
+  cover: 'http://cdn.new/cover_new.jpg',
+  is_hidden: false,
+  chapter_count: 10,
+  updated_at: 3000,
+});
+
+// Máy A chạy quickSyncCloudMetadata + runAutoSync
+await quickSyncCloudMetadata(supabaseMock);
+await runAutoSync(supabaseMock, { force: true });
+
+// Kiểm tra Máy A nhận được description và cover mới
+const lib38After = getLibrary({ includeHidden: true }).find(n => n.id === 'nov_38');
+assert.strictEqual(lib38After.description, 'Mô tả MỚI toanh từ máy B', 'Library máy A phải nhận description mới');
+assert.strictEqual(lib38After.updatedAt, 3000, 'Library máy A phải có updatedAt mới');
+
+const dbNovel38After = await getNovel('nov_38');
+assert.strictEqual(dbNovel38After.description, 'Mô tả MỚI toanh từ máy B', 'IndexedDB máy A phải nhận description mới');
+assert.strictEqual(dbNovel38After.coverUrl, 'http://cdn.new/cover_new.jpg', 'IndexedDB máy A phải nhận coverUrl mới');
+console.log('✓ Test 38 Passed: Máy B đổi cover/description ở cloud -> Máy A nhận được trọn vẹn!');
+
+// -------------------------------------------------------------
+// TEST 39 (c): quickPushLibraryMetadata không ghi đè khi cloud updated_at lớn hơn
+// -------------------------------------------------------------
+console.log('\n--- Test 39 (c): quickPushLibraryMetadata không ghi đè khi cloud updated_at lớn hơn ---');
+global.localStorage.clear();
+mockDB.novels.clear();
+saveSyncLedger({
+  novels: { nov_39: { lastSyncedMetaAt: 3000 } },
+  cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 },
+  lastSyncedAt: 1000,
+});
+
+// Trên cloud: nov_39 có updated_at = 5000, title = 'Tiêu đề Cloud Mới'
+supabaseMock.tables.novels.set('user_123:nov_39', {
+  user_id: 'user_123',
+  id: 'nov_39',
+  title: 'Tiêu đề Cloud Mới',
+  description: 'Mô tả Cloud',
+  cover: 'cloud_cover.jpg',
+  is_hidden: false,
+  chapter_count: 10,
+  updated_at: 5000,
+});
+
+// Trên máy A: nov_39 có updatedAt = 4000 (nhỏ hơn 5000 của cloud, nhưng > 3000 của lastSyncedMetaAt)
+await saveNovel({ id: 'nov_39', title: 'Tiêu đề Cũ Máy A', updatedAt: 4000 });
+addToLibrary({ id: 'nov_39', title: 'Tiêu đề Cũ Máy A', updatedAt: 4000 });
+
+// Gọi quickPushLibraryMetadata
+await quickPushLibraryMetadata(supabaseMock);
+
+// Kiểm tra: Cloud row KHÔNG bị ghi đè, vẫn giữ nguyên updated_at 5000 và tiêu đề mới
+const cloudRow39After = supabaseMock.tables.novels.get('user_123:nov_39');
+assert.strictEqual(cloudRow39After.title, 'Tiêu đề Cloud Mới', 'Cloud row không được bị đè bởi tiêu đề cũ');
+assert.strictEqual(cloudRow39After.updated_at, 5000, 'Cloud row phải giữ nguyên updated_at 5000');
+console.log('✓ Test 39 Passed: quickPushLibraryMetadata không ghi đè khi cloud updated_at lớn hơn!');
+
+// -------------------------------------------------------------
+// TEST 40 (d): quickPushLibraryMetadata không gửi cover rỗng
+// -------------------------------------------------------------
+console.log('\n--- Test 40 (d): quickPushLibraryMetadata không gửi cover rỗng ---');
+global.localStorage.clear();
+mockDB.novels.clear();
+saveSyncLedger({
+  novels: { nov_40: { lastSyncedMetaAt: 1000 } },
+  cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 },
+  lastSyncedAt: 1000,
+});
+
+// Trên Cloud: nov_40 đã có sẵn bìa xịn
+supabaseMock.tables.novels.set('user_123:nov_40', {
+  user_id: 'user_123',
+  id: 'nov_40',
+  title: 'Truyện 40 Có Bìa Sẵn',
+  description: 'Mô tả',
+  cover: 'https://cdn.example.com/existing_cover.png',
+  is_hidden: false,
+  chapter_count: 5,
+  updated_at: 1000,
+});
+
+// Trên máy A: sửa thông tin (updatedAt = 2000), nhưng coverUrl trong IndexedDB là rỗng
+await saveNovel({ id: 'nov_40', title: 'Truyện 40 Đổi Tên', coverUrl: '', updatedAt: 2000 });
+addToLibrary({ id: 'nov_40', title: 'Truyện 40 Đổi Tên', updatedAt: 2000 });
+
+supabaseMock.lastUpdatePayload = null;
+await quickPushLibraryMetadata(supabaseMock);
+
+// Kiểm tra: update payload tuyệt đối KHÔNG có trường cover (hoặc cover !== '')
+assert(
+  !supabaseMock.lastUpdatePayload || supabaseMock.lastUpdatePayload.cover === undefined,
+  'Payload cập nhật không được chứa trường cover rỗng'
+);
+
+// Kiểm tra: Cloud row vẫn giữ nguyên cover có sẵn, không bị đè thành rỗng
+const cloudRow40After = supabaseMock.tables.novels.get('user_123:nov_40');
+assert.strictEqual(
+  cloudRow40After.cover,
+  'https://cdn.example.com/existing_cover.png',
+  'Cover trên Cloud phải được bảo toàn, không bị đè thành rỗng!'
+);
+assert.strictEqual(cloudRow40After.title, 'Truyện 40 Đổi Tên', 'Title phải được cập nhật thành công');
+console.log('✓ Test 40 Passed: quickPushLibraryMetadata tuyệt đối không gửi cover rỗng!');
+
+console.log('\n=== TẤT CẢ 40 BÀI TEST (PHASE 1 + PHASE 2 + VAULT & HIDE SYNC + QUICK METADATA SYNC) ĐÃ VƯỢT QUA 100% HOÀN HẢO! ===');
 
 

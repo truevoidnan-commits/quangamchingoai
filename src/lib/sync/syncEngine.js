@@ -688,13 +688,14 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
  */
 export async function pullNovelFromCloud(supabase, userId, cloudRow, ledger = null) {
   const novelId = cloudRow.id;
+  const contentPath = cloudRow.content_path || `${userId}/${novelId}.json.gz`;
   const { data: blob, error: downloadErr } = await supabase.storage
     .from(BUCKET_NAME)
-    .download(cloudRow.content_path);
+    .download(contentPath);
 
   if (downloadErr) throw new Error(`Lỗi tải nội dung truyện "${cloudRow.title}": ${downloadErr.message}`);
 
-  const chapters = await decompressChapters(blob, cloudRow.content_path);
+  const chapters = await decompressChapters(blob, contentPath);
 
   let coverUrl = cloudRow.cover;
   let description = cloudRow.description;

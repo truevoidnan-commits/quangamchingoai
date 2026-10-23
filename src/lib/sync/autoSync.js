@@ -297,7 +297,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
     // 1. Hỏi thăm nhẹ: KHÔNG select cột cover
     const { data: cloudNovels, error: novelsErr } = await client
       .from('novels')
-      .select('id, updated_at, content_updated_at, deleted_at, title, chapter_count')
+      .select('id, updated_at, content_updated_at, deleted_at, title, chapter_count, content_path')
       .eq('user_id', userId);
 
     if (novelsErr) {
@@ -718,14 +718,25 @@ export async function quickPushLibraryMetadata(customSupabase = null) {
       const lastSyncedMetaAt = ledger.novels?.[item.id]?.lastSyncedMetaAt || 0;
       if ((item.updatedAt || 0) > lastSyncedMetaAt) {
         const n = await getNovel(item.id);
-        const { error } = await client.from('novels').update({
+        const updatePayload = {
           title: item.title,
           description: item.description || n?.description || '',
-          cover: n?.coverUrl || '',
           is_hidden: Boolean(item.isHidden),
           chapter_count: item.chapterCount || (item.totalChapters || 0),
           updated_at: item.updatedAt,
-        }).eq('user_id', userId).eq('id', item.id);
+        };
+
+        // Chỉ gửi cover khi cover khác rỗng, tuyệt đối không gửi cover rỗng đè cover có sẵn
+        if (n?.coverUrl && typeof n.coverUrl === 'string' && n.coverUrl.trim() !== '') {
+          updatePayload.cover = n.coverUrl;
+        }
+
+        const { error } = await client
+          .from('novels')
+          .update(updatePayload)
+          .eq('user_id', userId)
+          .eq('id', item.id)
+          .lt('updated_at', item.updatedAt);
 
         if (!error) {
           if (!ledger.novels) ledger.novels = {};
@@ -754,14 +765,16 @@ export async function quickSyncCloudMetadata(customSupabase = null) {
     if (!session?.user) return false;
     const userId = session.user.id;
 
+    // Chỉ select id, title, is_hidden, chapter_count, updated_at (KHÔNG select cover và description)
     const { data: cloudNovels, error } = await client
       .from('novels')
-      .select('id, title, description, cover, is_hidden, chapter_count, updated_at')
+      .select('id, title, is_hidden, chapter_count, updated_at')
       .eq('user_id', userId);
 
     if (error || !cloudNovels) return false;
 
     let changed = false;
+    const ledger = getSyncLedger();
     const localLibrary = getLibrary({ includeHidden: true });
     const localMap = new Map(localLibrary.map((n) => [n.id, n]));
 
@@ -769,33 +782,26 @@ export async function quickSyncCloudMetadata(customSupabase = null) {
       const localItem = localMap.get(cloudRow.id);
       if (localItem) {
         if ((cloudRow.updated_at || 0) > (localItem.updatedAt || 0)) {
-          setSyncBypassDirty(true);
           try {
-            updateLibraryItem(cloudRow.id, {
-              title: cloudRow.title,
-              isHidden: Boolean(cloudRow.is_hidden),
-              chapterCount: cloudRow.chapter_count,
-              totalChapters: cloudRow.chapter_count,
-              updatedAt: cloudRow.updated_at,
-            });
-            const n = await getNovel(cloudRow.id);
-            if (n) {
-              n.title = cloudRow.title;
-              n.isHidden = Boolean(cloudRow.is_hidden);
-              await saveNovel(n, { skipDirty: true });
+            // syncNovelMetadata tự lấy cover/description đầy đủ cho đúng một truyện khi cần
+            const res = await syncNovelMetadata(client, userId, cloudRow.id, localItem, cloudRow, ledger);
+            if (res?.applied === 'cloud') {
+              changed = true;
             }
-          } finally {
-            setSyncBypassDirty(false);
+          } catch (e) {
+            console.warn('Lỗi syncNovelMetadata trong quickSyncCloudMetadata:', e.message);
           }
-          changed = true;
         }
       }
     }
 
-    if (changed && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-      try {
-        window.dispatchEvent(new CustomEvent('tcl_library_updated'));
-      } catch {}
+    if (changed) {
+      saveSyncLedger(ledger);
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        try {
+          window.dispatchEvent(new CustomEvent('tcl_library_updated'));
+        } catch {}
+      }
     }
     return changed;
   } catch (err) {
