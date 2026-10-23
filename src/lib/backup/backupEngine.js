@@ -44,6 +44,15 @@ export function isAllowlistedStorageKey(key) {
 }
 
 /**
+ * Ánh xạ ID chương khi khôi phục (thêm tiền tố nếu truyện thuộc nhánh create_new)
+ */
+export function mapChapterIdForNovel(fileNovelId, chapterId, prefixMap = null) {
+  if (!chapterId) return chapterId;
+  const prefix = prefixMap instanceof Map ? prefixMap.get(fileNovelId) : prefixMap;
+  return prefix ? `${prefix}_${chapterId}` : chapterId;
+}
+
+/**
  * Chuỗi hóa JSON theo thứ tự key đã sắp xếp (deterministic canonical JSON)
  * để SHA-256 checksum luôn khớp bất kể engine JSON serialize thứ tự key ra sao.
  */
@@ -734,6 +743,7 @@ export async function performRestore(options = {}, onProgress = null) {
   // Ánh xạ fileNovelId -> targetId để chuyển tiếp progress cho truyện được đổi ID
   const novelIdMap = new Map();
   const skippedDueToConflict = new Set();
+  const createNewChapterPrefix = new Map();
 
   // 1. Khôi phục Truyện (Novels)
   if (selectedParts.novels && Array.isArray(backupObj.parts?.novels)) {
@@ -786,6 +796,7 @@ export async function performRestore(options = {}, onProgress = null) {
               targetId = `${item.id}_${Date.now()}`;
               shouldApply = true;
               isCreateNew = true;
+              createNewChapterPrefix.set(item.id, targetId);
             } else if (resolution === 'overwrite') {
               targetId = titleConflict.id;
               shouldApply = true;
@@ -832,7 +843,7 @@ export async function performRestore(options = {}, onProgress = null) {
           if (item.chapters && Array.isArray(item.chapters)) {
             const chaptersToSave = item.chapters.map(ch => ({
               ...ch,
-              id: isCreateNew ? `${targetId}_${ch.id}` : ch.id,
+              id: mapChapterIdForNovel(item.id, ch.id, createNewChapterPrefix),
               novelId: targetId,
             }));
             await saveChaptersBulk(chaptersToSave, { skipDirty: false });
@@ -894,8 +905,8 @@ export async function performRestore(options = {}, onProgress = null) {
         }
 
         const mappedProgress = { ...progress };
-        if (actualNovelId !== novelId && mappedProgress.chapterId) {
-          mappedProgress.chapterId = `${actualNovelId}_${mappedProgress.chapterId}`;
+        if (mappedProgress.chapterId) {
+          mappedProgress.chapterId = mapChapterIdForNovel(novelId, mappedProgress.chapterId, createNewChapterPrefix);
         }
 
         saveReadingProgress(actualNovelId, mappedProgress);
@@ -904,9 +915,7 @@ export async function performRestore(options = {}, onProgress = null) {
         if (Array.isArray(scrollPositions) && typeof localStorage !== 'undefined') {
           for (const sp of scrollPositions) {
             if (sp.chapterId && sp.data) {
-              const mappedChapterId = (actualNovelId !== novelId)
-                ? `${actualNovelId}_${sp.chapterId}`
-                : sp.chapterId;
+              const mappedChapterId = mapChapterIdForNovel(novelId, sp.chapterId, createNewChapterPrefix);
               const spKey = `scroll_pos_${actualNovelId}_${mappedChapterId}`;
               if (isAllowlistedStorageKey(spKey)) {
                 localStorage.setItem(spKey, JSON.stringify(sp.data));

@@ -197,6 +197,7 @@ const {
   parseAndVerifyBackupFile,
   performRestore,
   analyzeBackupForPreview,
+  mapChapterIdForNovel,
   BACKUP_FORMAT,
   BACKUP_VERSION,
   PRE_RESTORE_SNAPSHOT_KEY,
@@ -206,7 +207,7 @@ const {
   isGzip,
 } = await import('../src/lib/backup/backupEngine.js');
 
-console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST SAO LƯU & KHÔI PHỤC (1-17) ===\n');
+console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST SAO LƯU & KHÔI PHỤC (1-19) ===\n');
 
 let passedTests = 0;
 
@@ -1213,4 +1214,212 @@ await runTest("Test 17: Xuất file JSON compact (không thụt lề, không har
   assert.strictEqual(getLibrary()[0].id, 'novel_compact_test');
 });
 
-console.log(`\n=== TẤT CẢ ${passedTests}/17 BÀI TEST SAO LƯU & KHÔI PHỤC ĐÃ ĐẠT 100% HOÀN HẢO! ===`);
+// -------------------------------------------------------------
+// Test 18: Trùng tên khác id chọn 'overwrite': tiến độ và scroll_pos giữ nguyên chapterId gốc
+// -------------------------------------------------------------
+await runTest("Test 18: Trùng tên khác id chọn 'overwrite': tiến độ và scroll_pos giữ nguyên chapterId gốc, trỏ đúng chương trong DB", async () => {
+  localStorage.clear();
+  mockDB.clear();
+
+  // Máy có truyện đích 'local_tn_id' với 2 chương cũ
+  const localNovel = {
+    id: 'local_tn_id',
+    title: 'Tiên Nghịch',
+    author: 'Nhĩ Căn',
+    updatedAt: 1000,
+    chapterCount: 2,
+    totalChapters: 2,
+  };
+  const localChapters = [
+    { id: 'tn_old_1', novelId: 'local_tn_id', title: 'Chương 1 Cũ', content: 'Cũ 1' },
+    { id: 'tn_old_2', novelId: 'local_tn_id', title: 'Chương 2 Cũ', content: 'Cũ 2' },
+  ];
+  await saveNovel(localNovel);
+  await saveChaptersBulk(localChapters);
+  addToLibrary(localNovel);
+
+  // File sao lưu chứa truyện 'file_tn_id' có chương 'tn_new_2' kèm tiến độ & vị trí cuộn
+  const backupNovel = {
+    id: 'file_tn_id',
+    title: 'Tiên Nghịch',
+    author: 'Nhĩ Căn',
+    updatedAt: 2000,
+    chapterCount: 3,
+    totalChapters: 3,
+    chapters: [
+      { id: 'tn_new_1', novelId: 'file_tn_id', title: 'Chương 1 Mới', content: 'Mới 1' },
+      { id: 'tn_new_2', novelId: 'file_tn_id', title: 'Chương 2 Mới', content: 'Mới 2' },
+      { id: 'tn_new_3', novelId: 'file_tn_id', title: 'Chương 3 Mới', content: 'Mới 3' },
+    ],
+  };
+
+  const backupProgress = {
+    novelId: 'file_tn_id',
+    progress: {
+      chapterId: 'tn_new_2',
+      chapterTitle: 'Chương 2 Mới',
+      progressPercent: 45,
+      updatedAt: 2000,
+    },
+    scrollPositions: [
+      { chapterId: 'tn_new_2', data: { scrollY: 350, paragraphIndex: 5 } },
+    ],
+  };
+
+  const backupObj = {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: 2000,
+    profile: 'real',
+    parts: {
+      novels: [backupNovel],
+      progress: [backupProgress],
+      cultivation: null,
+      settings: null,
+      vault: null,
+    },
+    checksum: 'mock',
+  };
+
+  const report = await performRestore({
+    backupObj,
+    mode: 'merge',
+    selectedParts: { novels: true, progress: true },
+    titleConflictResolutions: {
+      file_tn_id: 'overwrite',
+    },
+  });
+
+  assert.strictEqual(report.updatedNovels, 1);
+  assert.strictEqual(report.progressRestored, 1);
+
+  // 1. Kiểm tra tiến độ được lưu cho id truyện đích 'local_tn_id'
+  const restoredProg = getReadingProgress('local_tn_id');
+  assert.ok(restoredProg, 'Phải có tiến độ đọc cho truyện đích local_tn_id');
+  // 2. chapterId của tiến độ PHẢI giữ nguyên gốc 'tn_new_2' (KHÔNG được có tiền tố local_tn_id_)
+  assert.strictEqual(restoredProg.chapterId, 'tn_new_2', 'Tiến độ chapterId phải là tn_new_2 nguyên gốc');
+
+  // 3. Khóa scroll_pos_<id truyện đích>_<chapterId gốc> phải tồn tại
+  const expectedScrollKey = 'scroll_pos_local_tn_id_tn_new_2';
+  const rawScrollData = localStorage.getItem(expectedScrollKey);
+  assert.ok(rawScrollData, `Khóa ${expectedScrollKey} phải tồn tại trong localStorage`);
+  const scrollData = JSON.parse(rawScrollData);
+  assert.strictEqual(scrollData.scrollY, 350);
+
+  // Khóa sai có tiền tố không được tồn tại
+  const wrongScrollKey = 'scroll_pos_local_tn_id_local_tn_id_tn_new_2';
+  assert.strictEqual(localStorage.getItem(wrongScrollKey), null, 'Không được tạo khóa sai có tiền tố trùng lặp');
+
+  // 4. Chương 'tn_new_2' phải thật sự tồn tại trong DB cho novelId 'local_tn_id'
+  const chapterInDB = await mockDB.get('chapters', 'tn_new_2');
+  assert.ok(chapterInDB, 'Chương tn_new_2 phải tồn tại trong DB');
+  assert.strictEqual(chapterInDB.novelId, 'local_tn_id');
+  assert.strictEqual(chapterInDB.title, 'Chương 2 Mới');
+});
+
+// -------------------------------------------------------------
+// Test 19: Trùng tên khác id chọn 'create_new': tiến độ và scroll_pos trỏ đúng id chương mới có tiền tố
+// -------------------------------------------------------------
+await runTest("Test 19: Trùng tên khác id chọn 'create_new': tiến độ và scroll_pos trỏ đúng id chương mới có tiền tố và có trong DB", async () => {
+  localStorage.clear();
+  mockDB.clear();
+
+  // Máy có truyện đích 'local_tn_id'
+  const localNovel = {
+    id: 'local_tn_id',
+    title: 'Tiên Nghịch',
+    author: 'Nhĩ Căn',
+    updatedAt: 1000,
+    chapterCount: 2,
+    totalChapters: 2,
+  };
+  const localChapters = [
+    { id: 'tn_old_1', novelId: 'local_tn_id', title: 'Chương 1 Cũ', content: 'Cũ 1' },
+    { id: 'tn_old_2', novelId: 'local_tn_id', title: 'Chương 2 Cũ', content: 'Cũ 2' },
+  ];
+  await saveNovel(localNovel);
+  await saveChaptersBulk(localChapters);
+  addToLibrary(localNovel);
+
+  // File sao lưu chứa truyện 'file_tn_id' có chương 'tn_new_2'
+  const backupNovel = {
+    id: 'file_tn_id',
+    title: 'Tiên Nghịch',
+    author: 'Nhĩ Căn',
+    updatedAt: 2000,
+    chapterCount: 2,
+    totalChapters: 2,
+    chapters: [
+      { id: 'tn_new_1', novelId: 'file_tn_id', title: 'Chương 1 Mới', content: 'Mới 1' },
+      { id: 'tn_new_2', novelId: 'file_tn_id', title: 'Chương 2 Mới', content: 'Mới 2' },
+    ],
+  };
+
+  const backupProgress = {
+    novelId: 'file_tn_id',
+    progress: {
+      chapterId: 'tn_new_2',
+      chapterTitle: 'Chương 2 Mới',
+      progressPercent: 60,
+      updatedAt: 2000,
+    },
+    scrollPositions: [
+      { chapterId: 'tn_new_2', data: { scrollY: 500, paragraphIndex: 8 } },
+    ],
+  };
+
+  const backupObj = {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: 2000,
+    profile: 'real',
+    parts: {
+      novels: [backupNovel],
+      progress: [backupProgress],
+      cultivation: null,
+      settings: null,
+      vault: null,
+    },
+    checksum: 'mock',
+  };
+
+  const report = await performRestore({
+    backupObj,
+    mode: 'merge',
+    selectedParts: { novels: true, progress: true },
+    titleConflictResolutions: {
+      file_tn_id: 'create_new',
+    },
+  });
+
+  assert.strictEqual(report.addedNovels, 1);
+  assert.strictEqual(report.progressRestored, 1);
+
+  // Tìm truyện mới được tạo trong thư viện
+  const lib = getLibrary();
+  assert.strictEqual(lib.length, 2);
+  const createdNovel = lib.find(n => n.id !== 'local_tn_id');
+  assert.ok(createdNovel, 'Phải tạo novel mới với ID khác local_tn_id');
+  const targetId = createdNovel.id;
+
+  // 1. Tiến độ của truyện mới tạo phải có chapterId mang tiền tố targetId
+  const expectedChapterId = `${targetId}_tn_new_2`;
+  const restoredProg = getReadingProgress(targetId);
+  assert.ok(restoredProg, `Phải có tiến độ đọc cho truyện mới ${targetId}`);
+  assert.strictEqual(restoredProg.chapterId, expectedChapterId, `chapterId trong tiến độ phải là ${expectedChapterId}`);
+
+  // 2. Khóa scroll_pos_<targetId>_<targetId_tn_new_2> phải tồn tại
+  const expectedScrollKey = `scroll_pos_${targetId}_${expectedChapterId}`;
+  const rawScrollData = localStorage.getItem(expectedScrollKey);
+  assert.ok(rawScrollData, `Khóa ${expectedScrollKey} phải tồn tại trong localStorage`);
+  const scrollData = JSON.parse(rawScrollData);
+  assert.strictEqual(scrollData.scrollY, 500);
+
+  // 3. Chương với ID mang tiền tố phải thật sự tồn tại trong DB với novelId là targetId
+  const chapterInDB = await mockDB.get('chapters', expectedChapterId);
+  assert.ok(chapterInDB, `Chương ${expectedChapterId} phải tồn tại trong DB`);
+  assert.strictEqual(chapterInDB.novelId, targetId);
+  assert.strictEqual(chapterInDB.title, 'Chương 2 Mới');
+});
+
+console.log(`\n=== TẤT CẢ ${passedTests}/19 BÀI TEST SAO LƯU & KHÔI PHỤC ĐÃ ĐẠT 100% HOÀN HẢO! ===`);
