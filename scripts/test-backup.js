@@ -165,7 +165,7 @@ class MockDB {
 const mockDB = new MockDB();
 
 // Dynamic imports of app modules after mocks are set up
-const { setDBPromiseForTesting, saveNovel, saveChaptersBulk, getNovel, getChapters } = await import('../src/lib/db.js');
+const { setDBPromiseForTesting, saveNovel, saveChaptersBulk, getNovel, getChapters, deleteChaptersOfNovel } = await import('../src/lib/db.js');
 setDBPromiseForTesting(Promise.resolve(mockDB));
 
 const {
@@ -199,13 +199,14 @@ const {
   analyzeBackupForPreview,
   BACKUP_FORMAT,
   BACKUP_VERSION,
+  PRE_RESTORE_SNAPSHOT_KEY,
   isAllowlistedStorageKey,
   canonicalJsonStringify,
   computeSHA256,
   isGzip,
 } = await import('../src/lib/backup/backupEngine.js');
 
-console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST SAO LƯU & KHÔI PHỤC (1-11) ===\n');
+console.log('=== BẮT ĐẦU CHẠY TOÀN BỘ CÁC BÀI TEST SAO LƯU & KHÔI PHỤC (1-17) ===\n');
 
 let passedTests = 0;
 
@@ -816,4 +817,400 @@ await runTest('Test 11: Đọc và nhập thành công từ cả định dạng 
   assert.strictEqual(fromGz.parts.novels[0].id, 'novel_multi_format');
 });
 
-console.log(`\n=== TẤT CẢ ${passedTests}/11 BÀI TEST SAO LƯU & KHÔI PHỤC ĐÃ ĐẠT 100% HOÀN HẢO! ===`);
+// -------------------------------------------------------------
+// Test 12: Trùng tên khác id mặc định là 'skip' (truyện cũ và chương cũ nguyên vẹn)
+// -------------------------------------------------------------
+await runTest("Test 12: Trùng tên khác id mặc định là 'skip' (truyện cũ và chương cũ nguyên vẹn)", async () => {
+  localStorage.clear();
+  mockDB.clear();
+
+  // Truyện trên máy
+  const localNovel = {
+    id: 'local_novel_id',
+    title: 'Phàm Nhân Tu Tiên',
+    author: 'Vong Ngữ',
+    updatedAt: 1000,
+    chapterCount: 2,
+    totalChapters: 2,
+  };
+  const localChapters = [
+    { id: 'ch_local_1', novelId: 'local_novel_id', title: 'Chương 1 Gốc', content: 'Gốc 1' },
+    { id: 'ch_local_2', novelId: 'local_novel_id', title: 'Chương 2 Gốc', content: 'Gốc 2' },
+  ];
+  await saveNovel(localNovel);
+  await saveChaptersBulk(localChapters);
+  addToLibrary(localNovel);
+
+  // File sao lưu chứa truyện cùng tên chuẩn hóa nhưng ID khác
+  const backupNovel = {
+    id: 'backup_novel_id',
+    title: '  phàm nhân  tu tiên  ', // Cùng tên sau chuẩn hóa
+    author: 'Vong Ngữ 2',
+    updatedAt: 5000, // Dù updatedAt mới hơn
+    chapterCount: 2,
+    totalChapters: 2,
+    chapters: [
+      { id: 'ch_backup_1', novelId: 'backup_novel_id', title: 'Chương 1 File', content: 'File 1' },
+      { id: 'ch_backup_2', novelId: 'backup_novel_id', title: 'Chương 2 File', content: 'File 2' },
+    ],
+  };
+
+  const backupObj = {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: 5000,
+    profile: 'real',
+    parts: {
+      novels: [backupNovel],
+      progress: [],
+      cultivation: null,
+      settings: null,
+      vault: null,
+    },
+    checksum: 'mock',
+  };
+
+  // Khôi phục không truyền titleConflictResolutions (hoặc {} rỗng) -> mặc định phải là 'skip'
+  const report = await performRestore({
+    backupObj,
+    mode: 'merge',
+  });
+
+  assert.strictEqual(report.skippedNovels, 1, 'Truyện trùng tên khác ID phải bị skip theo mặc định');
+  assert.strictEqual(report.addedNovels, 0);
+  assert.strictEqual(report.updatedNovels, 0);
+
+  // Kiểm tra truyện trên máy nguyên vẹn
+  const lib = getLibrary();
+  assert.strictEqual(lib.length, 1);
+  assert.strictEqual(lib[0].id, 'local_novel_id');
+  assert.strictEqual(lib[0].author, 'Vong Ngữ');
+
+  // Kiểm tra chương truyện cũ nguyên vẹn
+  const chaptersInDB = await getChapters('local_novel_id');
+  assert.strictEqual(chaptersInDB.length, 2);
+  assert.strictEqual(chaptersInDB[0].title, 'Chương 1 Gốc');
+  assert.strictEqual(chaptersInDB[1].title, 'Chương 2 Gốc');
+
+  // Chương từ file tuyệt đối không được ghi vào
+  const backupCh1 = await mockDB.get('chapters', 'ch_backup_1');
+  assert.strictEqual(backupCh1, undefined);
+});
+
+// -------------------------------------------------------------
+// Test 13: Trùng tên khác id khi chọn 'overwrite': chương cũ bị xóa sạch, chương mới được ghi, id truyện đích giữ nguyên, không có tombstone
+// -------------------------------------------------------------
+await runTest("Test 13: Trùng tên khác id khi chọn 'overwrite': chương cũ bị xóa sạch, chương mới được ghi, id truyện đích giữ nguyên, không có tombstone", async () => {
+  localStorage.clear();
+  mockDB.clear();
+
+  const localNovel = {
+    id: 'local_tn_id',
+    title: 'Tiên Nghịch',
+    author: 'Nhĩ Căn',
+    updatedAt: 1000,
+    chapterCount: 2,
+    totalChapters: 2,
+  };
+  const localChapters = [
+    { id: 'tn_old_1', novelId: 'local_tn_id', title: 'Chương 1 Cũ', content: 'Nội dung cũ 1' },
+    { id: 'tn_old_2', novelId: 'local_tn_id', title: 'Chương 2 Cũ', content: 'Nội dung cũ 2' },
+  ];
+  await saveNovel(localNovel);
+  await saveChaptersBulk(localChapters);
+  addToLibrary(localNovel);
+
+  const backupNovel = {
+    id: 'file_tn_id',
+    title: 'Tiên Nghịch',
+    author: 'Nhĩ Căn (Bản Mới)',
+    updatedAt: 2000,
+    chapterCount: 3,
+    totalChapters: 3,
+    chapters: [
+      { id: 'tn_new_1', novelId: 'file_tn_id', title: 'Chương 1 Mới', content: 'Mới 1' },
+      { id: 'tn_new_2', novelId: 'file_tn_id', title: 'Chương 2 Mới', content: 'Mới 2' },
+      { id: 'tn_new_3', novelId: 'file_tn_id', title: 'Chương 3 Mới', content: 'Mới 3' },
+    ],
+  };
+
+  const backupObj = {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: 2000,
+    profile: 'real',
+    parts: {
+      novels: [backupNovel],
+      progress: [],
+      cultivation: null,
+      settings: null,
+      vault: null,
+    },
+    checksum: 'mock',
+  };
+
+  // Người dùng CHỦ ĐỘNG chọn 'overwrite' cho truyện trùng tên
+  const report = await performRestore({
+    backupObj,
+    mode: 'merge',
+    titleConflictResolutions: {
+      file_tn_id: 'overwrite',
+    },
+  });
+
+  assert.strictEqual(report.updatedNovels, 1);
+  assert.strictEqual(report.skippedNovels, 0);
+
+  // ID truyện đích được giữ nguyên
+  const lib = getLibrary();
+  assert.strictEqual(lib.length, 1);
+  assert.strictEqual(lib[0].id, 'local_tn_id');
+  assert.strictEqual(lib[0].author, 'Nhĩ Căn (Bản Mới)');
+  assert.strictEqual(lib[0].chapterCount, 3);
+
+  // Không có tombstone nào được tạo
+  const tombstones = getTombstones();
+  assert.strictEqual(tombstones['local_tn_id'], undefined);
+  assert.strictEqual(tombstones['file_tn_id'], undefined);
+
+  // Kiểm tra: toàn bộ chương cũ bị xóa sạch
+  const oldCh1 = await mockDB.get('chapters', 'tn_old_1');
+  const oldCh2 = await mockDB.get('chapters', 'tn_old_2');
+  assert.strictEqual(oldCh1, undefined, 'Chương cũ tn_old_1 phải bị xóa hoàn toàn');
+  assert.strictEqual(oldCh2, undefined, 'Chương cũ tn_old_2 phải bị xóa hoàn toàn');
+
+  // Kiểm tra: toàn bộ chương mới được ghi với novelId là local_tn_id
+  const chaptersInDB = await getChapters('local_tn_id');
+  assert.strictEqual(chaptersInDB.length, 3);
+  assert.strictEqual(chaptersInDB[0].id, 'tn_new_1');
+  assert.strictEqual(chaptersInDB[0].novelId, 'local_tn_id');
+  assert.strictEqual(chaptersInDB[2].id, 'tn_new_3');
+  assert.strictEqual(chaptersInDB[2].novelId, 'local_tn_id');
+});
+
+// -------------------------------------------------------------
+// Test 14: 'create_new' không đè chương của truyện khác (kể cả khi trùng chapter.id)
+// -------------------------------------------------------------
+await runTest("Test 14: 'create_new' không đè chương của truyện khác (kể cả khi trùng chapter.id)", async () => {
+  localStorage.clear();
+  mockDB.clear();
+
+  // Truyện A trên máy có chương 'shared_ch_1'
+  const novelA = {
+    id: 'novel_A',
+    title: 'Cầu Ma',
+    author: 'Tác Giả Gốc',
+    updatedAt: 1000,
+    chapterCount: 1,
+    totalChapters: 1,
+  };
+  const chaptersA = [
+    { id: 'shared_ch_1', novelId: 'novel_A', title: 'Chương 1 Gốc của Truyện A', content: 'Nội dung gốc A' },
+  ];
+  await saveNovel(novelA);
+  await saveChaptersBulk(chaptersA);
+  addToLibrary(novelA);
+
+  // File sao lưu chứa truyện B (cùng tên) nhưng cũng có chapter.id là 'shared_ch_1'
+  const novelB = {
+    id: 'novel_B',
+    title: 'Cầu Ma',
+    author: 'Tác Giả Khác',
+    updatedAt: 2000,
+    chapterCount: 1,
+    totalChapters: 1,
+    chapters: [
+      { id: 'shared_ch_1', novelId: 'novel_B', title: 'Chương 1 của Truyện B', content: 'Nội dung file B' },
+    ],
+  };
+
+  const backupObj = {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: 2000,
+    profile: 'real',
+    parts: {
+      novels: [novelB],
+      progress: [],
+      cultivation: null,
+      settings: null,
+      vault: null,
+    },
+    checksum: 'mock',
+  };
+
+  // Người dùng chọn 'create_new'
+  const report = await performRestore({
+    backupObj,
+    mode: 'merge',
+    titleConflictResolutions: {
+      novel_B: 'create_new',
+    },
+  });
+
+  assert.strictEqual(report.addedNovels, 1);
+
+  // Thư viện bây giờ có 2 truyện
+  const lib = getLibrary();
+  assert.strictEqual(lib.length, 2);
+  const createdNovel = lib.find(n => n.id !== 'novel_A');
+  assert.ok(createdNovel, 'Phải tạo một truyện mới với ID khác novel_A');
+
+  // Truyện A và chương của truyện A không hề bị đè
+  const chA = await mockDB.get('chapters', 'shared_ch_1');
+  assert.strictEqual(chA.novelId, 'novel_A');
+  assert.strictEqual(chA.title, 'Chương 1 Gốc của Truyện A');
+
+  // Truyện mới có chương riêng được gán id an toàn với tiền tố targetId
+  const chNewInDB = await getChapters(createdNovel.id);
+  assert.strictEqual(chNewInDB.length, 1);
+  assert.strictEqual(chNewInDB[0].id, `${createdNovel.id}_shared_ch_1`);
+  assert.strictEqual(chNewInDB[0].title, 'Chương 1 của Truyện B');
+});
+
+// -------------------------------------------------------------
+// Test 15: Thay thế mặc định không xóa truyện ngoài file; khi bật cờ mới xóa và ghi tombstone
+// -------------------------------------------------------------
+await runTest("Test 15: Thay thế mặc định không xóa truyện ngoài file; khi bật cờ mới xóa và ghi tombstone", async () => {
+  localStorage.clear();
+  mockDB.clear();
+
+  const novelKeep = { id: 'novel_keep', title: 'Truyện Trong File', updatedAt: 1000 };
+  const novelUnlisted1 = { id: 'novel_unlisted_1', title: 'Truyện Ngoài File 1', updatedAt: 1000 };
+  const novelUnlisted2 = { id: 'novel_unlisted_2', title: 'Truyện Ngoài File 2', updatedAt: 1000 };
+
+  await saveNovel(novelKeep);
+  await saveNovel(novelUnlisted1);
+  await saveNovel(novelUnlisted2);
+  addToLibrary(novelKeep);
+  addToLibrary(novelUnlisted1);
+  addToLibrary(novelUnlisted2);
+
+  const backupObj = {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: 2000,
+    profile: 'real',
+    parts: {
+      novels: [{ ...novelKeep, updatedAt: 2000, title: 'Truyện Trong File (Đã Cập Nhật)' }],
+      progress: [],
+      cultivation: null,
+      settings: null,
+      vault: null,
+    },
+    checksum: 'mock',
+  };
+
+  // 1. Chạy chế độ replace nhưng KHÔNG bật cờ deleteUnlistedNovels
+  const reportDefault = await performRestore({
+    backupObj,
+    mode: 'replace',
+    // deleteUnlistedNovels: false (mặc định)
+  });
+
+  assert.strictEqual(reportDefault.deletedNovels, 0, 'Mặc định không được xóa truyện ngoài file');
+  const libAfterDefault = getLibrary();
+  assert.strictEqual(libAfterDefault.length, 3, 'Cả 3 truyện phải còn nguyên trong thư viện');
+  assert.ok(libAfterDefault.some(n => n.id === 'novel_unlisted_1'));
+  assert.ok(libAfterDefault.some(n => n.id === 'novel_unlisted_2'));
+
+  // 2. Chạy chế độ replace VÀ CHỦ ĐỘNG bật deleteUnlistedNovels: true
+  const reportWithFlag = await performRestore({
+    backupObj,
+    mode: 'replace',
+    deleteUnlistedNovels: true,
+  });
+
+  assert.strictEqual(reportWithFlag.deletedNovels, 2, 'Phải xóa 2 truyện ngoài file');
+  const libAfterDelete = getLibrary();
+  assert.strictEqual(libAfterDelete.length, 1);
+  assert.strictEqual(libAfterDelete[0].id, 'novel_keep');
+
+  // Kiểm tra tombstones được ghi nhận để đồng bộ xóa lên cloud
+  const tombstones = getTombstones();
+  assert.ok(tombstones['novel_unlisted_1'], 'Phải ghi tombstone cho novel_unlisted_1');
+  assert.ok(tombstones['novel_unlisted_2'], 'Phải ghi tombstone cho novel_unlisted_2');
+});
+
+// -------------------------------------------------------------
+// Test 16: Snapshot an toàn không chứa library (tránh QuotaExceededError)
+// -------------------------------------------------------------
+await runTest("Test 16: Snapshot an toàn không chứa library (tránh QuotaExceededError)", async () => {
+  localStorage.clear();
+  mockDB.clear();
+
+  const novel = {
+    id: 'novel_with_heavy_cover',
+    title: 'Truyện Bìa Nặng',
+    coverThumb: 'data:image/jpeg;base64,' + 'A'.repeat(5000), // Bìa nặng
+    updatedAt: 1000,
+  };
+  await saveNovel(novel);
+  addToLibrary(novel);
+
+  const backupObj = {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: 2000,
+    profile: 'real',
+    parts: { novels: [], progress: [], cultivation: null, settings: null, vault: null },
+    checksum: 'mock',
+  };
+
+  await performRestore({
+    backupObj,
+    mode: 'merge',
+  });
+
+  const rawSnapshot = localStorage.getItem(PRE_RESTORE_SNAPSHOT_KEY);
+  assert.ok(rawSnapshot, 'Phải lưu snapshot trước khi khôi phục');
+  const snapshot = JSON.parse(rawSnapshot);
+
+  assert.strictEqual(snapshot.library, undefined, 'Snapshot KHÔNG ĐƯỢC chứa object library đầy đủ');
+  assert.ok(Array.isArray(snapshot.novelIds), 'Snapshot phải chứa mảng novelIds');
+  assert.strictEqual(snapshot.novelIds[0], 'novel_with_heavy_cover');
+  assert.ok(snapshot.timestamp > 0);
+  assert.strictEqual(snapshot.mode, 'merge');
+});
+
+// -------------------------------------------------------------
+// Test 17: Xuất file JSON compact (không thụt lề, không hardcode commit) vẫn khôi phục và kiểm tra checksum đúng
+// -------------------------------------------------------------
+await runTest("Test 17: Xuất file JSON compact (không thụt lề, không hardcode commit) vẫn khôi phục và kiểm tra checksum đúng", async () => {
+  localStorage.clear();
+  mockDB.clear();
+
+  const novelItem = {
+    id: 'novel_compact_test',
+    title: 'Truyện Thử Nghiệm Compact',
+    author: 'Tác Giả C',
+    updatedAt: 1500,
+  };
+  await saveNovel(novelItem);
+  addToLibrary(novelItem);
+
+  const exportRes = await createBackupData({
+    includeContent: false,
+    parts: { novels: true, progress: false, cultivation: false, settings: false, vault: false },
+  });
+
+  // Kiểm tra không còn hardcode appCommit
+  assert.strictEqual(exportRes.backupObj.appCommit, undefined, 'appCommit hardcode 0296b90 phải được gỡ bỏ');
+
+  // Chuỗi JSON không chứa thụt lề định dạng 2-space
+  assert.strictEqual(exportRes.jsonStr.includes('\n  "format"'), false, 'JSON không được thụt lề 2 space');
+
+  // Đọc và verify checksum từ chuỗi compact
+  const verified = await parseAndVerifyBackupFile(exportRes.jsonStr);
+  assert.strictEqual(verified.format, BACKUP_FORMAT);
+  assert.strictEqual(verified.parts.novels[0].id, 'novel_compact_test');
+
+  // Khôi phục thành công vào môi trường mới
+  localStorage.clear();
+  mockDB.clear();
+  const report = await performRestore({ backupObj: verified, mode: 'merge' });
+  assert.strictEqual(report.addedNovels, 1);
+  assert.strictEqual(getLibrary()[0].id, 'novel_compact_test');
+});
+
+console.log(`\n=== TẤT CẢ ${passedTests}/17 BÀI TEST SAO LƯU & KHÔI PHỤC ĐÃ ĐẠT 100% HOÀN HẢO! ===`);

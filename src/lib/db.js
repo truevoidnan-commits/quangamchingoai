@@ -178,6 +178,13 @@ export async function deleteAllChapters(novelId, options = {}) {
   }
 }
 
+/**
+ * Xóa toàn bộ chương của một truyện (dùng khi ghi đè truyện trùng tên khác ID)
+ */
+export async function deleteChaptersOfNovel(novelId, options = {}) {
+  return deleteAllChapters(novelId, options);
+}
+
 // ---- Full-text search ----
 
 export async function searchChapters(novelId, query) {

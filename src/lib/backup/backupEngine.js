@@ -16,8 +16,8 @@ import {
   setVaultPasswordRaw,
   notifyLibraryChanged,
 } from '../storage.js';
-import { getNovel, saveNovel, deleteNovelDB, getChapters, saveChaptersBulk } from '../db.js';
-import { removeTombstone, markNovelDirty } from '../sync/syncLedger.js';
+import { getNovel, saveNovel, deleteNovelDB, getChapters, saveChaptersBulk, deleteChaptersOfNovel } from '../db.js';
+import { recordNovelTombstone, removeTombstone, markNovelDirty } from '../sync/syncLedger.js';
 import { normalizeTitle } from '../sync/syncEngine.js';
 
 export const BACKUP_FORMAT = 'thien-co-lau-backup';
@@ -368,13 +368,12 @@ export async function createBackupData(options = {}, onProgress = null) {
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     exportedAt: Date.now(),
-    appCommit: '0296b90',
     profile: currentProfile === 'real' ? 'real' : 'sandbox',
     parts: backupParts,
     checksum,
   };
 
-  const finalJsonStr = JSON.stringify(backupObj, null, 2);
+  const finalJsonStr = JSON.stringify(backupObj);
   const jsonBytes = new TextEncoder().encode(finalJsonStr);
 
   let compressedBytes = null;
@@ -663,6 +662,8 @@ export async function performRestore(options = {}, onProgress = null) {
       vault: false,
     },
     selectedNovelIds = null, // Set hoặc Array các novelId được chọn
+    deleteUnlistedNovels = false,
+    deleteUnlisted = false,
     titleConflictResolutions = {}, // { [novelId]: 'overwrite' | 'create_new' | 'skip' }
     confirmCultivation = false,
   } = options;
@@ -674,28 +675,34 @@ export async function performRestore(options = {}, onProgress = null) {
     throw new Error('Khôi phục tu vi vào hồ sơ Sandbox bị từ chối. Hãy chuyển sang Hồ sơ Thật trước khi khôi phục.');
   }
 
-  // Tự động tạo bản chụp an toàn dữ liệu hiện tại trước khi thay thế
+  // Tự động tạo bản chụp an toàn dữ liệu hiện tại trước khi khôi phục
+  // Bỏ qua lưu library đầy đủ (tránh QuotaExceededError trên trình duyệt), chỉ lưu novelIds
   try {
     if (typeof localStorage !== 'undefined') {
       const currentCultivation = getCultivationState();
       const currentPending = localStorage.getItem('cultivation_pending_seconds') || '0';
+      const localLibrary = getLibrary({ includeHidden: true });
       const snapshot = {
         cultivation: currentCultivation,
         pendingSeconds: currentPending,
-        library: getLibrary({ includeHidden: true }),
+        novelIds: localLibrary.map(n => n.id),
         timestamp: Date.now(),
         mode,
       };
       localStorage.setItem(PRE_RESTORE_SNAPSHOT_KEY, JSON.stringify(snapshot));
     }
-  } catch (e) {}
+  } catch (e) {
+    // QuotaExceededError: bỏ qua không chặn khôi phục
+  }
 
   const selectedIdSet = selectedNovelIds ? new Set(selectedNovelIds) : null;
+  const shouldDeleteUnlisted = Boolean(deleteUnlistedNovels || deleteUnlisted);
 
   const report = {
     addedNovels: 0,
     updatedNovels: 0,
     skippedNovels: 0,
+    deletedNovels: 0,
     progressRestored: 0,
     cultivationRestored: false,
     settingsRestored: false,
@@ -704,16 +711,19 @@ export async function performRestore(options = {}, onProgress = null) {
     errors: [],
   };
 
-  // Nếu là chế độ THAY THẾ TOÀN BỘ cho phần novels:
-  // Xóa các truyện ở máy không nằm trong danh sách khôi phục
-  if (mode === 'replace' && selectedParts.novels) {
-    const fileNovelIds = new Set((backupObj.parts.novels || []).map(n => n.id));
+  // Nếu là chế độ THAY THẾ TOÀN BỘ VÀ người dùng CHỦ ĐỘNG bật tùy chọn xóa truyện ngoài file:
+  // Chỉ xóa các truyện ở máy không nằm trong backupObj và không nằm trong selectedNovelIds
+  if (mode === 'replace' && selectedParts.novels && shouldDeleteUnlisted) {
+    const fileNovelIds = new Set((backupObj.parts?.novels || []).map(n => n.id));
     const localLibrary = getLibrary({ includeHidden: true });
     for (const local of localLibrary) {
-      if (!fileNovelIds.has(local.id)) {
+      if (!fileNovelIds.has(local.id) && (!selectedIdSet || !selectedIdSet.has(local.id))) {
         try {
           await deleteNovelDB(local.id);
           removeFromLibrary(local.id);
+          recordNovelTombstone(local.id, Date.now());
+          notifyLibraryChanged(local.id);
+          report.deletedNovels++;
         } catch (e) {
           report.errors.push(`Lỗi xóa truyện "${local.title}": ${e.message}`);
         }
@@ -721,8 +731,12 @@ export async function performRestore(options = {}, onProgress = null) {
     }
   }
 
+  // Ánh xạ fileNovelId -> targetId để chuyển tiếp progress cho truyện được đổi ID
+  const novelIdMap = new Map();
+  const skippedDueToConflict = new Set();
+
   // 1. Khôi phục Truyện (Novels)
-  if (selectedParts.novels && Array.isArray(backupObj.parts.novels)) {
+  if (selectedParts.novels && Array.isArray(backupObj.parts?.novels)) {
     const novelsToProcess = selectedIdSet
       ? backupObj.parts.novels.filter(n => selectedIdSet.has(n.id))
       : backupObj.parts.novels;
@@ -740,6 +754,8 @@ export async function performRestore(options = {}, onProgress = null) {
 
         let targetId = item.id;
         let shouldApply = false;
+        let isOverwriteTitleConflict = false;
+        let isCreateNew = false;
 
         if (existing) {
           if (mode === 'replace') {
@@ -760,16 +776,23 @@ export async function performRestore(options = {}, onProgress = null) {
           const normTitle = normalizeTitle(item.title);
           const titleConflict = localLibrary.find(n => normalizeTitle(n.title) === normTitle);
           if (titleConflict) {
-            const resolution = titleConflictResolutions[item.id] || 'overwrite';
+            // Mặc định xử lý khi trùng tên chuẩn hóa nhưng khác ID PHẢI là 'skip'
+            const resolution = titleConflictResolutions[item.id] || 'skip';
             if (resolution === 'skip') {
               report.skippedNovels++;
+              skippedDueToConflict.add(item.id);
               continue;
             } else if (resolution === 'create_new') {
               targetId = `${item.id}_${Date.now()}`;
               shouldApply = true;
-            } else {
+              isCreateNew = true;
+            } else if (resolution === 'overwrite') {
               targetId = titleConflict.id;
               shouldApply = true;
+              isOverwriteTitleConflict = true;
+            } else {
+              report.skippedNovels++;
+              continue;
             }
           } else {
             shouldApply = true;
@@ -777,10 +800,18 @@ export async function performRestore(options = {}, onProgress = null) {
         }
 
         if (shouldApply) {
+          novelIdMap.set(item.id, targetId);
+
           const now = Date.now();
           const existingUpdated = existing?.updatedAt || 0;
           const fileUpdated = item.updatedAt || 0;
           const causalUpdatedAt = Math.max(now, existingUpdated + 1, fileUpdated + 1);
+
+          // Khi ghi đè truyện do trùng tên khác ID: Xóa toàn bộ chương cũ của truyện đích trước khi ghi
+          // (skipDirty: true để không sinh dirty dư thừa, không tạo tombstone, giữ nguyên targetId)
+          if (isOverwriteTitleConflict) {
+            await deleteChaptersOfNovel(targetId, { skipDirty: true });
+          }
 
           const chapterCount = item.chapterCount || (item.chapters ? item.chapters.length : 0);
           const novelDoc = {
@@ -801,6 +832,7 @@ export async function performRestore(options = {}, onProgress = null) {
           if (item.chapters && Array.isArray(item.chapters)) {
             const chaptersToSave = item.chapters.map(ch => ({
               ...ch,
+              id: isCreateNew ? `${targetId}_${ch.id}` : ch.id,
               novelId: targetId,
             }));
             await saveChaptersBulk(chaptersToSave, { skipDirty: false });
@@ -823,7 +855,7 @@ export async function performRestore(options = {}, onProgress = null) {
           markNovelDirty(targetId, causalUpdatedAt);
           notifyLibraryChanged(targetId);
 
-          if (existing) {
+          if (existing || isOverwriteTitleConflict) {
             report.updatedNovels++;
           } else {
             report.addedNovels++;
@@ -838,13 +870,21 @@ export async function performRestore(options = {}, onProgress = null) {
   }
 
   // 2. Khôi phục Tiến độ đọc (Progress)
-  if (selectedParts.progress && Array.isArray(backupObj.parts.progress)) {
+  if (selectedParts.progress && Array.isArray(backupObj.parts?.progress)) {
     for (const progEntry of backupObj.parts.progress) {
       try {
         const { novelId, progress, scrollPositions } = progEntry;
         if (!novelId || !progress) continue;
 
-        const currentProg = getReadingProgress(novelId);
+        // Nếu truyện này đã được ánh xạ sang targetId khác (do create_new hoặc overwrite title conflict)
+        const actualNovelId = novelIdMap.get(novelId) || novelId;
+
+        // Nếu truyện bị bỏ qua do trùng tên khác ID thì không khôi phục tiến độ của file
+        if (skippedDueToConflict.has(novelId)) {
+          continue;
+        }
+
+        const currentProg = getReadingProgress(actualNovelId);
         const currentUpdated = currentProg?.updatedAt || 0;
         const fileUpdated = progress?.updatedAt || 0;
 
@@ -853,13 +893,21 @@ export async function performRestore(options = {}, onProgress = null) {
           continue;
         }
 
-        saveReadingProgress(novelId, progress);
+        const mappedProgress = { ...progress };
+        if (actualNovelId !== novelId && mappedProgress.chapterId) {
+          mappedProgress.chapterId = `${actualNovelId}_${mappedProgress.chapterId}`;
+        }
+
+        saveReadingProgress(actualNovelId, mappedProgress);
         report.progressRestored++;
 
         if (Array.isArray(scrollPositions) && typeof localStorage !== 'undefined') {
           for (const sp of scrollPositions) {
             if (sp.chapterId && sp.data) {
-              const spKey = `scroll_pos_${novelId}_${sp.chapterId}`;
+              const mappedChapterId = (actualNovelId !== novelId)
+                ? `${actualNovelId}_${sp.chapterId}`
+                : sp.chapterId;
+              const spKey = `scroll_pos_${actualNovelId}_${mappedChapterId}`;
               if (isAllowlistedStorageKey(spKey)) {
                 localStorage.setItem(spKey, JSON.stringify(sp.data));
               } else {

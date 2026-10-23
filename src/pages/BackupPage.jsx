@@ -68,6 +68,8 @@ export default function BackupPage() {
   const [titleConflictResolutions, setTitleConflictResolutions] = useState({});
   const [confirmCultivation, setConfirmCultivation] = useState(false);
   const [replaceConfirmInput, setReplaceConfirmInput] = useState('');
+  const [deleteUnlistedNovels, setDeleteUnlistedNovels] = useState(false);
+  const [autoBackupBeforeReplace, setAutoBackupBeforeReplace] = useState(true);
 
   // Restore Process
   const [isRestoring, setIsRestoring] = useState(false);
@@ -204,12 +206,42 @@ export default function BackupPage() {
     setImportError('');
 
     try {
+      // 1. Tự động tải bản sao lưu an toàn trước khi thay thế nếu được bật
+      if (restoreMode === 'replace' && autoBackupBeforeReplace) {
+        setRestoreProgress({ current: 0, total: 1, title: 'Đang tạo bản sao lưu an toàn trước khi thay thế...' });
+        try {
+          const safetyBackup = await createBackupData({
+            includeContent: true,
+            parts: {
+              novels: true,
+              progress: true,
+              cultivation: profile === 'real',
+              settings: true,
+              vault: true,
+            },
+          });
+          if (safetyBackup.blob) {
+            const dlRes = await downloadOrShareBackupFile(safetyBackup.blob, safetyBackup.filename);
+            if (!dlRes.downloaded && !dlRes.shared) {
+              throw new Error('Thao tác tải hoặc chia sẻ file sao lưu an toàn đã bị hủy.');
+            }
+          }
+        } catch (safetyErr) {
+          console.error('Lỗi tạo sao lưu an toàn trước khi thay thế:', safetyErr);
+          setImportError(`Không thể tạo hoặc tải bản sao lưu an toàn trước khi thay thế (${safetyErr.message}). Đã dừng khôi phục để bảo vệ dữ liệu.`);
+          setIsRestoring(false);
+          setRestoreProgress(null);
+          return;
+        }
+      }
+
       const report = await performRestore(
         {
           backupObj: parsedBackup,
           mode: restoreMode,
           selectedParts: selectedRestoreParts,
           selectedNovelIds: selectedRestoreNovelIds,
+          deleteUnlistedNovels: restoreMode === 'replace' && deleteUnlistedNovels,
           titleConflictResolutions,
           confirmCultivation,
         },
@@ -499,6 +531,12 @@ export default function BackupPage() {
             </div>
           </div>
 
+          {estimatedSize.rawBytes > 150 * 1024 * 1024 && (
+            <div className={styles.alertWarning} style={{ marginTop: 12 }}>
+              ⚠️ <strong>Cảnh báo dung lượng lớn:</strong> Dung lượng thô ước tính vượt quá 150MB ({formatBytes(estimatedSize.rawBytes)}). Trình duyệt có thể gặp hiện tượng quá tải bộ nhớ (tràn RAM) khi tạo file. Khuyên bạn nên chia nhỏ sao lưu theo từng nhóm truyện hoặc bỏ tùy chọn "Kèm toàn bộ nội dung văn bản của các chương".
+            </div>
+          )}
+
           {/* Progress bar */}
           {isExporting && exportProgress && (
             <div className={styles.progressContainer}>
@@ -641,7 +679,7 @@ export default function BackupPage() {
                     <span>GỘP (Khuyên dùng)</span>
                   </div>
                   <div className={styles.modeDesc}>
-                    Thêm truyện chưa có, giữ nguyên truyện trên máy. Truyện đã có chỉ cập nhật nếu bản trong file có ngày sửa đổi mới hơn.
+                    Thêm truyện chưa có, giữ nguyên truyện trên máy. Truyện đã có chỉ cập nhật nếu bản trong file có ngày sửa đổi mới hơn. Các chương có trên máy mà file không có sẽ được giữ lại nguyên vẹn.
                   </div>
                 </div>
 
@@ -659,33 +697,92 @@ export default function BackupPage() {
                     <span>THAY THẾ TOÀN BỘ</span>
                   </div>
                   <div className={styles.modeDesc}>
-                    Thay thế toàn bộ các phần được chọn bằng dữ liệu từ file sao lưu. Hệ thống tự động tạo bản chụp an toàn dữ liệu hiện tại trước khi thay.
+                    Thay thế toàn bộ các phần được chọn bằng dữ liệu từ file sao lưu. Mặc định không xóa truyện trên máy không có trong file trừ khi bạn chủ động chọn.
                   </div>
                 </div>
               </div>
 
-              {/* Replace Mode Warning & Confirmation */}
-              {restoreMode === 'replace' && (
-                <div className={styles.alertDanger}>
-                  <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                    ⚠️ Cảnh báo thay thế toàn bộ dữ liệu:
+              {/* Replace Mode Safeguards & Confirmation */}
+              {restoreMode === 'replace' && (() => {
+                const fileNovelIds = new Set((parsedBackup?.parts?.novels || []).map(n => n.id));
+                const selectedRestoreNovelIdsSet = selectedRestoreNovelIds ? new Set(selectedRestoreNovelIds) : null;
+                const novelsToDelete = availableNovels.filter(n => !fileNovelIds.has(n.id) && (!selectedRestoreNovelIdsSet || !selectedRestoreNovelIdsSet.has(n.id)));
+
+                return (
+                  <div className={styles.alertDanger} style={{ marginTop: 16 }}>
+                    <div style={{ fontWeight: 700, marginBottom: 6, fontSize: '0.95rem' }}>
+                      ⚠️ Cảnh báo chế độ Thay Thế Toàn Bộ:
+                    </div>
+                    <div style={{ fontSize: '0.88rem', marginBottom: 12, lineHeight: 1.5 }}>
+                      Chế độ này sẽ thay thế các mục đã chọn trên máy bằng dữ liệu từ file sao lưu. Hệ thống sẽ tự động lưu ảnh chụp tu vi an toàn trước khi thay thế.
+                    </div>
+
+                    {/* Option 1: Auto backup before replace (default true) */}
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', marginBottom: 10, fontSize: '0.88rem', color: '#f1f5f9' }}>
+                      <input
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={autoBackupBeforeReplace}
+                        onChange={(e) => setAutoBackupBeforeReplace(e.target.checked)}
+                      />
+                      <span>
+                        🛡️ <strong>Tải bản sao lưu dữ liệu hiện tại về máy trước khi thay thế</strong> (Khuyên dùng để phòng ngừa rủi ro mất dữ liệu).
+                      </span>
+                    </label>
+
+                    {/* Option 2: Delete unlisted novels (default false) */}
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', marginBottom: 10, fontSize: '0.88rem', color: '#fca5a5' }}>
+                      <input
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={deleteUnlistedNovels}
+                        onChange={(e) => setDeleteUnlistedNovels(e.target.checked)}
+                      />
+                      <span>
+                        🗑️ <strong>Cũng xóa các truyện trên máy không có trong file</strong> (Mặc định: KHÔNG xóa).
+                      </span>
+                    </label>
+
+                    {/* If deleteUnlistedNovels is checked: preview novels to be deleted */}
+                    {deleteUnlistedNovels && (
+                      <div style={{ marginTop: 10, padding: 12, background: 'rgba(0, 0, 0, 0.4)', borderRadius: 8, border: '1px solid rgba(239, 68, 68, 0.4)' }}>
+                        <div style={{ fontWeight: 700, color: '#f87171', marginBottom: 6 }}>
+                          🚨 Danh sách truyện trên máy sẽ bị XÓA ({novelsToDelete.length} truyện):
+                        </div>
+                        {novelsToDelete.length > 0 ? (
+                          <ul style={{ margin: '0 0 8px 0', paddingLeft: 20, maxHeight: 160, overflowY: 'auto' }}>
+                            {novelsToDelete.map(n => (
+                              <li key={n.id} style={{ fontSize: '0.85rem', color: '#fecaca', marginBottom: 2 }}>
+                                <strong>{n.title}</strong> — {n.chapterCount || n.totalChapters || 0} chương
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: 6 }}>
+                            (Không có truyện nào trên máy nằm ngoài file sao lưu).
+                          </div>
+                        )}
+                        <div style={{ fontSize: '0.82rem', color: '#f87171', lineHeight: 1.4 }}>
+                          ⚠️ <strong>Lưu ý:</strong> Việc xóa các truyện này sẽ được ghi nhận bia mộ (tombstone) và tự động đồng bộ xóa lên Cloud cũng như các thiết bị khác ở lần đồng bộ tiếp theo.
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Typing confirmation */}
+                    <div style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid rgba(239, 68, 68, 0.3)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.88rem' }}>Nhập chính xác cụm từ <strong>THAY THE</strong> để mở khóa:</span>
+                      <input
+                        type="text"
+                        className={styles.input}
+                        style={{ maxWidth: 160, padding: '6px 10px', background: '#0f172a', border: '1px solid #ef4444', color: '#fff' }}
+                        placeholder="THAY THE"
+                        value={replaceConfirmInput}
+                        onChange={(e) => setReplaceConfirmInput(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div style={{ marginBottom: 10 }}>
-                    Các truyện trên máy không nằm trong file sao lưu này sẽ bị xóa. Hệ thống sẽ tự động lưu bản chụp tu vi vào khóa <code>tcl_pre_restore_snapshot</code>.
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <span>Nhập chữ <strong>THAY THE</strong> để xác nhận:</span>
-                    <input
-                      type="text"
-                      className={styles.input}
-                      style={{ maxWidth: 160, padding: '6px 10px', background: '#0f172a', border: '1px solid #ef4444', color: '#fff' }}
-                      placeholder="THAY THE"
-                      value={replaceConfirmInput}
-                      onChange={(e) => setReplaceConfirmInput(e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Parts Selection & Comparison */}
               <div style={{ marginTop: 24 }}>
@@ -754,18 +851,18 @@ export default function BackupPage() {
                                 <td>
                                   {status === 'title_conflict' && (
                                     <select
-                                      value={titleConflictResolutions[novel.id] || 'overwrite'}
+                                      value={titleConflictResolutions[novel.id] || 'skip'}
                                       onChange={(e) => setTitleConflictResolutions(r => ({ ...r, [novel.id]: e.target.value }))}
                                       style={{ background: '#1e293b', color: '#fff', border: '1px solid #64748b', borderRadius: 4, padding: '2px 6px', fontSize: '0.8rem' }}
                                     >
+                                      <option value="skip">Bỏ qua (Mặc định)</option>
                                       <option value="overwrite">Ghi đè truyện cũ</option>
                                       <option value="create_new">Tạo truyện mới</option>
-                                      <option value="skip">Bỏ qua</option>
                                     </select>
                                   )}
                                   {status !== 'title_conflict' && (
                                     <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                                      {status === 'older' && restoreMode === 'merge' ? 'Sẽ bỏ qua' : 'Sẽ nhập'}
+                                      {status === 'older' && restoreMode === 'merge' ? 'Sẽ bỏ qua (máy mới hơn)' : 'Sẽ nhập'}
                                     </span>
                                   )}
                                 </td>
@@ -774,6 +871,11 @@ export default function BackupPage() {
                           })}
                         </tbody>
                       </table>
+                      {restoreMode === 'merge' && (
+                        <div style={{ fontSize: '0.8rem', color: '#38bdf8', marginTop: 8 }}>
+                          💡 <strong>Ghi chú chế độ Gộp:</strong> Nếu truyện đã có trên máy, chỉ ghi đè khi bản trong file mới hơn. Nếu trên máy có các chương mà file sao lưu không có, các chương đó vẫn được giữ lại nguyên vẹn.
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -961,6 +1063,12 @@ export default function BackupPage() {
                   <div className={styles.resultNumber}>{restoreReport.progressRestored}</div>
                   <div className={styles.resultLabel}>Tiến độ đọc đã khôi phục</div>
                 </div>
+                {restoreReport.deletedNovels > 0 && (
+                  <div className={styles.resultCard}>
+                    <div className={styles.resultNumber} style={{ color: '#f87171' }}>{restoreReport.deletedNovels}</div>
+                    <div className={styles.resultLabel}>Truyện ngoài file đã xóa</div>
+                  </div>
+                )}
               </div>
 
               <div style={{ fontSize: '0.88rem', color: '#cbd5e1', lineHeight: 1.6, marginTop: 12 }}>
