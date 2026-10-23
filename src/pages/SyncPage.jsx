@@ -8,6 +8,13 @@ import { removeFromLibrary } from '../lib/storage.js';
 import { isProductionHost } from '../lib/sync/envProtection.js';
 import { isAutoSyncEnabled, setAutoSyncEnabled, getSyncStatus, setConflictDialogOpen } from '../lib/sync/autoSync.js';
 import { isBackupOverdue, getLastBackupTimestamp } from '../lib/backup/backupEngine.js';
+import {
+  getSyncLogs,
+  clearSyncLogs,
+  exportSyncLogsText,
+  isSupabasePausedSuspected,
+  getLastSyncSuccessAt,
+} from '../lib/sync/syncLog.js';
 import styles from './SyncPage.module.css';
 
 export default function SyncPage() {
@@ -36,10 +43,15 @@ export default function SyncPage() {
   const [autoSyncOn, setAutoSyncOn] = useState(() => isAutoSyncEnabled());
   const [syncStatus, setSyncStatusState] = useState(() => getSyncStatus());
   const [backupOverdue, setBackupOverdue] = useState(() => isBackupOverdue(14));
+  const [isLogOpen, setIsLogOpen] = useState(false);
+  const [syncLogs, setSyncLogs] = useState(() => getSyncLogs());
+  const [copyLogSuccess, setCopyLogSuccess] = useState(false);
+
 
   useEffect(() => {
     const handleStatus = (e) => {
       setSyncStatusState(e.detail || getSyncStatus());
+      setSyncLogs(getSyncLogs());
     };
     window.addEventListener('tcl_sync_status_changed', handleStatus);
     return () => window.removeEventListener('tcl_sync_status_changed', handleStatus);
@@ -110,6 +122,7 @@ export default function SyncPage() {
       }
     } catch (err) {
       setAuthError(`Lỗi kết nối máy chủ: ${err.message}`);
+      import('../lib/sync/syncLog.js').then(m => m.recordSyncFailure(err)).catch(() => {});
     } finally {
       setAuthSubmitting(false);
     }
@@ -174,6 +187,7 @@ export default function SyncPage() {
         alert(res.message || 'Đang có một lần đồng bộ khác chạy, thử lại sau giây lát.');
         setSyncProgress(null);
         setIsSyncing(false);
+      setSyncLogs(getSyncLogs());
         return;
       }
 
@@ -306,6 +320,17 @@ export default function SyncPage() {
           Xuất và nhập toàn bộ truyện, tiến độ đọc và tu vi thành một file nén duy nhất (<code>.tclbackup.json.gz</code>) trên máy của bạn. Hoạt động độc lập hoàn toàn với Cloud, không phụ thuộc vào Internet, an toàn khi đổi máy hoặc phòng sự cố.
         </div>
       </div>
+
+      {isSupabasePausedSuspected() && (
+        <div className={styles.alertWarning} style={{ marginBottom: '16px', background: 'rgba(234, 179, 8, 0.12)', border: '1px solid rgba(234, 179, 8, 0.4)' }}>
+          <div style={{ fontWeight: 600, color: '#facc15', marginBottom: '4px' }}>
+            ⚠️ Không kết nối được Supabase
+          </div>
+          <div style={{ fontSize: '0.88rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+            Nếu bạn không dùng khoảng 7 ngày, dự án gói miễn phí có thể đã bị tạm dừng: vào <strong>supabase.com/dashboard</strong>, chọn dự án, bấm <strong>Restore project</strong>.
+          </div>
+        </div>
+      )}
 
       {/* Account Section */}
       <div className={styles.card}>
@@ -533,8 +558,95 @@ export default function SyncPage() {
             </div>
           )}
 
-          <div className={styles.lastSyncText}>
-            Lần đồng bộ thành công gần nhất: {formatTime(lastSyncedAt)}
+          {(() => {
+            const lastSuccessTimestamp = getLastSyncSuccessAt() || lastSyncedAt;
+            const daysAgo = lastSuccessTimestamp ? Math.floor((Date.now() - lastSuccessTimestamp) / (24 * 60 * 60 * 1000)) : null;
+            return (
+              <div style={{ marginTop: '16px' }}>
+                <div className={styles.lastSyncText}>
+                  Lần đồng bộ thành công gần nhất: {formatTime(lastSuccessTimestamp)}
+                  {lastSuccessTimestamp > 0 && daysAgo !== null && (
+                    <span> ({daysAgo === 0 ? 'hôm nay' : `${daysAgo} ngày trước`})</span>
+                  )}
+                </div>
+                {daysAgo !== null && daysAgo > 5 && (
+                  <div style={{ fontSize: '0.82rem', color: '#facc15', marginTop: '6px', fontStyle: 'italic' }}>
+                    💡 Nhắc nhẹ: Bạn nên mở ứng dụng và đồng bộ định kỳ để dự án Supabase không bị tự động tạm dừng.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Mục thu gọn: Nhật ký đồng bộ */}
+          <div className={styles.logAccordion}>
+            <div
+              className={styles.logAccordionHeader}
+              onClick={() => {
+                const next = !isLogOpen;
+                setIsLogOpen(next);
+                if (next) setSyncLogs(getSyncLogs());
+              }}
+            >
+              <span>📋 Nhật ký đồng bộ ({syncLogs.length})</span>
+              <span>{isLogOpen ? '▲ Thu gọn' : '▼ Mở rộng'}</span>
+            </div>
+            {isLogOpen && (
+              <div className={styles.logBody}>
+                <div className={styles.logActions}>
+                  <button
+                    className={styles.btnLogAction}
+                    onClick={() => {
+                      const text = exportSyncLogsText();
+                      if (navigator?.clipboard?.writeText) {
+                        navigator.clipboard.writeText(text);
+                        setCopyLogSuccess(true);
+                        setTimeout(() => setCopyLogSuccess(false), 2000);
+                      }
+                    }}
+                  >
+                    {copyLogSuccess ? '✓ Đã sao chép' : '📋 Sao chép nhật ký'}
+                  </button>
+                  <button
+                    className={styles.btnLogAction}
+                    style={{ color: '#f87171' }}
+                    onClick={() => {
+                      if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ nhật ký đồng bộ cục bộ?')) {
+                        clearSyncLogs();
+                        setSyncLogs([]);
+                      }
+                    }}
+                  >
+                    🗑️ Xóa nhật ký
+                  </button>
+                </div>
+                <div className={styles.logContainer}>
+                  {syncLogs.length === 0 ? (
+                    <div style={{ color: '#64748b' }}>(Chưa có nhật ký nào được ghi)</div>
+                  ) : (
+                    syncLogs.slice(-50).reverse().map((entry, idx) => {
+                      const d = new Date(entry.t);
+                      const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+                      const lineClass = entry.level === 'error'
+                        ? styles.logLineError
+                        : entry.level === 'warn'
+                          ? styles.logLineWarn
+                          : styles.logLineInfo;
+                      return (
+                        <div key={idx} className={lineClass}>
+                          [${timeStr}] [{String(entry.level || 'info').toUpperCase()}] [{entry.src}] {entry.evt}
+                          {entry.novelId ? ` novel=${entry.novelId}` : ''}
+                          {entry.count !== undefined ? ` count=${entry.count}` : ''}
+                          {entry.ms !== undefined ? ` ${entry.ms}ms` : ''}
+                          {entry.bytes !== undefined ? ` ${entry.bytes}B` : ''}
+                          {entry.msg ? ` - ${entry.msg}` : ''}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -122,8 +122,19 @@ export function acquireSyncLock() {
 }
 
 export function refreshSyncLock() {
+  const now = Date.now();
   try {
-    localStorage.setItem(SYNC_LOCK_KEY, String(Date.now()));
+    localStorage.setItem(SYNC_LOCK_KEY, String(now));
+  } catch {}
+  try {
+    const raw = localStorage.getItem('tcl_sync_status');
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s.state === 'syncing') {
+        s.heartbeatAt = now;
+        localStorage.setItem('tcl_sync_status', JSON.stringify(s));
+      }
+    }
   } catch {}
 }
 
