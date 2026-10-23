@@ -15,6 +15,7 @@ import EditNovelPage from './pages/EditNovelPage';
 import AddChapterPage from './pages/AddChapterPage';
 import SearchPage from './pages/SearchPage';
 import SyncPage from './pages/SyncPage';
+import BackupPage from './pages/BackupPage';
 
 import { preloadCoreArtifactIcons } from './lib/artifactIcons';
 import { startBackgroundPrefetch } from './lib/backgroundPrefetch';
@@ -107,6 +108,7 @@ function MainLayout() {
           <Route path="/cultivation" element={<CultivationWorkspace />} />
           <Route path="/sanctum" element={<SanctumPage />} />
           <Route path="/sync" element={<SyncPage />} />
+          <Route path="/backup" element={<BackupPage />} />
         </Routes>
       </main>
     </>

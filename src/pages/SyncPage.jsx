@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient.js';
 import { performSync, checkFirstSyncCondition } from '../lib/sync/syncEngine.js';
 import { getSyncLedger } from '../lib/sync/syncLedger.js';
@@ -6,6 +7,7 @@ import { deleteNovelDB } from '../lib/db.js';
 import { removeFromLibrary } from '../lib/storage.js';
 import { isProductionHost } from '../lib/sync/envProtection.js';
 import { isAutoSyncEnabled, setAutoSyncEnabled, getSyncStatus, setConflictDialogOpen } from '../lib/sync/autoSync.js';
+import { isBackupOverdue, getLastBackupTimestamp } from '../lib/backup/backupEngine.js';
 import styles from './SyncPage.module.css';
 
 export default function SyncPage() {
@@ -33,6 +35,7 @@ export default function SyncPage() {
   const isProd = isProductionHost();
   const [autoSyncOn, setAutoSyncOn] = useState(() => isAutoSyncEnabled());
   const [syncStatus, setSyncStatusState] = useState(() => getSyncStatus());
+  const [backupOverdue, setBackupOverdue] = useState(() => isBackupOverdue(14));
 
   useEffect(() => {
     const handleStatus = (e) => {
@@ -267,6 +270,42 @@ export default function SyncPage() {
           </button>
         </div>
       )}
+
+      {/* Gentle Backup Overdue Reminder */}
+      {backupOverdue && (
+        <div className={styles.alertWarning} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+          <div style={{ flex: 1, minWidth: 240 }}>
+            💡 <strong>Nhắc nhở sao lưu:</strong> Bạn chưa sao lưu dữ liệu máy gần đây (hoặc đã quá 14 ngày). Hãy tạo bản sao lưu tập tin để phòng ngừa sự cố đám mây.
+          </div>
+          <Link
+            to="/backup"
+            className={styles.btnOutline}
+            style={{ borderColor: '#f59e0b', color: '#f59e0b', whiteSpace: 'nowrap', textDecoration: 'none' }}
+          >
+            Sao lưu ngay →
+          </Link>
+        </div>
+      )}
+
+      {/* Backup & Restore Navigation Card */}
+      <div className={styles.card} style={{ border: '1px solid rgba(234, 179, 8, 0.35)', background: 'rgba(15, 23, 42, 0.85)' }}>
+        <div className={styles.cardHeader}>
+          <h2 className={styles.cardTitle}>
+            <span>💾</span>
+            <span>Sao Lưu & Khôi Phục (Tập Tin Cục Bộ)</span>
+          </h2>
+          <Link
+            to="/backup"
+            className={styles.btnOutline}
+            style={{ borderColor: '#eab308', color: '#facc15', textDecoration: 'none', fontSize: '0.88rem' }}
+          >
+            Mở Trang Sao Lưu →
+          </Link>
+        </div>
+        <div style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.5 }}>
+          Xuất và nhập toàn bộ truyện, tiến độ đọc và tu vi thành một file nén duy nhất (<code>.tclbackup.json.gz</code>) trên máy của bạn. Hoạt động độc lập hoàn toàn với Cloud, không phụ thuộc vào Internet, an toàn khi đổi máy hoặc phòng sự cố.
+        </div>
+      </div>
 
       {/* Account Section */}
       <div className={styles.card}>
