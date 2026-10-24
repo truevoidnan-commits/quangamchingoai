@@ -5,6 +5,7 @@ import {
   classifyErrorCode,
 } from './syncLog.js';
 import { setSyncStatus } from './autoSync.js';
+import { notifyOtherDevices } from './realtimeSignal.js';
 import JSZip from 'jszip';
 import {
   getSyncLedger,
@@ -251,8 +252,9 @@ export async function syncVaultPassword(supabase, userId, options = {}) {
         updated_at: Date.now(),
       }, { onConflict: 'user_id' });
       if (upsertErr) throw new Error(`Lỗi lưu mật khẩu Mật Thất: ${upsertErr.message}`);
+      return { pushed: true };
     }
-    return;
+    return { pushed: false };
   }
 
   // Quy tắc chuẩn:
@@ -268,12 +270,15 @@ export async function syncVaultPassword(supabase, userId, options = {}) {
       updated_at: Date.now(),
     }, { onConflict: 'user_id' });
     if (upsertErr) throw new Error(`Lỗi lưu mật khẩu Mật Thất: ${upsertErr.message}`);
+    return { pushed: true };
   } else if (cloudVault?.hash && !localVault.hash) {
     // Kéo từ cloud về
     setVaultPasswordRaw(cloudVault);
+    return { pushed: false };
   } else if (cloudVault?.hash && localVault.hash) {
     if ((cloudVault.updatedAt || 0) > (localVault.updatedAt || 0)) {
       setVaultPasswordRaw(cloudVault);
+      return { pushed: false };
     } else if ((localVault.updatedAt || 0) > (cloudVault.updatedAt || 0)) {
       const updatedData = { ...(userSettings?.data || {}), vault: localVault };
       const { error: upsertErr } = await supabase.from('user_settings').upsert({
@@ -282,8 +287,10 @@ export async function syncVaultPassword(supabase, userId, options = {}) {
         updated_at: Date.now(),
       }, { onConflict: 'user_id' });
       if (upsertErr) throw new Error(`Lỗi lưu mật khẩu Mật Thất: ${upsertErr.message}`);
+      return { pushed: true };
     }
   }
+  return { pushed: false };
 }
 
 /**
@@ -314,11 +321,12 @@ export async function syncReadingSettings(supabase, userId, options = {}) {
       updated_at: Date.now(),
     }, { onConflict: 'user_id' });
     if (upsertErr) throw new Error(`Lỗi lưu cài đặt đọc: ${upsertErr.message}`);
-    return;
+    return { pushed: true };
   }
 
   if (cloudSettings && cloudUpdatedAt > localUpdatedAt) {
     saveReadingSettings(cloudSettings);
+    return { pushed: false };
   } else if (localUpdatedAt > cloudUpdatedAt || (!cloudSettings && localSettings)) {
     const updatedData = { ...(userSettings?.data || {}), reading_settings: localSettings };
     const { error: upsertErr } = await supabase.from('user_settings').upsert({
@@ -327,7 +335,9 @@ export async function syncReadingSettings(supabase, userId, options = {}) {
       updated_at: Date.now(),
     }, { onConflict: 'user_id' });
     if (upsertErr) throw new Error(`Lỗi lưu cài đặt đọc: ${upsertErr.message}`);
+    return { pushed: true };
   }
+  return { pushed: false };
 }
 
 /**
@@ -1140,16 +1150,18 @@ export async function performSync(supabase, {
 
     // 1.4 Đồng bộ Cài đặt đọc
     onProgress({ stage: 'syncing_settings', percent: 20, message: 'Đang đồng bộ cài đặt đọc...' });
+    let settingsRes = null;
     try {
-      await syncReadingSettings(supabase, userId, { mode });
+      settingsRes = await syncReadingSettings(supabase, userId, { mode });
     } catch (err) {
       errors.push(`Lỗi đồng bộ cài đặt đọc: ${err.message}`);
     }
 
     // 1.5 Đồng bộ Mật khẩu Mật Thất
     onProgress({ stage: 'syncing_vault', percent: 22, message: 'Đang đồng bộ mật khẩu Mật Thất...' });
+    let vaultRes = null;
     try {
-      await syncVaultPassword(supabase, userId, { mode });
+      vaultRes = await syncVaultPassword(supabase, userId, { mode });
     } catch (err) {
       errors.push(`Lỗi đồng bộ mật khẩu Mật Thất: ${err.message}`);
     }
@@ -1739,6 +1751,25 @@ export async function performSync(supabase, {
       });
     }
     saveSyncLedger(ledger);
+
+    // Phát tín hiệu Realtime nếu có dữ liệu vừa được đẩy lên cloud
+    const pushedScopes = new Set();
+    if (pushedNovels > 0) {
+      pushedScopes.add('content');
+      pushedScopes.add('library');
+    }
+    if (progressPushed > 0) {
+      pushedScopes.add('progress');
+    }
+    if (cultivationRes?.pushedToCloud) {
+      pushedScopes.add('cultivation');
+    }
+    if (settingsRes?.pushed || vaultRes?.pushed) {
+      pushedScopes.add('settings');
+    }
+    if (pushedScopes.size > 0) {
+      notifyOtherDevices(Array.from(pushedScopes));
+    }
 
     return {
       success: isAllSuccess,

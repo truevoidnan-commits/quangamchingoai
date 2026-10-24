@@ -50,6 +50,11 @@ import {
   syncNovelMetadata,
 } from './syncEngine.js';
 import {
+  startRealtime,
+  stopRealtime,
+  notifyOtherDevices,
+} from './realtimeSignal.js';
+import {
   logSyncEvent,
   recordSyncSuccess,
   recordSyncFailure,
@@ -368,6 +373,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
 
   const syncStartTime = Date.now();
   const userId = session.user.id;
+  const pushedScopes = new Set();
   setSyncStatus({ state: 'syncing', message: 'Đang đồng bộ tiến độ và tu vi...' });
   logSyncEvent({ level: 'info', src: syncSource, evt: 'sync_started' });
 
@@ -521,6 +527,8 @@ export async function runAutoSync(customSupabase = null, options = {}) {
           const metaRes = await syncNovelMetadata(client, userId, novelId, localItem, cloudRow, ledger);
           if (metaRes?.applied === 'cloud') {
             cloudLibraryModified = true;
+          } else if (metaRes?.applied === 'local') {
+            pushedScopes.add('library');
           }
         } catch (e) {
           console.warn('Auto sync novel metadata error:', e.message);
@@ -531,7 +539,10 @@ export async function runAutoSync(customSupabase = null, options = {}) {
 
     // C. Đồng bộ Tiến độ đọc
     try {
-      await syncReadingProgress(client, userId, allNovelIds, { mode: 'normal' });
+      const progRes = await syncReadingProgress(client, userId, allNovelIds, { mode: 'normal' });
+      if (progRes?.progressPushed > 0) {
+        pushedScopes.add('progress');
+      }
     } catch (e) {
       console.warn('Auto sync reading progress error:', e.message);
       errors.push(e.message);
@@ -619,6 +630,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
         }, { onConflict: 'user_id' });
 
         if (!cultUpsertErr) {
+          pushedScopes.add('cultivation');
           ledger.cultivation = {
             lastSyncedRev: localRev,
             lastSyncedPending: localPending,
@@ -794,6 +806,8 @@ export async function runAutoSync(customSupabase = null, options = {}) {
           refreshSyncLock();
           const pushRes = await pushNovelToCloud(client, userId, task.novelId, task.localItem, ledger);
           refreshSyncLock();
+          pushedScopes.add('content');
+          pushedScopes.add('library');
           saveSyncLedger(ledger);
           logSyncEvent({
             level: 'info',
@@ -816,6 +830,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
           refreshSyncLock();
           const pushRes = await pushNovelToCloud(client, userId, task.novelId, task.localItem, ledger);
           refreshSyncLock();
+          pushedScopes.add('content');
           saveSyncLedger(ledger);
           logSyncEvent({
             level: 'info',
@@ -876,7 +891,10 @@ export async function runAutoSync(customSupabase = null, options = {}) {
     // Lượt bổ sung: Đồng bộ lại tiến độ đọc cho các truyện vừa mới được kéo về ở giai đoạn nặng
     if (newlyPulledNovels.length > 0) {
       try {
-        await syncReadingProgress(client, userId, newlyPulledNovels, { mode: 'normal' });
+        const suppRes = await syncReadingProgress(client, userId, newlyPulledNovels, { mode: 'normal' });
+        if (suppRes?.progressPushed > 0) {
+          pushedScopes.add('progress');
+        }
       } catch (e) {
         console.warn('Auto supplementary sync reading progress error:', e.message);
         errors.push(e.message);
@@ -926,6 +944,10 @@ export async function runAutoSync(customSupabase = null, options = {}) {
     saveSyncLedger(ledger);
     resetBackoff();
     recordSyncSuccess();
+
+    if (pushedScopes.size > 0) {
+      notifyOtherDevices(Array.from(pushedScopes));
+    }
 
     if (hasAttention) {
       setSyncStatus({
@@ -1026,6 +1048,7 @@ export async function quickPushLibraryMetadata(customSupabase = null) {
 
     const ledger = getSyncLedger();
     const library = getLibrary({ includeHidden: true });
+    let pushedLibrary = false;
     for (const item of library) {
       const lastSyncedMetaAt = ledger.novels?.[item.id]?.lastSyncedMetaAt || 0;
       if ((item.updatedAt || 0) > lastSyncedMetaAt) {
@@ -1055,8 +1078,12 @@ export async function quickPushLibraryMetadata(customSupabase = null) {
           if (!ledger.novels[item.id]) ledger.novels[item.id] = {};
           ledger.novels[item.id].lastSyncedMetaAt = item.updatedAt;
           saveSyncLedger(ledger);
+          pushedLibrary = true;
         }
       }
+    }
+    if (pushedLibrary) {
+      notifyOtherDevices(['library']);
     }
   } catch (err) {
     console.warn('Lỗi quickPushLibraryMetadata:', err?.message);
@@ -1131,6 +1158,16 @@ export function initAutoSync(customSupabase = null) {
 
   // Dọn trạng thái kẹt nếu có từ phiên trước
   getSyncStatus();
+
+  // Khởi động kết nối Realtime Signal cho người dùng đã đăng nhập
+  const client = customSupabase || supabase;
+  if (client?.auth) {
+    client.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) {
+        startRealtime(client, session.user.id).catch(() => {});
+      }
+    }).catch(() => {});
+  }
 
   // 0. Lắng nghe thay đổi thư viện
   window.addEventListener('tcl_library_changed', () => {
@@ -1232,6 +1269,7 @@ async function quickPushProgressAndCultivation(customSupabase = null) {
           lastCloudUpdatedAt: nowTime,
         };
         saveSyncLedger(ledger);
+        notifyOtherDevices(['cultivation']);
       } else {
         console.warn('Lỗi quick push tu vi:', cultErr.message);
       }

@@ -218,7 +218,7 @@ export function sanitizeLogMessage(str) {
  * Ghi 1 mục vào nhật ký đồng bộ (ring buffer tối đa 200 mục, ~40KB)
  * @param {Object} param0
  * @param {'info'|'warn'|'error'} [param0.level='info']
- * @param {'manual'|'auto'|'quick'|'visibility'|'online'|'interval'|'startup'} [param0.src='auto']
+ * @param {'manual'|'auto'|'quick'|'visibility'|'online'|'interval'|'startup'|'realtime'} [param0.src='auto']
  * @param {string} param0.evt - Tên sự kiện (sync_started, light_phase_done, novel_push, v.v.)
  * @param {string} [param0.novelId] - ID truyện (tự động cắt còn 8 ký tự, KHÔNG lưu tiêu đề)
  * @param {number} [param0.count] - Số lượng (chương, truyện, ...)
@@ -240,7 +240,7 @@ export function logSyncEvent({
 } = {}) {
   try {
     const validLevel = ['info', 'warn', 'error'].includes(level) ? level : 'info';
-    const validSrc = ['manual', 'auto', 'quick', 'visibility', 'online', 'interval', 'startup'].includes(src)
+    const validSrc = ['manual', 'auto', 'quick', 'visibility', 'online', 'interval', 'startup', 'realtime'].includes(src)
       ? src
       : 'auto';
 

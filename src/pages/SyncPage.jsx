@@ -7,6 +7,12 @@ import { deleteNovelDB } from '../lib/db.js';
 import { removeFromLibrary } from '../lib/storage.js';
 import { isProductionHost } from '../lib/sync/envProtection.js';
 import { isAutoSyncEnabled, setAutoSyncEnabled, getSyncStatus, setConflictDialogOpen } from '../lib/sync/autoSync.js';
+import {
+  isRealtimeEnabled,
+  setRealtimeEnabled,
+  getRealtimeStatus,
+  REALTIME_STATUS_CHANGED_EVENT,
+} from '../lib/sync/realtimeSignal.js';
 import { isBackupOverdue, getLastBackupTimestamp } from '../lib/backup/backupEngine.js';
 import {
   getSyncLogs,
@@ -41,6 +47,8 @@ export default function SyncPage() {
   const [deletedDuplicateIds, setDeletedDuplicateIds] = useState(new Set());
   const isProd = isProductionHost();
   const [autoSyncOn, setAutoSyncOn] = useState(() => isAutoSyncEnabled());
+  const [realtimeOn, setRealtimeOn] = useState(() => isRealtimeEnabled());
+  const [realtimeStatus, setRealtimeStatus] = useState(() => getRealtimeStatus());
   const [syncStatus, setSyncStatusState] = useState(() => getSyncStatus());
   const [backupOverdue, setBackupOverdue] = useState(() => isBackupOverdue(14));
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -53,8 +61,15 @@ export default function SyncPage() {
       setSyncStatusState(e.detail || getSyncStatus());
       setSyncLogs(getSyncLogs());
     };
+    const handleRealtime = (e) => {
+      setRealtimeStatus(e.detail?.status || getRealtimeStatus());
+    };
     window.addEventListener('tcl_sync_status_changed', handleStatus);
-    return () => window.removeEventListener('tcl_sync_status_changed', handleStatus);
+    window.addEventListener(REALTIME_STATUS_CHANGED_EVENT, handleRealtime);
+    return () => {
+      window.removeEventListener('tcl_sync_status_changed', handleStatus);
+      window.removeEventListener(REALTIME_STATUS_CHANGED_EVENT, handleRealtime);
+    };
   }, []);
 
   useEffect(() => {
@@ -434,6 +449,58 @@ export default function SyncPage() {
                   const val = e.target.checked;
                   setAutoSyncEnabled(val);
                   setAutoSyncOn(val);
+                }}
+                style={{ width: '18px', height: '18px', accentColor: '#38bdf8', cursor: !isProd ? 'not-allowed' : 'pointer' }}
+              />
+            </label>
+          </div>
+
+          {/* Tùy chọn Đồng bộ tức thời (Realtime Signal) */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', marginBottom: '16px', border: '1px solid rgba(255, 255, 255, 0.06)', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '220px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.92rem' }}>Đồng bộ tức thời</span>
+                <span style={{
+                  fontSize: '0.75rem',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontWeight: 500,
+                  background: realtimeStatus === 'active' ? 'rgba(52, 211, 153, 0.15)'
+                    : realtimeStatus === 'connecting' ? 'rgba(56, 189, 248, 0.15)'
+                    : realtimeStatus === 'paused' ? 'rgba(251, 191, 36, 0.15)'
+                    : 'rgba(148, 163, 184, 0.15)',
+                  color: realtimeStatus === 'active' ? '#34d399'
+                    : realtimeStatus === 'connecting' ? '#38bdf8'
+                    : realtimeStatus === 'paused' ? '#fbbf24'
+                    : '#94a3b8',
+                  border: `1px solid ${
+                    realtimeStatus === 'active' ? 'rgba(52, 211, 153, 0.3)'
+                    : realtimeStatus === 'connecting' ? 'rgba(56, 189, 248, 0.3)'
+                    : realtimeStatus === 'paused' ? 'rgba(251, 191, 36, 0.3)'
+                    : 'rgba(148, 163, 184, 0.3)'
+                  }`,
+                }}>
+                  {realtimeStatus === 'active' ? '● Đang hoạt động'
+                    : realtimeStatus === 'connecting' ? '⏳ Đang kết nối...'
+                    : realtimeStatus === 'paused' ? '⚠️ Tạm dừng (quay về kiểm tra 3 phút)'
+                    : '○ Tắt'}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px', lineHeight: '1.35' }}>
+                {!isProd
+                  ? 'Bị khóa tắt trên môi trường test'
+                  : 'Sử dụng tín hiệu Supabase Realtime để nhận dữ liệu mới ngay khi thiết bị khác lưu. Dùng thêm pin khi ứng dụng đang mở.'}
+              </div>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: !isProd ? 'not-allowed' : 'pointer' }}>
+              <input
+                type="checkbox"
+                disabled={!isProd}
+                checked={realtimeOn}
+                onChange={(e) => {
+                  const val = e.target.checked;
+                  setRealtimeEnabled(val);
+                  setRealtimeOn(val);
                 }}
                 style={{ width: '18px', height: '18px', accentColor: '#38bdf8', cursor: !isProd ? 'not-allowed' : 'pointer' }}
               />
