@@ -6356,7 +6356,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 if (t.includes('thần ma') || t.includes('ma công') || t.includes('tâm ma')) return { type: 'demon_god', color: '#c084fc', glow: '#ef4444', name: 'Đạo Ma Thần Thể' };
                 if (t.includes('thần vương') || t.includes('thái sơ') || t.includes('hoàng kim')) return { type: 'divine_king', color: '#fbbf24', glow: '#fef08a', name: 'Thái Sơ Thần Vương' };
                 if (t.includes('kim ô') || t.includes('thái dương') || t.includes('viêm')) return { type: 'solar_crow', color: '#f97316', glow: '#fbbf24', name: 'Kim Ô Liệt Diễm' };
-                if (t.includes('nguyệt') || t.includes('hồng trần') || t.includes('băng')) return { type: 'moon_goddess', color: '#e0e7ff', glow: '#38bdf8', name: 'Thái Âm Nguyệt Hoa' };
+                if (t.includes('nguyệt') || t.includes('hồng trần') || t.includes('tỉnh trung') || t.includes('băng')) return { type: 'moon_goddess', color: '#e0e7ff', glow: '#38bdf8', name: 'Thái Âm Nguyệt Hoa' };
                 if (t.includes('luân hồi') || t.includes('lục đạo')) return { type: 'reincarnation', color: '#38bdf8', glow: '#e2e8f0', name: 'Lục Đạo Thái Cực' };
                 if (t.includes('sáng thế') || t.includes('bàn nguyên')) return { type: 'phoenix', color: '#fde047', glow: '#4ade80', name: 'Sáng Thế Kim Phượng' };
                 if (t.includes('ngọc điệp') || t.includes('tạo hóa')) return { type: 'jade_butterfly', color: '#67e8f9', glow: '#ffffff', name: 'Tạo Hóa Bích Điệp' };

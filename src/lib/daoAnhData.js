@@ -11,6 +11,9 @@ export const DAO_ANH_ELEMENT_TYPES = {
   THAN_THE: { id: 'than_the', name: 'Thần Thể & Vô Địch', icon: '👑' },
 };
 
+export const TINH_TRUNG_LAO_NGUYET_POEM = 'Tỉnh trung lao nguyệt, hạo nguyệt chiếu chư thiên.';
+export const TINH_TRUNG_LAO_NGUYET_DESC = 'Đạo Anh ngưng tụ từ dị tượng vô thượng tỉnh trung lao nguyệt, vầng trăng vằng vặc vớt lên từ đáy giếng, xua tan mọi tà niệm ma chướng cõi phàm.';
+
 export const DAO_ANH_LIST = [
   // =========================================================================
   // I. 18 ĐẠO ANH HÓA SINH TỪ MỆNH ĐĂNG THẦN PHẨM
@@ -1152,8 +1155,8 @@ image: '/images/dao_anh/tran_nguc_minh_vuong_the.png',
     id: 'da_hong_tran_ngung_vong_anh_hao_nguyet',
     sourceType: 'artifact',
     sourceId: 'hong_tran_ngung_vong_anh_hao_nguyet',
-    name: 'Hồng Trần Hạo Nguyệt Đạo Anh',
-    title: 'Hồng Trần Ngưng Vọng Hạo Nguyệt',
+    name: 'Tỉnh Trung Lao Nguyệt Đạo Anh',
+    title: 'Tỉnh Trung Lao Nguyệt',
     category: 'thoi_khong',
     tier: 'than_pham',
     evolutionImages: [
@@ -1173,11 +1176,11 @@ image: '/images/dao_anh/tran_nguc_minh_vuong_the.png',
     foreheadMark: 'radiant_full_moon_sigil',
     ribbonStyle: 'mortal_dust_and_moonbeams',
     coreStyle: 'radiant_lunar_nexus',
-    poem: 'Hồng trần ngưng vọng, hạo nguyệt chiếu chư thiên.',
-    desc: 'Đạo Anh ngưng tụ từ dị tượng vô thượng hồng trần ngưng vọng ánh trăng vằng vặc, xua tan mọi tà niệm ma chướng cõi phàm.',
+    poem: TINH_TRUNG_LAO_NGUYET_POEM,
+    desc: TINH_TRUNG_LAO_NGUYET_DESC,
     skillName: 'Hạo Nguyệt Tịnh Hóa Quang',
     skillDesc: 'Chiếu rọi nguyệt quang thanh tẩy toàn bộ tâm ma, tăng 60% Thần Thức và hồi phục 20% chân nguyên mỗi hiệp.',
-    tribulationForm: 'Hồng Trần Tiên Hạo Nguyệt Đạo Thể',
+    tribulationForm: 'Tỉnh Trung Tiên Nguyệt Đạo Thể',
   },
   {
     id: 'da_tam_thu_dao',
@@ -1364,7 +1367,7 @@ export function findDaoAnhDefinition(da, state) {
   return DAO_ANH_LIST[0];
 }
 
-const daoAnhModules = import.meta.glob('../assets/images/dao_anh/*.png', { eager: true, import: 'default' });
+const daoAnhModules = typeof import.meta.glob === 'function' ? import.meta.glob('../assets/images/dao_anh/*.png', { eager: true, import: 'default' }) : {};
 const bundledDaoAnh = {};
 
 for (const [filepath, mod] of Object.entries(daoAnhModules)) {
@@ -1372,7 +1375,7 @@ for (const [filepath, mod] of Object.entries(daoAnhModules)) {
   bundledDaoAnh[filename] = mod;
 }
 
-import { getAssetUrl } from './assetHelper';
+import { getAssetUrl } from './assetHelper.js';
 export { getAssetUrl };
 
 export function resolveDaoAnhImage(rawPathOrId) {

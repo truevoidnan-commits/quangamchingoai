@@ -390,6 +390,9 @@ export const LIFE_LAMPS = [
 // =========================================================================
 // DANH SÁCH 24 THẦN PHẨM VẬT TRẤN ÁP THIÊN CUNG (BẢO VẬT & CÔNG PHÁP TỐI THƯỢNG)
 // =========================================================================
+export const TINH_TRUNG_ARTIFACT_POEM = 'Tỉnh trung lao nguyệt, hạo nguyệt chiếu chư thiên.';
+export const TINH_TRUNG_ARTIFACT_DESC = 'Dị tượng vô thượng tỉnh trung lao nguyệt, vớt vầng trăng sáng từ đáy giếng sâu, ánh trăng chiếu rọi thế gian xua tan mọi ma chướng cõi phàm.';
+
 export const SUPPRESSING_ARTIFACTS = [
   { id: 'tao_hoa_ngoc_diep', name: 'Tạo Hóa Ngọc Điệp', shortName: 'Ngọc Điệp', tier: 'than_pham', type: 'Đạo Tổ Di Vật', icon: '🪞', color: '#ef4444', desc: 'Mảnh vỡ ngọc điệp của Đạo Tổ ghi chép 3000 đại đạo, mở ra con đường tu tiên siêu việt cảnh giới.', poem: 'Tạo hóa ngọc điệp, thông hiểu vạn đạo.' },
   { id: 'kim_o_luyen_van_linh', name: 'Kim Ô Luyện Vạn Linh', shortName: 'Kim Ô Luyện Linh', tier: 'than_pham', type: 'Thái Dương Thần Công', icon: '☀️', color: '#ef4444', desc: 'Tuyệt kỹ chân hỏa Kim Ô thượng cổ, luyện hóa vạn linh khí tức trời đất thành thuần dương chi khí bảo hộ thiên cung.', poem: 'Kim ô xuất thế, vạn linh quy phục.' },
@@ -411,7 +414,7 @@ export const SUPPRESSING_ARTIFACTS = [
   { id: 'con_bang_tien_phap', name: 'Côn Bằng Tiên Pháp', shortName: 'Côn Bằng Pháp', tier: 'than_pham', type: 'Thập Hung Tuyệt Kỹ', icon: '🦅', color: '#ef4444', desc: 'Tiên pháp của Thái Cổ Thập Hung Côn Bằng, chưởng khống cực hạn âm dương và tốc độ vô địch thiên hạ.', poem: 'Côn bằng giương cánh, xé toạc cửu thiên.' },
   { id: 'trung_dong', name: 'Trùng Đồng', shortName: 'Trùng Đồng', tier: 'than_pham', type: 'Thái Cổ Thần Mâu', icon: '👁️', color: '#ef4444', desc: 'Thần nhãn song đồng thái cổ khai thiên tích địa, nhìn thấu bản nguyên đại đạo và diễn sinh thế giới thần quang.', poem: 'Trùng đồng khai thiên, khai tịch thế giới.' },
   { id: 'cuu_kiep_loi_nguc_kiem_phap', name: 'Cửu Kiếp Lôi Ngục Kiếm Pháp', shortName: 'Lôi Ngục Kiếm Pháp', tier: 'than_pham', type: 'Sát Phạt Kiếm Quyết', icon: '⚔️', color: '#ef4444', desc: 'Kiếm pháp triệu hoán chín tầng ngục lôi đình, trảm diệt sinh cơ và phong tỏa hoàn toàn kẻ địch.', poem: 'Cửu kiếp lôi ngục, kiếm trảm thần ma.' },
-  { id: 'hong_tran_ngung_vong_anh_hao_nguyet', name: 'Hồng Trần Ngưng Vọng Ánh Hạo Nguyệt', shortName: 'Hồng Trần Hạo Nguyệt', tier: 'than_pham', type: 'Vô Thượng Dị Tượng', icon: '🌕', color: '#ef4444', desc: 'Dị tượng vô thượng hồng trần ngưng vọng trăng sáng rực rỡ, ánh trăng chiếu rọi thế gian xua tan mọi ma chướng cõi phàm.', poem: 'Hồng trần ngưng vọng, hạo nguyệt chiếu chư thiên.' },
+  { id: 'hong_tran_ngung_vong_anh_hao_nguyet', name: 'Tỉnh Trung Lao Nguyệt', shortName: 'Tỉnh Trung Nguyệt', tier: 'than_pham', type: 'Vô Thượng Dị Tượng', icon: '🌕', color: '#ef4444', desc: 'Dị tượng vô thượng tỉnh trung lao nguyệt, vớt vầng trăng sáng từ đáy giếng sâu, ánh trăng chiếu rọi thế gian xua tan mọi ma chướng cõi phàm.', poem: 'Tỉnh trung lao nguyệt, hạo nguyệt chiếu chư thiên.' },
   { id: 'tam_thu_dao', name: 'Tam Thu Đao', shortName: 'Tam Thu Đao', tier: 'than_pham', type: 'Tuế Nguyệt Thần Binh', icon: '🗡️', color: '#ef4444', desc: 'Chiến đao ngưng tụ đao ý ba mùa thu của trời đất, một đao xuất vạn diệp lạc, chặt đứt thọ nguyên và ngưng đọng thời không.', poem: 'Nhất đao xuất vạn diệp lạc, tam thu tận định càn khôn.' },
   { id: 'thuong_thuong_hac_huyet', name: 'Thượng Thương Hắc Huyết', shortName: 'Hắc Huyết', tier: 'than_pham', type: 'Hắc Ám Đầu Nguồn', icon: '🩸', color: '#ef4444', desc: 'Một giọt máu rơi ra từ thượng thương, đầu nguồn hắc ám.', poem: 'Thượng thương hắc huyết, vạn giới trầm luân.' },
   { id: 'diet_the_loi_viem_dong', name: 'Diệt Thế Lôi Viêm Đồng', shortName: 'Lôi Viêm Đồng', tier: 'than_pham', type: 'Thần Thông Cực Hạn Nhãn Đồng', icon: '👁️', color: '#ef4444', desc: 'Đồng tử thần thoại ngưng tụ lôi đình và ngọn lửa diệt thế, một ánh nhìn thiêu rụi hư không và cấm chế.', poem: 'Lôi viêm đồng tử, chiếu rọi chư thiên.' },
@@ -798,6 +801,10 @@ export function migrateLegacyItems(state) {
     }
   }
 
+  // 7. Chuẩn hóa chuỗi tên hiển thị (Tỉnh Trung Lao Nguyệt & tương thích ngược)
+  // Quy tắc an toàn: Không đổi ID, không tăng _rev, không đổi _updatedAt, không sinh log
+  normalizeCultivationDisplayNames(state);
+
   if (hasChanged) {
     if (!state.logs) state.logs = [];
     const oldText = convertedOldNames.join(', ');
@@ -812,9 +819,173 @@ export function migrateLegacyItems(state) {
   return hasChanged;
 }
 
-export function getCultivationState() {
+/**
+ * Chuẩn hóa các chuỗi hiển thị của vật trấn cung "Tỉnh Trung Lao Nguyệt" (tương thích ngược từ "Hồng Trần Ngưng Vọng Ánh Hạo Nguyệt")
+ * - CHỈ đổi chuỗi hiển thị trong linhTangs, daoAnhs, palaceAnchors, inventoryArtifacts
+ * - KHÔNG đổi ID (hong_tran_ngung_vong_anh_hao_nguyet / da_hong_tran_ngung_vong_anh_hao_nguyet)
+ * - KHÔNG đổi đường dẫn ảnh hoặc icon
+ * - KHÔNG tăng _rev, KHÔNG đổi _updatedAt
+ * - Chạy idempotent (chạy nhiều lần kết quả như một)
+ */
+export function normalizeCultivationDisplayNames(state) {
+  if (!state || typeof state !== 'object') return state;
+
+  // 1. linhTangs
+  if (Array.isArray(state.linhTangs)) {
+    for (const t of state.linhTangs) {
+      if (!t || typeof t !== 'object') continue;
+      if (typeof t.name === 'string') {
+        t.name = t.name
+          .replace(/Hồng Trần Ngưng Vọng Ánh Hạo Nguyệt/g, 'Tỉnh Trung Lao Nguyệt')
+          .replace(/Hồng Trần Hạo Nguyệt/g, 'Tỉnh Trung Lao Nguyệt')
+          .replace(/Hồng Trần/g, 'Tỉnh Trung');
+      }
+      if (typeof t.originName === 'string') {
+        t.originName = t.originName
+          .replace(/Hồng Trần Ngưng Vọng Ánh Hạo Nguyệt/g, 'Tỉnh Trung')
+          .replace(/Hồng Trần Hạo Nguyệt/g, 'Tỉnh Trung')
+          .replace(/Hồng Trần/g, 'Tỉnh Trung');
+      }
+      if (typeof t.sourceDaoAnhName === 'string') {
+        t.sourceDaoAnhName = t.sourceDaoAnhName
+          .replace(/Hồng Trần Hạo Nguyệt Đạo Anh/g, 'Tỉnh Trung Lao Nguyệt Đạo Anh')
+          .replace(/Hồng Trần Đạo Anh/g, 'Tỉnh Trung Lao Nguyệt Đạo Anh')
+          .replace(/Hồng Trần Hạo Nguyệt/g, 'Tỉnh Trung Lao Nguyệt')
+          .replace(/Hồng Trần/g, 'Tỉnh Trung');
+      }
+      if (typeof t.thienDaoName === 'string') {
+        t.thienDaoName = t.thienDaoName
+          .replace(/Hồng Trần Ngưng Vọng Ánh Hạo Nguyệt/g, 'Tỉnh Trung Lao Nguyệt')
+          .replace(/Hồng Trần Hạo Nguyệt/g, 'Tỉnh Trung Lao Nguyệt')
+          .replace(/Hồng Trần/g, 'Tỉnh Trung');
+      }
+    }
+  }
+
+  // 2. daoAnhs
+  if (Array.isArray(state.daoAnhs)) {
+    for (const da of state.daoAnhs) {
+      if (!da || typeof da !== 'object') continue;
+      const isTarget = da.id === 'da_hong_tran_ngung_vong_anh_hao_nguyet' ||
+                       da.artifactId === 'hong_tran_ngung_vong_anh_hao_nguyet' ||
+                       da.sourceId === 'hong_tran_ngung_vong_anh_hao_nguyet';
+      if (typeof da.name === 'string') {
+        if (isTarget || da.name.includes('Hồng Trần')) {
+          da.name = da.name
+            .replace(/Hồng Trần Hạo Nguyệt Đạo Anh/g, 'Tỉnh Trung Lao Nguyệt Đạo Anh')
+            .replace(/Hồng Trần Đạo Anh/g, 'Tỉnh Trung Lao Nguyệt Đạo Anh')
+            .replace(/Hồng Trần Hạo Nguyệt/g, 'Tỉnh Trung Lao Nguyệt')
+            .replace(/Hồng Trần/g, 'Tỉnh Trung');
+        }
+      }
+      if (typeof da.title === 'string') {
+        if (isTarget || da.title.includes('Hồng Trần')) {
+          da.title = da.title
+            .replace(/Hồng Trần Ngưng Vọng Hạo Nguyệt/g, 'Tỉnh Trung Lao Nguyệt')
+            .replace(/Hồng Trần Ngưng Vọng Ánh Hạo Nguyệt/g, 'Tỉnh Trung Lao Nguyệt')
+            .replace(/Hồng Trần Hạo Nguyệt/g, 'Tỉnh Trung Lao Nguyệt')
+            .replace(/Hồng Trần/g, 'Tỉnh Trung');
+        }
+      }
+      if (typeof da.palaceName === 'string') {
+        if (isTarget || da.palaceName.includes('Hồng Trần')) {
+          da.palaceName = da.palaceName
+            .replace(/Hồng Trần Hạo Nguyệt Cung/g, 'Tỉnh Trung Lao Nguyệt Cung')
+            .replace(/Hồng Trần/g, 'Tỉnh Trung');
+        }
+      }
+      if (typeof da.tribulationForm === 'string') {
+        if (isTarget || da.tribulationForm.includes('Hồng Trần')) {
+          da.tribulationForm = da.tribulationForm
+            .replace(/Hồng Trần Tiên Hạo Nguyệt Đạo Thể/g, 'Tỉnh Trung Tiên Nguyệt Đạo Thể')
+            .replace(/Hồng Trần Tiên/g, 'Tỉnh Trung Tiên')
+            .replace(/Hồng Trần/g, 'Tỉnh Trung');
+        }
+      }
+      if (typeof da.element === 'string') {
+        if (isTarget || da.element.includes('Hồng Trần')) {
+          da.element = da.element
+            .replace(/Hồng Trần Hạo Nguyệt Thần Thể/g, 'Tỉnh Trung Nguyệt Thần Thể')
+            .replace(/Hồng Trần Thần Thể/g, 'Tỉnh Trung Thần Thể')
+            .replace(/Hồng Trần/g, 'Tỉnh Trung');
+        }
+      }
+      if (isTarget) {
+        if (typeof da.poem === 'string' && da.poem.includes('Hồng trần ngưng vọng')) {
+          da.poem = 'Tỉnh trung lao nguyệt, hạo nguyệt chiếu chư thiên.';
+        }
+        if (typeof da.desc === 'string' && da.desc.includes('hồng trần ngưng vọng')) {
+          da.desc = 'Đạo Anh ngưng tụ từ dị tượng vô thượng tỉnh trung lao nguyệt, vầng trăng vằng vặc vớt lên từ đáy giếng, xua tan mọi tà niệm ma chướng cõi phàm.';
+        }
+      }
+    }
+  }
+
+  // 3. palaceAnchors
+  if (state.palaceAnchors && typeof state.palaceAnchors === 'object') {
+    for (const [pIdx, anchor] of Object.entries(state.palaceAnchors)) {
+      if (anchor && typeof anchor === 'object') {
+        if (anchor.id === 'hong_tran_ngung_vong_anh_hao_nguyet' || (anchor.name && anchor.name.includes('Hồng Trần'))) {
+          if (anchor.name) {
+            anchor.name = anchor.name
+              .replace(/Hồng Trần Ngưng Vọng Ánh Hạo Nguyệt/g, 'Tỉnh Trung Lao Nguyệt')
+              .replace(/Hồng Trần Hạo Nguyệt/g, 'Tỉnh Trung Lao Nguyệt')
+              .replace(/Hồng Trần/g, 'Tỉnh Trung');
+          }
+          if (anchor.shortName) {
+            anchor.shortName = anchor.shortName
+              .replace(/Hồng Trần Hạo Nguyệt/g, 'Tỉnh Trung Nguyệt')
+              .replace(/Hồng Trần/g, 'Tỉnh Trung');
+          }
+          if (anchor.palaceName) {
+            anchor.palaceName = anchor.palaceName
+              .replace(/Hồng Trần Hạo Nguyệt Cung/g, 'Tỉnh Trung Lao Nguyệt Cung')
+              .replace(/Hồng Trần/g, 'Tỉnh Trung');
+          }
+          if (anchor.poem && anchor.poem.includes('Hồng trần ngưng vọng')) {
+            anchor.poem = 'Tỉnh trung lao nguyệt, hạo nguyệt chiếu chư thiên.';
+          }
+          if (anchor.desc && anchor.desc.includes('hồng trần ngưng vọng')) {
+            anchor.desc = 'Dị tượng vô thượng tỉnh trung lao nguyệt, vớt vầng trăng sáng từ đáy giếng sâu, ánh trăng chiếu rọi thế gian xua tan mọi ma chướng cõi phàm.';
+          }
+        }
+      }
+    }
+  }
+
+  // 4. inventoryArtifacts
+  if (Array.isArray(state.inventoryArtifacts)) {
+    for (const art of state.inventoryArtifacts) {
+      if (art && typeof art === 'object') {
+        if (art.id === 'hong_tran_ngung_vong_anh_hao_nguyet' || (art.name && art.name.includes('Hồng Trần'))) {
+          if (art.name) {
+            art.name = art.name
+              .replace(/Hồng Trần Ngưng Vọng Ánh Hạo Nguyệt/g, 'Tỉnh Trung Lao Nguyệt')
+              .replace(/Hồng Trần Hạo Nguyệt/g, 'Tỉnh Trung Lao Nguyệt')
+              .replace(/Hồng Trần/g, 'Tỉnh Trung');
+          }
+          if (art.shortName) {
+            art.shortName = art.shortName
+              .replace(/Hồng Trần Hạo Nguyệt/g, 'Tỉnh Trung Nguyệt')
+              .replace(/Hồng Trần/g, 'Tỉnh Trung');
+          }
+          if (art.poem && art.poem.includes('Hồng trần ngưng vọng')) {
+            art.poem = 'Tỉnh trung lao nguyệt, hạo nguyệt chiếu chư thiên.';
+          }
+          if (art.desc && art.desc.includes('hồng trần ngưng vọng')) {
+            art.desc = 'Dị tượng vô thượng tỉnh trung lao nguyệt, vớt vầng trăng sáng từ đáy giếng sâu, ánh trăng chiếu rọi thế gian xua tan mọi ma chướng cõi phàm.';
+          }
+        }
+      }
+    }
+  }
+
+  return state;
+}
+
+export function getCultivationState(profile = getActiveProfile()) {
   try {
-    const raw = localStorage.getItem(getCultivationKey('state'));
+    const raw = localStorage.getItem(getCultivationKey('state', profile));
     if (!raw) return { ...DEFAULT_STATE, _rev: 0, _updatedAt: 0 };
     const parsed = JSON.parse(raw);
     const state = { ...DEFAULT_STATE, ...parsed };
@@ -823,6 +994,7 @@ export function getCultivationState() {
 
     // Tự động chuyển đổi dữ liệu cũ (Legacy Items Migration)
     migrateLegacyItems(state);
+    normalizeCultivationDisplayNames(state);
 
     if (!state.linhTangs) state.linhTangs = [];
     if (!state.assignedHuyenLo) state.assignedHuyenLo = {};
@@ -2254,7 +2426,7 @@ export function getPalaceNameFromArtifact(artifact, palaceIdx = 0, allAnchors = 
     'con_bang_tien_phap': 'Côn Bằng Tiên Cung',
     'trung_dong': 'Trùng Đồng Cung',
     'cuu_kiep_loi_nguc_kiem_phap': 'Cửu Kiếp Lôi Ngục Cung',
-    'hong_tran_ngung_vong_anh_hao_nguyet': 'Hồng Trần Hạo Nguyệt Cung',
+    'hong_tran_ngung_vong_anh_hao_nguyet': 'Tỉnh Trung Lao Nguyệt Cung',
     'tam_thu_dao': 'Tam Thu Đao Cung',
     'thuong_thuong_hac_huyet': 'Thượng Thương Hắc Huyết Cung',
     'diet_the_loi_viem_dong': 'Diệt Thế Lôi Viêm Cung',
@@ -3771,7 +3943,7 @@ export function getLinhTangNameFromDaoAnh(da, index) {
   if (raw.includes('Trùng Đồng')) return 'Trùng Đồng';
   if (raw.includes('Tha Hóa')) return 'Tha Hóa';
   if (raw.includes('Tam Thu')) return 'Tam Thu';
-  if (raw.includes('Hồng Trần') || raw.includes('Hảo Nguyệt')) return 'Hồng Trần';
+  if (raw.includes('Tỉnh Trung') || raw.includes('Hồng Trần') || raw.includes('Hảo Nguyệt')) return 'Tỉnh Trung';
   if (raw.includes('Lôi Trì') || raw.includes('Diệt Thế Lôi')) return 'Lôi Trì';
   if (raw.includes('Kiếm') || raw.includes('Thảo Tự')) return 'Kiếm Thai';
   if (raw.includes('Ngũ Hành')) return 'Ngũ Hành';
