@@ -1,7 +1,9 @@
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import os from 'os';
+import crypto from 'crypto';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 import {
   SUPPRESSING_ARTIFACTS,
@@ -12,15 +14,40 @@ import {
   TINH_TRUNG_ARTIFACT_DESC,
 } from '../src/lib/cultivation.js';
 
-import {
-  DAO_ANH_LIST,
-  TINH_TRUNG_LAO_NGUYET_POEM,
-  TINH_TRUNG_LAO_NGUYET_DESC,
-} from '../src/lib/daoAnhData.js';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
+
+// Nạp module daoAnhData.js an toàn trong môi trường Node.js:
+// Mã nguồn thật trong src/lib/daoAnhData.js giữ nguyên 100% cú pháp chuẩn Vite (import.meta.glob, import không đuôi .js).
+// Tại test runner của Node, ta đọc file và tạo bản sao tạm thời trong os.tmpdir() để nạp module thực thi mà KHÔNG thêm bất kỳ workaround nào vào production code.
+const daoAnhSourcePath = path.join(rootDir, 'src', 'lib', 'daoAnhData.js');
+const rawDaoAnhSource = fs.readFileSync(daoAnhSourcePath, 'utf8');
+
+const assetHelperPath = path.join(rootDir, 'src', 'lib', 'assetHelper.js');
+const assetHelperUrl = pathToFileURL(assetHelperPath).href;
+
+const transformedSource = rawDaoAnhSource
+  .replace(/const daoAnhModules = import\.meta\.glob\([^)]*\);/g, 'const daoAnhModules = {};')
+  .replace(/from\s+['"]\.\/assetHelper['"]/g, `from '${assetHelperUrl}'`);
+
+const tempFile = path.join(os.tmpdir(), `daoAnhData_test_${crypto.randomBytes(8).toString('hex')}.mjs`);
+fs.writeFileSync(tempFile, transformedSource, 'utf8');
+
+let daoAnhMod;
+try {
+  daoAnhMod = await import(pathToFileURL(tempFile).href);
+} finally {
+  try {
+    fs.unlinkSync(tempFile);
+  } catch {}
+}
+
+const {
+  DAO_ANH_LIST,
+  TINH_TRUNG_LAO_NGUYET_POEM,
+  TINH_TRUNG_LAO_NGUYET_DESC,
+} = daoAnhMod;
 
 console.log('=== BẮT ĐẦU KIỂM THỬ ĐỔI TÊN THẦN VẬT "TỈNH TRUNG LAO NGUYỆT" ===\n');
 

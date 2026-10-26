@@ -1367,7 +1367,7 @@ export function findDaoAnhDefinition(da, state) {
   return DAO_ANH_LIST[0];
 }
 
-const daoAnhModules = typeof import.meta.glob === 'function' ? import.meta.glob('../assets/images/dao_anh/*.png', { eager: true, import: 'default' }) : {};
+const daoAnhModules = import.meta.glob('../assets/images/dao_anh/*.png', { eager: true, import: 'default' });
 const bundledDaoAnh = {};
 
 for (const [filepath, mod] of Object.entries(daoAnhModules)) {
@@ -1375,7 +1375,7 @@ for (const [filepath, mod] of Object.entries(daoAnhModules)) {
   bundledDaoAnh[filename] = mod;
 }
 
-import { getAssetUrl } from './assetHelper.js';
+import { getAssetUrl } from './assetHelper';
 export { getAssetUrl };
 
 export function resolveDaoAnhImage(rawPathOrId) {
