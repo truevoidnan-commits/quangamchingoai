@@ -295,6 +295,20 @@
   }
 }
 
+@media (max-width: 768px) {
+  .floating-back-library-btn.hide-on-mobile {
+    display: none !important;
+  }
+}
+
+/* THANH CÔNG CỤ TRẬN ĐỒ TRÊN MOBILE (IN-FLOW TOOLBAR) */
+.array-mobile-toolbar {
+  user-select: none;
+}
+.array-mobile-toolbar button:active {
+  transform: scale(0.92);
+}
+
 /* KHỐI THÔNG TIN TIÊN ĐẠO THỐNG NHẤT (UNIFIED CELESTIAL HUD) */
 .celestial-hud-bar {
   display: flex;

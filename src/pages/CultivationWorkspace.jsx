@@ -192,9 +192,9 @@ export default function CultivationWorkspace() {
 
       {/* 2. CENTER COLUMN: Celestial Array Visualizer (100% Tối Giản & Tràn Viền Tuyệt Đối) */}
       <div className={`cultivation-col-center ${mobileTab === 'visualizer' ? 'mobile-show' : ''}`}>
-        {/* Nút Quay Lại Thư Viện Nổi Siêu Nhỏ Gọn (Chỉ có icon mũi tên) */}
+        {/* Nút Quay Lại Thư Viện Nổi Siêu Nhỏ Gọn (Ẩn trên mobile khi tab trận đồ dùng thanh công cụ mới) */}
         <button
-          className="floating-back-library-btn"
+          className={`floating-back-library-btn ${(activeView === 'nguyen_anh' || activeView === 'gia_anh') ? 'hide-on-mobile' : ''}`}
           onClick={handleSmartBack}
           title="Quay lại Thư Viện"
         >
@@ -218,6 +218,7 @@ export default function CultivationWorkspace() {
         >
           <RealmPreviewVisualizer
             cultivation={{ ...cultivation, realm: activeView }}
+            onBack={handleSmartBack}
           />
         </div>
       </div>
