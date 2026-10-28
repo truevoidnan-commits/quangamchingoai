@@ -127,7 +127,11 @@ class MockProgressSupabaseClient {
       cultivation: new Map(),
     };
     this.upsertCalls = [];
+    this.updateCalls = [];
+    this.insertCalls = [];
     this.failOnUpsert = false;
+    this.failOnUpdate = false;
+    this.failOnInsert = false;
     this.authListeners = [];
 
     this.realtime = {
@@ -175,25 +179,101 @@ class MockProgressSupabaseClient {
 
   from(tableName) {
     const self = this;
+    const tableMap = self.tables[tableName] || new Map();
+    self.tables[tableName] = tableMap;
+
+    let op = null; // 'select' | 'insert' | 'update' | 'upsert'
+    let opPayload = null;
+    let eqFilters = {};
+    let ltFilters = {};
+    let selectedCols = null;
+
     const builder = {
+      select: (cols) => {
+        selectedCols = cols;
+        return builder;
+      },
+      eq: (col, val) => {
+        eqFilters[col] = val;
+        return builder;
+      },
+      lt: (col, val) => {
+        ltFilters[col] = val;
+        return builder;
+      },
+      single: () => {
+        return builder;
+      },
+      insert: async (payload) => {
+        op = 'insert';
+        opPayload = payload;
+        self.insertCalls.push({ table: tableName, payload });
+
+        if (self.failOnInsert || self.failOnUpsert) {
+          return { data: null, error: new Error('Simulated network insert failure') };
+        }
+
+        if (tableName === 'progress') {
+          const key = payload.novel_id;
+          if (tableMap.has(key)) {
+            return {
+              data: null,
+              error: { code: '23505', message: 'duplicate key value violates unique constraint' },
+            };
+          }
+          tableMap.set(key, { ...payload });
+          return { data: [payload], error: null };
+        }
+
+        tableMap.set(payload.id || payload.user_id, { ...payload });
+        return { data: [payload], error: null };
+      },
+      update: (payload) => {
+        op = 'update';
+        opPayload = payload;
+        self.updateCalls.push({ table: tableName, payload });
+        return builder;
+      },
       upsert: async (payload, options = {}) => {
         self.upsertCalls.push({ table: tableName, payload, options });
         if (self.failOnUpsert) {
           return { data: null, error: new Error('Simulated network upsert failure') };
         }
         if (tableName === 'progress') {
-          self.tables.progress.set(payload.novel_id, { ...payload });
+          tableMap.set(payload.novel_id, { ...payload });
         } else if (tableName === 'cultivation') {
-          self.tables.cultivation.set(payload.user_id, { ...payload });
+          tableMap.set(payload.user_id, { ...payload });
+        } else {
+          tableMap.set(payload.id || payload.user_id, { ...payload });
         }
         return { data: payload, error: null };
       },
-      select: () => builder,
-      eq: () => builder,
-      lt: () => builder,
-      single: () => builder,
-      then: (resolve) => resolve({ data: [], error: null }),
+      then: (resolve) => {
+        if (op === 'update') {
+          if (self.failOnUpdate || self.failOnUpsert) {
+            return resolve({ data: null, error: new Error('Simulated network update failure') });
+          }
+          if (tableName === 'progress') {
+            const key = eqFilters.novel_id;
+            const existing = tableMap.get(key);
+            if (!existing) {
+              return resolve({ data: [], error: null });
+            }
+            if (ltFilters.updated_at !== undefined) {
+              if (!((existing.updated_at || 0) < ltFilters.updated_at)) {
+                // Cloud đã có dòng mới hơn hoặc bằng -> không thỏa điều kiện lt
+                return resolve({ data: [], error: null });
+              }
+            }
+            // Thỏa mãn điều kiện update
+            Object.assign(existing, opPayload);
+            return resolve({ data: [{ novel_id: key }], error: null });
+          }
+        }
+        return resolve({ data: [], error: null });
+      },
     };
+
     return builder;
   }
 }
@@ -336,23 +416,25 @@ async function runProgressFlushTests() {
     saveReadingProgress('nov_1', { chapterId: 'ch_1', updatedAt: 5000 });
     saveReadingProgress('nov_2', { chapterId: 'ch_2', updatedAt: 6000 });
 
-    // Lượt 1: Cả 2 đều mới -> đẩy cả 2
+    // Lượt 1: Cả 2 đều mới -> đẩy cả 2 (insert thành công)
     const res1 = await flushReadingProgress(client);
     assert.strictEqual(res1.flushed, 2, 'Lần 1 đẩy 2 truyện');
-    assert.strictEqual(client.upsertCalls.filter((c) => c.table === 'progress').length, 2);
+    assert.strictEqual(client.insertCalls.filter((c) => c.table === 'progress').length, 2);
 
     // Lượt 2: Không ai đổi -> 0 truyện được đẩy
-    client.upsertCalls = [];
+    const prevInsertCount = client.insertCalls.length;
+    const prevUpdateCount = client.updateCalls.length;
     const res2 = await flushReadingProgress(client);
     assert.strictEqual(res2.flushed, 0, 'Lần 2 không có gì đổi -> không đẩy');
-    assert.strictEqual(client.upsertCalls.length, 0, 'Không phát sinh bất kỳ lời gọi upsert nào');
+    assert.strictEqual(client.insertCalls.length, prevInsertCount, 'Không phát sinh insert mới');
+    assert.strictEqual(client.updateCalls.length, prevUpdateCount, 'Không phát sinh update mới');
 
-    // Lượt 3: Chỉ nov_1 đổi sang chương mới lúc t=7000
+    // Lượt 3: Chỉ nov_1 đổi sang chương mới lúc t=7000 -> update thành công
     saveReadingProgress('nov_1', { chapterId: 'ch_2', updatedAt: 7000 });
     const res3 = await flushReadingProgress(client);
     assert.strictEqual(res3.flushed, 1, 'Chỉ đẩy đúng 1 truyện đã đổi');
-    assert.strictEqual(client.upsertCalls.length, 1);
-    assert.strictEqual(client.upsertCalls[0].payload.novel_id, 'nov_1');
+    assert.strictEqual(client.tables.progress.get('nov_1').updated_at, 7000);
+    assert.strictEqual(getNovelLastSyncedProgressAt('nov_1'), 7000);
 
     console.log('✓ Test B Passed: Hoàn toàn không đẩy lại truyện chưa đổi!');
   }
@@ -477,6 +559,73 @@ async function runProgressFlushTests() {
     assert.strictEqual(getNovelLastSyncedProgressAt('nov_err'), 12345);
 
     console.log('✓ Test E Passed: Lỗi mạng được nuốt an toàn, ledger không đổi, lần sau thử lại thành công!');
+  }
+
+  // -----------------------------------------------------------
+  // TEST F: Cloud có tiến độ mới hơn thì flush không ghi đè và không tính là đã đẩy
+  // -----------------------------------------------------------
+  console.log('\n--- Test F: Cloud có tiến độ mới hơn -> flush không ghi đè và không tính là đã đẩy ---');
+  {
+    global.localStorage.clear();
+    clearSyncLogs();
+    setActiveProfile('real');
+    setHostOverrideForTesting('test.github.io');
+    setAutoSyncEnabled(true);
+
+    const client = new MockProgressSupabaseClient('user_flush_F');
+    setCachedUserIdForTesting('user_flush_F');
+
+    saveLibrary([
+      { id: 'nov_newer_on_cloud', title: 'Truyện Đọc Máy Khác' },
+      { id: 'nov_new_local', title: 'Truyện Mới Tinh' },
+    ]);
+
+    // 1. Máy tính đọc lúc t=5000 và đã đẩy lên cloud trước
+    client.tables.progress.set('nov_newer_on_cloud', {
+      user_id: 'user_flush_F',
+      novel_id: 'nov_newer_on_cloud',
+      data: { chapterId: 'ch_desktop_50', percent: 0.95 },
+      updated_at: 5000,
+    });
+
+    // 2. Điện thoại đọc offline trước đó lúc t=3000 (< 5000)
+    saveReadingProgress('nov_newer_on_cloud', {
+      chapterId: 'ch_phone_20',
+      percent: 0.3,
+      updatedAt: 3000,
+    });
+
+    // Truyện nov_new_local hoàn toàn chưa có trên cloud, đọc lúc t=4000
+    saveReadingProgress('nov_new_local', {
+      chapterId: 'ch_local_1',
+      percent: 0.1,
+      updatedAt: 4000,
+    });
+
+    // Gọi flushReadingProgress
+    const res = await flushReadingProgress(client);
+
+    // nov_newer_on_cloud bị chặn không ghi đè vì cloud đã có t=5000 > 3000.
+    // Chỉ có nov_new_local được đẩy thành công.
+    assert.strictEqual(res.flushed, 1, 'Chỉ 1 truyện mới được đẩy, truyện cloud mới hơn không bị tính');
+
+    // Khẳng định: Trên cloud, nov_newer_on_cloud VẪN GIỮ NGUYÊN tiến độ máy tính (t=5000, ch_desktop_50)
+    const cloudItem = client.tables.progress.get('nov_newer_on_cloud');
+    assert.strictEqual(cloudItem.updated_at, 5000, 'Cloud phải giữ nguyên mốc 5000, không bị đè thành 3000');
+    assert.strictEqual(cloudItem.data.chapterId, 'ch_desktop_50');
+
+    // Khẳng định: Ledger KHÔNG cập nhật lastSyncedProgressAt cho nov_newer_on_cloud
+    assert.strictEqual(
+      getNovelLastSyncedProgressAt('nov_newer_on_cloud'),
+      0,
+      'Ledger không được cập nhật cho truyện cloud mới hơn (để sync kéo về)'
+    );
+
+    // Khẳng định: nov_new_local được insert thành công và cập nhật ledger
+    assert.strictEqual(client.tables.progress.get('nov_new_local').updated_at, 4000);
+    assert.strictEqual(getNovelLastSyncedProgressAt('nov_new_local'), 4000);
+
+    console.log('✓ Test F Passed: Cloud có tiến độ mới hơn tuyệt đối không bị đè và giữ nguyên để kéo về!');
   }
 
   console.log('\n=== TẤT CẢ CÁC BÀI TEST FLUSH READING PROGRESS ĐÃ VƯỢT QUA 100%! ===');

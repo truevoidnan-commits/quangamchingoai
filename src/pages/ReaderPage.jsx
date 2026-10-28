@@ -492,7 +492,6 @@ export default function ReaderPage() {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       if (throttleTimer) clearTimeout(throttleTimer);
-      saveCurrentPositionImmediate();
       flushReadingProgress();
     };
   }, [chapter?.id, loading, activeNovelId, saveCurrentPositionImmediate]);

@@ -1383,20 +1383,63 @@ export async function flushReadingProgress(customSupabase = null) {
 
       // Chỉ đẩy các truyện có tiến độ mới hơn ledger đã sync gần nhất (hoặc cloud chưa có)
       if (localUpdatedAt > lastSyncedProgressAt) {
-        const { error: upsertErr } = await client.from('progress').upsert({
-          user_id: userId,
-          novel_id: item.id,
-          data: localProg,
-          updated_at: localUpdatedAt,
-        }, { onConflict: 'user_id,novel_id' });
+        let pushed = false;
+        try {
+          // a. Thử update với điều kiện cloud cũ hơn: updated_at < localUpdatedAt
+          const { data: updatedRows, error: updateErr } = await client
+            .from('progress')
+            .update({
+              data: localProg,
+              updated_at: localUpdatedAt,
+            })
+            .eq('user_id', userId)
+            .eq('novel_id', item.id)
+            .lt('updated_at', localUpdatedAt)
+            .select('novel_id');
 
-        if (!upsertErr) {
+          if (updateErr) {
+            console.warn(`Lỗi update tiến độ đọc truyện "${item.id}":`, updateErr.message);
+          } else if (updatedRows && updatedRows.length > 0) {
+            pushed = true;
+          } else {
+            // b. Nếu trả về 0 dòng: thử insert dòng mới (trường hợp cloud chưa có dòng)
+            const { error: insertErr } = await client
+              .from('progress')
+              .insert({
+                user_id: userId,
+                novel_id: item.id,
+                data: localProg,
+                updated_at: localUpdatedAt,
+              });
+
+            if (!insertErr) {
+              pushed = true;
+            } else {
+              const isDuplicateKey =
+                insertErr.code === '23505' ||
+                String(insertErr.code) === '23505' ||
+                insertErr.message?.includes('23505') ||
+                insertErr.message?.toLowerCase().includes('duplicate key') ||
+                insertErr.message?.toLowerCase().includes('unique constraint');
+
+              if (isDuplicateKey) {
+                // Cloud đã có dòng mới hơn hoặc bằng -> KHÔNG coi là lỗi, KHÔNG cập nhật lastSyncedProgressAt
+                // để luồng sync đầy đủ kéo về như bình thường, KHÔNG gọi notifyOtherDevices cho truyện này
+              } else {
+                console.warn(`Lỗi insert tiến độ đọc truyện "${item.id}":`, insertErr.message);
+              }
+            }
+          }
+        } catch (opErr) {
+          console.warn(`Lỗi thao tác tiến độ đọc truyện "${item.id}":`, opErr?.message);
+        }
+
+        // c. Chỉ khi (a) hoặc (b) ghi thành công mới set lastSyncedProgressAt và đếm pushedCount
+        if (pushed) {
           if (!ledger.novels) ledger.novels = {};
           if (!ledger.novels[item.id]) ledger.novels[item.id] = {};
           ledger.novels[item.id].lastSyncedProgressAt = localUpdatedAt;
           pushedCount++;
-        } else {
-          console.warn(`Lỗi flush tiến độ đọc truyện "${item.id}":`, upsertErr.message);
         }
       }
     }
