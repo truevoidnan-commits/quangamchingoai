@@ -47,6 +47,21 @@ export function saveSyncLedger(ledger) {
   }
 }
 
+export function getNovelLastSyncedProgressAt(novelId) {
+  if (!novelId) return 0;
+  const ledger = getSyncLedger();
+  return ledger.novels?.[novelId]?.lastSyncedProgressAt || 0;
+}
+
+export function setNovelLastSyncedProgressAt(novelId, timestamp) {
+  if (!novelId) return;
+  const ledger = getSyncLedger();
+  if (!ledger.novels) ledger.novels = {};
+  if (!ledger.novels[novelId]) ledger.novels[novelId] = {};
+  ledger.novels[novelId].lastSyncedProgressAt = timestamp;
+  saveSyncLedger(ledger);
+}
+
 export function getDirtyNovels() {
   try {
     const raw = localStorage.getItem(DIRTY_KEY);

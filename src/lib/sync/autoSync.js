@@ -28,6 +28,7 @@ import {
 import {
   getLibrary,
   getReadingProgress,
+  saveReadingProgress,
   removeFromLibrary,
   updateLibraryItem,
 } from '../storage.js';
@@ -75,6 +76,15 @@ let _nextRetryTimestamp = 0;
 let _progressDebounceTimer = null;
 let _initialized = false;
 let _intervalTimer = null;
+let _cachedUserId = null;
+
+export function setCachedUserIdForTesting(id) {
+  _cachedUserId = id;
+}
+
+export function getCachedUserId() {
+  return _cachedUserId;
+}
 
 // Modal open flags
 let _isConflictDialogOpen = false;
@@ -366,6 +376,9 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       return { skipped: true, reason: 'not_logged_in' };
     }
     session = s;
+    if (session?.user?.id) {
+      _cachedUserId = session.user.id;
+    }
   } catch (err) {
     releaseSyncLock();
     return { skipped: true, reason: 'auth_error' };
@@ -542,6 +555,17 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       const progRes = await syncReadingProgress(client, userId, allNovelIds, { mode: 'normal' });
       if (progRes?.progressPushed > 0) {
         pushedScopes.add('progress');
+      }
+      for (const novelId of allNovelIds) {
+        const prog = getReadingProgress(novelId);
+        if (prog?.updatedAt) {
+          if (!ledger.novels) ledger.novels = {};
+          if (!ledger.novels[novelId]) ledger.novels[novelId] = {};
+          ledger.novels[novelId].lastSyncedProgressAt = Math.max(
+            ledger.novels[novelId].lastSyncedProgressAt || 0,
+            prog.updatedAt
+          );
+        }
       }
     } catch (e) {
       console.warn('Auto sync reading progress error:', e.message);
@@ -1164,9 +1188,22 @@ export function initAutoSync(customSupabase = null) {
   if (client?.auth) {
     client.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.id) {
+        _cachedUserId = session.user.id;
         startRealtime(client, session.user.id).catch(() => {});
       }
     }).catch(() => {});
+
+    if (typeof client.auth.onAuthStateChange === 'function') {
+      try {
+        client.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_OUT' || !session?.user) {
+            _cachedUserId = null;
+          } else if (session?.user?.id) {
+            _cachedUserId = session.user.id;
+          }
+        });
+      } catch {}
+    }
   }
 
   // 0. Lắng nghe thay đổi thư viện
@@ -1188,6 +1225,7 @@ export function initAutoSync(customSupabase = null) {
     } else if (document.visibilityState === 'hidden') {
       Promise.allSettled([
         quickPushProgressAndCultivation(customSupabase),
+        flushReadingProgress(customSupabase),
         quickPushLibraryMetadata(customSupabase),
       ]).catch(() => {});
     }
@@ -1202,6 +1240,7 @@ export function initAutoSync(customSupabase = null) {
   window.addEventListener('pagehide', () => {
     Promise.allSettled([
       quickPushProgressAndCultivation(customSupabase),
+      flushReadingProgress(customSupabase),
       quickPushLibraryMetadata(customSupabase),
     ]).catch(() => {});
   });
@@ -1215,7 +1254,7 @@ export function initAutoSync(customSupabase = null) {
 }
 
 /**
- * Lắng nghe thay đổi tiến độ đọc với debounce 30s
+ * Lắng nghe thay đổi tiến độ đọc với debounce 8s
  */
 export function notifyReadingProgressChanged(customSupabase = null) {
   if (!isProductionHost() || !isAutoSyncEnabled()) return;
@@ -1224,7 +1263,7 @@ export function notifyReadingProgressChanged(customSupabase = null) {
   }
   _progressDebounceTimer = setTimeout(() => {
     runAutoSync(customSupabase, { src: 'auto' }).catch(() => {});
-  }, 30000);
+  }, 8000);
 }
 
 /**
@@ -1237,9 +1276,13 @@ async function quickPushProgressAndCultivation(customSupabase = null) {
   if (!client?.auth) return;
 
   try {
-    const { data: { session } } = await client.auth.getSession();
-    if (!session?.user) return;
-    const userId = session.user.id;
+    let userId = _cachedUserId;
+    if (!userId) {
+      const { data: { session } } = await client.auth.getSession();
+      if (!session?.user) return;
+      userId = session.user.id;
+      _cachedUserId = userId;
+    }
 
     const ledger = getSyncLedger();
     const localState = getCultivationState();
@@ -1276,5 +1319,108 @@ async function quickPushProgressAndCultivation(customSupabase = null) {
     }
   } catch (err) {
     console.warn('Lỗi quickPushProgressAndCultivation:', err.message);
+  }
+}
+
+/**
+ * Đẩy nhanh tiến độ đọc các truyện đã thay đổi lên Cloud (không chờ debounce)
+ * Được gọi khi tab bị ẩn (visibilitychange=hidden), đóng tab (pagehide),
+ * hoặc khi rời chương / unmount trong ReaderPage.
+ */
+export async function flushReadingProgress(customSupabase = null) {
+  if (!isProductionHost() || !isAutoSyncEnabled()) return { flushed: 0, reason: 'disabled' };
+  if (getActiveProfile() !== 'real') return { flushed: 0, reason: 'sandbox_profile' };
+  if (isSyncBypassDirty()) return { flushed: 0, reason: 'bypass_dirty' };
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return { flushed: 0, reason: 'offline' };
+  }
+
+  const client = customSupabase || supabase;
+  if (!client?.auth) return { flushed: 0, reason: 'no_client' };
+
+  let userId = _cachedUserId;
+  if (!userId) {
+    try {
+      const { data: { session } } = await client.auth.getSession();
+      if (!session?.user?.id) return { flushed: 0, reason: 'not_logged_in' };
+      userId = session.user.id;
+      _cachedUserId = userId;
+    } catch {
+      return { flushed: 0, reason: 'not_logged_in' };
+    }
+  }
+
+  try {
+    const library = getLibrary({ includeHidden: true });
+    const tombstones = getTombstones();
+    const ledger = getSyncLedger();
+    let pushedCount = 0;
+
+    for (const item of library) {
+      if (!item?.id || tombstones[item.id]) continue;
+
+      let localProg = getReadingProgress(item.id);
+      if (!localProg || !localProg.chapterId) continue;
+
+      // Phục hồi updatedAt cho tiến độ cũ nếu chưa có
+      if (!localProg.updatedAt) {
+        let fallbackTime = 0;
+        try {
+          const rawScroll = localStorage.getItem(`scroll_pos_${item.id}_${localProg.chapterId}`);
+          if (rawScroll) {
+            const parsedScroll = JSON.parse(rawScroll);
+            if (typeof parsedScroll.time === 'number' && parsedScroll.time > 0) {
+              fallbackTime = parsedScroll.time;
+            }
+          }
+        } catch {}
+        localProg.updatedAt = fallbackTime || Date.now();
+        saveReadingProgress(item.id, localProg);
+      }
+
+      const localUpdatedAt = localProg.updatedAt;
+      const lastSyncedProgressAt = ledger.novels?.[item.id]?.lastSyncedProgressAt || 0;
+
+      // Chỉ đẩy các truyện có tiến độ mới hơn ledger đã sync gần nhất (hoặc cloud chưa có)
+      if (localUpdatedAt > lastSyncedProgressAt) {
+        const { error: upsertErr } = await client.from('progress').upsert({
+          user_id: userId,
+          novel_id: item.id,
+          data: localProg,
+          updated_at: localUpdatedAt,
+        }, { onConflict: 'user_id,novel_id' });
+
+        if (!upsertErr) {
+          if (!ledger.novels) ledger.novels = {};
+          if (!ledger.novels[item.id]) ledger.novels[item.id] = {};
+          ledger.novels[item.id].lastSyncedProgressAt = localUpdatedAt;
+          pushedCount++;
+        } else {
+          console.warn(`Lỗi flush tiến độ đọc truyện "${item.id}":`, upsertErr.message);
+        }
+      }
+    }
+
+    if (pushedCount > 0) {
+      saveSyncLedger(ledger);
+      notifyOtherDevices(['progress']);
+      logSyncEvent({
+        level: 'info',
+        src: 'auto',
+        evt: 'progress_flushed',
+        msg: `Đã đẩy tiến độ ${pushedCount} truyện`,
+      });
+    }
+
+    return { flushed: pushedCount };
+  } catch (err) {
+    console.warn('Lỗi flushReadingProgress:', err?.message);
+    logSyncEvent({
+      level: 'warn',
+      src: 'auto',
+      evt: 'progress_flush_error',
+      msg: err?.message || String(err),
+    });
+    return { flushed: 0, error: err?.message };
   }
 }

@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { getNovel, getChapters, getChapter } from '../lib/db';
 import { getReadingProgress, saveReadingProgress } from '../lib/storage';
 import { pullNovelProgressNow } from '../lib/sync/syncEngine.js';
-import { notifyReadingProgressChanged } from '../lib/sync/autoSync.js';
+import { notifyReadingProgressChanged, flushReadingProgress } from '../lib/sync/autoSync.js';
 import { useReadingSettings } from '../hooks/useReadingSettings';
 import { READING_THEMES, FONT_OPTIONS } from '../hooks/useReadingSettings';
 import { useCultivation } from '../hooks/useCultivation';
@@ -311,6 +311,7 @@ export default function ReaderPage() {
   const handleGoToCultivationFromReader = useCallback(() => {
     if (dismissPromptAllDaoAnhFull) dismissPromptAllDaoAnhFull();
     saveCurrentPositionImmediate();
+    flushReadingProgress();
     sessionStorage.setItem('from_reader', '1');
     sessionStorage.setItem('last_reading_url', window.location.hash ? window.location.hash.slice(1) : (window.location.pathname + window.location.search));
     navigate('/cultivation');
@@ -411,6 +412,7 @@ export default function ReaderPage() {
           percent: 0,
           paraIndex: 0
         });
+        flushReadingProgress();
       }
     }
   }, [chapter?.id, activeNovelId]);
@@ -478,13 +480,20 @@ export default function ReaderPage() {
       }
     };
 
+    const handleBeforeUnload = () => {
+      saveCurrentPositionImmediate();
+      flushReadingProgress();
+    };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('beforeunload', saveCurrentPositionImmediate);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('beforeunload', saveCurrentPositionImmediate);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       if (throttleTimer) clearTimeout(throttleTimer);
+      saveCurrentPositionImmediate();
+      flushReadingProgress();
     };
   }, [chapter?.id, loading, activeNovelId, saveCurrentPositionImmediate]);
 
@@ -788,10 +797,12 @@ export default function ReaderPage() {
 
   const goToChapter = useCallback((ch) => {
     if (ch) {
+      saveCurrentPositionImmediate();
+      flushReadingProgress();
       const queryStr = searchKeyword ? `?q=${encodeURIComponent(searchKeyword)}` : '';
       navigate(`/novel/${activeNovelId}/read/${ch.id}${queryStr}`);
     }
-  }, [navigate, activeNovelId, searchKeyword]);
+  }, [navigate, activeNovelId, searchKeyword, saveCurrentPositionImmediate]);
 
   const clearHighlight = () => {
     const next = new URLSearchParams(searchParams);
@@ -818,7 +829,11 @@ export default function ReaderPage() {
         <div className={styles.topBarInner}>
           <button
             className={styles.topBtn}
-            onClick={() => navigate(`/novel/${activeNovelId}`)}
+            onClick={() => {
+              saveCurrentPositionImmediate();
+              flushReadingProgress();
+              navigate(`/novel/${activeNovelId}`);
+            }}
             aria-label="Quay lại"
           >
             ←
@@ -835,6 +850,7 @@ export default function ReaderPage() {
                 className={styles.topBtn}
                 onClick={() => {
                   saveCurrentPositionImmediate();
+                  flushReadingProgress();
                   sessionStorage.setItem('from_reader', '1');
                   sessionStorage.setItem('last_reading_url', window.location.hash ? window.location.hash.slice(1) : (window.location.pathname + window.location.search));
                   clearUnreadDrops();
@@ -939,6 +955,7 @@ export default function ReaderPage() {
                 className="btn-gold"
                 onClick={() => {
                   saveCurrentPositionImmediate();
+                  flushReadingProgress();
                   sessionStorage.setItem('from_reader', '1');
                   sessionStorage.setItem('last_reading_url', window.location.hash ? window.location.hash.slice(1) : (window.location.pathname + window.location.search));
                   setDroppedLamp(null);
@@ -1066,7 +1083,11 @@ export default function ReaderPage() {
         onClose={() => setTocOpen(false)}
         chapters={chapters}
         currentChapterId={chapterId}
-        onSelectChapter={(ch) => navigate(`/novel/${activeNovelId}/read/${ch.id}`)}
+        onSelectChapter={(ch) => {
+          saveCurrentPositionImmediate();
+          flushReadingProgress();
+          navigate(`/novel/${activeNovelId}/read/${ch.id}`);
+        }}
       />
 
       {/* Reading settings */}
