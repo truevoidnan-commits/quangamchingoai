@@ -1603,7 +1603,7 @@ function CucCanhYinYangBadge({ is121Unlocked }) {
   );
 }
 
-export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: propCultivation, onBack }) {
+export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: propCultivation, swapMode: propSwapMode, onSwapModeChange }) {
   const { 
     cultivation: contextCultivation, 
     selectedNode, 
@@ -1660,7 +1660,25 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
   const [hoveredDaoAnh, setHoveredDaoAnh] = useState(null);
   const [thunderStrikeActive, setThunderStrikeActive] = useState(null);
   const [isBreakthroughAnim, setIsBreakthroughAnim] = useState(false);
-  const [isSwapMode, setIsSwapMode] = useState(false);
+  const [localSwapMode, setLocalSwapMode] = useState(false);
+  const isControlledSwap = typeof propSwapMode === 'boolean';
+  const isSwapMode = isControlledSwap ? propSwapMode : localSwapMode;
+  const setIsSwapMode = (valOrUpdater) => {
+    const nextVal = typeof valOrUpdater === 'function' ? valOrUpdater(isSwapMode) : valOrUpdater;
+    if (onSwapModeChange) {
+      onSwapModeChange(nextVal);
+    }
+    if (!isControlledSwap) {
+      setLocalSwapMode(nextVal);
+    }
+  };
+
+  useEffect(() => {
+    if (!isSwapMode) {
+      setSwapSelectedIdx(null);
+      setSwapNotice('');
+    }
+  }, [isSwapMode]);
   const [swapSelectedIdx, setSwapSelectedIdx] = useState(null);
   const [swapNotice, setSwapNotice] = useState('');
 
@@ -5961,7 +5979,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           );
         };
 
-        const showMobileToolbar = isMobile && Boolean(onBack);
 
         return (
           <div style={{
@@ -5980,140 +5997,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             backgroundColor: '#020617',
             userSelect: 'none'
           }}>
-            {/* THANH CÔNG CỤ MỎNG TRÊN MOBILE TRONG LUỒNG BỐ CỤC (THAY THẾ 2 NÚT NỔI & BANNER CHE ĐẠO ANH) */}
-            {showMobileToolbar && (
-              <div
-                className="array-mobile-toolbar"
-                style={{
-                  width: '100%',
-                  height: 36,
-                  minHeight: 36,
-                  maxHeight: 36,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0 8px',
-                  background: 'rgba(8, 14, 28, 0.85)',
-                  backdropFilter: 'blur(10px)',
-                  WebkitBackdropFilter: 'blur(10px)',
-                  borderBottom: '1px solid rgba(56, 189, 248, 0.2)',
-                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.4)',
-                  zIndex: 40,
-                  flexShrink: 0,
-                  boxSizing: 'border-box',
-                  gap: 8
-                }}
-              >
-                {/* Trái: Nút ← quay lại thư viện / trang trước */}
-                <button
-                  type="button"
-                  onClick={onBack}
-                  title="Quay lại"
-                  aria-label="Quay lại"
-                  style={{
-                    width: 32,
-                    height: 32,
-                    minWidth: 32,
-                    minHeight: 32,
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'rgba(16, 25, 39, 0.75)',
-                    border: '1px solid rgba(6, 182, 212, 0.4)',
-                    color: 'var(--accent-cyan, #22c3f0)',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-                    padding: 0,
-                    flexShrink: 0,
-                    fontSize: 16,
-                    fontWeight: 900,
-                    lineHeight: 1
-                  }}
-                >
-                  <span style={{ transform: 'translateX(-1px)' }}>←</span>
-                </button>
-
-                {/* Giữa: Dòng gợi ý hoán đổi vị trí (chữ không tràn, ellipsis) */}
-                <div
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    textAlign: 'center',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    padding: '0 4px',
-                    fontSize: 11.5,
-                    fontWeight: 700,
-                    color: isSwapMode ? '#fef08a' : 'rgba(148, 163, 184, 0.7)',
-                    letterSpacing: isSwapMode ? 0.2 : 0.5
-                  }}
-                  title={isSwapMode ? (swapNotice || (swapSelectedIdx !== null ? '👉 Chọn Đạo Anh thứ 2 để đổi vị trí!' : '👉 Nhấp Đạo Anh thứ 1 muốn đổi vị trí')) : 'TRẬN ĐỒ ĐẠO ANH'}
-                >
-                  {isSwapMode ? (
-                    <span style={{
-                      color: '#fef08a',
-                      textShadow: '0 0 10px rgba(253, 224, 71, 0.5)'
-                    }}>
-                      {swapNotice || (swapSelectedIdx !== null ? '👉 Chọn Đạo Anh thứ 2 để đổi vị trí!' : '👉 Nhấp Đạo Anh thứ 1 muốn đổi vị trí')}
-                    </span>
-                  ) : (
-                    <span style={{ opacity: 0.8, fontSize: 11, textTransform: 'uppercase' }}>
-                      TRẬN ĐỒ ĐẠO ANH
-                    </span>
-                  )}
-                </div>
-
-                {/* Phải: Nút 🔄 hoán đổi vị trí Đạo Anh */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSwapMode(prev => !prev);
-                    setSwapSelectedIdx(null);
-                    setSwapNotice('');
-                  }}
-                  title={isSwapMode ? "Đang bật hoán vị (Bấm để tắt)" : "Hoán đổi vị trí Đạo Anh"}
-                  aria-label={isSwapMode ? "Tắt hoán đổi" : "Bật hoán đổi"}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    minWidth: 32,
-                    minHeight: 32,
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    border: isSwapMode ? '1.5px solid #fde047' : '1px solid rgba(56, 189, 248, 0.4)',
-                    background: isSwapMode 
-                      ? 'rgba(234, 179, 8, 0.35)' 
-                      : 'rgba(16, 25, 39, 0.75)',
-                    color: isSwapMode ? '#fef08a' : '#38bdf8',
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    boxShadow: isSwapMode 
-                      ? '0 0 14px rgba(253, 224, 71, 0.6), 0 2px 8px rgba(0,0,0,0.5)' 
-                      : '0 2px 8px rgba(0, 0, 0, 0.3)',
-                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                    padding: 0,
-                    flexShrink: 0
-                  }}
-                >
-                  <span style={{ 
-                    display: 'inline-block',
-                    transform: isSwapMode ? 'rotate(180deg)' : 'none', 
-                    transition: 'transform 0.3s ease' 
-                  }}>
-                    🔄
-                  </span>
-                </button>
-              </div>
-            )}
-
-            {/* Nút Hoán Đổi Trận Vị Siêu Nhỏ Gọn (Chỉ hiện khi KHÔNG có toolbar mobile) */}
-            {!showMobileToolbar && (
+            {/* Nút Hoán Đổi Trận Vị Siêu Nhỏ Gọn (Chỉ hiện trên desktop) */}
+            {!isMobile && (
               <button
                 onClick={() => {
                   setIsSwapMode(prev => !prev);
@@ -6123,16 +6008,16 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 title={isSwapMode ? "Đang bật hoán vị (Bấm để tắt)" : "Hoán đổi vị trí Đạo Anh"}
                 style={{
                   position: 'absolute',
-                  top: isMobile ? 10 : 14,
-                  left: isMobile ? 48 : 56,
+                  top: 14,
+                  left: 56,
                   zIndex: 50,
-                  width: isMobile ? 30 : 34,
-                  height: isMobile ? 30 : 34,
+                  width: 34,
+                  height: 34,
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: isMobile ? 13 : 15,
+                  fontSize: 15,
                   cursor: 'pointer',
                   border: isSwapMode ? '1.5px solid #fde047' : '1px solid rgba(56, 189, 248, 0.4)',
                   background: isSwapMode 
@@ -6154,11 +6039,11 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               </button>
             )}
 
-            {/* Banner Hướng Dẫn Tinh Tế ở Đỉnh Giữa (Chỉ hiện khi KHÔNG có toolbar mobile và bật hoán đổi) */}
-            {!showMobileToolbar && isSwapMode && (
+            {/* Banner Hướng Dẫn Tinh Tế ở Đỉnh Giữa (Chỉ hiện trên desktop khi bật hoán đổi) */}
+            {!isMobile && isSwapMode && (
               <div style={{
                 position: 'absolute',
-                top: isMobile ? 10 : 14,
+                top: 14,
                 left: '50%',
                 transform: 'translateX(-50%)',
                 zIndex: 49,
@@ -6167,7 +6052,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 borderRadius: 20,
                 padding: '4px 14px',
                 color: '#fef08a',
-                fontSize: isMobile ? 11 : 12,
+                fontSize: 12,
                 fontWeight: 700,
                 backdropFilter: 'blur(10px)',
                 boxShadow: '0 0 16px rgba(253, 224, 71, 0.25)',
@@ -6179,12 +6064,41 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               </div>
             )}
 
+            {/* Pill Hướng Dẫn Nổi Trên Mobile Khi Bật Hoán Vị (Không chiếm chỗ luồng bố cục) */}
+            {isMobile && isSwapMode && (
+              <div style={{
+                position: 'absolute',
+                top: 8,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 49,
+                background: 'rgba(0, 0, 0, 0.55)',
+                border: '1px solid rgba(253, 224, 71, 0.5)',
+                borderRadius: 20,
+                padding: '4px 12px',
+                color: '#fef08a',
+                fontSize: 12,
+                fontWeight: 600,
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.4), 0 0 8px rgba(253, 224, 71, 0.2)',
+                whiteSpace: 'nowrap',
+                maxWidth: '90%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                pointerEvents: 'none',
+                animation: 'fadeIn 0.2s ease-out'
+              }}>
+                {swapNotice || (swapSelectedIdx !== null ? '👉 Chọn Đạo Anh thứ 2 để đổi vị trí!' : '👉 Nhấp Đạo Anh thứ 1 muốn đổi vị trí')}
+              </div>
+            )}
+
             {/* KHUNG CANVAS SVG VŨ TRỤ THỨC HẢI & CÁC ĐẠO ANH */}
             <div style={{
               position: 'relative',
               width: '100%',
               height: '100%',
-              minHeight: 0,
+              minHeight: '100%',
               flex: 1,
               background: `#040714 url(${bgTrucCoGalaxy}) center/cover no-repeat`,
               border: 'none',

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCultivationContext } from '../context/CultivationContext';
 import RealmTimeline from '../components/cultivation/RealmTimeline';
 import SidePanelInfo from '../components/cultivation/SidePanelInfo';
@@ -34,6 +34,15 @@ export default function CultivationWorkspace() {
   const [tribulationModalData, setTribulationModalData] = useState(null);
   const [breakthroughModalData, setBreakthroughModalData] = useState(null);
   const [backupModalOpen, setBackupModalOpen] = useState(false);
+  const [isSwapMode, setIsSwapMode] = useState(false);
+
+  const currentRealm = cultivation?.realm || 'truc_co';
+  const activeView = activeRealmView || currentRealm;
+
+  // Tự động tắt hoán đổi khi chuyển tab hoặc chuyển cảnh giới
+  useEffect(() => {
+    setIsSwapMode(false);
+  }, [mobileTab, activeView]);
 
   const handleGoToTribulation = () => {
     if (dismissPromptAllDaoAnhFull) dismissPromptAllDaoAnhFull();
@@ -51,8 +60,8 @@ export default function CultivationWorkspace() {
     }
   };
 
-  const currentRealm = cultivation?.realm || 'truc_co';
-  const activeView = activeRealmView || currentRealm;
+  const canSwap = mobileTab === 'visualizer' && (activeView === 'nguyen_anh' || activeView === 'gia_anh');
+  const isSwapActive = canSwap && isSwapMode;
 
   return (
     <div className={`cultivation-workspace ${isFocusMode ? 'focus-mode' : ''} mobile-tab-${mobileTab}`}>
@@ -60,22 +69,50 @@ export default function CultivationWorkspace() {
       {/* Mobile Top Navigation Tabs */}
       <div className="cultivation-mobile-tabs">
         <button
+          type="button"
+          className="mobile-nav-btn mobile-back-btn"
+          onClick={handleSmartBack}
+          title="Quay lại"
+          aria-label="Quay lại"
+        >
+          <span className="mobile-btn-icon">←</span>
+        </button>
+        <button
+          type="button"
           className={`mobile-tab-btn ${mobileTab === 'visualizer' ? 'active' : ''}`}
           onClick={() => setMobileTab('visualizer')}
         >
           <span>🪐 TRẬN ĐỒ</span>
         </button>
         <button
+          type="button"
           className={`mobile-tab-btn ${mobileTab === 'actions' ? 'active' : ''}`}
           onClick={() => setMobileTab('actions')}
         >
-          <span>⚡ THAO TÁC / CUNG</span>
+          <span>⚡ THAO TÁC</span>
         </button>
         <button
+          type="button"
           className={`mobile-tab-btn ${mobileTab === 'realm' ? 'active' : ''}`}
           onClick={() => setMobileTab('realm')}
         >
           <span>📜 CẢNH GIỚI</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-nav-btn mobile-swap-btn ${isSwapActive ? 'swap-active' : ''}`}
+          disabled={!canSwap}
+          onClick={() => {
+            if (canSwap) {
+              setIsSwapMode(prev => !prev);
+            }
+          }}
+          title={!canSwap ? "Chỉ khả dụng ở Trận Đồ Nguyên Anh / Giả Anh" : (isSwapMode ? "Đang bật hoán vị (Bấm để tắt)" : "Hoán đổi vị trí Đạo Anh")}
+          aria-label={isSwapMode ? "Tắt hoán đổi" : "Bật hoán đổi"}
+        >
+          <span className="mobile-btn-icon" style={{ display: 'inline-block', transform: isSwapActive ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }}>
+            🔄
+          </span>
         </button>
       </div>
 
@@ -194,7 +231,7 @@ export default function CultivationWorkspace() {
       <div className={`cultivation-col-center ${mobileTab === 'visualizer' ? 'mobile-show' : ''}`}>
         {/* Nút Quay Lại Thư Viện Nổi Siêu Nhỏ Gọn (Ẩn trên mobile khi tab trận đồ dùng thanh công cụ mới) */}
         <button
-          className={`floating-back-library-btn ${(activeView === 'nguyen_anh' || activeView === 'gia_anh') ? 'hide-on-mobile' : ''}`}
+          className="floating-back-library-btn"
           onClick={handleSmartBack}
           title="Quay lại Thư Viện"
         >
@@ -218,7 +255,8 @@ export default function CultivationWorkspace() {
         >
           <RealmPreviewVisualizer
             cultivation={{ ...cultivation, realm: activeView }}
-            onBack={handleSmartBack}
+            swapMode={isSwapMode}
+            onSwapModeChange={setIsSwapMode}
           />
         </div>
       </div>
