@@ -13,4 +13,3 @@ dist-ssr
 *.sw?
 .agents
 screenshots/
-test-screenshots/
