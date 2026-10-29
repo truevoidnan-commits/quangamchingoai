@@ -6,6 +6,7 @@ import {
 } from './syncLog.js';
 import { setSyncStatus } from './autoSync.js';
 import { notifyOtherDevices } from './realtimeSignal.js';
+import { supabase } from '../supabaseClient.js';
 
 import {
   getSyncLedger,
