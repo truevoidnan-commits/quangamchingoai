@@ -23,6 +23,11 @@ let _authSubscription = null;
 let _authClient = null;
 let _lifecycleListenersAttached = false;
 
+// Chống race condition khi khởi động kênh đồng thời (in-flight startRealtime)
+let _startingTopic = null;
+let _startPromise = null;
+let _startSeq = 0;
+
 // Bộ đếm lỗi và các bộ hẹn giờ
 let _consecutiveErrors = 0;
 let _retryTimer = null;
@@ -168,58 +173,88 @@ export async function startRealtime(client, userId) {
     return;
   }
 
+  // Nếu đang có tiến trình kết nối cho cùng topic (chưa gán _activeChannel), tránh race tạo trùng kênh
+  if (_startingTopic === topic) {
+    return _startPromise || undefined;
+  }
+
   // Dọn kênh cũ nếu khác topic hoặc đang dang dở
   if (_activeChannel) {
     cleanupChannelOnly();
   }
 
+  const currentSeq = ++_startSeq;
+  _startingTopic = topic;
   notifyRealtimeStatusChange('connecting');
 
-  try {
-    // 1. Cập nhật auth token cho Realtime socket nếu có session
-    if (client.auth && typeof client.auth.getSession === 'function') {
-      try {
-        const { data: { session } } = await client.auth.getSession();
-        if (session?.access_token && client.realtime && typeof client.realtime.setAuth === 'function') {
-          await client.realtime.setAuth(session.access_token);
+  const runStart = async () => {
+    try {
+      // 1. Cập nhật auth token cho Realtime socket nếu có session
+      if (client.auth && typeof client.auth.getSession === 'function') {
+        try {
+          const { data: { session } } = await client.auth.getSession();
+          if (session?.access_token && client.realtime && typeof client.realtime.setAuth === 'function') {
+            await client.realtime.setAuth(session.access_token);
+          }
+        } catch (authErr) {
+          // Nuốt lỗi auth ở đây để quá trình subscribe tự xử lý qua RLS
         }
-      } catch (authErr) {
-        // Nuốt lỗi auth ở đây để quá trình subscribe tự xử lý qua RLS
+      }
+
+      // Hủy bỏ an toàn: sau khi await, kiểm tra lại toàn bộ điều kiện.
+      // Nếu stopRealtime() đã được gọi (hoặc phiên start mới thay thế,
+      // hoặc trạng thái chuyển sang disabled, hoặc user/profile/công tắc thay đổi):
+      if (
+        currentSeq !== _startSeq ||
+        _startingTopic !== topic ||
+        _realtimeStatus === 'disabled' ||
+        !canEnableRealtime() ||
+        _currentUserId !== userId
+      ) {
+        return;
+      }
+
+      // 2. Khởi tạo kênh riêng tư (private: true, broadcast.self = false)
+      const channel = client.channel(topic, {
+        config: {
+          private: true,
+          broadcast: { self: false },
+        },
+      });
+
+      // 3. Lắng nghe tín hiệu broadcast từ các thiết bị khác
+      channel.on('broadcast', { event: 'sync_signal' }, ({ payload }) => {
+        handleIncomingSignal(payload);
+      });
+
+      // 4. Theo dõi trạng thái kết nối
+      channel.subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          _consecutiveErrors = 0;
+          notifyRealtimeStatusChange('active');
+          logSyncEvent({
+            level: 'info',
+            src: 'realtime',
+            evt: 'realtime_subscribed',
+          });
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          handleChannelFailure(status, err);
+        }
+      });
+
+      _activeChannel = channel;
+    } catch (err) {
+      handleChannelFailure('CHANNEL_ERROR', err);
+    } finally {
+      if (_startingTopic === topic && currentSeq === _startSeq) {
+        _startingTopic = null;
+        _startPromise = null;
       }
     }
+  };
 
-    // 2. Khởi tạo kênh riêng tư (private: true, broadcast.self = false)
-    const channel = client.channel(topic, {
-      config: {
-        private: true,
-        broadcast: { self: false },
-      },
-    });
-
-    // 3. Lắng nghe tín hiệu broadcast từ các thiết bị khác
-    channel.on('broadcast', { event: 'sync_signal' }, ({ payload }) => {
-      handleIncomingSignal(payload);
-    });
-
-    // 4. Theo dõi trạng thái kết nối
-    channel.subscribe((status, err) => {
-      if (status === 'SUBSCRIBED') {
-        _consecutiveErrors = 0;
-        notifyRealtimeStatusChange('active');
-        logSyncEvent({
-          level: 'info',
-          src: 'realtime',
-          evt: 'realtime_subscribed',
-        });
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        handleChannelFailure(status, err);
-      }
-    });
-
-    _activeChannel = channel;
-  } catch (err) {
-    handleChannelFailure('CHANNEL_ERROR', err);
-  }
+  _startPromise = runStart();
+  return _startPromise;
 }
 
 /**
@@ -288,6 +323,10 @@ function cleanupChannelOnly() {
  * Dừng hoàn toàn Realtime, gỡ đăng ký kênh và dọn dẹp bộ hẹn giờ
  */
 export function stopRealtime() {
+  _startSeq++;
+  _startingTopic = null;
+  _startPromise = null;
+
   cleanupChannelOnly();
 
   if (_retryTimer) {
@@ -584,6 +623,9 @@ function attachAuthListener(client) {
  */
 export function _resetRealtimeForTesting() {
   stopRealtime();
+  _startSeq = 0;
+  _startingTopic = null;
+  _startPromise = null;
   _supabaseClient = null;
   _currentUserId = null;
   if (_authSubscription && typeof _authSubscription.unsubscribe === 'function') {

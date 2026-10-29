@@ -99,12 +99,14 @@ class MockRealtimeChannel {
     this.sentMessages = [];
     this.status = 'CLOSED';
     this.subCallback = null;
+    this.subscribeCount = 0;
   }
   on(type, filter, callback) {
     this.listeners.push({ type, filter, callback });
     return this;
   }
   subscribe(callback) {
+    this.subscribeCount++;
     this.subCallback = callback;
     this.status = 'SUBSCRIBED';
     if (callback) {
@@ -150,17 +152,22 @@ console.log('=== BẮT ĐẦU KIỂM THỬ VÒNG ĐỜI REALTIME (scripts/test-r
 
 setHostOverrideForTesting('test.github.io');
 
-function createMockClient(initialSession = null) {
+function createMockClient(initialSession = null, { getSessionDelay = 0 } = {}) {
   let session = initialSession;
   const authListeners = [];
   const channelsCreated = [];
 
   return {
     auth: {
-      getSession: async () => ({
-        data: { session },
-        error: null,
-      }),
+      getSession: async () => {
+        if (getSessionDelay > 0) {
+          await new Promise((r) => setTimeout(r, getSessionDelay));
+        }
+        return {
+          data: { session },
+          error: null,
+        };
+      },
       onAuthStateChange: (callback) => {
         authListeners.push(callback);
         return {
@@ -201,7 +208,7 @@ function createMockClient(initialSession = null) {
 }
 
 let passedTests = 0;
-const totalTests = 6;
+const totalTests = 10;
 
 // ---------------------------------------------------------------------------
 // Test (a): Khởi động không có session, sau đó phát sự kiện SIGNED_IN -> startRealtime gọi đúng 1 lần
@@ -536,6 +543,201 @@ try {
   passedTests++;
 } catch (err) {
   console.error('❌ Test (f) Thất bại:', err);
+  process.exit(1);
+}
+
+// ---------------------------------------------------------------------------
+// Test (g): Gọi startRealtime(client, uid) 2 lần đồng thời (không await ở giữa, getSession giả lập trễ 20ms)
+// -> client.channel() chỉ được gọi ĐÚNG 1 LẦN, chỉ 1 subscribe
+// ---------------------------------------------------------------------------
+try {
+  console.log('--- Test (g): Gọi startRealtime đồng thời 2 lần -> client.channel() và subscribe đúng 1 lần ---');
+  _resetRealtimeForTesting();
+  _resetAutoSyncForTesting();
+  localStorage.clear();
+  localStorage.setItem('tcl_active_profile', 'real');
+
+  const userSession = {
+    user: { id: 'user_grace' },
+    access_token: 'jwt_grace',
+  };
+  const mockClient = createMockClient(userSession, { getSessionDelay: 20 });
+
+  // Gọi đồng thời không await ở giữa
+  const p1 = startRealtime(mockClient, 'user_grace');
+  const p2 = startRealtime(mockClient, 'user_grace');
+
+  await Promise.all([p1, p2]);
+  await new Promise((r) => setTimeout(r, 60));
+
+  assert.strictEqual(
+    mockClient._channelsCreated.length,
+    1,
+    'client.channel() chỉ được gọi ĐÚNG 1 LẦN khi có 2 lời gọi đồng thời'
+  );
+  assert.strictEqual(
+    mockClient._channelsCreated[0].subscribeCount,
+    1,
+    'channel.subscribe() chỉ được gọi ĐÚNG 1 LẦN'
+  );
+  assert.strictEqual(
+    mockClient._channelsCreated[0].status,
+    'SUBSCRIBED',
+    'Kênh duy nhất phải được subscribe thành công'
+  );
+  assert.strictEqual(
+    getRealtimeStatus(),
+    'active',
+    'Trạng thái Realtime phải là active'
+  );
+
+  console.log('✓ Test (g) Passed: Gọi startRealtime đồng thời chỉ tạo 1 channel và 1 subscribe!\n');
+  passedTests++;
+} catch (err) {
+  console.error('❌ Test (g) Thất bại:', err);
+  process.exit(1);
+}
+
+// ---------------------------------------------------------------------------
+// Test (h): Mô phỏng mở app: getSession().then(startRealtime) + event INITIAL_SESSION đồng thời -> đúng 1 kênh
+// ---------------------------------------------------------------------------
+try {
+  console.log('--- Test (h): Mở app có session + INITIAL_SESSION đồng thời -> đúng 1 kênh ---');
+  _resetRealtimeForTesting();
+  _resetAutoSyncForTesting();
+  localStorage.clear();
+  localStorage.setItem('tcl_active_profile', 'real');
+
+  const userSession = {
+    user: { id: 'user_helen' },
+    access_token: 'jwt_helen',
+  };
+  const mockClient = createMockClient(userSession, { getSessionDelay: 20 });
+
+  // initAutoSync sẽ đăng ký onAuthStateChange và gọi client.auth.getSession().then(...)
+  initAutoSync(mockClient);
+
+  // Đồng thời phát INITIAL_SESSION (như Supabase client làm khi mở app đã đăng nhập)
+  mockClient.auth._emitAuthChange('INITIAL_SESSION', userSession);
+
+  // Đợi getSession delay + subscribe callbacks
+  await new Promise((r) => setTimeout(r, 100));
+
+  assert.strictEqual(
+    mockClient._channelsCreated.length,
+    1,
+    'Mở app có session + INITIAL_SESSION đồng thời chỉ được tạo ĐÚNG 1 kênh'
+  );
+  assert.strictEqual(
+    mockClient._channelsCreated[0].subscribeCount,
+    1,
+    'Kênh chỉ được subscribe ĐÚNG 1 LẦN'
+  );
+  assert.strictEqual(
+    mockClient._channelsCreated[0].status,
+    'SUBSCRIBED',
+    'Kênh phải ở trạng thái SUBSCRIBED'
+  );
+  assert.strictEqual(
+    getRealtimeStatus(),
+    'active',
+    'Trạng thái Realtime phải là active'
+  );
+
+  console.log('✓ Test (h) Passed: Mở app có session + INITIAL_SESSION đồng thời xử lý đua kênh thành công!\n');
+  passedTests++;
+} catch (err) {
+  console.error('❌ Test (h) Thất bại:', err);
+  process.exit(1);
+}
+
+// ---------------------------------------------------------------------------
+// Test (i): Gọi startRealtime rồi gọi ngay stopRealtime() trước khi getSession xong
+// -> không có channel nào được tạo/gán sau đó, trạng thái cuối là 'disabled'
+// ---------------------------------------------------------------------------
+try {
+  console.log('--- Test (i): startRealtime rồi gọi ngay stopRealtime() -> 0 channel, status disabled ---');
+  _resetRealtimeForTesting();
+  _resetAutoSyncForTesting();
+  localStorage.clear();
+  localStorage.setItem('tcl_active_profile', 'real');
+
+  const userSession = {
+    user: { id: 'user_ian' },
+    access_token: 'jwt_ian',
+  };
+  const mockClient = createMockClient(userSession, { getSessionDelay: 20 });
+
+  const p = startRealtime(mockClient, 'user_ian');
+  // Gọi ngay stopRealtime trước khi getSession (20ms) kết thúc
+  stopRealtime();
+
+  await p;
+  await new Promise((r) => setTimeout(r, 60));
+
+  assert.strictEqual(
+    mockClient._channelsCreated.length,
+    0,
+    'Không có channel nào được tạo khi stopRealtime được gọi giữa chừng'
+  );
+  assert.strictEqual(
+    getRealtimeStatus(),
+    'disabled',
+    'Trạng thái cuối cùng của Realtime phải là disabled'
+  );
+
+  console.log('✓ Test (i) Passed: Hủy bỏ an toàn khi stopRealtime gọi trong lúc đang kết nối!\n');
+  passedTests++;
+} catch (err) {
+  console.error('❌ Test (i) Thất bại:', err);
+  process.exit(1);
+}
+
+// ---------------------------------------------------------------------------
+// Test (j): startRealtime -> stopRealtime -> startRealtime nối tiếp nhanh
+// -> trạng thái cuối có đúng 1 kênh active
+// ---------------------------------------------------------------------------
+try {
+  console.log('--- Test (j): startRealtime -> stopRealtime -> startRealtime nối tiếp nhanh -> đúng 1 kênh active ---');
+  _resetRealtimeForTesting();
+  _resetAutoSyncForTesting();
+  localStorage.clear();
+  localStorage.setItem('tcl_active_profile', 'real');
+
+  const userSession = {
+    user: { id: 'user_jack' },
+    access_token: 'jwt_jack',
+  };
+  const mockClient = createMockClient(userSession, { getSessionDelay: 20 });
+
+  // Chuỗi gọi nối tiếp nhanh không await ở giữa
+  const p1 = startRealtime(mockClient, 'user_jack');
+  stopRealtime();
+  const p2 = startRealtime(mockClient, 'user_jack');
+
+  await Promise.all([p1, p2]);
+  await new Promise((r) => setTimeout(r, 60));
+
+  assert.strictEqual(
+    mockClient._channelsCreated.length,
+    1,
+    'Sau chuỗi start -> stop -> start nhanh, chỉ được có ĐÚNG 1 channel được tạo'
+  );
+  assert.strictEqual(
+    mockClient._channelsCreated[0].status,
+    'SUBSCRIBED',
+    'Channel duy nhất phải ở trạng thái SUBSCRIBED'
+  );
+  assert.strictEqual(
+    getRealtimeStatus(),
+    'active',
+    'Trạng thái cuối cùng của Realtime phải là active'
+  );
+
+  console.log('✓ Test (j) Passed: Chuỗi start -> stop -> start nhanh xử lý chính xác, đúng 1 kênh active!\n');
+  passedTests++;
+} catch (err) {
+  console.error('❌ Test (j) Thất bại:', err);
   process.exit(1);
 }
 
