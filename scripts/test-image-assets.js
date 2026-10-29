@@ -15,6 +15,8 @@ const THAN_PHAM_SRC = path.join(ROOT_DIR, 'src/assets/icons/than_pham');
 const THAN_PHAM_WEBP = path.join(ROOT_DIR, 'src/assets/icons/than_pham_webp');
 const THAN_PHAM_THUMB = path.join(ROOT_DIR, 'src/assets/icons/than_pham_thumb');
 
+const STATIC_IMAGES_DIR = path.join(ROOT_DIR, 'src/assets/images');
+
 let passedTests = 0;
 
 function runTest(name, fn) {
@@ -71,6 +73,32 @@ async function main() {
       assert.ok(fs.existsSync(thumbFile), `Thiếu bản thumb webp cho Thần Phẩm: ${file}`);
     }
     console.log(`    -> Đã kiểm tra ${jpgFiles.length} file JPG Thần Phẩm: Đủ 100% full và thumb.`);
+  });
+
+  // -------------------------------------------------------------------------
+  // Test A.3: Kiểm tra các file WebP tĩnh gốc (Mục A: bg-thien-co-lau, huyet_ho, long_kinh)
+  // -------------------------------------------------------------------------
+  await runAsyncTest('A.3: Kiểm tra các file WebP tĩnh gốc trong src/assets/images', async () => {
+    const expectedWebP = [
+      'bg-thien-co-lau.webp',
+      'huyet_ho_god.webp',
+      'long_kinh_god.webp'
+    ];
+
+    for (const name of expectedWebP) {
+      const filePath = path.join(STATIC_IMAGES_DIR, name);
+      assert.ok(fs.existsSync(filePath), `Thiếu file tĩnh WebP: ${name}`);
+      const meta = await sharp(filePath).metadata();
+      assert.strictEqual(meta.format, 'webp', `${name} không phải định dạng WebP`);
+      assert.ok(meta.width > 0 && meta.height > 0, `${name} kích thước không hợp lệ`);
+    }
+
+    // Kiểm tra globals.css đã dùng bg-thien-co-lau.webp
+    const globalsCss = fs.readFileSync(path.join(ROOT_DIR, 'src/styles/globals.css'), 'utf8');
+    assert.ok(globalsCss.includes('bg-thien-co-lau.webp'), 'globals.css chưa trỏ vào bg-thien-co-lau.webp');
+    assert.ok(!globalsCss.includes('bg-thien-co-lau.png'), 'globals.css vẫn còn trỏ vào bg-thien-co-lau.png');
+
+    console.log(`    -> 3/3 file tĩnh WebP tồn tại hợp lệ; globals.css đã dùng WebP.`);
   });
 
   // -------------------------------------------------------------------------
@@ -197,6 +225,58 @@ async function main() {
     } finally {
       await vite.close();
     }
+  });
+
+  // -------------------------------------------------------------------------
+  // Test E: Kiểm tra dọn dẹp public/ và không còn đường dẫn tĩnh gãy trong src/
+  // -------------------------------------------------------------------------
+  runTest('E.1: Thư mục public/ đã được dọn sạch, chỉ giữ lại các tệp hệ thống cần thiết', () => {
+    const publicDir = path.join(ROOT_DIR, 'public');
+    const keptFiles = ['error-log.js', 'favicon.svg', 'sw.js'];
+    
+    // Kiểm tra không còn các thư mục / tệp cũ nặng
+    assert.ok(!fs.existsSync(path.join(publicDir, 'images')), 'public/images vẫn còn tồn tại!');
+    assert.ok(!fs.existsSync(path.join(publicDir, 'icons')), 'public/icons vẫn còn tồn tại!');
+    assert.ok(!fs.existsSync(path.join(publicDir, 'assets')), 'public/assets vẫn còn tồn tại!');
+    assert.ok(!fs.existsSync(path.join(publicDir, 'bg-thien-co-lau.png')), 'public/bg-thien-co-lau.png vẫn còn tồn tại!');
+
+    // Kiểm tra các tệp bắt buộc giữ lại
+    for (const f of keptFiles) {
+      assert.ok(fs.existsSync(path.join(publicDir, f)), `Thiếu tệp bắt buộc giữ lại trong public: ${f}`);
+    }
+
+    const remainingItems = fs.readdirSync(publicDir);
+    assert.deepStrictEqual(remainingItems.sort(), keptFiles.sort(), `public/ chứa các tệp ngoài danh mục cho phép: ${remainingItems.join(', ')}`);
+    console.log(`    -> public/ đã tinh gọn: chỉ còn ${keptFiles.length} tệp (${keptFiles.join(', ')}).`);
+  });
+
+  runTest('E.2: Quét toàn bộ mã nguồn src/ không còn đường dẫn tĩnh gãy đến các tệp đã xóa', () => {
+    const srcDir = path.join(ROOT_DIR, 'src');
+    const brokenPatterns = [
+      /url\(['"]?\/images\//,
+      /url\(['"]?\/icons\//,
+      /getAssetUrl\(['"]icons\/than_pham\//,
+      /\/images\/thien_cung\//,
+    ];
+
+    function scanDir(dir) {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          scanDir(fullPath);
+        } else if (/\.(jsx?|tsx?|css|html)$/.test(entry.name)) {
+          const content = fs.readFileSync(fullPath, 'utf8');
+          for (const pattern of brokenPatterns) {
+            const match = content.match(pattern);
+            assert.ok(!match, `Phát hiện đường dẫn tĩnh gãy trong ${path.relative(ROOT_DIR, fullPath)}: ${pattern}`);
+          }
+        }
+      }
+    }
+
+    scanDir(srcDir);
+    console.log(`    -> Quét toàn bộ src/: 100% sạch, không còn url('/images/...') hay trỏ tĩnh vào public.`);
   });
 
   console.log(`\n========================================`);

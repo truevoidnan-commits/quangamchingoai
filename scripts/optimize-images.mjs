@@ -22,6 +22,13 @@ const TASKS = [
   },
 ];
 
+// Các ảnh tĩnh cốt lõi trong src/assets/images cần sinh bản WebP cạnh file gốc
+const STATIC_ROOT_IMAGES = [
+  'bg-thien-co-lau.png',
+  'huyet_ho_god.png',
+  'long_kinh_god.png',
+];
+
 async function ensureDir(dir) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -52,6 +59,7 @@ async function processImages() {
   let totalFilesProcessed = 0;
   let totalFilesSkipped = 0;
 
+  // 1. Xử lý các thư mục Đạo Ảnh và Thần Phẩm (giữ nguyên không động chạm)
   for (const task of TASKS) {
     await ensureDir(task.fullDir);
     await ensureDir(task.thumbDir);
@@ -146,6 +154,46 @@ async function processImages() {
     });
   }
 
+  // 2. Xử lý các ảnh tĩnh tại src/assets/images (bg-thien-co-lau, huyet_ho_god, long_kinh_god)
+  console.log(`\n[Ảnh tĩnh nền/chân thân] Kiểm tra ${STATIC_ROOT_IMAGES.length} tệp trong src/assets/images`);
+  for (const file of STATIC_ROOT_IMAGES) {
+    const srcPath = path.resolve('src/assets/images', file);
+    if (!fs.existsSync(srcPath)) continue;
+
+    const baseName = path.parse(file).name;
+    const webpPath = path.resolve('src/assets/images', `${baseName}.webp`);
+    const srcStat = fs.statSync(srcPath);
+    totalSrcBytes += srcStat.size;
+
+    let needGenerate = true;
+    if (fs.existsSync(webpPath)) {
+      const webpStat = fs.statSync(webpPath);
+      if (webpStat.mtimeMs >= srcStat.mtimeMs) {
+        needGenerate = false;
+      }
+    }
+
+    if (needGenerate) {
+      await sharp(srcPath)
+        .webp({
+          quality: 90,
+          alphaQuality: 100,
+          effort: 6,
+        })
+        .toFile(webpPath);
+
+      const webpStat = fs.statSync(webpPath);
+      totalFilesProcessed++;
+      totalFullBytes += webpStat.size;
+      const saving = ((1 - webpStat.size / srcStat.size) * 100).toFixed(1);
+      console.log(`  -> Tạo mới ${baseName}.webp: ${(srcStat.size/1024).toFixed(1)} KB -> ${(webpStat.size/1024).toFixed(1)} KB (giảm ${saving}%)`);
+    } else {
+      totalFilesSkipped++;
+      totalFullBytes += fs.statSync(webpPath).size;
+      console.log(`  -> Bỏ qua ${baseName}.webp (đã có bản mới nhất)`);
+    }
+  }
+
   console.log('\n=== TỔNG KẾT TỐI ƯU HÓA HÌNH ẢNH ===');
   console.log(`- Tệp mới xử lý / tạo lại: ${totalFilesProcessed}`);
   console.log(`- Tệp bỏ qua (đã có bản WebP mới hơn): ${totalFilesSkipped}`);
@@ -156,6 +204,6 @@ async function processImages() {
 }
 
 processImages().catch(err => {
-  console.error('Lỗi khi tối ưu hình ảnh:', err);
+  console.error('LỖI:', err);
   process.exit(1);
 });

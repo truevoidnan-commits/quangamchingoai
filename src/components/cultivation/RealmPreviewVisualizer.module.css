@@ -121,7 +121,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-image: url('/images/truc_co_galaxy_bg.jpg');
+  background-image: url('../../assets/images/truc_co_galaxy_bg.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

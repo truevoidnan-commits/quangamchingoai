@@ -8,8 +8,8 @@ import { THAN_PHAM_AI_ICONS, LAMP_THAN_PHAM_AI_ICONS } from './artifactIcons';
 import { DAO_ANH_LIST, getDaoAnhEvolutionImage } from './daoAnhData';
 import bgTrucCoGalaxy from '../assets/images/truc_co_galaxy_bg.jpg';
 import bgGodCosmicEye from '../assets/images/bg_god_cosmic_eye.jpg';
-import imgHuyetHoGod from '../assets/images/huyet_ho_god.png';
-import imgLongKinhGod from '../assets/images/long_kinh_god.png';
+import imgHuyetHoGod from '../assets/images/huyet_ho_god.webp';
+import imgLongKinhGod from '../assets/images/long_kinh_god.webp';
 import imgTuTuongWheelFlow from '../assets/images/tu_tuong_wheel_flow.jpg';
 
 import { fetchAndCacheImage } from './persistentImageCache';
