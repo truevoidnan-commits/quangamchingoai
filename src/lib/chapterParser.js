@@ -5,7 +5,7 @@
  * - Chống nhận diện nhầm các câu văn thông thường trong truyện
  * - Tách bạch chuẩn xác từng đoạn văn (<p>), giữ layout thoáng đãng như ứng dụng đọc cao cấp
  */
-import JSZip from 'jszip';
+
 import { normalizeVietnamese, formatChapterContent, capFirstLetters } from './textFixer';
 
 /**
@@ -674,6 +674,7 @@ export function parseTxtFile(text, filename = '') {
  * Parse .epub file siêu cấp chuẩn xác (EPUB 2 & EPUB 3)
  */
 export async function parseEpubFile(arrayBuffer, filename = '') {
+  const { default: JSZip } = await import('jszip');
   const zip = await JSZip.loadAsync(arrayBuffer);
 
   let opfPath = '';

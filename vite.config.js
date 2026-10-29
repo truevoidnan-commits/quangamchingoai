@@ -6,6 +6,15 @@ export default defineConfig({
   base: './',
   build: {
     cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-jszip': ['jszip'],
+        },
+      },
+    },
   },
   server: {
     host: true,

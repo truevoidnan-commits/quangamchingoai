@@ -6,7 +6,7 @@ import {
 } from './syncLog.js';
 import { setSyncStatus } from './autoSync.js';
 import { notifyOtherDevices } from './realtimeSignal.js';
-import JSZip from 'jszip';
+
 import {
   getSyncLedger,
   saveSyncLedger,
@@ -96,6 +96,7 @@ export async function compressChapters(chaptersJsonString) {
       contentType: 'application/gzip',
     };
   } else {
+    const { default: JSZip } = await import('jszip');
     const zip = new JSZip();
     zip.file('chapters.json', chaptersJsonString);
     const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
@@ -125,6 +126,7 @@ export async function decompressChapters(blob, path = '') {
   }
 
   // Fallback to JSZip
+  const { default: JSZip } = await import('jszip');
   const zip = await JSZip.loadAsync(blob);
   const chapterFile = zip.file('chapters.json') || Object.values(zip.files)[0];
   if (!chapterFile) throw new Error('Không tìm thấy dữ liệu chương trong file nén');

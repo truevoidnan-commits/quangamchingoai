@@ -1,21 +1,25 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/layout/Header';
 import { CultivationProvider } from './context/CultivationContext';
 import './styles/cultivation-theme.css';
 
-// Direct synchronous imports for rock-solid reliability & instant loading (zero spinner delays)
-import CultivationWorkspace from './pages/CultivationWorkspace';
-import SanctumPage from './pages/SanctumPage';
+// 1. Synchronous primary reading routes - instant startup, rock-solid reliability, zero spinner delay
 import LibraryPage from './pages/LibraryPage';
 import NovelDetailPage from './pages/NovelDetailPage';
 import ReaderPage from './pages/ReaderPage';
-import AddNovelPage from './pages/AddNovelPage';
-import EditNovelPage from './pages/EditNovelPage';
-import AddChapterPage from './pages/AddChapterPage';
-import SearchPage from './pages/SearchPage';
-import SyncPage from './pages/SyncPage';
-import BackupPage from './pages/BackupPage';
+
+// 2. Lazy loaded secondary routes via lazyWithRetry (anti-white-screen protection for GitHub Pages deployments)
+import { lazyWithRetry, prefetchLazyRoutes, RouteLoadingFallback } from './lib/lazyWithRetry';
+
+const CultivationWorkspace = lazyWithRetry(() => import('./pages/CultivationWorkspace'), 'CultivationWorkspace');
+const SanctumPage = lazyWithRetry(() => import('./pages/SanctumPage'), 'SanctumPage');
+const SyncPage = lazyWithRetry(() => import('./pages/SyncPage'), 'SyncPage');
+const BackupPage = lazyWithRetry(() => import('./pages/BackupPage'), 'BackupPage');
+const AddNovelPage = lazyWithRetry(() => import('./pages/AddNovelPage'), 'AddNovelPage');
+const EditNovelPage = lazyWithRetry(() => import('./pages/EditNovelPage'), 'EditNovelPage');
+const AddChapterPage = lazyWithRetry(() => import('./pages/AddChapterPage'), 'AddChapterPage');
+const SearchPage = lazyWithRetry(() => import('./pages/SearchPage'), 'SearchPage');
 
 import { preloadCoreArtifactIcons } from './lib/artifactIcons';
 import { startBackgroundPrefetch } from './lib/backgroundPrefetch';
@@ -32,6 +36,7 @@ function ScrollRestorer() {
       window.scrollTo(0, 0);
     }
   }, [pathname]);
+
   useEffect(() => {
     preloadCoreArtifactIcons();
     startBackgroundPrefetch();
@@ -39,7 +44,14 @@ function ScrollRestorer() {
     pullCultivationBeforeMeditation().finally(() => {
       initAutoSync();
     });
+
+    // Idle background prefetch for high-traffic secondary routes
+    prefetchLazyRoutes([
+      () => import('./pages/CultivationWorkspace'),
+      () => import('./pages/SanctumPage'),
+    ]);
   }, []);
+
   return null;
 }
 
@@ -63,12 +75,20 @@ class ErrorBoundary extends React.Component {
           <pre style={{ background: '#1c0f0f', padding: 20, borderRadius: 8, overflowX: 'auto', color: '#ffd1d1' }}>
             {this.state.error?.toString()}
           </pre>
-          <button 
-            onClick={() => { localStorage.clear(); window.location.reload(); }}
-            style={{ marginTop: 20, padding: '10px 20px', background: '#e24b4a', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
-          >
-            Xóa Cache LocalStorage & Tải lại
-          </button>
+          <div style={{ marginTop: 20, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <button 
+              onClick={() => window.location.reload()}
+              style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
+            >
+              🔄 Tải lại trang
+            </button>
+            <button 
+              onClick={() => { localStorage.clear(); window.location.reload(); }}
+              style={{ padding: '10px 20px', background: '#334155', color: '#cbd5e1', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+            >
+              Xóa Cache & Tải lại
+            </button>
+          </div>
         </div>
       );
     }
@@ -89,6 +109,7 @@ function MainLayout() {
       {!hideHeader && <Header />}
       <main className="main-content" style={{ padding: hideHeader ? 0 : undefined, margin: hideHeader ? 0 : undefined }}>
         <Routes>
+          {/* Synchronous primary reading routes - zero spinner / zero delay */}
           <Route path="/" element={<LibraryPage />} />
           <Route path="/novel/:id" element={<NovelDetailPage />} />
           <Route path="/novel/:novelId" element={<NovelDetailPage />} />
@@ -96,19 +117,21 @@ function MainLayout() {
           <Route path="/novel/:id/chapter/:chapterId" element={<ReaderPage />} />
           <Route path="/novel/:novelId/read/:chapterId" element={<ReaderPage />} />
           <Route path="/novel/:novelId/chapter/:chapterId" element={<ReaderPage />} />
-          <Route path="/add-novel" element={<AddNovelPage />} />
-          <Route path="/edit-novel/:id" element={<EditNovelPage />} />
-          <Route path="/edit-novel/:novelId" element={<EditNovelPage />} />
-          <Route path="/novel/:id/edit" element={<EditNovelPage />} />
-          <Route path="/novel/:novelId/edit" element={<EditNovelPage />} />
-          <Route path="/novel/:id/add-chapter" element={<AddChapterPage />} />
-          <Route path="/novel/:novelId/add-chapter" element={<AddChapterPage />} />
-          <Route path="/novel/:novelId/edit-chapter/:chapterId" element={<AddChapterPage />} />
-          <Route path="/search" element={<SearchPage />} />
-          <Route path="/cultivation" element={<CultivationWorkspace />} />
-          <Route path="/sanctum" element={<SanctumPage />} />
-          <Route path="/sync" element={<SyncPage />} />
-          <Route path="/backup" element={<BackupPage />} />
+
+          {/* Lazy loaded routes wrapped in Suspense with dark theme fallback */}
+          <Route path="/add-novel" element={<Suspense fallback={<RouteLoadingFallback />}><AddNovelPage /></Suspense>} />
+          <Route path="/edit-novel/:id" element={<Suspense fallback={<RouteLoadingFallback />}><EditNovelPage /></Suspense>} />
+          <Route path="/edit-novel/:novelId" element={<Suspense fallback={<RouteLoadingFallback />}><EditNovelPage /></Suspense>} />
+          <Route path="/novel/:id/edit" element={<Suspense fallback={<RouteLoadingFallback />}><EditNovelPage /></Suspense>} />
+          <Route path="/novel/:novelId/edit" element={<Suspense fallback={<RouteLoadingFallback />}><EditNovelPage /></Suspense>} />
+          <Route path="/novel/:id/add-chapter" element={<Suspense fallback={<RouteLoadingFallback />}><AddChapterPage /></Suspense>} />
+          <Route path="/novel/:novelId/add-chapter" element={<Suspense fallback={<RouteLoadingFallback />}><AddChapterPage /></Suspense>} />
+          <Route path="/novel/:novelId/edit-chapter/:chapterId" element={<Suspense fallback={<RouteLoadingFallback />}><AddChapterPage /></Suspense>} />
+          <Route path="/search" element={<Suspense fallback={<RouteLoadingFallback />}><SearchPage /></Suspense>} />
+          <Route path="/cultivation" element={<Suspense fallback={<RouteLoadingFallback />}><CultivationWorkspace /></Suspense>} />
+          <Route path="/sanctum" element={<Suspense fallback={<RouteLoadingFallback />}><SanctumPage /></Suspense>} />
+          <Route path="/sync" element={<Suspense fallback={<RouteLoadingFallback />}><SyncPage /></Suspense>} />
+          <Route path="/backup" element={<Suspense fallback={<RouteLoadingFallback />}><BackupPage /></Suspense>} />
         </Routes>
       </main>
     </>
