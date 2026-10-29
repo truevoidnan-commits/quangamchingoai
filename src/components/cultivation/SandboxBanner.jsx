@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { getActiveProfile, setActiveProfile } from '../../lib/cultivation';
-import AdminSandboxModal from './AdminSandboxModal';
+import { lazyWithRetry } from '../../lib/lazyWithRetry';
 import styles from './SandboxBanner.module.css';
+
+const AdminSandboxModal = lazyWithRetry(
+  () => import('./AdminSandboxModal'),
+  'AdminSandboxModal'
+);
 
 export default function SandboxBanner() {
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
@@ -65,10 +70,14 @@ export default function SandboxBanner() {
         </div>
       </aside>
 
-      <AdminSandboxModal
-        isOpen={isAdminModalOpen}
-        onClose={() => setIsAdminModalOpen(false)}
-      />
+      {isAdminModalOpen && (
+        <Suspense fallback={null}>
+          <AdminSandboxModal
+            isOpen={isAdminModalOpen}
+            onClose={() => setIsAdminModalOpen(false)}
+          />
+        </Suspense>
+      )}
     </>
   );
 }

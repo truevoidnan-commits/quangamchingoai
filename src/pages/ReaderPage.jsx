@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { getNovel, getChapters, getChapter } from '../lib/db';
 import { getReadingProgress, saveReadingProgress } from '../lib/storage';
@@ -8,7 +8,14 @@ import { useReadingSettings } from '../hooks/useReadingSettings';
 import { READING_THEMES, FONT_OPTIONS } from '../hooks/useReadingSettings';
 import { useCultivation } from '../hooks/useCultivation';
 import { getCultivationKey } from '../lib/cultivation';
-import CultivationModal from '../components/cultivation/CultivationModal';
+import { lazyWithRetry, prefetchLazyRoutes } from '../lib/lazyWithRetry';
+
+// Lazy load heavy CultivationModal to keep index bundle ultra-light
+const CultivationModal = lazyWithRetry(
+  () => import('../components/cultivation/CultivationModal'),
+  'CultivationModal'
+);
+
 import BreakthroughModal from '../components/cultivation/BreakthroughModal';
 import TableOfContents from '../components/reader/TableOfContents';
 import ReadingSettings from '../components/reader/ReadingSettings';
@@ -96,6 +103,21 @@ export default function ReaderPage() {
     });
     return () => { active = false; };
   }, [activeNovelId]);
+
+  // Idle background prefetch for CultivationModal chunk
+  useEffect(() => {
+    prefetchLazyRoutes([
+      () => import('../components/cultivation/CultivationModal'),
+    ]);
+
+    const handleOpenModal = () => setCultivationOpen(true);
+    window.addEventListener('tcl_open_cultivation_modal', handleOpenModal);
+    window.__tcl_openCultivationModal = handleOpenModal;
+    return () => {
+      window.removeEventListener('tcl_open_cultivation_modal', handleOpenModal);
+      delete window.__tcl_openCultivationModal;
+    };
+  }, []);
 
   // Track user interaction (scroll, touch, keydown)
   useEffect(() => {
@@ -847,6 +869,8 @@ export default function ReaderPage() {
             <div className={styles.cultivationBtnWrap}>
               <button
                 className={styles.topBtn}
+                onMouseEnter={() => prefetchLazyRoutes([() => import('../components/cultivation/CultivationModal')])}
+                onTouchStart={() => prefetchLazyRoutes([() => import('../components/cultivation/CultivationModal')])}
                 onClick={() => {
                   saveCurrentPositionImmediate();
                   flushReadingProgress();
@@ -1097,11 +1121,15 @@ export default function ReaderPage() {
         onUpdate={updateSettings}
       />
 
-      {/* Cultivation Modal */}
-      <CultivationModal
-        isOpen={cultivationOpen}
-        onClose={() => setCultivationOpen(false)}
-      />
+      {/* Cultivation Modal - only rendered when open with zero layout shift/spinner */}
+      {cultivationOpen && (
+        <Suspense fallback={null}>
+          <CultivationModal
+            isOpen={cultivationOpen}
+            onClose={() => setCultivationOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* MODAL THÔNG BÁO TIÊN KIẾP: ĐẠO ANH ĐẠT 80% LINH LỰC */}
       {cultivation?.prompt80DaoAnh && !(cultivation?.daoAnhs || []).every(d => (d.currentKiep || 0) >= 5) && (() => {
