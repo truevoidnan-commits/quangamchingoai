@@ -1636,9 +1636,13 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
   const activeViewRealm = propCultivation?.realm || activeRealmView || currentRealm;
 
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
+  const [useTabsLayout, setUseTabsLayout] = useState(typeof window !== 'undefined' ? window.innerWidth <= 1024 : false);
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+      setUseTabsLayout(window.innerWidth <= 1024);
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -5997,8 +6001,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             backgroundColor: '#020617',
             userSelect: 'none'
           }}>
-            {/* Nút Hoán Đổi Trận Vị Siêu Nhỏ Gọn (Chỉ hiện trên desktop) */}
-            {!isMobile && (
+            {/* Nút Hoán Đổi Trận Vị Siêu Nhỏ Gọn (Chỉ hiện trên desktop >1024px) */}
+            {!useTabsLayout && (
               <button
                 onClick={() => {
                   setIsSwapMode(prev => !prev);
@@ -6039,8 +6043,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               </button>
             )}
 
-            {/* Banner Hướng Dẫn Tinh Tế ở Đỉnh Giữa (Chỉ hiện trên desktop khi bật hoán đổi) */}
-            {!isMobile && isSwapMode && (
+            {/* Banner Hướng Dẫn Tinh Tế ở Đỉnh Giữa (Chỉ hiện trên desktop >1024px khi bật hoán đổi) */}
+            {!useTabsLayout && isSwapMode && (
               <div style={{
                 position: 'absolute',
                 top: 14,
@@ -6064,8 +6068,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               </div>
             )}
 
-            {/* Pill Hướng Dẫn Nổi Trên Mobile Khi Bật Hoán Vị (Không chiếm chỗ luồng bố cục) */}
-            {isMobile && isSwapMode && (
+            {/* Pill Hướng Dẫn Nổi Trên Mobile/Tablet (<=1024px) Khi Bật Hoán Vị (Không chiếm chỗ luồng bố cục) */}
+            {useTabsLayout && isSwapMode && (
               <div style={{
                 position: 'absolute',
                 top: 8,

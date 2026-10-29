@@ -82,21 +82,24 @@ export default function CultivationWorkspace() {
           className={`mobile-tab-btn ${mobileTab === 'visualizer' ? 'active' : ''}`}
           onClick={() => setMobileTab('visualizer')}
         >
-          <span>🪐 TRẬN ĐỒ</span>
+          <span className="mobile-tab-icon">🪐</span>
+          <span className="mobile-tab-label">TRẬN ĐỒ</span>
         </button>
         <button
           type="button"
           className={`mobile-tab-btn ${mobileTab === 'actions' ? 'active' : ''}`}
           onClick={() => setMobileTab('actions')}
         >
-          <span>⚡ THAO TÁC</span>
+          <span className="mobile-tab-icon">⚡</span>
+          <span className="mobile-tab-label">THAO TÁC</span>
         </button>
         <button
           type="button"
           className={`mobile-tab-btn ${mobileTab === 'realm' ? 'active' : ''}`}
           onClick={() => setMobileTab('realm')}
         >
-          <span>📜 CẢNH GIỚI</span>
+          <span className="mobile-tab-icon">📜</span>
+          <span className="mobile-tab-label">CẢNH GIỚI</span>
         </button>
         <button
           type="button"

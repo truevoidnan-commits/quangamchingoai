@@ -718,10 +718,29 @@
   box-sizing: border-box;
 }
 
-.mobile-tab-btn span {
+.mobile-tab-btn .mobile-tab-icon {
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mobile-tab-btn .mobile-tab-label {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+@media (max-width: 430px) {
+  .mobile-tab-btn {
+    font-size: 11px;
+    padding: 0 2px;
+    gap: 0;
+  }
+  .mobile-tab-btn .mobile-tab-icon {
+    display: none !important;
+  }
 }
 
 .mobile-tab-btn.active {
