@@ -28,7 +28,7 @@ const assetHelperPath = path.join(rootDir, 'src', 'lib', 'assetHelper.js');
 const assetHelperUrl = pathToFileURL(assetHelperPath).href;
 
 const transformedSource = rawDaoAnhSource
-  .replace(/const daoAnhModules = import\.meta\.glob\([^)]*\);/g, 'const daoAnhModules = {};')
+  .replace(/const daoAnh\w+Modules = import\.meta\.glob\([^)]*\);/g, (m) => m.split('=')[0] + '= {};')
   .replace(/from\s+['"]\.\/assetHelper['"]/g, `from '${assetHelperUrl}'`);
 
 const tempFile = path.join(os.tmpdir(), `daoAnhData_test_${crypto.randomBytes(8).toString('hex')}.mjs`);

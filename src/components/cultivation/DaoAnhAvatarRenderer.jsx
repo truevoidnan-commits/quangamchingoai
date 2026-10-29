@@ -23,6 +23,7 @@ export default function DaoAnhAvatarRenderer({
   className = '',
   style = {},
   onClick = null,
+  imageSize,
 }) {
   if (!daoAnh) return null;
 
@@ -112,7 +113,7 @@ export default function DaoAnhAvatarRenderer({
         >
           <PersistentImage
             key={`${daoAnh.id || 'da'}_kiep_${currentKiep}`}
-            src={getDaoAnhEvolutionImage(daoAnh, currentKiep)}
+            src={getDaoAnhEvolutionImage(daoAnh, currentKiep, imageSize || (size <= 190 ? 'thumb' : 'full'))}
             alt={daoAnh.name}
             loading="lazy"
             decoding="async"

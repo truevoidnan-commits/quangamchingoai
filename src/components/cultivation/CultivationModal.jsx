@@ -1116,6 +1116,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           <DaoAnhAvatarRenderer
                             daoAnh={daoAnhDef}
                             size={56}
+                            imageSize="thumb"
                             currentKiep={previewKiepMap[da.id] !== undefined ? previewKiepMap[da.id] : (da.currentKiep || 0)}
                             animate={true}
                             showAura={true}

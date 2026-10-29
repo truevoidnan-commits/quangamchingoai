@@ -507,7 +507,7 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
           title={item?.name || 'Mệnh Đăng'}
         >
           <PersistentImage
-            src={getLampImageUrl(item.id)}
+            src={getLampImageUrl(item.id, size > 190 ? 'full' : 'thumb')}
             alt={item?.name || 'Mệnh Đăng'}
             loading="lazy"
             decoding="async"
@@ -575,7 +575,7 @@ export default function ArtifactIcon({ item, isLamp = false, size = 28, classNam
         title={item?.name}
       >
         <PersistentImage
-          src={getArtifactImageUrl(item.id)}
+          src={getArtifactImageUrl(item.id, size > 190 ? 'full' : 'thumb')}
           alt={item?.name}
           loading="lazy"
           decoding="async"

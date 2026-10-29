@@ -29,7 +29,7 @@ export function DaoAnh80Modal({
   const displayName = resolvedDaoAnhName || daoAnhDef?.name || 'Đạo Anh';
   
   // Lấy hình ảnh artwork chân thực theo đúng Đạo Anh và Kiếp hiện tại
-  const daoAnhImage = getDaoAnhEvolutionImage(daoAnhDef, currentKiep);
+  const daoAnhImage = getDaoAnhEvolutionImage(daoAnhDef, currentKiep, 'full');
   const primaryColor = daoAnhDef?.primaryColor || '#fbbf24';
   const glowColor = daoAnhDef?.glowColor || 'rgba(251, 191, 36, 0.7)';
   const transformStyle = getDaoAnhTransformStyle(daoAnhDef, currentKiep);

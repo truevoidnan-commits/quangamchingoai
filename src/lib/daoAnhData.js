@@ -1367,25 +1367,45 @@ export function findDaoAnhDefinition(da, state) {
   return DAO_ANH_LIST[0];
 }
 
-const daoAnhModules = import.meta.glob('../assets/images/dao_anh/*.png', { eager: true, import: 'default' });
-const bundledDaoAnh = {};
+const daoAnhFullModules = import.meta.glob('../assets/images/dao_anh_webp/*.webp', { eager: true, import: 'default' });
+const daoAnhThumbModules = import.meta.glob('../assets/images/dao_anh_thumb/*.webp', { eager: true, import: 'default' });
 
-for (const [filepath, mod] of Object.entries(daoAnhModules)) {
+const bundledDaoAnhFull = {};
+for (const [filepath, mod] of Object.entries(daoAnhFullModules)) {
   const filename = filepath.split(/[\/\\]/).pop().split('.')[0];
-  bundledDaoAnh[filename] = mod;
+  bundledDaoAnhFull[filename] = mod;
+}
+
+const bundledDaoAnhThumb = {};
+for (const [filepath, mod] of Object.entries(daoAnhThumbModules)) {
+  const filename = filepath.split(/[\/\\]/).pop().split('.')[0];
+  bundledDaoAnhThumb[filename] = mod;
 }
 
 import { getAssetUrl } from './assetHelper';
 export { getAssetUrl };
 
-export function resolveDaoAnhImage(rawPathOrId) {
+export function resolveDaoAnhImage(rawPathOrId, size = 'full') {
   if (!rawPathOrId) return '';
   if (rawPathOrId.startsWith('http') || rawPathOrId.startsWith('data:') || rawPathOrId.startsWith('blob:')) return rawPathOrId;
   const cleanKey = rawPathOrId.split(/[\/\\]/).pop().split('.')[0];
-  if (bundledDaoAnh[cleanKey]) return bundledDaoAnh[cleanKey];
-  // Fallback: nếu chưa có hình ảnh Kiếp (ví dụ _k2, _k3, _k4, _k5), tự động dùng hình ảnh gốc
   const baseKey = cleanKey.replace(/_k[1-5]$/, '');
-  if (bundledDaoAnh[baseKey]) return bundledDaoAnh[baseKey];
+
+  if (size === 'thumb') {
+    // 1. Thử thumb trực tiếp
+    if (bundledDaoAnhThumb[cleanKey]) return bundledDaoAnhThumb[cleanKey];
+    // 2. Thử full webp trực tiếp
+    if (bundledDaoAnhFull[cleanKey]) return bundledDaoAnhFull[cleanKey];
+    // 3. Thử baseKey: thumb baseKey -> full baseKey
+    if (bundledDaoAnhThumb[baseKey]) return bundledDaoAnhThumb[baseKey];
+    if (bundledDaoAnhFull[baseKey]) return bundledDaoAnhFull[baseKey];
+    // 4. Fallback getAssetUrl
+    return getAssetUrl(rawPathOrId);
+  }
+
+  // Cho full: full -> baseKey full -> getAssetUrl
+  if (bundledDaoAnhFull[cleanKey]) return bundledDaoAnhFull[cleanKey];
+  if (bundledDaoAnhFull[baseKey]) return bundledDaoAnhFull[baseKey];
   return getAssetUrl(rawPathOrId);
 }
 
@@ -1393,7 +1413,7 @@ export function resolveDaoAnhImage(rawPathOrId) {
  * Lấy URL hình ảnh Đạo Ảnh theo tầng Kiếp (Kiếp 1 -> Kiếp 5)
  * Sử dụng asset bundle của Vite cho tốc độ load tức thì 0ms.
  */
-export function getDaoAnhEvolutionImage(daoAnhDef, currentKiep = 0) {
+export function getDaoAnhEvolutionImage(daoAnhDef, currentKiep = 0, size = 'full') {
   if (!daoAnhDef) return '';
   const kiep = typeof currentKiep === 'number' ? currentKiep : 0;
 
@@ -1405,7 +1425,7 @@ export function getDaoAnhEvolutionImage(daoAnhDef, currentKiep = 0) {
     }
   }
 
-  return resolveDaoAnhImage(chosenPath);
+  return resolveDaoAnhImage(chosenPath, size);
 }
 
 /** Deprecated: Replaced by progressive gentle prefetcher in backgroundPrefetch.js */

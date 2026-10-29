@@ -273,6 +273,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                       <DaoAnhAvatarRenderer
                         daoAnh={da}
                         size={185}
+                        imageSize="thumb"
                         currentKiep={5}
                         animate={isHovered}
                         showAura={isHovered}
@@ -316,6 +317,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                     <DaoAnhAvatarRenderer
                       daoAnh={da}
                       size={52}
+                      imageSize="thumb"
                       currentKiep={5}
                       animate={false}
                       showAura={false}
@@ -400,6 +402,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                     <DaoAnhAvatarRenderer
                       daoAnh={selectedDaoAnh}
                       size={300}
+                      imageSize="full"
                       currentKiep={previewKiep}
                       animate={true}
                       showAura={true}

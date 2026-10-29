@@ -6359,7 +6359,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                               {daoAnhDef?.image ? (
                                 <g transform={`translate(${transCfg.x || 0}, ${transCfg.y || 0}) scale(${transCfg.scale || 1})`}>
                                   <image
-                                    href={getAssetUrl(getDaoAnhEvolutionImage(daoAnhDef, currentKiep))}
+                                    href={getAssetUrl(getDaoAnhEvolutionImage(daoAnhDef, currentKiep, 'thumb'))}
                                     x="-72"
                                     y="-76"
                                     width="144"
@@ -6546,6 +6546,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                 : (modalDaoAnhDef.glowColor || modalArch.color || '#fbbf24')
                             }}
                             size={260}
+                            imageSize="full"
                             currentKiep={curKiep}
                             animate={true}
                             showAura={true}
