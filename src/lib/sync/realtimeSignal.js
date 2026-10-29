@@ -80,12 +80,28 @@ export function setRealtimeEnabled(enabled) {
     }
   } catch {}
 
-  if (!boolVal) {
-    stopRealtime();
-  } else if (_supabaseClient && _currentUserId) {
-    startRealtime(_supabaseClient, _currentUserId).catch(() => {});
+  reconcileRealtime();
+}
+
+/**
+ * Điều chỉnh trạng thái kết nối Realtime dựa trên các điều kiện hiện thời.
+ * Dùng _supabaseClient và _currentUserId đã lưu.
+ * Nếu canEnableRealtime() và chưa active/connecting -> startRealtime.
+ * Nếu không được phép và đang chạy -> stopRealtime (cập nhật 'disabled' cho UI).
+ */
+export function reconcileRealtime() {
+  if (canEnableRealtime()) {
+    if (_supabaseClient && _currentUserId) {
+      if (_realtimeStatus !== 'active' && _realtimeStatus !== 'connecting') {
+        startRealtime(_supabaseClient, _currentUserId).catch(() => {});
+      }
+    }
   } else {
-    notifyRealtimeStatusChange('disabled');
+    if (_realtimeStatus !== 'disabled') {
+      stopRealtime();
+    } else {
+      notifyRealtimeStatusChange('disabled');
+    }
   }
 }
 
@@ -148,7 +164,7 @@ export async function startRealtime(client, userId) {
 
   // Nếu đã có kênh đang kết nối cho đúng user này thì không tạo trùng
   const topic = `sync:${userId}`;
-  if (_activeChannel && _activeChannel.topic === topic && _realtimeStatus === 'active') {
+  if (_activeChannel && _activeChannel.topic === topic && (_realtimeStatus === 'active' || _realtimeStatus === 'connecting')) {
     return;
   }
 
@@ -321,7 +337,7 @@ export function stopRealtime() {
  * @param {Array<string>} scopes - Danh sách phạm vi: 'progress'|'cultivation'|'library'|'content'|'settings'
  */
 export function notifyOtherDevices(scopes = []) {
-  if (!isProductionHost() || getActiveProfile() !== 'real' || !isRealtimeEnabled()) {
+  if (!isProductionHost() || getActiveProfile() !== 'real' || !isRealtimeEnabled() || !isAutoSyncEnabled()) {
     return;
   }
 
@@ -351,8 +367,8 @@ async function flushOutboundSignal() {
   const scopesToSend = Array.from(_batchedOutboundScopes);
   _batchedOutboundScopes.clear();
 
-  if (!_activeChannel || _realtimeStatus !== 'active') {
-    return; // Kênh chưa sẵn sàng hoặc đã đóng, nuốt im lặng
+  if (!_activeChannel || _realtimeStatus !== 'active' || !isAutoSyncEnabled()) {
+    return; // Kênh chưa sẵn sàng hoặc đã đóng, hoặc autoSync bị tắt, nuốt im lặng
   }
 
   try {
@@ -519,13 +535,8 @@ function attachLifecycleListeners() {
   });
 
   // 3. Sự kiện chuyển đổi hồ sơ (Thật <-> Sandbox)
-  window.addEventListener('tcl_profile_changed', (e) => {
-    const newProfile = e?.detail?.profile || getActiveProfile();
-    if (newProfile !== 'real') {
-      stopRealtime();
-    } else if (canEnableRealtime() && _supabaseClient && _currentUserId) {
-      startRealtime(_supabaseClient, _currentUserId).catch(() => {});
-    }
+  window.addEventListener('tcl_profile_changed', () => {
+    reconcileRealtime();
   });
 
 }
@@ -566,4 +577,24 @@ function attachAuthListener(client) {
     });
     _authSubscription = subscription;
   } catch {}
+}
+
+/**
+ * Reset toàn bộ module state phục vụ unit test độc lập
+ */
+export function _resetRealtimeForTesting() {
+  stopRealtime();
+  _supabaseClient = null;
+  _currentUserId = null;
+  if (_authSubscription && typeof _authSubscription.unsubscribe === 'function') {
+    try {
+      _authSubscription.unsubscribe();
+    } catch {}
+  }
+  _authSubscription = null;
+  _authClient = null;
+  _lifecycleListenersAttached = false;
+  _syncStatusListenerAttached = false;
+  _consecutiveErrors = 0;
+  _testOverrideDeviceId = null;
 }

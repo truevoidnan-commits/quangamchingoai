@@ -54,6 +54,8 @@ import {
   startRealtime,
   stopRealtime,
   notifyOtherDevices,
+  reconcileRealtime,
+  canEnableRealtime,
 } from './realtimeSignal.js';
 import {
   logSyncEvent,
@@ -120,6 +122,7 @@ export function setAutoSyncEnabled(enabled) {
   try {
     localStorage.setItem(AUTO_SYNC_KEY, enabled ? 'true' : 'false');
     notifyStatusChange();
+    reconcileRealtime();
     return true;
   } catch {
     return false;
@@ -1198,8 +1201,18 @@ export function initAutoSync(customSupabase = null) {
         client.auth.onAuthStateChange((event, session) => {
           if (event === 'SIGNED_OUT' || !session?.user) {
             _cachedUserId = null;
+            stopRealtime();
           } else if (session?.user?.id) {
+            const prevUserId = _cachedUserId;
             _cachedUserId = session.user.id;
+            if (event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && session?.user)) {
+              if (canEnableRealtime()) {
+                startRealtime(client, session.user.id).catch(() => {});
+              }
+              if (event === 'SIGNED_IN' && prevUserId !== session.user.id) {
+                runAutoSync(client, { src: 'login' }).catch(() => {});
+              }
+            }
           }
         });
       } catch {}
@@ -1251,6 +1264,9 @@ export function initAutoSync(customSupabase = null) {
       runAutoSync(customSupabase, { src: 'interval' }).catch(() => {});
     }
   }, 3 * 60 * 1000);
+  if (typeof _intervalTimer?.unref === 'function') {
+    _intervalTimer.unref();
+  }
 }
 
 /**
@@ -1465,5 +1481,21 @@ export async function flushReadingProgress(customSupabase = null) {
       msg: err?.message || String(err),
     });
     return { flushed: 0, error: err?.message };
+  }
+}
+
+/**
+ * Reset module state phục vụ unit test độc lập
+ */
+export function _resetAutoSyncForTesting() {
+  _initialized = false;
+  _cachedUserId = null;
+  if (_intervalTimer) {
+    clearInterval(_intervalTimer);
+    _intervalTimer = null;
+  }
+  if (_progressDebounceTimer) {
+    clearTimeout(_progressDebounceTimer);
+    _progressDebounceTimer = null;
   }
 }
