@@ -1,9 +1,14 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { getNovel, getChapters, getChapter } from '../lib/db';
 import { getReadingProgress, saveReadingProgress } from '../lib/storage';
 import { pullNovelProgressNow } from '../lib/sync/syncEngine.js';
 import { notifyReadingProgressChanged, flushReadingProgress } from '../lib/sync/autoSync.js';
+import {
+  decideInitialOpenAction,
+  canWriteProgress,
+  shouldWaitForInitialPull,
+} from '../lib/readerProgressGuard.js';
 import { useReadingSettings } from '../hooks/useReadingSettings';
 import { READING_THEMES, FONT_OPTIONS } from '../hooks/useReadingSettings';
 import { useCultivation } from '../hooks/useCultivation';
@@ -41,6 +46,11 @@ export default function ReaderPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchKeyword = searchParams.get('q') || '';
   const navigate = useNavigate();
+  const location = useLocation();
+  const hasUserEngagedRef = useRef(false);
+  const hasPulledOnMountRef = useRef(false);
+  const isInitialPassiveOpenRef = useRef(location.key === 'default');
+  const effectiveLocationKey = isInitialPassiveOpenRef.current ? 'default' : location.key;
   const { settings, updateSettings } = useReadingSettings();
   const { 
     gainReadingExp, 
@@ -98,11 +108,52 @@ export default function ReaderPage() {
   // Pull latest progress on mount before restoring position
   useEffect(() => {
     let active = true;
-    pullNovelProgressNow(activeNovelId).finally(() => {
-      if (active) setPullProgressDone(true);
-    });
+    if (hasPulledOnMountRef.current) return;
+    hasPulledOnMountRef.current = true;
+
+    pullNovelProgressNow(activeNovelId)
+      .then((res) => {
+        if (!active) return;
+        const action = decideInitialOpenAction({
+          locationKey: effectiveLocationKey,
+          urlChapterId: chapterId,
+          hasEngaged: hasUserEngagedRef.current,
+          pullResult: res,
+        });
+
+        if (action === 'jump') {
+          const cloudProg = res.data;
+          const curPos = {
+            chapterId: chapterId,
+            percent: lastRecordedScrollRef.current?.percent || 0,
+            paraIndex: lastRecordedScrollRef.current?.paraIndex || 0,
+            scrollY: window.scrollY || 0,
+          };
+          prevJumpPosRef.current = curPos;
+          navigate(`/novel/${activeNovelId}/read/${cloudProg.chapterId}`, { replace: true });
+          setSyncToast({
+            type: 'jumped',
+            message: 'Đã nhảy tới vị trí mới nhất từ thiết bị khác',
+            canRevert: true,
+          });
+        } else if (action === 'propose') {
+          const cloudProg = res.data;
+          setSyncToast({
+            type: 'proposal',
+            message: 'Có tiến độ mới từ thiết bị khác',
+            targetProgress: cloudProg,
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn('Reader pull progress on mount error:', err);
+      })
+      .finally(() => {
+        if (active) setPullProgressDone(true);
+      });
+
     return () => { active = false; };
-  }, [activeNovelId]);
+  }, [activeNovelId, chapterId, location.key, navigate]);
 
   // Idle background prefetch for CultivationModal chunk
   useEffect(() => {
@@ -131,6 +182,32 @@ export default function ReaderPage() {
       window.removeEventListener('scroll', markInteraction);
       window.removeEventListener('touchstart', markInteraction);
       window.removeEventListener('keydown', markInteraction);
+    };
+  }, []);
+
+  // Track real user engagement with the page (excluding programmatic scrollTo)
+  useEffect(() => {
+    const markEngaged = () => {
+      hasUserEngagedRef.current = true;
+    };
+    const handleScrollEngage = () => {
+      if (!isRestoringRef.current) {
+        hasUserEngagedRef.current = true;
+      }
+    };
+
+    window.addEventListener('touchstart', markEngaged, { passive: true });
+    window.addEventListener('pointerdown', markEngaged, { passive: true });
+    window.addEventListener('keydown', markEngaged, { passive: true });
+    window.addEventListener('wheel', markEngaged, { passive: true });
+    window.addEventListener('scroll', handleScrollEngage, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', markEngaged);
+      window.removeEventListener('pointerdown', markEngaged);
+      window.removeEventListener('keydown', markEngaged);
+      window.removeEventListener('wheel', markEngaged);
+      window.removeEventListener('scroll', handleScrollEngage);
     };
   }, []);
 
@@ -265,6 +342,12 @@ export default function ReaderPage() {
   const lastRecordedScrollRef = useRef({ scrollY: 0, percent: 0, paraIndex: 0 });
   const isRestoringRef = useRef(true);
 
+  const shouldWaitForPull = shouldWaitForInitialPull({
+    locationKey: effectiveLocationKey,
+    pullProgressDone,
+  });
+  const isContentLoading = loading || shouldWaitForPull;
+
   // Vô hiệu hoá tính năng tự động cuộn mặc định của trình duyệt để tránh nhảy lung tung khi back/forward
   useEffect(() => {
     if ('scrollRestoration' in window.history) {
@@ -275,6 +358,13 @@ export default function ReaderPage() {
   // Lưu vị trí đọc chính xác (đoạn văn, % và pixel scrollY)
   const saveCurrentPositionImmediate = useCallback(() => {
     if (!chapter) return;
+    if (!canWriteProgress({
+      locationKey: effectiveLocationKey,
+      pullProgressDone,
+      hasEngaged: hasUserEngagedRef.current,
+    })) {
+      return;
+    }
     const currentScrollY = window.scrollY;
     // Nếu currentScrollY === 0 mà trước đó đã cuộn được (ví dụ unmount event), giữ vị trí trước đó
     const effectiveScrollY = currentScrollY > 0 ? currentScrollY : lastRecordedScrollRef.current.scrollY;
@@ -328,20 +418,26 @@ export default function ReaderPage() {
       paraIndex: currentParaIndex
     });
     notifyReadingProgressChanged();
-  }, [chapter, activeNovelId]);
+  }, [chapter, activeNovelId, location.key, pullProgressDone]);
 
   const handleGoToCultivationFromReader = useCallback(() => {
     if (dismissPromptAllDaoAnhFull) dismissPromptAllDaoAnhFull();
     saveCurrentPositionImmediate();
-    flushReadingProgress();
+    if (canWriteProgress({
+      locationKey: effectiveLocationKey,
+      pullProgressDone,
+      hasEngaged: hasUserEngagedRef.current,
+    })) {
+      flushReadingProgress();
+    }
     sessionStorage.setItem('from_reader', '1');
     sessionStorage.setItem('last_reading_url', window.location.hash ? window.location.hash.slice(1) : (window.location.pathname + window.location.search));
     navigate('/cultivation');
-  }, [dismissPromptAllDaoAnhFull, saveCurrentPositionImmediate, navigate]);
+  }, [dismissPromptAllDaoAnhFull, saveCurrentPositionImmediate, navigate, location.key, pullProgressDone]);
 
   // Khôi phục vị trí đọc chính xác (đoạn văn đang đọc dở hoặc %) khi vào lại chương
   useEffect(() => {
-    if (!chapter || loading) return;
+    if (!chapter || loading || shouldWaitForPull) return;
 
     // Nếu vào từ thanh tìm kiếm có từ khoá thì cuộn đến từ khoá đầu tiên
     if (searchKeyword) {
@@ -425,6 +521,13 @@ export default function ReaderPage() {
   // Reset timer on chapter change & save reading progress (KHÔNG đè scrollTop = 0 lên vị trí đang đọc)
   useEffect(() => {
     // setCycleSeconds(0); // Không reset khi chuyển chương để cộng dồn
+    if (!canWriteProgress({
+      locationKey: effectiveLocationKey,
+      pullProgressDone,
+      hasEngaged: hasUserEngagedRef.current,
+    })) {
+      return;
+    }
     if (chapter) {
       const existing = getReadingProgress(activeNovelId);
       if (existing?.chapterId !== chapter.id) {
@@ -437,11 +540,11 @@ export default function ReaderPage() {
         flushReadingProgress();
       }
     }
-  }, [chapter?.id, activeNovelId]);
+  }, [chapter?.id, activeNovelId, location.key, pullProgressDone]);
 
   // Bộ đếm ngộ đạo thực tế (mỗi giây tăng 1s, đủ 60s tự động cộng tu vi và rơi cơ duyên)
   useEffect(() => {
-    if (!chapter || loading) return;
+    if (!chapter || loading || shouldWaitForPull) return;
 
     const interval = setInterval(() => {
       setCycleSeconds(prev => {
@@ -476,7 +579,7 @@ export default function ReaderPage() {
 
   // Lưu lại vị trí cuộn (% đọc & đoạn văn đang đọc) real-time khi người đọc lướt trang
   useEffect(() => {
-    if (!chapter || loading) return;
+    if (!chapter || loading || shouldWaitForPull) return;
 
     let throttleTimer = null;
     const handleScroll = () => {
@@ -504,7 +607,13 @@ export default function ReaderPage() {
 
     const handleBeforeUnload = () => {
       saveCurrentPositionImmediate();
-      flushReadingProgress();
+      if (canWriteProgress({
+        locationKey: effectiveLocationKey,
+        pullProgressDone,
+        hasEngaged: hasUserEngagedRef.current,
+      })) {
+        flushReadingProgress();
+      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -514,9 +623,15 @@ export default function ReaderPage() {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       if (throttleTimer) clearTimeout(throttleTimer);
-      flushReadingProgress();
+      if (canWriteProgress({
+        locationKey: effectiveLocationKey,
+        pullProgressDone,
+        hasEngaged: hasUserEngagedRef.current,
+      })) {
+        flushReadingProgress();
+      }
     };
-  }, [chapter?.id, loading, activeNovelId, saveCurrentPositionImmediate]);
+  }, [chapter?.id, loading, activeNovelId, saveCurrentPositionImmediate, shouldWaitForPull, location.key, pullProgressDone]);
 
   // Hoàn tác thay đổi vừa thực hiện
   const handleUndo = useCallback(async () => {
@@ -818,12 +933,20 @@ export default function ReaderPage() {
 
   const goToChapter = useCallback((ch) => {
     if (ch) {
+      isInitialPassiveOpenRef.current = false;
+      hasUserEngagedRef.current = true;
       saveCurrentPositionImmediate();
-      flushReadingProgress();
+      if (canWriteProgress({
+        locationKey: effectiveLocationKey,
+        pullProgressDone,
+        hasEngaged: hasUserEngagedRef.current,
+      })) {
+        flushReadingProgress();
+      }
       const queryStr = searchKeyword ? `?q=${encodeURIComponent(searchKeyword)}` : '';
       navigate(`/novel/${activeNovelId}/read/${ch.id}${queryStr}`);
     }
-  }, [navigate, activeNovelId, searchKeyword, saveCurrentPositionImmediate]);
+  }, [navigate, activeNovelId, searchKeyword, saveCurrentPositionImmediate, location.key, pullProgressDone]);
 
   const clearHighlight = () => {
     const next = new URLSearchParams(searchParams);
@@ -852,7 +975,9 @@ export default function ReaderPage() {
             className={styles.topBtn}
             onClick={() => {
               saveCurrentPositionImmediate();
-              flushReadingProgress();
+              if (canWriteProgress({ locationKey: effectiveLocationKey, pullProgressDone, hasEngaged: hasUserEngagedRef.current })) {
+                flushReadingProgress();
+              }
               navigate(`/novel/${activeNovelId}`);
             }}
             aria-label="Quay lại"
@@ -873,7 +998,9 @@ export default function ReaderPage() {
                 onTouchStart={() => prefetchLazyRoutes([() => import('../components/cultivation/CultivationModal')])}
                 onClick={() => {
                   saveCurrentPositionImmediate();
-                  flushReadingProgress();
+                  if (canWriteProgress({ locationKey: effectiveLocationKey, pullProgressDone, hasEngaged: hasUserEngagedRef.current })) {
+                    flushReadingProgress();
+                  }
                   sessionStorage.setItem('from_reader', '1');
                   sessionStorage.setItem('last_reading_url', window.location.hash ? window.location.hash.slice(1) : (window.location.pathname + window.location.search));
                   clearUnreadDrops();
@@ -978,7 +1105,9 @@ export default function ReaderPage() {
                 className="btn-gold"
                 onClick={() => {
                   saveCurrentPositionImmediate();
-                  flushReadingProgress();
+                  if (canWriteProgress({ locationKey: effectiveLocationKey, pullProgressDone, hasEngaged: hasUserEngagedRef.current })) {
+                    flushReadingProgress();
+                  }
                   sessionStorage.setItem('from_reader', '1');
                   sessionStorage.setItem('last_reading_url', window.location.hash ? window.location.hash.slice(1) : (window.location.pathname + window.location.search));
                   setDroppedLamp(null);
@@ -1007,13 +1136,13 @@ export default function ReaderPage() {
           lineHeight: settings.lineHeight,
         }}
       >
-        {loading && (
+        {isContentLoading && (
           <div className={styles.loadingWrap}>
             <div className="spinner" style={{ borderTopColor: theme.accent }} />
           </div>
         )}
 
-        {!loading && chapter && (
+        {!isContentLoading && chapter && (
           <>
             <nav className={styles.chapterNavTop}>
               <button
@@ -1056,7 +1185,7 @@ export default function ReaderPage() {
           </>
         )}
 
-        {!loading && !chapter && (
+        {!isContentLoading && !chapter && (
           <div className={styles.notFound}>
             <p>Không tìm thấy nội dung chương này.</p>
             <button className="btn-ghost" onClick={() => navigate(`/novel/${activeNovelId}`)}>
@@ -1067,7 +1196,7 @@ export default function ReaderPage() {
       </main>
 
       {/* ===== CHAPTER NAVIGATION ===== */}
-      {!loading && (
+      {!isContentLoading && (
         <nav className={styles.chapterNav} style={{ borderColor: `${theme.accent}30` }}>
           <button
             className={styles.navBtn}
@@ -1107,8 +1236,12 @@ export default function ReaderPage() {
         chapters={chapters}
         currentChapterId={chapterId}
         onSelectChapter={(ch) => {
+          isInitialPassiveOpenRef.current = false;
+          hasUserEngagedRef.current = true;
           saveCurrentPositionImmediate();
-          flushReadingProgress();
+          if (canWriteProgress({ locationKey: effectiveLocationKey, pullProgressDone, hasEngaged: hasUserEngagedRef.current })) {
+            flushReadingProgress();
+          }
           navigate(`/novel/${activeNovelId}/read/${ch.id}`);
         }}
       />
@@ -1257,6 +1390,8 @@ export default function ReaderPage() {
           {syncToast.canRevert && prevJumpPosRef.current && (
             <button
               onClick={() => {
+                isInitialPassiveOpenRef.current = false;
+                hasUserEngagedRef.current = true;
                 const prev = prevJumpPosRef.current;
                 if (prev) {
                   if (prev.chapterId && prev.chapterId !== chapter?.id) {
@@ -1283,6 +1418,8 @@ export default function ReaderPage() {
           {syncToast.type === 'proposal' && syncToast.targetProgress && (
             <button
               onClick={() => {
+                isInitialPassiveOpenRef.current = false;
+                hasUserEngagedRef.current = true;
                 const target = syncToast.targetProgress;
                 if (target.chapterId && target.chapterId !== chapter?.id) {
                   navigate(`/novel/${activeNovelId}/read/${target.chapterId}`);
