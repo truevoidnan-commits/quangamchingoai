@@ -370,13 +370,6 @@ export function applyCloudReadingProgress(novelId, cloudData, cloudUpdatedAt = D
  * Lấy nhanh 1 dòng progress cho 1 truyện từ Cloud (chờ tối đa 2.5s)
  */
 export async function pullNovelProgressNow(novelId, customSupabase = null) {
-  if (typeof window !== 'undefined' && typeof window.__tcl_stubPullNovelProgressNow === 'function') {
-    const res = await window.__tcl_stubPullNovelProgressNow(novelId);
-    if (res?.updated && res?.data) {
-      applyCloudReadingProgress(novelId, res.data, res.cloudUpdatedAt || Date.now());
-    }
-    return res;
-  }
   if (!novelId) return { updated: false, reason: 'missing_novel_id' };
   const client = customSupabase || supabase;
   if (!client || !client.auth) return { updated: false, reason: 'no_client' };

@@ -47,8 +47,14 @@ export default function ReaderPage() {
   const searchKeyword = searchParams.get('q') || '';
   const navigate = useNavigate();
   const location = useLocation();
+  const chapterIdRef = useRef(chapterId);
+  chapterIdRef.current = chapterId;
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+  const locationRef = useRef(location);
+  locationRef.current = location;
+
   const hasUserEngagedRef = useRef(false);
-  const hasPulledOnMountRef = useRef(false);
   const isInitialPassiveOpenRef = useRef(location.key === 'default');
   const effectiveLocationKey = isInitialPassiveOpenRef.current ? 'default' : location.key;
   const { settings, updateSettings } = useReadingSettings();
@@ -108,15 +114,15 @@ export default function ReaderPage() {
   // Pull latest progress on mount before restoring position
   useEffect(() => {
     let active = true;
-    if (hasPulledOnMountRef.current) return;
-    hasPulledOnMountRef.current = true;
 
     pullNovelProgressNow(activeNovelId)
       .then((res) => {
         if (!active) return;
+        const currentLocKey = isInitialPassiveOpenRef.current ? 'default' : locationRef.current.key;
+        const currentChId = chapterIdRef.current;
         const action = decideInitialOpenAction({
-          locationKey: effectiveLocationKey,
-          urlChapterId: chapterId,
+          locationKey: currentLocKey,
+          urlChapterId: currentChId,
           hasEngaged: hasUserEngagedRef.current,
           pullResult: res,
         });
@@ -124,13 +130,13 @@ export default function ReaderPage() {
         if (action === 'jump') {
           const cloudProg = res.data;
           const curPos = {
-            chapterId: chapterId,
+            chapterId: currentChId,
             percent: lastRecordedScrollRef.current?.percent || 0,
             paraIndex: lastRecordedScrollRef.current?.paraIndex || 0,
             scrollY: window.scrollY || 0,
           };
           prevJumpPosRef.current = curPos;
-          navigate(`/novel/${activeNovelId}/read/${cloudProg.chapterId}`, { replace: true });
+          navigateRef.current(`/novel/${activeNovelId}/read/${cloudProg.chapterId}`, { replace: true });
           setSyncToast({
             type: 'jumped',
             message: 'Đã nhảy tới vị trí mới nhất từ thiết bị khác',
@@ -152,8 +158,10 @@ export default function ReaderPage() {
         if (active) setPullProgressDone(true);
       });
 
-    return () => { active = false; };
-  }, [activeNovelId, chapterId, location.key, navigate]);
+    return () => {
+      active = false;
+    };
+  }, [activeNovelId]);
 
   // Idle background prefetch for CultivationModal chunk
   useEffect(() => {
