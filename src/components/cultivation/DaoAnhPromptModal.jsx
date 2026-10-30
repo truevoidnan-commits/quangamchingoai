@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhFitScale } from '../../lib/daoAnhData';
+import { findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhFitScale, getDaoAnhBBox } from '../../lib/daoAnhData';
 import styles from './DaoAnhPromptModal.module.css';
 
 /**
@@ -13,6 +13,8 @@ export function DaoAnh80Modal({
   onSwitch, 
   onContinue 
 }) {
+  const [imgError, setImgError] = useState(false);
+
   if (!isOpen || !promptData) return null;
 
   const currentExp = promptData.currentExp || 0;
@@ -32,9 +34,16 @@ export function DaoAnh80Modal({
   const daoAnhImage = getDaoAnhEvolutionImage(daoAnhDef, currentKiep, 'full');
   const primaryColor = daoAnhDef?.primaryColor || '#fbbf24';
   const glowColor = daoAnhDef?.glowColor || 'rgba(251, 191, 36, 0.7)';
-  const fitScale = getDaoAnhFitScale(daoAnhDef, currentKiep);
 
-  const [imgError, setImgError] = useState(false);
+  // Tính toán scale và translation dựa trên bounding box nội dung thực (không dùng DAO_ANH_FIT cho modal này)
+  const bbox = getDaoAnhBBox(daoAnhDef, currentKiep);
+  let imageTransform = undefined;
+  if (bbox && bbox.w > 0 && bbox.h > 0) {
+    const s = Math.min(1.6, Math.min(1 / bbox.w, 1 / bbox.h) * 0.92);
+    const tx = (0.5 - bbox.cx) * 100;
+    const ty = (0.5 - bbox.cy) * 100;
+    imageTransform = `scale(${s}) translate(${tx.toFixed(2)}%, ${ty.toFixed(2)}%)`;
+  }
 
   useEffect(() => {
     setImgError(false);
@@ -58,19 +67,13 @@ export function DaoAnh80Modal({
             </span>
           </div>
 
-          {/* Avatar / Artwork Pedestal */}
+          {/* Avatar / Artwork Showcase Box (Bỏ vòng tròn, không cắt hình, canh giữa theo bounding box) */}
           <div className={styles.avatarPedestal}>
             <div 
-              className={styles.avatarHalo}
-              style={{ borderColor: `${primaryColor}66` }}
+              className={styles.avatarGlow}
+              style={{ background: `radial-gradient(circle, ${glowColor} 0%, rgba(245, 158, 11, 0.12) 45%, transparent 70%)` }}
             />
-            <div 
-              className={styles.avatarInner}
-              style={{
-                borderColor: `${primaryColor}88`,
-                boxShadow: `0 0 25px ${glowColor}, inset 0 0 16px ${primaryColor}25`
-              }}
-            >
+            <div className={styles.avatarInner}>
               {daoAnhImage && !imgError ? (
                 <div className={styles.imageWrapper}>
                   <img
@@ -78,14 +81,14 @@ export function DaoAnh80Modal({
                     alt={displayName}
                     className={styles.daoAnhImage}
                     style={{
-                      transform: `scale(${fitScale})`,
-                      filter: `drop-shadow(0 0 12px ${glowColor})`
+                      transform: imageTransform,
+                      filter: `drop-shadow(0 0 14px ${glowColor})`
                     }}
                     onError={() => setImgError(true)}
                   />
                 </div>
               ) : (
-                <span style={{ fontSize: 40 }}>⚡</span>
+                <span style={{ fontSize: 48, filter: `drop-shadow(0 0 14px ${glowColor})` }}>⚡</span>
               )}
             </div>
           </div>
@@ -163,12 +166,21 @@ export function DaoAnhFullModal({
   daoAnh,
   daoAnhImage: customDaoAnhImage,
 }) {
+  // Đưa useState lên đầu trước early return để tuân thủ React Hooks rules
+  const [imgError, setImgError] = useState(false);
+
   if (!isOpen) return null;
 
   const targetDef = daoAnh ? findDaoAnhDefinition(daoAnh, null) : null;
   const image = customDaoAnhImage || (targetDef ? getDaoAnhEvolutionImage(targetDef, 5, 'full') : null);
-  const fitScale = targetDef ? getDaoAnhFitScale(targetDef, 5) : (customDaoAnhImage ? getDaoAnhFitScale(customDaoAnhImage, 5) : 1);
-  const [imgError, setImgError] = useState(false);
+  const bbox = targetDef ? getDaoAnhBBox(targetDef, 5) : (customDaoAnhImage ? getDaoAnhBBox(customDaoAnhImage, 5) : null);
+  let imageTransform = undefined;
+  if (bbox && bbox.w > 0 && bbox.h > 0) {
+    const s = Math.min(1.6, Math.min(1 / bbox.w, 1 / bbox.h) * 0.92);
+    const tx = (0.5 - bbox.cx) * 100;
+    const ty = (0.5 - bbox.cy) * 100;
+    imageTransform = `scale(${s}) translate(${tx.toFixed(2)}%, ${ty.toFixed(2)}%)`;
+  }
 
   return (
     <div className={styles.overlay}>
@@ -185,9 +197,9 @@ export function DaoAnhFullModal({
             </span>
           </div>
 
-          {/* Icon Pedestal */}
+          {/* Icon / Avatar Showcase Box (No ring, soft purple ambient glow) */}
           <div className={styles.avatarPedestal}>
-            <div className={styles.avatarHaloPurple} />
+            <div className={styles.avatarGlowPurple} />
             <div className={`${styles.avatarInner} ${styles.avatarInnerPurple}`}>
               {image && !imgError ? (
                 <div className={styles.imageWrapper}>
@@ -196,14 +208,14 @@ export function DaoAnhFullModal({
                     alt="Đạo Anh Viên Mãn"
                     className={styles.daoAnhImage}
                     style={{
-                      transform: `scale(${fitScale})`,
-                      filter: 'drop-shadow(0 0 12px rgba(240, 171, 252, 0.8))'
+                      transform: imageTransform,
+                      filter: 'drop-shadow(0 0 14px rgba(240, 171, 252, 0.8))'
                     }}
                     onError={() => setImgError(true)}
                   />
                 </div>
               ) : (
-                <span style={{ fontSize: 44, filter: 'drop-shadow(0 0 12px rgba(240, 171, 252, 0.8))' }}>⛈️</span>
+                <span style={{ fontSize: 48, filter: 'drop-shadow(0 0 14px rgba(240, 171, 252, 0.8))' }}>⛈️</span>
               )}
             </div>
           </div>

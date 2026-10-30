@@ -1384,7 +1384,8 @@ for (const [filepath, mod] of Object.entries(daoAnhThumbModules)) {
 
 import { getAssetUrl } from './assetHelper';
 import { DAO_ANH_FIT } from './daoAnhFit.generated.js';
-export { getAssetUrl, DAO_ANH_FIT };
+import { DAO_ANH_BBOX } from './daoAnhBBox.generated.js';
+export { getAssetUrl, DAO_ANH_FIT, DAO_ANH_BBOX };
 
 export function resolveDaoAnhImage(rawPathOrId, size = 'full') {
   if (!rawPathOrId) return '';
@@ -1468,6 +1469,47 @@ export function getDaoAnhFitScale(daoAnhDef, currentKiep = 0) {
     return DAO_ANH_FIT[baseKey];
   }
   return 1;
+}
+
+/**
+ * Lấy bounding box (khung bao nội dung alpha > 40) cho Đạo Ảnh
+ * Dùng để căn giữa và phóng to vừa vặn trong các modal hiển thị không cắt viền
+ * @param {Object|string} daoAnhDef - Đối tượng Đạo Ảnh hoặc key/path ảnh
+ * @param {number} currentKiep - Tầng kiếp (0: Kiếp 1, ..., 4: Kiếp 5, 5: Viên Mãn)
+ * @returns {{cx: number, cy: number, w: number, h: number}|null} Khung bao hoặc null nếu không tìm thấy
+ */
+export function getDaoAnhBBox(daoAnhDef, currentKiep = 0) {
+  if (!daoAnhDef) return null;
+
+  if (typeof daoAnhDef === 'string') {
+    const cleanKey = daoAnhDef.split(/[\/\\]/).pop().split('.')[0];
+    if (DAO_ANH_BBOX[cleanKey] !== undefined) return DAO_ANH_BBOX[cleanKey];
+    const baseKey = cleanKey.replace(/_k\d+$/, '');
+    if (DAO_ANH_BBOX[baseKey] !== undefined) return DAO_ANH_BBOX[baseKey];
+    return null;
+  }
+
+  const def = findDaoAnhDefinition(daoAnhDef) || daoAnhDef;
+  const kiep = typeof currentKiep === 'number' ? currentKiep : 0;
+
+  let chosenPath = def.image || '';
+  if (Array.isArray(def.evolutionImages) && def.evolutionImages.length > 0) {
+    const targetIndex = kiep <= 1 ? 0 : Math.min(def.evolutionImages.length - 1, kiep - 1);
+    if (def.evolutionImages[targetIndex]) {
+      chosenPath = def.evolutionImages[targetIndex];
+    }
+  }
+
+  if (!chosenPath) return null;
+  const cleanKey = chosenPath.split(/[\/\\]/).pop().split('.')[0];
+  if (DAO_ANH_BBOX[cleanKey] !== undefined) {
+    return DAO_ANH_BBOX[cleanKey];
+  }
+  const baseKey = cleanKey.replace(/_k\d+$/, '');
+  if (DAO_ANH_BBOX[baseKey] !== undefined) {
+    return DAO_ANH_BBOX[baseKey];
+  }
+  return null;
 }
 
 /** Deprecated: Replaced by progressive gentle prefetcher in backgroundPrefetch.js */
