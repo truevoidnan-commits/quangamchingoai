@@ -26,10 +26,13 @@ const rawDaoAnhSource = fs.readFileSync(daoAnhSourcePath, 'utf8');
 
 const assetHelperPath = path.join(rootDir, 'src', 'lib', 'assetHelper.js');
 const assetHelperUrl = pathToFileURL(assetHelperPath).href;
+const daoAnhFitPath = path.join(rootDir, 'src', 'lib', 'daoAnhFit.generated.js');
+const daoAnhFitUrl = pathToFileURL(daoAnhFitPath).href;
 
 const transformedSource = rawDaoAnhSource
   .replace(/const daoAnh\w+Modules = import\.meta\.glob\([^)]*\);/g, (m) => m.split('=')[0] + '= {};')
-  .replace(/from\s+['"]\.\/assetHelper['"]/g, `from '${assetHelperUrl}'`);
+  .replace(/from\s+['"]\.\/assetHelper['"]/g, `from '${assetHelperUrl}'`)
+  .replace(/from\s+['"]\.\/daoAnhFit\.generated\.js['"]/g, `from '${daoAnhFitUrl}'`);
 
 const tempFile = path.join(os.tmpdir(), `daoAnhData_test_${crypto.randomBytes(8).toString('hex')}.mjs`);
 fs.writeFileSync(tempFile, transformedSource, 'utf8');

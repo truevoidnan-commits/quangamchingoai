@@ -1383,7 +1383,8 @@ for (const [filepath, mod] of Object.entries(daoAnhThumbModules)) {
 }
 
 import { getAssetUrl } from './assetHelper';
-export { getAssetUrl };
+import { DAO_ANH_FIT } from './daoAnhFit.generated.js';
+export { getAssetUrl, DAO_ANH_FIT };
 
 export function resolveDaoAnhImage(rawPathOrId, size = 'full') {
   if (!rawPathOrId) return '';
@@ -1426,6 +1427,47 @@ export function getDaoAnhEvolutionImage(daoAnhDef, currentKiep = 0, size = 'full
   }
 
   return resolveDaoAnhImage(chosenPath, size);
+}
+
+/**
+ * Lấy hệ số scale vừa vặn khung tròn (avatarInner) cho Đạo Ảnh
+ * Tránh việc các vũ khí, cánh hào quang bị cắt mép trong các modal có overflow: hidden
+ * @param {Object|string} daoAnhDef - Đối tượng Đạo Ảnh hoặc key/path ảnh
+ * @param {number} currentKiep - Tầng kiếp (0: Kiếp 1, ..., 4: Kiếp 5, 5: Viên Mãn)
+ * @returns {number} Hệ số scale (tối đa 1, tối thiểu 0.6)
+ */
+export function getDaoAnhFitScale(daoAnhDef, currentKiep = 0) {
+  if (!daoAnhDef) return 1;
+
+  if (typeof daoAnhDef === 'string') {
+    const cleanKey = daoAnhDef.split(/[\/\\]/).pop().split('.')[0];
+    if (DAO_ANH_FIT[cleanKey] !== undefined) return DAO_ANH_FIT[cleanKey];
+    const baseKey = cleanKey.replace(/_k\d+$/, '');
+    if (DAO_ANH_FIT[baseKey] !== undefined) return DAO_ANH_FIT[baseKey];
+    return 1;
+  }
+
+  const def = findDaoAnhDefinition(daoAnhDef) || daoAnhDef;
+  const kiep = typeof currentKiep === 'number' ? currentKiep : 0;
+
+  let chosenPath = def.image || '';
+  if (Array.isArray(def.evolutionImages) && def.evolutionImages.length > 0) {
+    const targetIndex = kiep <= 1 ? 0 : Math.min(def.evolutionImages.length - 1, kiep - 1);
+    if (def.evolutionImages[targetIndex]) {
+      chosenPath = def.evolutionImages[targetIndex];
+    }
+  }
+
+  if (!chosenPath) return 1;
+  const cleanKey = chosenPath.split(/[\/\\]/).pop().split('.')[0];
+  if (DAO_ANH_FIT[cleanKey] !== undefined) {
+    return DAO_ANH_FIT[cleanKey];
+  }
+  const baseKey = cleanKey.replace(/_k\d+$/, '');
+  if (DAO_ANH_FIT[baseKey] !== undefined) {
+    return DAO_ANH_FIT[baseKey];
+  }
+  return 1;
 }
 
 /** Deprecated: Replaced by progressive gentle prefetcher in backgroundPrefetch.js */

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "optimize-images": "node scripts/optimize-images.mjs"
+    "optimize-images": "node scripts/optimize-images.mjs",
+    "compute-daoanh-fit": "node scripts/compute-daoanh-fit.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { findDaoAnhDefinition, getDaoAnhEvolutionImage } from '../../lib/daoAnhData';
+import { findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhFitScale } from '../../lib/daoAnhData';
 import styles from './DaoAnhPromptModal.module.css';
 
 /**
@@ -32,6 +32,7 @@ export function DaoAnh80Modal({
   const daoAnhImage = getDaoAnhEvolutionImage(daoAnhDef, currentKiep, 'full');
   const primaryColor = daoAnhDef?.primaryColor || '#fbbf24';
   const glowColor = daoAnhDef?.glowColor || 'rgba(251, 191, 36, 0.7)';
+  const fitScale = getDaoAnhFitScale(daoAnhDef, currentKiep);
 
   const [imgError, setImgError] = useState(false);
 
@@ -77,6 +78,7 @@ export function DaoAnh80Modal({
                     alt={displayName}
                     className={styles.daoAnhImage}
                     style={{
+                      transform: `scale(${fitScale})`,
                       filter: `drop-shadow(0 0 12px ${glowColor})`
                     }}
                     onError={() => setImgError(true)}
@@ -157,9 +159,16 @@ export function DaoAnhFullModal({
   isOpen,
   daoAnhsCount = 13,
   onGoTribulation,
-  onDismiss
+  onDismiss,
+  daoAnh,
+  daoAnhImage: customDaoAnhImage,
 }) {
   if (!isOpen) return null;
+
+  const targetDef = daoAnh ? findDaoAnhDefinition(daoAnh, null) : null;
+  const image = customDaoAnhImage || (targetDef ? getDaoAnhEvolutionImage(targetDef, 5, 'full') : null);
+  const fitScale = targetDef ? getDaoAnhFitScale(targetDef, 5) : (customDaoAnhImage ? getDaoAnhFitScale(customDaoAnhImage, 5) : 1);
+  const [imgError, setImgError] = useState(false);
 
   return (
     <div className={styles.overlay}>
@@ -180,7 +189,22 @@ export function DaoAnhFullModal({
           <div className={styles.avatarPedestal}>
             <div className={styles.avatarHaloPurple} />
             <div className={`${styles.avatarInner} ${styles.avatarInnerPurple}`}>
-              <span style={{ fontSize: 44, filter: 'drop-shadow(0 0 12px rgba(240, 171, 252, 0.8))' }}>⛈️</span>
+              {image && !imgError ? (
+                <div className={styles.imageWrapper}>
+                  <img
+                    src={image}
+                    alt="Đạo Anh Viên Mãn"
+                    className={styles.daoAnhImage}
+                    style={{
+                      transform: `scale(${fitScale})`,
+                      filter: 'drop-shadow(0 0 12px rgba(240, 171, 252, 0.8))'
+                    }}
+                    onError={() => setImgError(true)}
+                  />
+                </div>
+              ) : (
+                <span style={{ fontSize: 44, filter: 'drop-shadow(0 0 12px rgba(240, 171, 252, 0.8))' }}>⛈️</span>
+              )}
             </div>
           </div>
 

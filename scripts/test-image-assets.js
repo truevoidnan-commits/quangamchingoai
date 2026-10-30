@@ -279,6 +279,119 @@ async function main() {
     console.log(`    -> Quét toàn bộ src/: 100% sạch, không còn url('/images/...') hay trỏ tĩnh vào public.`);
   });
 
+  // -------------------------------------------------------------------------
+  // Test F: Kiểm tra Đạo Ảnh Fit Scale cho Modal Avatar
+  // -------------------------------------------------------------------------
+  await runAsyncTest('F.1: (a) Mọi key ảnh dao_anh_webp đều có hoặc fallback về fit hợp lệ trong (0.6, 1]', async () => {
+    const vite = await createServer({
+      server: { middlewareMode: true },
+      appType: 'custom',
+    });
+
+    try {
+      const { DAO_ANH_FIT, getDaoAnhFitScale, DAO_ANH_LIST } = await vite.ssrLoadModule('/src/lib/daoAnhData.js');
+      const webpFiles = fs.readdirSync(DAO_ANH_WEBP).filter(f => f.endsWith('.webp'));
+      assert.ok(webpFiles.length > 0, 'Phải có file webp trong dao_anh_webp');
+
+      for (const file of webpFiles) {
+        const key = path.basename(file, '.webp');
+        const fitDirect = DAO_ANH_FIT[key];
+        assert.ok(typeof fitDirect === 'number' && !isNaN(fitDirect), `Key ${key} không có trong DAO_ANH_FIT`);
+        assert.ok(fitDirect >= 0.6 && fitDirect <= 1.0, `Key ${key} có fit ${fitDirect} ngoài khoảng [0.6, 1]`);
+
+        const fitFn = getDaoAnhFitScale(key);
+        assert.strictEqual(fitFn, fitDirect, `getDaoAnhFitScale('${key}') trả về ${fitFn} khác DAO_ANH_FIT ${fitDirect}`);
+      }
+
+      // Kiểm tra fallback cho key không tồn tại hoặc rỗng
+      assert.strictEqual(getDaoAnhFitScale(null), 1, 'getDaoAnhFitScale(null) phải trả về 1');
+      assert.strictEqual(getDaoAnhFitScale(undefined), 1, 'getDaoAnhFitScale(undefined) phải trả về 1');
+      assert.strictEqual(getDaoAnhFitScale(''), 1, 'getDaoAnhFitScale("") phải trả về 1');
+      assert.strictEqual(getDaoAnhFitScale('non_existent_key_xyz'), 1, 'Key không tồn tại phải fallback về 1');
+
+      // Kiểm tra fallback key kiếp không tồn tại -> baseKey
+      const baseKey = 'tam_thu_dao';
+      const fakeKiepKey = `${baseKey}_k99`;
+      assert.strictEqual(getDaoAnhFitScale(fakeKiepKey), DAO_ANH_FIT[baseKey] ?? 1, 'Key kiếp lạ phải fallback về baseKey');
+
+      // Kiểm tra DAO_ANH_LIST qua các kiếp 0..5
+      for (const da of DAO_ANH_LIST) {
+        for (let k = 0; k <= 5; k++) {
+          const fit = getDaoAnhFitScale(da, k);
+          assert.ok(typeof fit === 'number' && !isNaN(fit), `fit không hợp lệ cho ${da.id} kiếp ${k}`);
+          assert.ok(fit >= 0.6 && fit <= 1.0, `fit ${fit} ngoài [0.6, 1] cho ${da.id} kiếp ${k}`);
+        }
+      }
+
+      console.log(`    -> Đã kiểm tra ${webpFiles.length} key dao_anh_webp: 100% có fit hợp lệ trong [0.6, 1]; fallback hoạt động đúng.`);
+    } finally {
+      await vite.close();
+    }
+  });
+
+  await runAsyncTest('F.2: (b) Bán kính nội dung * 0.92 * 1.02 * fit <= 0.495 cho 100% ảnh có fit >= 0.6', async () => {
+    const vite = await createServer({
+      server: { middlewareMode: true },
+      appType: 'custom',
+    });
+
+    try {
+      const { getDaoAnhFitScale } = await vite.ssrLoadModule('/src/lib/daoAnhData.js');
+      const webpFiles = fs.readdirSync(DAO_ANH_WEBP).filter(f => f.endsWith('.webp'));
+
+      let scaledCount = 0;
+      let minFit = 1;
+      let maxEffAfter = 0;
+      let floorTouchedCount = 0;
+
+      for (const file of webpFiles) {
+        const key = path.basename(file, '.webp');
+        const filePath = path.join(DAO_ANH_WEBP, file);
+
+        const { data, info } = await sharp(filePath).raw().ensureAlpha().toBuffer({ resolveWithObject: true });
+        const { width, height } = info;
+        const cx = (width - 1) / 2;
+        const cy = (height - 1) / 2;
+
+        let maxDist = 0;
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const alpha = data[(y * width + x) * 4 + 3];
+            if (alpha > 40) {
+              const d = Math.hypot(x - cx, y - cy);
+              if (d > maxDist) maxDist = d;
+            }
+          }
+        }
+
+        const rmax_ratio = maxDist / width;
+        const fit = getDaoAnhFitScale(key);
+        if (fit < minFit) minFit = fit;
+        if (fit < 1) scaledCount++;
+
+        const effBefore = rmax_ratio * 0.92 * 1.02;
+        const effAfter = effBefore * fit;
+        if (effAfter > maxEffAfter) maxEffAfter = effAfter;
+
+        if (fit >= 0.6) {
+          if (effAfter > 0.495) {
+            if (fit === 0.6) {
+              floorTouchedCount++;
+              console.warn(`    ⚠️ [CẢNH BÁO SÀN 0.6] Ảnh ${key} chạm sàn fit=0.6 và effAfter vẫn vượt 0.495: ${effAfter.toFixed(4)}`);
+            } else {
+              assert.fail(`Ảnh ${key} có fit=${fit} >= 0.6 nhưng effAfter=${effAfter.toFixed(4)} > 0.495 (trước fit=${effBefore.toFixed(4)})`);
+            }
+          }
+        }
+      }
+
+      assert.strictEqual(floorTouchedCount, 0, 'Có ảnh chạm sàn 0.6 vẫn vượt ngưỡng 0.495!');
+      console.log(`    -> Đã quét ${webpFiles.length} ảnh: ${scaledCount} ảnh co nhỏ (fit < 1), minFit = ${minFit}, max effAfter = ${maxEffAfter.toFixed(4)} <= 0.495 (100% đạt chuẩn).`);
+    } finally {
+      await vite.close();
+    }
+  });
+
   console.log(`\n========================================`);
   console.log(`TẤT CẢ ${passedTests} BÀI KIỂM TRA HÌNH ẢNH ĐỀU VƯỢT QUA!`);
   console.log(`========================================\n`);
