@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { countMatchesInNovel } from '../../lib/db';
+import { toTitleCaseVi } from '../../lib/textFixer';
 import styles from './SelectionEditor.module.css';
 
 export default function ChapterTextEditModal({
@@ -107,6 +108,23 @@ export default function ChapterTextEditModal({
     if (!newText) return;
     setNewText(newText.charAt(0).toUpperCase() + newText.slice(1));
   };
+  const handleTitleCase = () => {
+    if (!newText) return;
+    const transformed = toTitleCaseVi(newText);
+    setNewText(transformed);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      const len = transformed.length;
+      textareaRef.current.setSelectionRange(len, len);
+    }
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        const len = textareaRef.current.value.length;
+        textareaRef.current.setSelectionRange(len, len);
+      }
+    }, 0);
+  };
   const handleUppercase = () => setNewText(newText.toUpperCase());
   const handleLowercase = () => setNewText(newText.toLowerCase());
 
@@ -171,6 +189,14 @@ export default function ChapterTextEditModal({
                   title="Viết hoa chữ cái đầu"
                 >
                   aA
+                </button>
+                <button
+                  type="button"
+                  className={styles.toolMiniBtn}
+                  onClick={handleTitleCase}
+                  title="Viết Hoa Chữ Cái Đầu Mỗi Từ"
+                >
+                  Aa Aa
                 </button>
                 <button
                   type="button"

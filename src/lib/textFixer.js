@@ -50,6 +50,27 @@ export function capFirstLetters(title) {
 }
 
 /**
+ * Chuyển văn bản sang Title Case (Viết hoa chữ cái đầu của mỗi từ) chuẩn tiếng Việt
+ * - Dùng cờ Unicode u và \p{L}/\p{M} để hiểu đầy đủ dấu tiếng Việt (không dùng \b hay \w)
+ * - Tách từ theo ranh giới đầu chuỗi, khoảng trắng, các dấu mở/nối (" “ ‘ ' ( [ { - – — / ;)
+ * - Chuẩn hóa NFC bảo toàn thanh điệu (kể cả khi đầu vào là NFD)
+ * - Giữ nguyên toàn bộ khoảng trắng, xuống dòng, dấu câu, số và ký tự không phải chữ
+ * - Dấu nháy trong từ như "don't" giữ nguyên dạng viết thường sau nháy (chỉ coi nháy là ranh giới khi đứng đầu từ)
+ */
+export function toTitleCaseVi(text) {
+  if (!text) return text ?? '';
+  const normalized = String(text).normalize('NFC');
+
+  return normalized.replace(/[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)*/gu, (word) => {
+    const chars = Array.from(word);
+    if (chars.length === 0) return '';
+    const first = chars[0].toUpperCase();
+    const rest = chars.slice(1).join('').toLocaleLowerCase('vi');
+    return first + rest;
+  });
+}
+
+/**
  * Smart paragraph detection and formatting
  */
 export function formatChapterContent(text) {
