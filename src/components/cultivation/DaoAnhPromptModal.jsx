@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhTransformStyle } from '../../lib/daoAnhData';
+import { findDaoAnhDefinition, getDaoAnhEvolutionImage } from '../../lib/daoAnhData';
 import styles from './DaoAnhPromptModal.module.css';
 
 /**
@@ -32,7 +32,7 @@ export function DaoAnh80Modal({
   const daoAnhImage = getDaoAnhEvolutionImage(daoAnhDef, currentKiep, 'full');
   const primaryColor = daoAnhDef?.primaryColor || '#fbbf24';
   const glowColor = daoAnhDef?.glowColor || 'rgba(251, 191, 36, 0.7)';
-  const transformStyle = getDaoAnhTransformStyle(daoAnhDef, currentKiep);
+
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
@@ -77,7 +77,6 @@ export function DaoAnh80Modal({
                     alt={displayName}
                     className={styles.daoAnhImage}
                     style={{
-                      transform: transformStyle,
                       filter: `drop-shadow(0 0 12px ${glowColor})`
                     }}
                     onError={() => setImgError(true)}
