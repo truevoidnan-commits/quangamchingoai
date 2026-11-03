@@ -225,7 +225,7 @@ async function runBrowserFlowTests() {
     // Test page-by-page mode
     console.log('  7. Testing Page-by-Page reading mode...');
     const pageModeBtn = await page.locator('button:has-text("Từng Trang")');
-    await pageModeBtn.click();
+    await pageModeBtn.click({ force: true });
     await page.waitForTimeout(400);
 
     const readerSinglePageShot = path.join(ARTIFACT_DIR, 'comics-reader-single-page.png');

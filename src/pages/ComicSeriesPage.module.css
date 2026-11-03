@@ -567,6 +567,18 @@
   to { box-shadow: 0 0 10px rgba(234, 179, 8, 0.5); }
 }
 
+.statusInterrupted {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.statusQueued {
+  background: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
 .statusSynced {
   background: rgba(14, 165, 233, 0.15);
   color: #38bdf8;
@@ -668,6 +680,34 @@
   background: rgba(239, 68, 68, 0.15);
   color: #fca5a5;
   border-color: rgba(239, 68, 68, 0.5);
+}
+
+.syncBtnResume {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.syncBtnResume:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.3);
+  color: #fff;
+}
+
+.syncBtnDiscard {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.syncBtnDiscard:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fff;
+}
+
+.queuedHint {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-style: italic;
 }
 
 .taskProgressContainer {

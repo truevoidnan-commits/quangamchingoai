@@ -45,6 +45,7 @@ export default function ComicSeriesPage() {
   const [isBatchUploading, setIsBatchUploading] = useState(false);
   const [batchAbortCtrl, setBatchAbortCtrl] = useState(null);
   const [batchNotice, setBatchNotice] = useState('');
+  const [queuedVolumeIds, setQueuedVolumeIds] = useState([]);
 
   // Modals for confirmations
   const [volumeToDeleteLocal, setVolumeToDeleteLocal] = useState(null);
@@ -170,6 +171,7 @@ export default function ComicSeriesPage() {
   // ---------------------------------------------------------------------------
 
   const handleUploadSingle = async (volumeId) => {
+    if (isBatchUploading || activeTasks[volumeId]) return;
     const abortCtrl = new AbortController();
     setActiveTasks((prev) => ({
       ...prev,
@@ -191,27 +193,52 @@ export default function ComicSeriesPage() {
       });
 
       showToast('Tải lên Cloud thành công! ✨');
-      setActiveTasks((prev) => {
-        const next = { ...prev };
-        delete next[volumeId];
-        return next;
-      });
-      loadData();
     } catch (err) {
-      if (err.name === 'AbortError' || err.message?.includes('hủy')) {
-        showToast('Đã hủy tải lên.');
+      const isAbort = err.name === 'AbortError' || err.message?.includes('hủy');
+      if (isAbort) {
+        // If 0 pages were uploaded, clear empty progress key
+        try {
+          const raw = localStorage.getItem(`tcl_comic_upload_${volumeId}`);
+          if (raw) {
+            const arr = JSON.parse(raw);
+            if (!Array.isArray(arr) || arr.length === 0) {
+              localStorage.removeItem(`tcl_comic_upload_${volumeId}`);
+            }
+          }
+        } catch {}
+        showToast('Đã dừng tải lên.');
       } else {
         showToast(`Lỗi tải lên: ${err.message}`);
       }
+    } finally {
       setActiveTasks((prev) => {
         const next = { ...prev };
         delete next[volumeId];
         return next;
       });
+      await loadData();
     }
   };
 
+  const handleDiscardUpload = async (volumeId) => {
+    try {
+      localStorage.removeItem(`tcl_comic_upload_${volumeId}`);
+    } catch {}
+    setCloudStatusMap((prev) => ({
+      ...prev,
+      [volumeId]: {
+        ...(prev[volumeId] || {}),
+        status: 'local_only',
+        label: 'Chỉ trên máy này',
+        percent: 0,
+      },
+    }));
+    showToast('Đã hủy bỏ tiến độ dở dang, đưa về chỉ trên máy.');
+    await loadData();
+  };
+
   const handleDownloadSingle = async (volumeId) => {
+    if (isBatchUploading || activeTasks[volumeId]) return;
     const abortCtrl = new AbortController();
     setActiveTasks((prev) => ({
       ...prev,
@@ -233,27 +260,27 @@ export default function ComicSeriesPage() {
       });
 
       showToast('Tải về máy thành công! Bạn có thể đọc offline. ✨');
-      setActiveTasks((prev) => {
-        const next = { ...prev };
-        delete next[volumeId];
-        return next;
-      });
-      loadData();
     } catch (err) {
       if (err.name === 'AbortError' || err.message?.includes('hủy')) {
         showToast('Đã hủy tải về.');
       } else {
         showToast(`Lỗi tải về: ${err.message}`);
       }
+    } finally {
       setActiveTasks((prev) => {
         const next = { ...prev };
         delete next[volumeId];
         return next;
       });
+      await loadData();
     }
   };
 
   const handleCancelTask = (volumeId) => {
+    if (isBatchUploading) {
+      handleCancelBatchUpload();
+      return;
+    }
     const task = activeTasks[volumeId];
     if (task?.abortCtrl) {
       task.abortCtrl.abort();
@@ -261,10 +288,18 @@ export default function ComicSeriesPage() {
   };
 
   const handleUploadAllUnsynced = async () => {
+    if (isBatchUploading) return;
     const abortCtrl = new AbortController();
     setBatchAbortCtrl(abortCtrl);
     setIsBatchUploading(true);
-    setBatchNotice('Đang bắt đầu đồng bộ...');
+
+    const unsyncedList = volumes.filter((v) => {
+      const s = cloudStatusMap[v.id]?.status;
+      return (s === 'local_only' || s === 'uploading' || s === 'interrupted') && !v.isCloudOnly;
+    });
+    const unsyncedIds = unsyncedList.map((v) => v.id);
+    setQueuedVolumeIds(unsyncedIds);
+    setBatchNotice(`Chuẩn bị đồng bộ ${unsyncedIds.length} tập...`);
 
     try {
       const res = await uploadAllUnsyncedVolumes(seriesId, {
@@ -274,34 +309,38 @@ export default function ComicSeriesPage() {
             const msg = p.message || 'Đã chạm giới hạn thao tác, tự tiếp tục sau...';
             setBatchNotice(msg);
             if (p.volumeId) {
-              setActiveTasks((prev) => ({
-                ...prev,
+              setActiveTasks({
                 [p.volumeId]: { phase: 'rate_limited', percent: 0, message: msg },
-              }));
+              });
             }
           } else if (p.volumeId) {
-            setBatchNotice(`Đang tải tập ${p.currentVolumeIndex || 1}/${p.totalVolumesCount || 1}...`);
-            setActiveTasks((prev) => ({
-              ...prev,
-              [p.volumeId]: { phase: 'uploading', percent: p.percent },
-            }));
+            setBatchNotice(
+              `Đang tải tập ${p.currentVolumeIndex || 1}/${p.totalVolumesCount || unsyncedIds.length}: ${p.volumeTitle || ''}...`
+            );
+            setActiveTasks({
+              [p.volumeId]: { phase: 'uploading', percent: p.percent || 0 },
+            });
+            if (p.queuedVolumeIds) {
+              const currentIdx = (p.currentVolumeIndex || 1) - 1;
+              setQueuedVolumeIds(p.queuedVolumeIds.slice(currentIdx));
+            }
           }
         },
       });
       showToast(`Đã đồng bộ ${res.uploadedCount} tập lên Cloud thành công! ✨`);
-      setActiveTasks({});
-      setBatchNotice('');
-      loadData();
     } catch (err) {
-      if (err.message?.includes('hủy')) {
+      if (err.message?.includes('hủy') || abortCtrl.signal.aborted) {
         showToast('Đã dừng tiến trình tải lên hàng loạt.');
       } else {
         showToast(`Lỗi đồng bộ hàng loạt: ${err.message}`);
       }
     } finally {
       setIsBatchUploading(false);
+      setQueuedVolumeIds([]);
+      setActiveTasks({});
       setBatchAbortCtrl(null);
       setBatchNotice('');
+      await loadData();
     }
   };
 
@@ -376,7 +415,7 @@ export default function ComicSeriesPage() {
   // Check how many volumes are unsynced
   const unsyncedCount = volumes.filter((v) => {
     const s = cloudStatusMap[v.id]?.status;
-    return s === 'local_only' || s === 'uploading';
+    return (s === 'local_only' || s === 'uploading' || s === 'interrupted') && !v.isCloudOnly;
   }).length;
 
   if (loading) {
@@ -538,11 +577,13 @@ export default function ComicSeriesPage() {
                 const activeTask = activeTasks[vol.id];
                 const cloudStatus = cloudStatusMap[vol.id] || { status: vol.isCloudOnly ? 'cloud_only' : 'local_only' };
                 const isSynced = cloudStatus.status === 'synced';
-                const isLocalOnly = cloudStatus.status === 'local_only';
                 const isCloudOnly = cloudStatus.status === 'cloud_only' || vol.isCloudOnly;
+                const isActivelyUploading = activeTask?.phase === 'uploading';
+                const isActivelyDownloading = activeTask?.phase === 'downloading';
                 const isRateLimited = activeTask?.phase === 'rate_limited';
-                const isUploading = activeTask?.phase === 'uploading' || cloudStatus.status === 'uploading' || isRateLimited;
-                const isDownloading = activeTask?.phase === 'downloading';
+                const isQueued = isBatchUploading && queuedVolumeIds.includes(vol.id) && !activeTask;
+                const isInterrupted = !activeTask && !isQueued && cloudStatus.status === 'interrupted';
+                const isLocalOnly = !isSynced && !isCloudOnly && !isInterrupted && !isQueued && !activeTask;
 
                 return (
                   <div key={vol.id} className={styles.volumeCard}>
@@ -559,8 +600,12 @@ export default function ComicSeriesPage() {
                               className={`${styles.statusBadge} ${
                                 isSynced
                                   ? styles.statusSynced
-                                  : isUploading
+                                  : (isActivelyUploading || isRateLimited)
                                   ? styles.statusUploading
+                                  : isQueued
+                                  ? styles.statusQueued
+                                  : isInterrupted
+                                  ? styles.statusInterrupted
                                   : isCloudOnly
                                   ? styles.statusCloud
                                   : styles.statusLocal
@@ -568,7 +613,9 @@ export default function ComicSeriesPage() {
                             >
                               {isSynced && '☁️ Đã đồng bộ'}
                               {isRateLimited && '⏳ Tạm dừng (chờ giới hạn)'}
-                              {!isRateLimited && isUploading && `⏳ Đang tải lên ${activeTask?.percent || cloudStatus.percent || 0}%`}
+                              {isActivelyUploading && `⏳ Đang tải lên ${activeTask?.percent || 0}%`}
+                              {isQueued && '⏳ Đang chờ'}
+                              {isInterrupted && `⚠ Tải lên dở dang (${cloudStatus.percent || 0}%)`}
                               {isCloudOnly && '☁️ Chỉ trên cloud'}
                               {isLocalOnly && '💾 Chỉ trên máy này'}
                             </span>
@@ -584,7 +631,7 @@ export default function ComicSeriesPage() {
                         </div>
 
                         {/* Active Progress Bar for Upload / Download */}
-                        {(isUploading || isDownloading) && (
+                        {(isActivelyUploading || isActivelyDownloading || isRateLimited) && (
                           <div className={styles.taskProgressContainer}>
                             <div className={styles.taskProgressTrack}>
                               <div
@@ -596,7 +643,7 @@ export default function ComicSeriesPage() {
                               <span>
                                 {isRateLimited
                                   ? (activeTask?.message || 'Đã chạm giới hạn thao tác, tự tiếp tục sau...')
-                                  : isUploading
+                                  : isActivelyUploading
                                   ? 'Đang tải lên Cloudflare R2...'
                                   : 'Đang tải về máy...'}
                               </span>
@@ -624,13 +671,15 @@ export default function ComicSeriesPage() {
 
                     <div className={styles.volumeRight}>
                       {/* Active Cancel Button */}
-                      {(isUploading || isDownloading) ? (
+                      {(isActivelyUploading || isActivelyDownloading || isRateLimited) ? (
                         <button
                           className={`${styles.syncBtn} ${styles.syncBtnDanger}`}
                           onClick={() => handleCancelTask(vol.id)}
                         >
                           ✕ Hủy
                         </button>
+                      ) : isQueued ? (
+                        <span className={styles.queuedHint}>Đang trong hàng đợi...</span>
                       ) : (
                         <>
                           {/* If on machine: Read button */}
@@ -646,11 +695,34 @@ export default function ComicSeriesPage() {
                           {/* Cloud Sync Actions (Only if logged in) */}
                           {isLoggedIn && (
                             <>
+                              {/* Interrupted Actions: Resume & Discard */}
+                              {isInterrupted && (
+                                <>
+                                  <button
+                                    className={`${styles.syncBtn} ${styles.syncBtnResume}`}
+                                    title="Tiếp tục tải lên các trang còn lại"
+                                    disabled={isBatchUploading}
+                                    onClick={() => handleUploadSingle(vol.id)}
+                                  >
+                                    ▶ Tiếp tục
+                                  </button>
+                                  <button
+                                    className={`${styles.syncBtn} ${styles.syncBtnDiscard}`}
+                                    title="Hủy bỏ tiến độ dở dang, đưa về chỉ trên máy"
+                                    disabled={isBatchUploading}
+                                    onClick={() => handleDiscardUpload(vol.id)}
+                                  >
+                                    ✕ Bỏ dở
+                                  </button>
+                                </>
+                              )}
+
                               {/* Upload Button */}
                               {isLocalOnly && (
                                 <button
                                   className={`${styles.syncBtn} ${styles.syncBtnPrimary}`}
                                   title="Tải tập này lên Cloud"
+                                  disabled={isBatchUploading}
                                   onClick={() => handleUploadSingle(vol.id)}
                                 >
                                   ☁️ Tải lên
@@ -662,6 +734,7 @@ export default function ComicSeriesPage() {
                                 <button
                                   className={`${styles.syncBtn} ${styles.syncBtnPrimary}`}
                                   title="Tải tập này về máy để đọc offline"
+                                  disabled={isBatchUploading}
                                   onClick={() => handleDownloadSingle(vol.id)}
                                 >
                                   ⬇️ Tải về
@@ -673,6 +746,7 @@ export default function ComicSeriesPage() {
                                 <button
                                   className={styles.syncBtn}
                                   title="Xóa trang ảnh trên máy để tiết kiệm dung lượng, vẫn giữ nguyên trên Cloud"
+                                  disabled={isBatchUploading}
                                   onClick={() => setVolumeToEvict(vol)}
                                 >
                                   💾 Giải phóng máy
@@ -684,6 +758,7 @@ export default function ComicSeriesPage() {
                                 <button
                                   className={`${styles.syncBtn} ${styles.syncBtnDanger}`}
                                   title="Xóa tập này khỏi Cloud"
+                                  disabled={isBatchUploading}
                                   onClick={() => setVolumeToDeleteCloud(vol)}
                                 >
                                   ☁️ Xóa Cloud
@@ -693,7 +768,7 @@ export default function ComicSeriesPage() {
                           )}
 
                           {/* Delete Local Volume (if on machine and not synced) */}
-                          {!isCloudOnly && !isSynced && (
+                          {!isCloudOnly && !isSynced && !isBatchUploading && (
                             <button
                               className={styles.deleteVolumeBtn}
                               title="Xóa tập này khỏi máy"

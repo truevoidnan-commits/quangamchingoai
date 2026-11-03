@@ -431,14 +431,17 @@ async function runAllCloudTests() {
     },
   };
 
-  // 2.1 Test Upload Volume Normal Flow
-  console.log('  2.1 Kiểm tra uploadVolume luồng chuẩn...');
+  // 2.1 Test Upload Volume Normal Flow (Bỏ HEAD, dùng GET Range bytes=0-0 trả 206)
+  console.log('  2.1 Kiểm tra uploadVolume luồng chuẩn (Range GET 206, không gọi HEAD)...');
   const uploadedUrls = [];
   const verifiedUrls = [];
   const mockFetchSuccess = async (url, init) => {
-    if (init?.method === 'HEAD' || (init?.method === 'GET' && init?.headers?.Range)) {
-      verifiedUrls.push({ url, method: init.method });
-      return { ok: true, status: 200 };
+    if (init?.method === 'HEAD') {
+      throw new TypeError('HEAD method is strictly forbidden on presigned GET URL (failed to fetch CORS error)');
+    }
+    if (init?.method === 'GET' && init?.headers?.Range === 'bytes=0-0') {
+      verifiedUrls.push({ url, method: init.method, headers: init.headers });
+      return { ok: true, status: 206 }; // R2 / S3 returns 206 Partial Content
     }
     uploadedUrls.push({ url, method: init?.method, headers: init?.headers });
     return {
@@ -460,12 +463,14 @@ async function runAllCloudTests() {
   assert.strictEqual(remoteVol?.title, 'Tập 01: Thiếu Niên Thiên Tài');
   // 3 pages + 1 cover = 4 uploads
   assert.strictEqual(uploadedUrls.length, 4, '4 tệp ảnh được tải lên (3 trang + bìa)');
-  // Verification: 1 last page + 1 cover = 2 verified URLs
-  assert.strictEqual(verifiedUrls.length, 2, '2 tệp được kiểm tra HEAD trước khi đặt status=ready');
-  console.log('      ✓ Tập truyện được tải lên đầy đủ, xác minh HEAD thành công và chuyển trạng thái "ready".');
+  // Verification: 1 last page + 1 cover = 2 verified URLs via Range GET (not HEAD)
+  assert.strictEqual(verifiedUrls.length, 2, '2 tệp được kiểm tra Range GET bytes=0-0');
+  assert.strictEqual(verifiedUrls.every(v => v.method === 'GET' && v.headers.Range === 'bytes=0-0'), true);
+  assert.strictEqual(mockStorage.getItem(`tcl_comic_upload_${testVolumeId}`), null, 'Xoá sạch resume key khi thành công');
+  console.log('      ✓ Tập truyện được tải lên đầy đủ, xác minh Range GET thành công và chuyển trạng thái "ready".');
 
-  // 2.1.1 Test Verification Failure before setting ready
-  console.log('  2.1.1 Kiểm tra xác minh thất bại trước khi đặt status="ready"...');
+  // 2.1.1 Test Verification Failure (404 Not Found) - Không xoá localStorage để resume
+  console.log('  2.1.1 Kiểm tra xác minh 404 thất bại và giữ nguyên localStorage tiến độ...');
   const failVolId = 'vol_test_fail_verify';
   inMemoryVolumes.set(failVolId, {
     id: failVolId,
@@ -480,8 +485,11 @@ async function runAllCloudTests() {
   inMemoryPages.set(`${failVolId}:00000`, { volumeId: failVolId, index: 0, blob: { size: 500000 } });
   inMemoryPages.set(`${failVolId}:00001`, { volumeId: failVolId, index: 1, blob: { size: 500000 } });
 
-  const mockFetchFailVerify = async (url, init) => {
-    if (init?.method === 'HEAD' || (init?.method === 'GET' && init?.headers?.Range)) {
+  const mockFetchFailVerify404 = async (url, init) => {
+    if (init?.method === 'HEAD') {
+      throw new TypeError('HEAD method is strictly forbidden');
+    }
+    if (init?.method === 'GET' && init?.headers?.Range) {
       // Simulate last page or cover not accessible (HTTP 404)
       return { ok: false, status: 404 };
     }
@@ -492,23 +500,83 @@ async function runAllCloudTests() {
     async () => {
       await uploadVolume(failVolId, {
         customSupabase: mockSupabase,
-        customFetch: mockFetchFailVerify,
+        customFetch: mockFetchFailVerify404,
       });
     },
-    /Xác minh.*thất bại/,
-    'Phải báo lỗi khi bước kiểm tra xác minh trang cuối/bìa thất bại'
+    /tệp không tồn tại trên Cloud \(404\)/,
+    'Phải phân biệt chính xác lỗi tệp không tồn tại trên Cloud (404)'
   );
 
   const failRemoteVol = remoteVolumesTable.get(failVolId);
   assert.notStrictEqual(failRemoteVol?.status, 'ready', 'Tập lỗi xác minh tuyệt đối không được chuyển status="ready"');
-  console.log('      ✓ Xác minh thất bại ngăn chặn thành công việc đánh dấu status="ready".');
+  const retainedProgress = mockStorage.getItem(`tcl_comic_upload_${failVolId}`);
+  assert.notStrictEqual(retainedProgress, null, 'Khi verify thất bại, KHÔNG được xoá key localStorage của tập');
+  console.log('      ✓ Xác minh 404 báo lỗi chuẩn loại và giữ nguyên dữ liệu trong localStorage.');
+
+  // 2.1.2 Test Verification Network Error (TypeError) retries 3 times with backoff
+  console.log('  2.1.2 Kiểm tra xác minh lỗi mạng (TypeError) retry đúng 3 lần với backoff...');
+  let verifyNetworkAttempts = 0;
+  const mockFetchFailNetwork = async (url, init) => {
+    if (init?.method === 'HEAD') {
+      throw new TypeError('HEAD method is strictly forbidden');
+    }
+    if (init?.method === 'GET' && init?.headers?.Range) {
+      verifyNetworkAttempts++;
+      throw new TypeError('Failed to fetch (simulated network or CORS error)');
+    }
+    return { ok: true, status: 200, blob: async () => ({ size: 500000, type: 'image/webp' }) };
+  };
+
+  await assert.rejects(
+    async () => {
+      await uploadVolume(failVolId, {
+        customSupabase: mockSupabase,
+        customFetch: mockFetchFailNetwork,
+        verifyDelays: [5, 10, 15],
+      });
+    },
+    /không kết nối được tới Cloud \(có thể do CORS hoặc mạng\)/,
+    'Phải phân biệt lỗi không kết nối được tới Cloud (do CORS hoặc mạng)'
+  );
+  assert.strictEqual(verifyNetworkAttempts, 4, 'Phải retry đúng 3 lần (tổng 4 lượt gọi) trước khi ném lỗi');
+  console.log('      ✓ Lỗi mạng xác minh retry 3 lần và báo thông báo phân biệt CORS/mạng chuẩn xác.');
+
+  // 2.1.3 Test Resume after Verification Failure (Không upload lại trang nào, chỉ verify và set ready)
+  console.log('  2.1.3 Kiểm tra Resume sau lỗi xác minh: không tải lại trang nào, chỉ verify rồi đặt ready...');
+  const resumeUploadUrls = [];
+  const resumeVerifyUrls = [];
+  const mockFetchResumeVerify = async (url, init) => {
+    if (init?.method === 'HEAD') {
+      throw new TypeError('HEAD method is strictly forbidden');
+    }
+    if (init?.method === 'GET' && init?.headers?.Range) {
+      resumeVerifyUrls.push(url);
+      return { ok: true, status: 206 };
+    }
+    resumeUploadUrls.push(url);
+    return { ok: true, status: 200 };
+  };
+
+  const resumeVerifyRes = await uploadVolume(failVolId, {
+    customSupabase: mockSupabase,
+    customFetch: mockFetchResumeVerify,
+  });
+  assert.strictEqual(resumeVerifyRes.ok, true);
+  assert.strictEqual(resumeUploadUrls.length, 0, 'Tuyệt đối không upload lại các trang đã xong');
+  assert.strictEqual(resumeVerifyUrls.length, 2, 'Chỉ verify 2 tệp (trang cuối + cover)');
+  assert.strictEqual(remoteVolumesTable.get(failVolId)?.status, 'ready', 'Tập được chuyển sang "ready"');
+  assert.strictEqual(mockStorage.getItem(`tcl_comic_upload_${failVolId}`), null, 'Xoá key localStorage sau khi hoàn tất ready');
+  console.log('      ✓ Resume sau lỗi xác minh bỏ qua toàn bộ trang đã upload, chỉ verify thành công và set ready.');
 
   // 2.2 Test Retry with Backoff
   console.log('  2.2 Kiểm tra cơ chế retry tối đa 4 lần với lũy thừa thời gian chờ...');
   let failedAttempts = 0;
   const mockFetchRetry = async (url, init) => {
-    if (init?.method === 'HEAD' || (init?.method === 'GET' && init?.headers?.Range)) {
-      return { ok: true, status: 200 };
+    if (init?.method === 'HEAD') {
+      throw new TypeError('HEAD method is strictly forbidden');
+    }
+    if (init?.method === 'GET' && init?.headers?.Range) {
+      return { ok: true, status: 206 };
     }
     if (failedAttempts < 2) {
       failedAttempts++;
@@ -537,6 +605,12 @@ async function runAllCloudTests() {
 
   const resumeUploads = [];
   const mockFetchResume = async (url, init) => {
+    if (init?.method === 'HEAD') {
+      throw new TypeError('HEAD method is strictly forbidden');
+    }
+    if (init?.method === 'GET' && init?.headers?.Range) {
+      return { ok: true, status: 206 };
+    }
     resumeUploads.push(url);
     return { ok: true, status: 200 };
   };
@@ -616,25 +690,40 @@ async function runAllCloudTests() {
   assert.strictEqual(evictRes.ok, true);
   console.log('      ✓ Giải phóng an toàn tập đã có bản sao Cloud.');
 
-  // 2.6 Test Status Resolution in listRemote
-  console.log('  2.6 Kiểm tra nhận diện 4 trạng thái tập trong listRemote...');
+  // 2.6 Test Status Resolution in listRemote (interrupted vs local_only vs synced vs cloud_only)
+  console.log('  2.6 Kiểm tra nhận diện trạng thái trong listRemote (interrupted, local_only, synced, cloud_only)...');
   // 1. Synced: in both DBs and status ready
   inMemoryVolumes.set('vol_synced', { id: 'vol_synced', seriesId: testSeriesId, importState: 'ready' });
   remoteVolumesTable.set('vol_synced', { id: 'vol_synced', series_id: testSeriesId, status: 'ready', user_id: validUid, deleted_at: null });
 
-  // 2. Local only: in local DB only
+  // 2. Local only: in local DB only, no residual progress in localStorage
   inMemoryVolumes.set('vol_local', { id: 'vol_local', seriesId: testSeriesId, importState: 'ready' });
   remoteVolumesTable.delete('vol_local');
+  mockStorage.removeItem('tcl_comic_upload_vol_local');
 
   // 3. Cloud only: in remote DB only
   inMemoryVolumes.delete('vol_cloud');
   remoteVolumesTable.set('vol_cloud', { id: 'vol_cloud', series_id: testSeriesId, status: 'ready', user_id: validUid, deleted_at: null });
 
+  // 4. Interrupted: in local DB, upload incomplete in localStorage, remote not ready
+  inMemoryVolumes.set('vol_interrupted', { id: 'vol_interrupted', seriesId: testSeriesId, pageCount: 2, importState: 'ready' });
+  remoteVolumesTable.set('vol_interrupted', { id: 'vol_interrupted', series_id: testSeriesId, status: 'uploading', user_id: validUid, deleted_at: null });
+  mockStorage.setItem('tcl_comic_upload_vol_interrupted', JSON.stringify([0, 1])); // 2 out of 3 tasks = 67%
+
   const statusList = await listRemote({ customSupabase: mockSupabase });
   assert.strictEqual(statusList.volumeStatusMap['vol_synced']?.status, 'synced');
   assert.strictEqual(statusList.volumeStatusMap['vol_local']?.status, 'local_only');
   assert.strictEqual(statusList.volumeStatusMap['vol_cloud']?.status, 'cloud_only');
-  console.log('      ✓ 4 trạng thái (Chỉ trên máy, Đang tải lên, Đã đồng bộ, Chỉ trên cloud) chuẩn xác.');
+  assert.strictEqual(statusList.volumeStatusMap['vol_interrupted']?.status, 'interrupted', 'Phải nhận diện trạng thái interrupted khi không có task đang chạy');
+  assert.strictEqual(statusList.volumeStatusMap['vol_interrupted']?.percent, 67);
+  assert.strictEqual(statusList.volumeStatusMap['vol_interrupted']?.label, 'Tải lên dở dang (67%)');
+
+  // Test Bỏ dở (Discard): Xoá localStorage đưa về local_only
+  mockStorage.removeItem('tcl_comic_upload_vol_interrupted');
+  remoteVolumesTable.delete('vol_interrupted');
+  const statusListAfterDiscard = await listRemote({ customSupabase: mockSupabase });
+  assert.strictEqual(statusListAfterDiscard.volumeStatusMap['vol_interrupted']?.status, 'local_only', 'Sau khi Bỏ dở đưa về local_only');
+  console.log('      ✓ Trạng thái interrupted và chuyển về local_only khi Bỏ dở hoạt động chuẩn xác.');
 
   // 2.7 Test Reading Progress Synchronization (Cloud vs Local)
   console.log('  2.7 Kiểm tra ưu tiên tiến độ đọc giữa Cloud và Local...');
@@ -781,7 +870,11 @@ async function runAllCloudTests() {
 
   const queueRes = await uploadAllUnsyncedVolumes(queueSeriesId, {
     customSupabase: mockSupabaseQueueRateLimit,
-    customFetch: async (url, init) => ({ ok: true, status: 200, blob: async () => ({ size: 100000 }) }),
+    customFetch: async (url, init) => {
+      if (init?.method === 'HEAD') throw new TypeError('HEAD forbidden');
+      if (init?.method === 'GET' && init?.headers?.Range) return { ok: true, status: 206 };
+      return { ok: true, status: 200, blob: async () => ({ size: 100000 }) };
+    },
     onProgress: (p) => queueProgressEvents.push(p),
   });
 

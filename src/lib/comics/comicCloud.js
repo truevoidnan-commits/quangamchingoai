@@ -417,6 +417,9 @@ export async function uploadVolume(volumeId, options = {}) {
 
     await uploadWithRetry(getCoverUrl, getCoverBlob, 'ảnh bìa');
     completedPages.add('cover');
+    try {
+      localStorage.setItem(progressKey, JSON.stringify([...completedPages]));
+    } catch {}
     reportProgress();
   }
 
@@ -435,28 +438,62 @@ export async function uploadVolume(volumeId, options = {}) {
 
   const checkFileExists = async (signedUrl, label) => {
     if (!signedUrl) return;
-    try {
-      // 1. Try HEAD request
-      let checkRes = await customFetch(signedUrl, {
-        method: 'HEAD',
-        signal,
-      });
+    const maxRetries = 3;
+    const delays = options.verifyDelays || [1000, 2000, 4000];
+    let lastError = null;
 
-      // 2. If HEAD returns 403 / 405 (method not allowed / SigV4 verb mismatch), try GET with Range bytes=0-0
-      if (checkRes.status === 403 || checkRes.status === 405) {
-        checkRes = await customFetch(signedUrl, {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (signal?.aborted) throw new Error('Thao tác đã bị hủy');
+
+      try {
+        const checkRes = await customFetch(signedUrl, {
           method: 'GET',
           headers: { Range: 'bytes=0-0' },
           signal,
         });
-      }
 
-      if (checkRes.status !== 200 && checkRes.status !== 206) {
+        if (checkRes.status === 200 || checkRes.status === 206) {
+          return;
+        }
+
+        if (checkRes.status === 404) {
+          throw new Error('tệp không tồn tại trên Cloud (404)');
+        }
+
         throw new Error(`HTTP ${checkRes.status}`);
+      } catch (err) {
+        lastError = err;
+        if (signal?.aborted) throw err;
+
+        // 404: file is definitely not on Cloud, do not retry
+        if (err.message?.includes('404')) {
+          throw new Error(
+            `Xác minh ${label} trên Cloud thất bại: tệp không tồn tại trên Cloud (404). Không thể đánh dấu tập hoàn tất.`
+          );
+        }
+
+        // Network error (TypeError) or transient HTTP error: retry with backoff
+        if (attempt < maxRetries) {
+          const delay = delays[attempt] || 1000;
+          await sleep(delay, signal);
+          continue;
+        }
       }
-    } catch (err) {
-      throw new Error(`Xác minh ${label} trên Cloud thất bại (${err.message}). Không thể đánh dấu tập hoàn tất.`);
     }
+
+    const isNetworkOrCors =
+      lastError instanceof TypeError ||
+      lastError?.name === 'TypeError' ||
+      lastError?.message?.toLowerCase().includes('failed to fetch') ||
+      lastError?.message?.toLowerCase().includes('network');
+
+    const reason = isNetworkOrCors
+      ? 'không kết nối được tới Cloud (có thể do CORS hoặc mạng)'
+      : (lastError?.message || 'lỗi không xác định');
+
+    throw new Error(
+      `Xác minh ${label} trên Cloud thất bại: ${reason}. Không thể đánh dấu tập hoàn tất.`
+    );
   };
 
   const lastPageUrl = verifyPresign?.urls?.[lastPageIndex];
@@ -596,12 +633,14 @@ export async function listRemote(options = {}) {
       }
     } catch {}
 
-    if (uploadingCount > 0 && local) {
+    const isRemoteReady = remote && remote.status === 'ready';
+
+    if (uploadingCount > 0 && local && !isRemoteReady) {
       const total = (local.pageCount || 1) + 1;
       const pct = Math.min(99, Math.round((uploadingCount / total) * 100));
       volumeStatusMap[volId] = {
-        status: 'uploading',
-        label: `Đang tải lên ${pct}%`,
+        status: 'interrupted',
+        label: `Tải lên dở dang (${pct}%)`,
         percent: pct,
         local,
         remote,
@@ -1047,7 +1086,7 @@ export async function uploadAllUnsyncedVolumes(seriesId, options = {}) {
 
   const unsynced = localVolumes.filter((v) => {
     const s = remoteInfo.volumeStatusMap[v.id]?.status;
-    return s === 'local_only' || s === 'uploading';
+    return s === 'local_only' || s === 'uploading' || s === 'interrupted';
   });
 
   if (unsynced.length === 0) return { uploadedCount: 0 };
@@ -1058,6 +1097,18 @@ export async function uploadAllUnsyncedVolumes(seriesId, options = {}) {
     const vol = unsynced[i];
     currentVolIndex = i + 1;
 
+    if (onProgress) {
+      onProgress({
+        phase: 'start_volume',
+        volumeId: vol.id,
+        volumeTitle: vol.title,
+        percent: 0,
+        currentVolumeIndex: currentVolIndex,
+        totalVolumesCount: unsynced.length,
+        queuedVolumeIds: unsynced.map((u) => u.id),
+      });
+    }
+
     try {
       await uploadVolume(vol.id, {
         signal,
@@ -1067,8 +1118,10 @@ export async function uploadAllUnsyncedVolumes(seriesId, options = {}) {
           if (onProgress) {
             onProgress({
               ...p,
+              volumeTitle: vol.title,
               currentVolumeIndex: currentVolIndex,
               totalVolumesCount: unsynced.length,
+              queuedVolumeIds: unsynced.map((u) => u.id),
             });
           }
         },
