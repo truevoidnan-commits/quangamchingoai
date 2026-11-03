@@ -8,6 +8,12 @@ import {
   getComicProgress,
   saveComicProgress,
 } from '../lib/comics/comicDb.js';
+import {
+  recordVolumeOpened,
+  autoEvictIfStorageFull,
+  pushComicProgressCloud,
+  pullComicProgressCloud,
+} from '../lib/comics/comicCloud.js';
 import styles from './ComicReaderPage.module.css';
 
 const VIRTUAL_WINDOW_SIZE = 5; // ±5 pages in memory
@@ -61,6 +67,10 @@ export default function ComicReaderPage() {
     async function loadVolumeData() {
       setLoading(true);
       try {
+        recordVolumeOpened(volumeId);
+        // Background LRU eviction check for other synced volumes
+        autoEvictIfStorageFull({ activeVolumeId: volumeId }).catch(() => {});
+
         const [vol, vols, meta] = await Promise.all([
           getVolume(volumeId),
           getVolumes(seriesId),
@@ -83,8 +93,17 @@ export default function ComicReaderPage() {
         });
         setPageMeta(fullMeta);
 
-        // Check saved progress
-        const savedProgress = getComicProgress(volumeId);
+        // Check local saved progress
+        let savedProgress = getComicProgress(volumeId);
+
+        // Check Cloud progress (if logged in and newer)
+        try {
+          const cloudProgress = await pullComicProgressCloud(volumeId);
+          if (cloudProgress) {
+            savedProgress = cloudProgress;
+          }
+        } catch {}
+
         const startIdx = savedProgress && typeof savedProgress.pageIndex === 'number'
           ? Math.min(savedProgress.pageIndex, total - 1)
           : 0;
@@ -185,10 +204,15 @@ export default function ComicReaderPage() {
 
   // 4. Save progress only after genuine user interaction
   const recordProgress = useCallback((newPageIndex) => {
-    if (!hasUserEngagedRef.current) return;
+    if (!hasUserEngagedRef.current) return; // PASSIVE OPEN GUARD!
+    const scrollPercent = pageMeta.length > 0 ? Math.round(((newPageIndex + 1) / pageMeta.length) * 100) : 0;
     saveComicProgress(volumeId, {
       pageIndex: newPageIndex,
-      scrollPercent: pageMeta.length > 0 ? Math.round(((newPageIndex + 1) / pageMeta.length) * 100) : 0,
+      scrollPercent,
+    });
+    pushComicProgressCloud(volumeId, {
+      pageIndex: newPageIndex,
+      scrollPercent,
     });
   }, [volumeId, pageMeta.length]);
 

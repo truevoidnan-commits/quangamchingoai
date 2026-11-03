@@ -7,6 +7,12 @@ import {
   getComicsStorageStats,
   requestStoragePersistence,
 } from '../lib/comics/comicDb.js';
+import {
+  isCloudAvailable,
+  listRemote,
+  autoEvictIfStorageFull,
+} from '../lib/comics/comicCloud.js';
+import { supabase } from '../lib/supabaseClient.js';
 import ComicImportModal from '../components/comics/ComicImportModal.jsx';
 import Footer from '../components/layout/Footer.jsx';
 import styles from './ComicsPage.module.css';
@@ -16,6 +22,11 @@ export default function ComicsPage() {
   const [seriesList, setSeriesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [storageStats, setStorageStats] = useState(null);
+  const [cloudInfo, setCloudInfo] = useState({
+    isLoggedIn: false,
+    cloudUsageBytes: 0,
+    cloudQuotaBytes: 8 * 1024 * 1024 * 1024,
+  });
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [seriesToDelete, setSeriesToDelete] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
@@ -28,12 +39,39 @@ export default function ComicsPage() {
   const loadData = useCallback(async () => {
     try {
       await cleanOrphanImportingVolumes();
-      const [list, stats] = await Promise.all([
+      const [localList, stats, cloudRes] = await Promise.all([
         getAllSeries(),
         getComicsStorageStats(),
+        listRemote(),
       ]);
-      setSeriesList(list);
+
+      // Merge local series with remote series (for devices that haven't downloaded series yet)
+      const mergedSeries = [...localList];
+      const localIds = new Set(localList.map((s) => s.id));
+
+      if (cloudRes.isLoggedIn && cloudRes.remoteSeries) {
+        for (const rs of cloudRes.remoteSeries) {
+          if (!localIds.has(rs.id)) {
+            // Count remote volumes for this series
+            const volCount = cloudRes.remoteVolumes?.filter((v) => v.series_id === rs.id && v.status === 'ready').length || 0;
+            mergedSeries.push({
+              id: rs.id,
+              title: rs.title,
+              volumeCount: volCount,
+              totalPages: 0,
+              totalBytes: 0,
+              isCloudOnly: true,
+              updatedAt: new Date(rs.updated_at || Date.now()).getTime(),
+            });
+          }
+        }
+      }
+
+      mergedSeries.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+      setSeriesList(mergedSeries);
       setStorageStats(stats);
+      setCloudInfo(cloudRes);
     } catch (err) {
       console.error('Error loading comics series:', err);
     } finally {
@@ -43,6 +81,20 @@ export default function ComicsPage() {
 
   useEffect(() => {
     loadData();
+
+    // Refresh when tab gains focus
+    const handleFocus = () => loadData();
+    window.addEventListener('focus', handleFocus);
+
+    // Refresh on Supabase auth change
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      loadData();
+    });
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      authListener?.subscription?.unsubscribe();
+    };
   }, [loadData]);
 
   const handleDeleteSeries = async () => {
@@ -68,6 +120,23 @@ export default function ComicsPage() {
     setStorageStats(stats);
   };
 
+  const handleFreeDeviceSpace = async () => {
+    try {
+      const initialStats = await getComicsStorageStats();
+      await autoEvictIfStorageFull({ threshold: 0, target: 0 }); // Evict LRU synced volumes
+      const finalStats = await getComicsStorageStats();
+      const freedBytes = Math.max(0, initialStats.comicsBytes - finalStats.comicsBytes);
+      if (freedBytes > 0) {
+        showToast(`Đã giải phóng ${(freedBytes / (1024 * 1024)).toFixed(1)} MB từ các tập đã đồng bộ Cloud! ✨`);
+      } else {
+        showToast('Không có tập truyện đã đồng bộ nào cần giải phóng.');
+      }
+      loadData();
+    } catch (err) {
+      showToast(`Lỗi giải phóng bộ nhớ: ${err.message}`);
+    }
+  };
+
   const formatMb = (bytes) => (bytes / (1024 * 1024)).toFixed(1);
   const formatGb = (bytes) => (bytes / (1024 * 1024 * 1024)).toFixed(2);
 
@@ -76,6 +145,11 @@ export default function ComicsPage() {
   const quotaBytes = storageStats?.storageQuota || 0;
   const usagePercent = quotaBytes > 0 ? Math.min(100, Math.round((usedBytes / quotaBytes) * 100)) : 0;
   const isHighStorage = usagePercent >= 80;
+
+  // Cloud usage calculations
+  const cloudUsedGb = (cloudInfo.cloudUsageBytes / (1024 * 1024 * 1024)).toFixed(2);
+  const cloudTotalGb = 8.0;
+  const cloudPercent = Math.min(100, Math.round((cloudInfo.cloudUsageBytes / (8 * 1024 * 1024 * 1024)) * 100));
 
   return (
     <div className={styles.page}>
@@ -89,7 +163,7 @@ export default function ComicsPage() {
         <div className={styles.bannerContent}>
           <h1 className={styles.appTitle}>TÀNG KINH HỌA CÁC</h1>
           <p className={styles.appSubtitle}>
-            Trình đọc truyện tranh offline · Tách trang PDF tự động
+            Trình đọc truyện tranh offline · Đồng bộ Cloudflare R2 & Supabase
           </p>
           <div className={styles.neonBar} aria-hidden="true" />
         </div>
@@ -108,14 +182,14 @@ export default function ComicsPage() {
       </div>
 
       <div className={styles.container}>
-        {/* ===== STORAGE GAUGE ===== */}
+        {/* ===== STORAGE GAUGE (LOCAL) ===== */}
         {storageStats && (
           <div className={`${styles.storageGauge} ${isHighStorage ? styles.storageGaugeWarning : ''}`}>
             <div className={styles.gaugeHeader}>
               <div className={styles.gaugeInfo}>
                 <span className={styles.gaugeIcon}>💾</span>
                 <span className={styles.gaugeLabel}>
-                  Bộ nhớ truyện tranh: <strong>{formatMb(storageStats.comicsBytes)} MB</strong> ({storageStats.totalComicsPages} trang)
+                  Bộ nhớ truyện tranh trong máy: <strong>{formatMb(storageStats.comicsBytes)} MB</strong> ({storageStats.totalComicsPages} trang)
                 </span>
                 {quotaBytes > 0 && (
                   <span className={styles.gaugeSub}>
@@ -151,9 +225,38 @@ export default function ComicsPage() {
 
             {isHighStorage && (
               <div className={styles.gaugeWarningText}>
-                ⚠️ Bộ nhớ trình duyệt sắp đầy (&gt;80%). Bạn nên dọn bớt các tập cũ để tránh lỗi.
+                ⚠️ Bộ nhớ trình duyệt sắp đầy (&gt;80%). Bạn nên giải phóng bớt các tập đã lưu trên Cloud.
               </div>
             )}
+          </div>
+        )}
+
+        {/* ===== CLOUD STORAGE GAUGE (SHOWN ONLY IF LOGGED IN) ===== */}
+        {cloudInfo.isLoggedIn && (
+          <div className={styles.cloudStorageGauge}>
+            <div className={styles.gaugeHeader}>
+              <div className={styles.gaugeInfo}>
+                <span className={styles.gaugeIcon}>☁️</span>
+                <span className={styles.gaugeLabel}>
+                  Cloudflare R2: <strong>Cloud: {cloudUsedGb} / {cloudTotalGb} GB</strong> ({cloudPercent}%)
+                </span>
+              </div>
+              <div className={styles.cloudActions}>
+                <button
+                  className={styles.evictBtn}
+                  onClick={handleFreeDeviceSpace}
+                  title="Xóa trang ảnh local của các tập đã lưu an toàn trên Cloud để giải phóng bộ nhớ máy"
+                >
+                  🧹 Giải Phóng Bộ Nhớ Máy
+                </button>
+              </div>
+            </div>
+            <div className={styles.gaugeTrack}>
+              <div
+                className={styles.cloudGaugeFill}
+                style={{ width: `${cloudPercent}%` }}
+              />
+            </div>
           </div>
         )}
 
@@ -184,7 +287,7 @@ export default function ComicsPage() {
             <span className={styles.emptyIcon}>📚</span>
             <h3>Chưa có truyện tranh nào</h3>
             <p>
-              Nhập file PDF tập truyện (từ 1 đến nhiều tập) để bắt đầu đọc tranh offline mượt mà.
+              Nhập file PDF tập truyện để bắt đầu đọc tranh offline mượt mà hoặc đồng bộ giữa các thiết bị.
             </p>
             <button
               className={styles.emptyImportBtn}
@@ -288,30 +391,39 @@ function SeriesCard({ series, onClick, onDelete }) {
           </div>
         )}
         <div className={styles.coverGradient} />
-        <button
-          className={styles.cardDeleteBtn}
-          title="Xóa bộ truyện"
-          aria-label="Xóa bộ truyện"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-        >
-          ✕
-        </button>
+        {!series.isCloudOnly && (
+          <button
+            className={styles.cardDeleteBtn}
+            title="Xóa bộ truyện"
+            aria-label="Xóa bộ truyện"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       <div className={styles.cardBody}>
-        <h3 className={styles.cardTitle} title={series.title}>
-          {series.title}
-        </h3>
+        <div className={styles.titleRow}>
+          <h3 className={styles.cardTitle} title={series.title}>
+            {series.title}
+          </h3>
+          {series.isCloudOnly && (
+            <span className={styles.cloudOnlyTag}>☁️ Trên Cloud</span>
+          )}
+        </div>
         <div className={styles.cardMeta}>
           <span className={styles.cardVolumes}>
-            {series.volumeCount} tập ({series.totalPages || 0} trang)
+            {series.volumeCount} tập {!series.isCloudOnly && `(${series.totalPages || 0} trang)`}
           </span>
-          <span className={styles.cardSize}>
-            {formatMb(series.totalBytes || 0)} MB
-          </span>
+          {!series.isCloudOnly && (
+            <span className={styles.cardSize}>
+              {formatMb(series.totalBytes || 0)} MB
+            </span>
+          )}
         </div>
       </div>
     </div>

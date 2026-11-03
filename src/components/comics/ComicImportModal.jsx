@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { QUALITY_PRESETS, importMultiplePdfs } from '../../lib/comics/pdfImport.js';
+import { isCloudAvailable, uploadAllUnsyncedVolumes } from '../../lib/comics/comicCloud.js';
 import styles from './ComicImportModal.module.css';
 
 export default function ComicImportModal({
@@ -18,9 +19,15 @@ export default function ComicImportModal({
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [autoUpload, setAutoUpload] = useState(() => localStorage.getItem('tcl_comic_auto_upload') !== 'false');
 
   const abortControllerRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    isCloudAvailable().then(setIsLoggedIn);
+  }, []);
 
   useEffect(() => {
     if (initialSeriesId) {
@@ -32,7 +39,7 @@ export default function ComicImportModal({
   if (!isOpen) return null;
 
   const handleFileChange = (e) => {
-    const selected = Array.from(e.target.files || []).filter(f => f.name.toLowerCase().endsWith('.pdf'));
+    const selected = Array.from(e.target.files || []).filter((f) => f.name.toLowerCase().endsWith('.pdf'));
     if (selected.length === 0) return;
     setFiles(selected);
     setErrorMsg('');
@@ -75,6 +82,14 @@ export default function ComicImportModal({
       });
 
       setIsImporting(false);
+
+      // Auto-upload to Cloud if enabled and logged in
+      if (autoUpload && isLoggedIn && res?.seriesId) {
+        uploadAllUnsyncedVolumes(res.seriesId).catch((err) => {
+          console.warn('[ComicCloud] Tự động tải lên thất bại:', err);
+        });
+      }
+
       if (onImportSuccess) {
         onImportSuccess(res);
       }
@@ -119,7 +134,7 @@ export default function ComicImportModal({
 
           {!isImporting ? (
             <>
-              {/* File Selection Box */}
+              {/* File Drop Area */}
               <div
                 className={styles.dropZone}
                 onClick={() => fileInputRef.current?.click()}
@@ -127,26 +142,23 @@ export default function ComicImportModal({
                 <input
                   type="file"
                   ref={fileInputRef}
-                  accept=".pdf,application/pdf"
+                  accept=".pdf"
                   multiple
                   style={{ display: 'none' }}
                   onChange={handleFileChange}
                 />
-                <span className={styles.dropIcon}>📥</span>
-                {files.length === 0 ? (
-                  <>
-                    <p className={styles.dropTitle}>Chọn file PDF từ máy</p>
-                    <p className={styles.dropSub}>Hỗ trợ chọn nhiều tập cùng lúc (70-80MB/tập)</p>
-                  </>
-                ) : (
-                  <div className={styles.fileListSummary}>
-                    <p className={styles.dropTitle}>Đã chọn {files.length} file PDF</p>
-                    <ul className={styles.fileNames}>
-                      {files.slice(0, 5).map((f, i) => (
-                        <li key={i}>{f.name} ({formatMb(f.size)} MB)</li>
-                      ))}
-                      {files.length > 5 && <li>...và {files.length - 5} file khác</li>}
-                    </ul>
+                <span className={styles.uploadIcon}>📂</span>
+                <p className={styles.dropPrompt}>
+                  Nhấn để chọn một hoặc nhiều file PDF tập truyện
+                </p>
+                <p className={styles.dropSub}>
+                  Mỗi file ứng với 1 tập (hỗ trợ file nặng 50–100MB+)
+                </p>
+
+                {files.length > 0 && (
+                  <div className={styles.fileSummary}>
+                    Đã chọn <strong>{files.length} tập</strong> (tổng dung lượng ~
+                    {formatMb(files.reduce((acc, f) => acc + f.size, 0))} MB)
                   </div>
                 )}
               </div>
@@ -219,6 +231,23 @@ export default function ComicImportModal({
                   ))}
                 </div>
               </div>
+
+              {/* Auto Upload Checkbox (shown only when logged in) */}
+              {isLoggedIn && (
+                <div className={styles.formGroup}>
+                  <label className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={autoUpload}
+                      onChange={(e) => {
+                        setAutoUpload(e.target.checked);
+                        localStorage.setItem('tcl_comic_auto_upload', String(e.target.checked));
+                      }}
+                    />
+                    <span>☁️ Tự động tải lên Cloud sau khi nhập xong</span>
+                  </label>
+                </div>
+              )}
             </>
           ) : (
             /* Progress view during import */
