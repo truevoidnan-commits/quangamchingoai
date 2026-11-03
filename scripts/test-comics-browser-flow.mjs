@@ -6,8 +6,14 @@ import { chromium } from 'playwright';
 import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
+import { generateComicBenchmarkPdf } from './make-comic-benchmark-pdf.mjs';
 
-const ARTIFACT_DIR = 'C:/Users/ADMIN/.gemini/antigravity/brain/04a8635f-ab90-4862-af83-b6463b1f6a83';
+// Screenshots saved strictly in artifacts/ (which is in .gitignore), no hardcoded Windows paths
+const ARTIFACT_DIR = path.resolve('artifacts/comics');
+if (!fs.existsSync(ARTIFACT_DIR)) {
+  fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
+}
+
 const PORT = 4199;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const distDir = path.resolve('dist');
@@ -53,19 +59,18 @@ function createStaticServer() {
   });
 }
 
-
 async function ensureSamplePdf(browser) {
-  const samplePdfPath = path.resolve('scripts/test-comic-sample.pdf');
+  const samplePdfPath = path.resolve('artifacts/comics/test-comic-sample.pdf');
   if (fs.existsSync(samplePdfPath)) return samplePdfPath;
 
   const p = await browser.newPage();
-  let html = '<html><head><style>@page { size: 800px 1200px; margin: 0; } body { margin:0; background:#0f172a; font-family:sans-serif; } .p { width:800px; height:1200px; page-break-after:always; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#38bdf8; border:4px solid #38bdf8; box-sizing:border-box; }</style></head><body>';
+  let html = '<html><head><style>@page { size: 1000px 1500px; margin: 0; } body { margin:0; background:#0f172a; font-family:sans-serif; } .p { width:1000px; height:1500px; page-break-after:always; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#38bdf8; border:4px solid #38bdf8; box-sizing:border-box; }</style></head><body>';
   for (let i = 1; i <= 6; i++) {
     html += `<div class="p"><h1>Đấu Phá Thương Khung</h1><h2>Tập 1 - Trang ${i}</h2></div>`;
   }
   html += '</body></html>';
   await p.setContent(html);
-  await p.pdf({ path: samplePdfPath, width: '800px', height: '1200px', printBackground: true });
+  await p.pdf({ path: samplePdfPath, width: '1000px', height: '1500px', printBackground: true });
   await p.close();
   return samplePdfPath;
 }
@@ -244,41 +249,129 @@ async function runBrowserFlowTests() {
     await page.waitForSelector('text=Chưa có tập nào trong bộ truyện này');
     console.log('     Volume deleted cleanly.');
 
-    // 9. Benchmark Large PDF Import (~75MB volume)
-    console.log('  9. Running Benchmark on 75MB PDF volume...');
-    const benchPdfPath = path.resolve('scripts/benchmark-comic-75mb.pdf');
-    if (fs.existsSync(benchPdfPath)) {
-      const benchStat = fs.statSync(benchPdfPath);
-      const benchSizeMb = (benchStat.size / (1024 * 1024)).toFixed(2);
-      console.log(`     Benchmarking with ${benchPdfPath} (${benchSizeMb} MB)...`);
+    // 9. Benchmark Realistic Comic PDF at 3 Quality Tiers (Low, Balanced, High)
+    console.log('  9. Generating Realistic Manga Benchmark PDF (2000x3000px, 45 pages)...');
+    const benchmarkPdf = await generateComicBenchmarkPdf(null, 45);
+    console.log(`     Benchmark PDF ready: ${benchmarkPdf.path} (${benchmarkPdf.sizeMb} MB)`);
+
+    const tiers = [
+      { id: 'low', expectedW: 900, textPattern: '900px' },
+      { id: 'balanced', expectedW: 1200, textPattern: '1200px' },
+      { id: 'high', expectedW: 1600, textPattern: '1600px' },
+    ];
+
+    const benchmarkResults = [];
+
+    for (const tier of tiers) {
+      console.log(`     Testing Quality Tier: ${tier.id.toUpperCase()} (Kỳ vọng width = ${tier.expectedW}px)...`);
 
       await page.goto(`${BASE_URL}/#/comics`, { waitUntil: 'domcontentloaded' });
       await page.waitForSelector('#btn-import-pdf-comics');
       await page.click('#btn-import-pdf-comics');
 
-      const modalInput = await page.locator('input[type="file"]');
-      await modalInput.setInputFiles(benchPdfPath);
+      await page.waitForSelector('text=Nhập Truyện Tranh (PDF)');
+      const benchFileInput = await page.locator('input[type="file"]');
+      await benchFileInput.setInputFiles(benchmarkPdf.path);
 
-      const titleInp = await page.locator('input[placeholder*="One Piece"]');
-      await titleInp.fill('Đấu Phá Benchmark');
+      // Select Quality Tier Card
+      const qualityCard = await page.locator(`div[class*="qualityCard"]:has-text("${tier.textPattern}")`);
+      await qualityCard.click();
+
+      // Enter distinct title
+      const titleInput = await page.locator('input[placeholder*="One Piece"]');
+      const seriesTitle = `Benchmark ${tier.id.toUpperCase()}`;
+      await titleInput.fill(seriesTitle);
 
       const startTime = Date.now();
-      const startMem = await page.evaluate(() => performance?.memory ? performance.memory.usedJSHeapSize : 0);
-
       await page.click('button:has-text("Bắt Đầu Nhập")');
+
+      // Wait until import completes and navigates to series page
       await page.waitForURL(/\/comics\/[A-Za-z0-9_-]+/, { timeout: 120000 });
+      const durationSec = ((Date.now() - startTime) / 1000).toFixed(1);
 
-      const durationMs = Date.now() - startTime;
-      const endMem = await page.evaluate(() => performance?.memory ? performance.memory.usedJSHeapSize : 0);
-      const peakRamMb = ((endMem - startMem) / (1024 * 1024)).toFixed(1);
+      // Query IndexedDB directly for first page actual dimensions and volume totalBytes
+      const currentUrl = page.url();
+      const seriesId = currentUrl.split('/comics/')[1].split(/[?#/]/)[0];
 
-      console.log(`     ⚡ 75MB Benchmark complete in ${(durationMs / 1000).toFixed(1)}s!`);
-      console.log(`     Estimated JS Heap variation: ~${peakRamMb} MB`);
+      const volStats = await page.evaluate(async (sId) => {
+        return new Promise((resolve) => {
+          const req = indexedDB.open('thien-co-lau-comics', 1);
+          req.onsuccess = () => {
+            const db = req.result;
+            const tx = db.transaction(['volumes', 'pages'], 'readonly');
+            const volStore = tx.objectStore('volumes');
+            const volIndex = volStore.index('seriesId');
+            const getVols = volIndex.getAll(IDBKeyRange.only(sId));
 
-      // Read volume size from UI
-      const sizeText = await page.locator('div:has-text("MB")').first().innerText();
-      console.log(`     Stored size in IndexedDB: ${sizeText}`);
+            getVols.onsuccess = () => {
+              const vols = getVols.result || [];
+              const vol = vols[0];
+              if (!vol) return resolve(null);
+
+              const pageStore = tx.objectStore('pages');
+              const pageIndex = pageStore.index('volumeId');
+              const getPages = pageIndex.openCursor(IDBKeyRange.only(vol.id));
+
+              getPages.onsuccess = (e) => {
+                const cursor = e.target.result;
+                if (cursor) {
+                  resolve({
+                    volumeId: vol.id,
+                    totalBytes: vol.totalBytes,
+                    pageCount: vol.pageCount,
+                    firstPageW: cursor.value.w,
+                    firstPageH: cursor.value.h,
+                  });
+                } else {
+                  resolve({
+                    volumeId: vol.id,
+                    totalBytes: vol.totalBytes,
+                    pageCount: vol.pageCount,
+                    firstPageW: 0,
+                    firstPageH: 0,
+                  });
+                }
+              };
+            };
+          };
+          req.onerror = () => resolve(null);
+        });
+      }, seriesId);
+
+      const sizeMb = ((volStats?.totalBytes || 0) / (1024 * 1024)).toFixed(2);
+      console.log(`     ✓ Tier ${tier.id.toUpperCase()}: Trang đầu = ${volStats?.firstPageW}x${volStats?.firstPageH}px | Thời gian = ${durationSec}s | Dung lượng IDB = ${sizeMb} MB`);
+
+      benchmarkResults.push({
+        tier: tier.id,
+        expectedW: tier.expectedW,
+        actualW: volStats?.firstPageW,
+        actualH: volStats?.firstPageH,
+        durationSec,
+        sizeMb,
+        pageCount: volStats?.pageCount || 45,
+      });
+
+      // Cleanup this benchmark series
+      await page.waitForSelector('button:has-text("Xóa Bộ Truyện")');
+      page.once('dialog', async (dialog) => {
+        await dialog.accept();
+      });
+      await page.click('button:has-text("Xóa Bộ Truyện")');
+      await page.waitForURL('**/comics', { timeout: 10000 });
     }
+
+    // Clean up temporary benchmark PDF file
+    if (fs.existsSync(benchmarkPdf.path)) {
+      try {
+        fs.unlinkSync(benchmarkPdf.path);
+        console.log(`     Cleaned up temporary benchmark PDF: ${benchmarkPdf.path}`);
+      } catch (e) {}
+    }
+
+    console.log('\n======================================================');
+    console.log('📊 BẢNG KẾT QUẢ BENCHMARK 3 MỨC CHẤT LƯỢNG (45 TRANG MANGA):');
+    console.table(benchmarkResults);
+    console.log('======================================================\n');
 
     console.log('✅ ALL Comics Browser Flow & Performance Tests PASSED!');
   } finally {

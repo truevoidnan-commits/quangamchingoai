@@ -5,8 +5,10 @@
  * - Dynamic import of pdfjs-dist (code-split, zero impact on main bundle)
  * - Object URL streaming for range requests (no 80MB JS memory spike)
  * - Sequential page rendering with immediate canvas/page memory cleanup
- * - Quality tiers (low: 900px/0.7, balanced: 1200px/0.8, high: 1600px/0.9)
- * - Maximum pixel clamping (2.5MP max)
+ * - Quality tiers by WIDTH (low: rộng 900px, balanced: rộng 1200px, high: rộng 1600px)
+ * - Landscape / double-page spread handling (max 1.5x preset width)
+ * - Maximum canvas pixel limit (4.2MP standard, 2.5MP on low-RAM / older iOS)
+ * - 100% offline raster rendering: zero CDN dependencies
  * - Storage estimate check & persistence request
  * - Progress callback & AbortSignal support
  * - First-page cover thumbnail extraction (~300px WebP)
@@ -24,33 +26,56 @@ import {
   getComicsStorageStats,
   requestStoragePersistence,
 } from './comicDb.js';
-import { nanoid } from '../nanoid.js';
 
 export const QUALITY_PRESETS = {
   low: {
     id: 'low',
-    label: 'Tiết kiệm (900px, WebP 70%)',
-    maxEdge: 900,
+    label: 'Tiết kiệm (rộng 900px, WebP 70%)',
+    maxWidth: 900,
+    maxEdge: 900, // Backward compat
     quality: 0.7,
-    estimatedSizeMbPerVol: 20,
+    estimatedSizeMbPerVol: 25,
   },
   balanced: {
     id: 'balanced',
-    label: 'Cân bằng (1200px, WebP 80%)',
-    maxEdge: 1200,
+    label: 'Cân bằng (rộng 1200px, WebP 80%)',
+    maxWidth: 1200,
+    maxEdge: 1200, // Backward compat
     quality: 0.8,
-    estimatedSizeMbPerVol: 35,
+    estimatedSizeMbPerVol: 45,
   },
   high: {
     id: 'high',
-    label: 'Sắc nét (1600px, WebP 90%)',
-    maxEdge: 1600,
+    label: 'Sắc nét (rộng 1600px, WebP 90%)',
+    maxWidth: 1600,
+    maxEdge: 1600, // Backward compat
     quality: 0.9,
-    estimatedSizeMbPerVol: 65,
+    estimatedSizeMbPerVol: 85,
   },
 };
 
-const MAX_CANVAS_PIXELS = 2500000; // ~2.5 megapixels max to avoid mobile canvas memory crashes
+/**
+ * Returns canvas pixel ceiling:
+ * - 4.2 million pixels for modern desktop & phones (fits 1600x2400 ~3.84MP or 1600x2600 ~4.16MP)
+ * - 2.5 million pixels for low-RAM devices (<= 2GB) or older iOS
+ */
+export function getMaxCanvasPixels() {
+  if (typeof navigator !== 'undefined') {
+    // Detect low-RAM devices (<= 2GB)
+    if (typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 2) {
+      return 2500000;
+    }
+    // Detect older iOS devices (prior to iOS 15)
+    const ua = navigator.userAgent || '';
+    if (/iPhone|iPad|iPod/.test(ua)) {
+      const match = ua.match(/OS (\d+)_/);
+      if (match && parseInt(match[1], 10) < 15) {
+        return 2500000;
+      }
+    }
+  }
+  return 4200000;
+}
 
 let pdfjsLibPromise = null;
 
@@ -151,13 +176,14 @@ export async function importPdfVolume(file, options = {}) {
   if (signal?.aborted) throw new Error('Đã hủy nhập');
 
   const qualityConfig = QUALITY_PRESETS[quality] || QUALITY_PRESETS.balanced;
+  const presetMaxW = qualityConfig.maxWidth || qualityConfig.maxEdge || 1200;
 
   // 1. Storage check & persistence
   await requestStoragePersistence();
   const storageStats = await getComicsStorageStats();
   if (storageStats.storageQuota > 0) {
     const freeBytes = storageStats.storageQuota - storageStats.storageUsage;
-    const estimatedNeededBytes = (qualityConfig.estimatedSizeMbPerVol || 35) * 1024 * 1024;
+    const estimatedNeededBytes = (qualityConfig.estimatedSizeMbPerVol || 45) * 1024 * 1024;
     if (freeBytes < estimatedNeededBytes && freeBytes < 50 * 1024 * 1024) {
       console.warn(`[PDF Import] Dung lượng bộ nhớ máy sắp hết (còn lại ~${Math.round(freeBytes / (1024 * 1024))}MB)`);
     }
@@ -194,7 +220,7 @@ export async function importPdfVolume(file, options = {}) {
     title: resolvedVolumeTitle,
     order: resolvedOrder,
     pageCount: 0,
-    widthHint: qualityConfig.maxEdge,
+    widthHint: presetMaxW,
     totalBytes: 0,
     quality,
     sourceName: file.name,
@@ -205,6 +231,9 @@ export async function importPdfVolume(file, options = {}) {
   const volumeId = volumeRecord.id;
 
   // 6. Open PDF document with range streaming via blob URL
+  // NOTE: Scanned manga/comic PDFs contain 100% full-page raster images (JPEG/PNG/WebP).
+  // They do not require cMapUrl or standardFontDataUrl, so we omit external CDN URLs.
+  // This guarantees 100% offline import without network dependency.
   let objectUrl = null;
   let pdfDoc = null;
 
@@ -212,9 +241,6 @@ export async function importPdfVolume(file, options = {}) {
     objectUrl = URL.createObjectURL(file);
     const loadingTask = pdfjs.getDocument({
       url: objectUrl,
-      cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/cmaps/',
-      cMapPacked: true,
-      standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/standard_fonts/',
       disableAutoFetch: true, // Only fetch ranges needed for current page
       disableStream: false,
     });
@@ -236,8 +262,6 @@ export async function importPdfVolume(file, options = {}) {
       const buffer = await file.arrayBuffer();
       pdfDoc = await pdfjs.getDocument({
         data: buffer,
-        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/cmaps/',
-        cMapPacked: true,
       }).promise;
     }
 
@@ -267,6 +291,7 @@ export async function importPdfVolume(file, options = {}) {
     const BATCH_SIZE = 5; // Batch write to IndexedDB every 5 pages
     let pageBatch = [];
     let firstPageCoverBlob = null;
+    const maxCanvasPixels = getMaxCanvasPixels();
 
     for (let pageNum = 1; pageNum <= numPages; pageNum++) {
       if (signal?.aborted) {
@@ -276,14 +301,20 @@ export async function importPdfVolume(file, options = {}) {
       const page = await pdfDoc.getPage(pageNum);
       const baseViewport = page.getViewport({ scale: 1.0 });
 
-      // Determine optimal scale
-      let scale = qualityConfig.maxEdge / Math.max(baseViewport.width, baseViewport.height);
+      // Determine dimensions based on WIDTH:
+      // - Portrait page (height >= width): targetWidth = preset.maxWidth
+      // - Landscape / Double-page spread (width > height): targetWidth up to 1.5x preset.maxWidth
+      // - Never upscale if original is smaller: scale <= 1.0
+      const isLandscape = baseViewport.width > baseViewport.height;
+      const targetMaxWidth = isLandscape ? Math.round(presetMaxW * 1.5) : presetMaxW;
+
+      let scale = baseViewport.width > targetMaxWidth ? targetMaxWidth / baseViewport.width : 1.0;
       let targetW = Math.round(baseViewport.width * scale);
       let targetH = Math.round(baseViewport.height * scale);
 
-      // Clamp max pixels if extreme aspect ratio
-      if (targetW * targetH > MAX_CANVAS_PIXELS) {
-        scale = Math.sqrt(MAX_CANVAS_PIXELS / (baseViewport.width * baseViewport.height));
+      // Clamp max pixels if exceeding canvas ceiling (4.2MP standard, 2.5MP on low-memory)
+      if (targetW * targetH > maxCanvasPixels) {
+        scale = Math.sqrt(maxCanvasPixels / (baseViewport.width * baseViewport.height));
         targetW = Math.round(baseViewport.width * scale);
         targetH = Math.round(baseViewport.height * scale);
       }
@@ -298,7 +329,7 @@ export async function importPdfVolume(file, options = {}) {
         viewport,
       }).promise;
 
-      // Extract cover thumbnail from first page
+      // Extract cover thumbnail from first page (~320px)
       if (pageNum === 1) {
         firstPageCoverBlob = await generateThumbnailBlob(canvas, 320);
       }
@@ -363,7 +394,7 @@ export async function importPdfVolume(file, options = {}) {
     const finalVolume = await updateVolume(volumeId, {
       pageCount: numPages,
       totalBytes,
-      widthHint: qualityConfig.maxEdge,
+      widthHint: presetMaxW,
       importState: 'ready',
       pageMeta,
     });
