@@ -14,6 +14,12 @@
  */
 
 import { supabase as defaultSupabase } from '../supabaseClient.js';
+
+let activeDefaultSupabase = defaultSupabase;
+
+export function setSupabaseForTesting(client) {
+  activeDefaultSupabase = client;
+}
 import {
   getVolume,
   getSeries,
@@ -67,7 +73,7 @@ function sleep(ms, signal) {
  * Checks if a Supabase user session is active
  */
 export async function getCloudUser(customSupabase = null) {
-  const client = customSupabase || defaultSupabase;
+  const client = customSupabase || activeDefaultSupabase;
   try {
     const { data: { session } } = await client.auth.getSession();
     return session?.user || null;
@@ -92,7 +98,7 @@ export async function callComicPresign(payload, { customSupabase = null, signal 
     throw new Error('Thao tác đã bị hủy');
   }
 
-  const client = customSupabase || defaultSupabase;
+  const client = customSupabase || activeDefaultSupabase;
   const user = await getCloudUser(client);
   if (!user) {
     throw new Error('Chưa đăng nhập Supabase. Vui lòng đăng nhập để sử dụng tính năng Cloud.');
@@ -218,16 +224,21 @@ export function getVolumeLastOpened(volumeId) {
  * @param {Function} [options.customFetch]
  */
 export async function uploadVolume(volumeId, options = {}) {
-  const {
+  let {
     onProgress,
     signal,
-    customSupabase = null,
-    customFetch = typeof fetch !== 'undefined' ? fetch : null,
+    customSupabase,
+    customFetch,
+    verifyDelays,
   } = options;
 
   if (signal?.aborted) throw new Error('Thao tác đã bị hủy');
 
-  const client = customSupabase || defaultSupabase;
+  const client = customSupabase || activeDefaultSupabase;
+  customFetch = customFetch || (typeof fetch !== 'undefined' ? fetch : (typeof globalThis !== 'undefined' && globalThis.fetch ? globalThis.fetch.bind(globalThis) : null));
+  if (typeof customFetch !== 'function') {
+    throw new Error('Môi trường không hỗ trợ fetch API để tải ảnh lên Cloud.');
+  }
   const user = await getCloudUser(client);
   if (!user) {
     throw new Error('Cần đăng nhập Supabase để tải truyện lên Cloud.');
@@ -558,7 +569,7 @@ export async function uploadVolume(volumeId, options = {}) {
  */
 export async function listRemote(options = {}) {
   const { customSupabase = null } = options;
-  const client = customSupabase || defaultSupabase;
+  const client = customSupabase || activeDefaultSupabase;
 
   const user = await getCloudUser(client);
   if (!user) {
@@ -692,16 +703,20 @@ export async function listRemote(options = {}) {
  * Downloads a volume from Cloudflare R2 into local IndexedDB
  */
 export async function downloadVolume(volumeId, options = {}) {
-  const {
+  let {
     onProgress,
     signal,
-    customSupabase = null,
-    customFetch = typeof fetch !== 'undefined' ? fetch : null,
+    customSupabase,
+    customFetch,
   } = options;
 
   if (signal?.aborted) throw new Error('Thao tác đã bị hủy');
 
-  const client = customSupabase || defaultSupabase;
+  const client = customSupabase || activeDefaultSupabase;
+  customFetch = customFetch || (typeof fetch !== 'undefined' ? fetch : (typeof globalThis !== 'undefined' && globalThis.fetch ? globalThis.fetch.bind(globalThis) : null));
+  if (typeof customFetch !== 'function') {
+    throw new Error('Môi trường không hỗ trợ fetch API để tải ảnh từ Cloud.');
+  }
   const user = await getCloudUser(client);
   if (!user) throw new Error('Cần đăng nhập để tải truyện từ Cloud.');
 
@@ -878,7 +893,7 @@ export async function downloadVolume(volumeId, options = {}) {
  */
 export async function evictLocalVolume(volumeId, options = {}) {
   const { customSupabase = null } = options;
-  const client = customSupabase || defaultSupabase;
+  const client = customSupabase || activeDefaultSupabase;
 
   const user = await getCloudUser(client);
   if (!user) {
@@ -923,7 +938,7 @@ export async function autoEvictIfStorageFull(options = {}) {
 
     if (quota === 0 || usage / quota <= threshold) return; // Storage is fine
 
-    const remoteInfo = await listRemote({ customSupabase });
+    const remoteInfo = await listRemote({ ...(customSupabase ? { customSupabase } : {}) });
     if (!remoteInfo.isLoggedIn) return;
 
     // Find all 'synced' volumes, sorted by lastOpenedAt ascending (LRU)
@@ -944,7 +959,7 @@ export async function autoEvictIfStorageFull(options = {}) {
     for (const v of syncedVols) {
       if (currentUsage / quota <= target) break;
       console.log(`[ComicCloud] Auto-evicting synced volume: ${v.volumeId}`);
-      await evictLocalVolume(v.volumeId, { customSupabase });
+      await evictLocalVolume(v.volumeId, { ...(customSupabase ? { customSupabase } : {}) });
       currentUsage -= v.bytes;
     }
   } catch (err) {
@@ -961,7 +976,7 @@ export async function autoEvictIfStorageFull(options = {}) {
  */
 export async function deleteVolumeFromCloud(volumeId, options = {}) {
   const { customSupabase = null } = options;
-  const client = customSupabase || defaultSupabase;
+  const client = customSupabase || activeDefaultSupabase;
 
   const user = await getCloudUser(client);
   if (!user) throw new Error('Cần đăng nhập để xóa truyện khỏi Cloud.');
@@ -1004,7 +1019,7 @@ let progressDebounceTimer = null;
 export function pushComicProgressCloud(volumeId, { pageIndex, scrollPercent }, options = {}) {
   if (!volumeId) return;
   const { customSupabase = null } = options;
-  const client = customSupabase || defaultSupabase;
+  const client = customSupabase || activeDefaultSupabase;
 
   if (progressDebounceTimer) clearTimeout(progressDebounceTimer);
 
@@ -1032,7 +1047,7 @@ export function pushComicProgressCloud(volumeId, { pageIndex, scrollPercent }, o
 export async function pullComicProgressCloud(volumeId, options = {}) {
   if (!volumeId) return null;
   const { customSupabase = null } = options;
-  const client = customSupabase || defaultSupabase;
+  const client = customSupabase || activeDefaultSupabase;
 
   try {
     const user = await getCloudUser(client);
@@ -1079,8 +1094,8 @@ export async function pullComicProgressCloud(volumeId, options = {}) {
  * Uploads all unsynced volumes of a series sequentially
  */
 export async function uploadAllUnsyncedVolumes(seriesId, options = {}) {
-  const { onProgress, signal, customSupabase = null, customFetch = null } = options;
-  const remoteInfo = await listRemote({ customSupabase });
+  const { onProgress, signal, customSupabase, customFetch, verifyDelays } = options;
+  const remoteInfo = await listRemote({ ...(customSupabase ? { customSupabase } : {}) });
   const { getVolumes } = await import('./comicDb.js');
   const localVolumes = await getVolumes(seriesId);
 
@@ -1111,9 +1126,10 @@ export async function uploadAllUnsyncedVolumes(seriesId, options = {}) {
 
     try {
       await uploadVolume(vol.id, {
-        signal,
-        customSupabase,
-        customFetch,
+        ...(signal ? { signal } : {}),
+        ...(customSupabase ? { customSupabase } : {}),
+        ...(customFetch ? { customFetch } : {}),
+        ...(verifyDelays ? { verifyDelays } : {}),
         onProgress: (p) => {
           if (onProgress) {
             onProgress({

@@ -35,6 +35,7 @@ import {
   pullComicProgressCloud,
   uploadAllUnsyncedVolumes,
   asyncPool,
+  setSupabaseForTesting,
 } from '../src/lib/comics/comicCloud.js';
 import { setComicDBForTesting } from '../src/lib/comics/comicDb.js';
 
@@ -430,6 +431,7 @@ async function runAllCloudTests() {
       },
     },
   };
+  setSupabaseForTesting(mockSupabase);
 
   // 2.1 Test Upload Volume Normal Flow (Bỏ HEAD, dùng GET Range bytes=0-0 trả 206)
   console.log('  2.1 Kiểm tra uploadVolume luồng chuẩn (Range GET 206, không gọi HEAD)...');
@@ -906,6 +908,53 @@ async function runAllCloudTests() {
     /vượt quá hạn mức lưu trữ Cloud 8GB/i
   );
   console.log('      ✓ Hàng đợi dừng ngay lập tức và báo rõ khi chạm 413 Quota.');
+
+  // 2.11 Test Regression: uploadAllUnsyncedVolumes KHÔNG truyền customFetch / customSupabase
+  console.log('  2.11 Kiểm tra hồi quy: uploadAllUnsyncedVolumes không truyền customFetch/customSupabase, dùng globalThis.fetch...');
+  const regSeriesId = 'series_regression_fetch';
+  inMemorySeries.set(regSeriesId, { id: regSeriesId, title: 'Hàng Đợi Hồi Quy Fetch' });
+  remoteSeriesTable.set(regSeriesId, { id: regSeriesId, title: 'Hàng Đợi Hồi Quy Fetch', user_id: validUid, deleted_at: null });
+
+  const rVol1 = 'vol_reg_01';
+  const rVol2 = 'vol_reg_02';
+
+  inMemoryVolumes.set(rVol1, { id: rVol1, seriesId: regSeriesId, title: 'Tập Reg 1', order: 1, pageCount: 1, totalBytes: 100000, importState: 'ready' });
+  inMemoryVolumes.set(rVol2, { id: rVol2, seriesId: regSeriesId, title: 'Tập Reg 2', order: 2, pageCount: 1, totalBytes: 100000, importState: 'ready' });
+
+  inMemoryPages.set(`${rVol1}:00000`, { volumeId: rVol1, index: 0, blob: { size: 100000 } });
+  inMemoryPages.set(`${rVol2}:00000`, { volumeId: rVol2, index: 0, blob: { size: 100000 } });
+
+  const globalFetchCalls = [];
+  const originalGlobalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    if (init?.method === 'HEAD') throw new TypeError('HEAD forbidden');
+    if (init?.method === 'GET' && init?.headers?.Range) return { ok: true, status: 206 };
+    globalFetchCalls.push({ url, method: init?.method });
+    return { ok: true, status: 200, blob: async () => ({ size: 100000 }) };
+  };
+
+  const regProgressEvents = [];
+  try {
+    // GỌI HÀNG ĐỢI TUYỆT ĐỐI KHÔNG TRUYỀN customFetch và customSupabase!
+    const regRes = await uploadAllUnsyncedVolumes(regSeriesId, {
+      verifyDelays: [5, 10, 15],
+      onProgress: (p) => regProgressEvents.push(p),
+    });
+
+    assert.strictEqual(regRes.uploadedCount, 2, 'Cả 2 tập phải tải lên thành công qua globalThis.fetch');
+    assert.strictEqual(remoteVolumesTable.get(rVol1)?.status, 'ready', 'Tập 1 phải hoàn tất ready');
+    assert.strictEqual(remoteVolumesTable.get(rVol2)?.status, 'ready', 'Tập 2 phải hoàn tất ready');
+    assert.strictEqual(globalFetchCalls.length >= 4, true, 'globalThis.fetch phải được gọi cho các trang và bìa');
+
+    // Khẳng định chạy tuần tự: tập 1 bắt đầu trước tập 2
+    const startIdx1 = regProgressEvents.findIndex((p) => p.phase === 'start_volume' && p.volumeId === rVol1);
+    const startIdx2 = regProgressEvents.findIndex((p) => p.phase === 'start_volume' && p.volumeId === rVol2);
+    assert.strictEqual(startIdx1 !== -1 && startIdx2 !== -1 && startIdx1 < startIdx2, true, 'Hàng đợi phải chạy tuần tự tập 1 trước tập 2');
+
+    console.log('      ✓ Hàng đợi tải lên qua globalThis.fetch thành công 100% cho cả 2 tập tuần tự.');
+  } finally {
+    globalThis.fetch = originalGlobalFetch;
+  }
 
   console.log('\n======================================================');
   console.log('✅ TOÀN BỘ CÁC BÀI TEST COMIC CLOUD SYNC (PHASE 2) ĐÃ PASS 100%!');
