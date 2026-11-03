@@ -125,8 +125,13 @@ export async function generateComicBenchmarkPdf(outputPath, pageCount = 45) {
 
   console.log(`[make-comic-benchmark-pdf] Đang sinh ${pageCount} trang manga thực tế (2000x3000px)...`);
 
-  const width = 2000;
-  const height = 3000;
+  const imgWidth = 2000;
+  const imgHeight = 3000;
+  // Trang PDF mô phỏng manga scan thực tế: kích thước 600 x 900 pt chứa ảnh scan 2000x3000px
+  const pagePtWidth = 600;
+  const pagePtHeight = 900;
+  const widthIn = `${(pagePtWidth / 72).toFixed(4)}in`;
+  const heightIn = `${(pagePtHeight / 72).toFixed(4)}in`;
   const pageFiles = [];
 
   // Để sinh 40-60 trang nhanh chóng mà vẫn đa dạng trang, tạo 6 trang layout khác nhau và lặp lại
@@ -136,7 +141,7 @@ export async function generateComicBenchmarkPdf(outputPath, pageCount = 45) {
   for (let v = 1; v <= distinctVariations; v++) {
     const filename = `template_${v}.jpg`;
     const filepath = path.join(tmpDir, filename);
-    const buf = await createMangaPageBuffer(v, pageCount, width, height);
+    const buf = await createMangaPageBuffer(v, pageCount, imgWidth, imgHeight);
     fs.writeFileSync(filepath, buf);
     variationFiles.push(filename);
   }
@@ -162,9 +167,6 @@ export async function generateComicBenchmarkPdf(outputPath, pageCount = 45) {
 
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
-
-  const widthIn = `${(width / 72).toFixed(4)}in`;
-  const heightIn = `${(height / 72).toFixed(4)}in`;
 
   let html = `
     <!DOCTYPE html>

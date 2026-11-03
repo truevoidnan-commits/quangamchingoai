@@ -6,6 +6,7 @@ import { chromium } from 'playwright';
 import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
+import assert from 'node:assert';
 import { generateComicBenchmarkPdf } from './make-comic-benchmark-pdf.mjs';
 
 // Screenshots saved strictly in artifacts/ (which is in .gitignore), no hardcoded Windows paths
@@ -341,6 +342,13 @@ async function runBrowserFlowTests() {
       const sizeMb = ((volStats?.totalBytes || 0) / (1024 * 1024)).toFixed(2);
       console.log(`     ✓ Tier ${tier.id.toUpperCase()}: Trang đầu = ${volStats?.firstPageW}x${volStats?.firstPageH}px | Thời gian = ${durationSec}s | Dung lượng IDB = ${sizeMb} MB`);
 
+      // Kiểm tra: trang portrait ra width xấp xỉ 900 / 1200 / 1600 ở Thấp / Cân bằng / Cao (sai số 2px)
+      const diffW = Math.abs((volStats?.firstPageW || 0) - tier.expectedW);
+      assert(
+        diffW <= 2,
+        `Tier ${tier.id.toUpperCase()}: Chiều rộng thực tế ${volStats?.firstPageW}px lệch quá 2px so với kỳ vọng ${tier.expectedW}px (sai số: ${diffW}px)`
+      );
+
       benchmarkResults.push({
         tier: tier.id,
         expectedW: tier.expectedW,
@@ -348,6 +356,7 @@ async function runBrowserFlowTests() {
         actualH: volStats?.firstPageH,
         durationSec,
         sizeMb,
+        totalBytes: volStats?.totalBytes || 0,
         pageCount: volStats?.pageCount || 45,
       });
 
@@ -372,6 +381,24 @@ async function runBrowserFlowTests() {
     console.log('📊 BẢNG KẾT QUẢ BENCHMARK 3 MỨC CHẤT LƯỢNG (45 TRANG MANGA):');
     console.table(benchmarkResults);
     console.log('======================================================\n');
+
+    // Kiểm tra dung lượng tăng dần theo preset (Thấp < Cân bằng < Cao)
+    const lowTier = benchmarkResults.find((r) => r.tier === 'low');
+    const balancedTier = benchmarkResults.find((r) => r.tier === 'balanced');
+    const highTier = benchmarkResults.find((r) => r.tier === 'high');
+
+    assert(lowTier && balancedTier && highTier, 'Thiếu kết quả của 1 trong 3 mức chất lượng');
+    assert(
+      lowTier.totalBytes < balancedTier.totalBytes,
+      `Dung lượng Thấp (${lowTier.totalBytes} B / ${lowTier.sizeMb} MB) phải nhỏ hơn Cân bằng (${balancedTier.totalBytes} B / ${balancedTier.sizeMb} MB)`
+    );
+    assert(
+      balancedTier.totalBytes < highTier.totalBytes,
+      `Dung lượng Cân bằng (${balancedTier.totalBytes} B / ${balancedTier.sizeMb} MB) phải nhỏ hơn Cao (${highTier.totalBytes} B / ${highTier.sizeMb} MB)`
+    );
+    console.log(`  ✓ Đã kiểm tra tính đúng đắn:
+      - Chiều rộng trang đầu khớp chuẩn (sai số <= 2px): Low=${lowTier.actualW}px (kỳ vọng 900), Balanced=${balancedTier.actualW}px (kỳ vọng 1200), High=${highTier.actualW}px (kỳ vọng 1600)
+      - Dung lượng tăng dần theo preset: Thấp (${lowTier.sizeMb}MB) < Cân bằng (${balancedTier.sizeMb}MB) < Cao (${highTier.sizeMb}MB)`);
 
     console.log('✅ ALL Comics Browser Flow & Performance Tests PASSED!');
   } finally {

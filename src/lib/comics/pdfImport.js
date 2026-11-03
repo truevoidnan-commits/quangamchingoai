@@ -302,17 +302,23 @@ export async function importPdfVolume(file, options = {}) {
       const baseViewport = page.getViewport({ scale: 1.0 });
 
       // Determine dimensions based on WIDTH:
-      // - Portrait page (height >= width): targetWidth = preset.maxWidth
-      // - Landscape / Double-page spread (width > height): targetWidth up to 1.5x preset.maxWidth
-      // - Never upscale if original is smaller: scale <= 1.0
+      // - Portrait page (height >= width): targetMaxWidth = preset.maxWidth
+      // - Landscape / Double-page spread (width > height): targetMaxWidth = Math.round(preset.maxWidth * 1.5)
+      // 1. Luôn render theo chiều rộng mục tiêu: scale = targetMaxWidth / w (cho phép phóng to lẫn thu nhỏ)
       const isLandscape = baseViewport.width > baseViewport.height;
       const targetMaxWidth = isLandscape ? Math.round(presetMaxW * 1.5) : presetMaxW;
 
-      let scale = baseViewport.width > targetMaxWidth ? targetMaxWidth / baseViewport.width : 1.0;
+      let scale = targetMaxWidth / baseViewport.width;
+
+      // 2. Giới hạn scale tối đa 4 để tránh trang PDF nhỏ bất thường bị phóng quá đà
+      if (scale > 4) {
+        scale = 4;
+      }
+
       let targetW = Math.round(baseViewport.width * scale);
       let targetH = Math.round(baseViewport.height * scale);
 
-      // Clamp max pixels if exceeding canvas ceiling (4.2MP standard, 2.5MP on low-memory)
+      // 3. Giữ nguyên giới hạn pixel canvas (4.2MP, hoặc 2.5MP trên máy ít RAM / iOS < 15): nếu width*height vượt giới hạn thì giảm scale cho vừa
       if (targetW * targetH > maxCanvasPixels) {
         scale = Math.sqrt(maxCanvasPixels / (baseViewport.width * baseViewport.height));
         targetW = Math.round(baseViewport.width * scale);
