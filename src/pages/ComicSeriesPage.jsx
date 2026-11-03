@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getSeries,
@@ -8,20 +8,43 @@ import {
   updateSeries,
   getComicProgress,
   cleanOrphanImportingVolumes,
-  saveSeries,
 } from '../lib/comics/comicDb.js';
 import {
-  isCloudAvailable,
   listRemote,
   uploadVolume,
   downloadVolume,
   evictLocalVolume,
   deleteVolumeFromCloud,
   uploadAllUnsyncedVolumes,
+  updateVolumeMetadata,
 } from '../lib/comics/comicCloud.js';
+import {
+  subscribeSyncQueue,
+  priorityDownloadVolume,
+  enqueueDownload,
+  enqueueUpload,
+} from '../lib/comics/comicSyncQueue.js';
 import { supabase } from '../lib/supabaseClient.js';
 import ComicImportModal from '../components/comics/ComicImportModal.jsx';
 import Footer from '../components/layout/Footer.jsx';
+import {
+  IconArrowLeft,
+  IconBook,
+  IconBookOpen,
+  IconDevice,
+  IconCloud,
+  IconCloudCheck,
+  IconCloudUpload,
+  IconCloudDownload,
+  IconDotsVertical,
+  IconEdit,
+  IconTrash,
+  IconRefresh,
+  IconClock,
+  IconUpload,
+  IconX,
+  IconAlertTriangle,
+} from '../components/comics/ComicIcons.jsx';
 import styles from './ComicSeriesPage.module.css';
 
 export default function ComicSeriesPage() {
@@ -40,17 +63,34 @@ export default function ComicSeriesPage() {
   const [editTitleText, setEditTitleText] = useState('');
   const [toastMsg, setToastMsg] = useState('');
 
-  // Active tasks for up/down: { [volumeId]: { phase: 'uploading'|'downloading'|'rate_limited', percent, abortCtrl, message } }
-  const [activeTasks, setActiveTasks] = useState({});
-  const [isBatchUploading, setIsBatchUploading] = useState(false);
-  const [batchAbortCtrl, setBatchAbortCtrl] = useState(null);
-  const [batchNotice, setBatchNotice] = useState('');
-  const [queuedVolumeIds, setQueuedVolumeIds] = useState([]);
+  // Queue state
+  const [syncSnapshot, setSyncSnapshot] = useState({
+    activeTask: null,
+    pendingTasks: [],
+  });
 
-  // Modals for confirmations
+  // Action Menu ⋯
+  const [menuVolume, setMenuVolume] = useState(null);
+
+  // Edit Volume Order & Title Modal (D2)
+  const [volumeToEdit, setVolumeToEdit] = useState(null);
+  const [editVolOrder, setEditVolOrder] = useState(1);
+  const [editVolTitle, setEditVolTitle] = useState('');
+  const [isSavingMeta, setIsSavingMeta] = useState(false);
+
+  // Priority download state (A4)
+  const [priorityDownloadingVol, setPriorityDownloadingVol] = useState(null);
+  const [priorityProgress, setPriorityProgress] = useState(0);
+
+  // Confirmation Modals
   const [volumeToDeleteLocal, setVolumeToDeleteLocal] = useState(null);
   const [volumeToEvict, setVolumeToEvict] = useState(null);
   const [volumeToDeleteCloud, setVolumeToDeleteCloud] = useState(null);
+
+  // Batch upload state
+  const [isBatchUploading, setIsBatchUploading] = useState(false);
+  const [batchAbortCtrl, setBatchAbortCtrl] = useState(null);
+  const [batchNotice, setBatchNotice] = useState('');
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -65,7 +105,7 @@ export default function ComicSeriesPage() {
       const cloudRes = await listRemote();
       setIsLoggedIn(cloudRes.isLoggedIn);
 
-      // If series not found in local IndexedDB, check if it exists on Cloud
+      // Nếu bộ truyện chưa có local, kiểm tra trên Cloud
       if (!s && cloudRes.isLoggedIn) {
         const remoteS = cloudRes.remoteSeries?.find((rs) => rs.id === seriesId);
         if (remoteS) {
@@ -87,17 +127,19 @@ export default function ComicSeriesPage() {
       setSeries(s);
       setEditTitleText(s.title);
 
-      // Fetch local volumes
+      // Lấy danh sách tập local
       const localVols = await getVolumes(seriesId);
       const localVolMap = {};
       for (const lv of localVols) {
         localVolMap[lv.id] = lv;
       }
 
-      // Merge remote volumes for this series
+      // Hợp nhất các tập trên Cloud thuộc bộ này
       const mergedVols = [...localVols];
       if (cloudRes.isLoggedIn && cloudRes.remoteVolumes) {
-        const seriesRemoteVols = cloudRes.remoteVolumes.filter((rv) => rv.series_id === seriesId && rv.status === 'ready');
+        const seriesRemoteVols = cloudRes.remoteVolumes.filter(
+          (rv) => rv.series_id === seriesId && rv.status === 'ready'
+        );
         for (const rv of seriesRemoteVols) {
           if (!localVolMap[rv.id]) {
             mergedVols.push({
@@ -114,11 +156,11 @@ export default function ComicSeriesPage() {
         }
       }
 
-      mergedVols.sort((a, b) => (a.order || 0) - (b.order || 0));
+      mergedVols.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
       setVolumes(mergedVols);
       setCloudStatusMap(cloudRes.volumeStatusMap || {});
 
-      // Load reading progress for local volumes
+      // Lấy tiến độ đọc
       const pMap = {};
       for (const v of mergedVols) {
         const prog = getComicProgress(v.id);
@@ -137,6 +179,10 @@ export default function ComicSeriesPage() {
   useEffect(() => {
     loadData();
 
+    const unsubQueue = subscribeSyncQueue((snap) => {
+      setSyncSnapshot(snap);
+    });
+
     const handleFocus = () => loadData();
     window.addEventListener('focus', handleFocus);
 
@@ -144,13 +190,18 @@ export default function ComicSeriesPage() {
       loadData();
     });
 
+    const handleRealtime = () => loadData();
+    window.addEventListener('tcl_comic_realtime_signal', handleRealtime);
+
     return () => {
+      unsubQueue();
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('tcl_comic_realtime_signal', handleRealtime);
       authListener?.subscription?.unsubscribe();
     };
   }, [loadData]);
 
-  // Object URL for series cover
+  // Object URL cho bìa bộ truyện
   useEffect(() => {
     let url = null;
     if (series?.coverBlob) {
@@ -158,135 +209,85 @@ export default function ComicSeriesPage() {
         url = URL.createObjectURL(series.coverBlob);
         setCoverUrl(url);
       } catch (e) {}
-    } else {
-      setCoverUrl(null);
     }
     return () => {
       if (url) URL.revokeObjectURL(url);
     };
   }, [series?.coverBlob]);
 
-  // ---------------------------------------------------------------------------
-  // CLOUD ACTIONS
-  // ---------------------------------------------------------------------------
+  // Bấm Đọc vào một tập (A4)
+  const handleReadVolume = async (vol) => {
+    const cloudStatus = cloudStatusMap[vol.id] || {
+      status: vol.isCloudOnly ? 'cloud_only' : 'local_only',
+    };
+    const isCloudOnly = cloudStatus.status === 'cloud_only' || vol.isCloudOnly;
 
-  const handleUploadSingle = async (volumeId) => {
-    if (isBatchUploading || activeTasks[volumeId]) return;
-    const abortCtrl = new AbortController();
-    setActiveTasks((prev) => ({
-      ...prev,
-      [volumeId]: { phase: 'uploading', percent: 0, abortCtrl },
-    }));
-
-    try {
-      await uploadVolume(volumeId, {
-        signal: abortCtrl.signal,
-        onProgress: (p) => {
-          setActiveTasks((prev) => {
-            if (!prev[volumeId]) return prev;
-            return {
-              ...prev,
-              [volumeId]: { ...prev[volumeId], percent: p.percent },
-            };
-          });
-        },
-      });
-
-      showToast('Tải lên Cloud thành công! ✨');
-    } catch (err) {
-      const isAbort = err.name === 'AbortError' || err.message?.includes('hủy');
-      if (isAbort) {
-        // If 0 pages were uploaded, clear empty progress key
-        try {
-          const raw = localStorage.getItem(`tcl_comic_upload_${volumeId}`);
-          if (raw) {
-            const arr = JSON.parse(raw);
-            if (!Array.isArray(arr) || arr.length === 0) {
-              localStorage.removeItem(`tcl_comic_upload_${volumeId}`);
-            }
-          }
-        } catch {}
-        showToast('Đã dừng tải lên.');
-      } else {
-        showToast(`Lỗi tải lên: ${err.message}`);
-      }
-    } finally {
-      setActiveTasks((prev) => {
-        const next = { ...prev };
-        delete next[volumeId];
-        return next;
-      });
-      await loadData();
-    }
-  };
-
-  const handleDiscardUpload = async (volumeId) => {
-    try {
-      localStorage.removeItem(`tcl_comic_upload_${volumeId}`);
-    } catch {}
-    setCloudStatusMap((prev) => ({
-      ...prev,
-      [volumeId]: {
-        ...(prev[volumeId] || {}),
-        status: 'local_only',
-        label: 'Chỉ trên máy này',
-        percent: 0,
-      },
-    }));
-    showToast('Đã hủy bỏ tiến độ dở dang, đưa về chỉ trên máy.');
-    await loadData();
-  };
-
-  const handleDownloadSingle = async (volumeId) => {
-    if (isBatchUploading || activeTasks[volumeId]) return;
-    const abortCtrl = new AbortController();
-    setActiveTasks((prev) => ({
-      ...prev,
-      [volumeId]: { phase: 'downloading', percent: 0, abortCtrl },
-    }));
-
-    try {
-      await downloadVolume(volumeId, {
-        signal: abortCtrl.signal,
-        onProgress: (p) => {
-          setActiveTasks((prev) => {
-            if (!prev[volumeId]) return prev;
-            return {
-              ...prev,
-              [volumeId]: { ...prev[volumeId], percent: p.percent },
-            };
-          });
-        },
-      });
-
-      showToast('Tải về máy thành công! Bạn có thể đọc offline. ✨');
-    } catch (err) {
-      if (err.name === 'AbortError' || err.message?.includes('hủy')) {
-        showToast('Đã hủy tải về.');
-      } else {
-        showToast(`Lỗi tải về: ${err.message}`);
-      }
-    } finally {
-      setActiveTasks((prev) => {
-        const next = { ...prev };
-        delete next[volumeId];
-        return next;
-      });
-      await loadData();
-    }
-  };
-
-  const handleCancelTask = (volumeId) => {
-    if (isBatchUploading) {
-      handleCancelBatchUpload();
+    // Nếu tập đã có trên máy: mở thẳng trình đọc
+    if (!isCloudOnly) {
+      navigate(`/comics/${seriesId}/read/${vol.id}`);
       return;
     }
-    const task = activeTasks[volumeId];
-    if (task?.abortCtrl) {
-      task.abortCtrl.abort();
+
+    // Nếu tập Chỉ trên Cloud: Tải ưu tiên lên đầu hàng đợi và mở trình đọc khi xong
+    setPriorityDownloadingVol(vol);
+    setPriorityProgress(0);
+
+    try {
+      await priorityDownloadVolume(vol.id, seriesId, {
+        volumeTitle: vol.title,
+        onProgress: (p) => {
+          setPriorityProgress(p.percent || 0);
+        },
+      });
+
+      setPriorityDownloadingVol(null);
+      await loadData();
+      navigate(`/comics/${seriesId}/read/${vol.id}`);
+    } catch (err) {
+      console.error('Priority download error:', err);
+      showToast(`Không thể tải tập để đọc: ${err.message || String(err)}`);
+      setPriorityDownloadingVol(null);
     }
   };
 
+  // Mở modal sửa thông tin tập (D2)
+  const handleOpenEditModal = (vol) => {
+    setVolumeToEdit(vol);
+    setEditVolOrder(vol.order || 1);
+    setEditVolTitle(vol.title || '');
+    setMenuVolume(null);
+  };
+
+  const handleSaveVolumeMeta = async () => {
+    if (!volumeToEdit) return;
+    setIsSavingMeta(true);
+    try {
+      await updateVolumeMetadata(volumeToEdit.id, {
+        order: Number(editVolOrder),
+        title: editVolTitle,
+      });
+
+      // Cập nhật state cục bộ và sắp xếp lại danh sách
+      setVolumes((prev) => {
+        const next = prev.map((v) =>
+          v.id === volumeToEdit.id
+            ? { ...v, order: Number(editVolOrder), title: editVolTitle.trim() }
+            : v
+        );
+        next.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+        return next;
+      });
+
+      showToast('Đã cập nhật số tập và tên tập!');
+      setVolumeToEdit(null);
+    } catch (err) {
+      showToast(`Lỗi lưu: ${err.message}`);
+    } finally {
+      setIsSavingMeta(false);
+    }
+  };
+
+  // Tải lên tất cả các tập chưa đồng bộ
   const handleUploadAllUnsynced = async () => {
     if (isBatchUploading) return;
     const abortCtrl = new AbortController();
@@ -297,37 +298,22 @@ export default function ComicSeriesPage() {
       const s = cloudStatusMap[v.id]?.status;
       return (s === 'local_only' || s === 'uploading' || s === 'interrupted') && !v.isCloudOnly;
     });
-    const unsyncedIds = unsyncedList.map((v) => v.id);
-    setQueuedVolumeIds(unsyncedIds);
-    setBatchNotice(`Chuẩn bị đồng bộ ${unsyncedIds.length} tập...`);
+    setBatchNotice(`Chuẩn bị đồng bộ ${unsyncedList.length} tập...`);
 
     try {
       const res = await uploadAllUnsyncedVolumes(seriesId, {
         signal: abortCtrl.signal,
         onProgress: (p) => {
           if (p.phase === 'rate_limited') {
-            const msg = p.message || 'Đã chạm giới hạn thao tác, tự tiếp tục sau...';
-            setBatchNotice(msg);
-            if (p.volumeId) {
-              setActiveTasks({
-                [p.volumeId]: { phase: 'rate_limited', percent: 0, message: msg },
-              });
-            }
+            setBatchNotice(p.message || 'Đã chạm giới hạn thao tác, tự tiếp tục sau...');
           } else if (p.volumeId) {
             setBatchNotice(
-              `Đang tải tập ${p.currentVolumeIndex || 1}/${p.totalVolumesCount || unsyncedIds.length}: ${p.volumeTitle || ''}...`
+              `Đang tải tập ${p.currentVolumeIndex || 1}/${p.totalVolumesCount || unsyncedList.length}: ${p.volumeTitle || ''}...`
             );
-            setActiveTasks({
-              [p.volumeId]: { phase: 'uploading', percent: p.percent || 0 },
-            });
-            if (p.queuedVolumeIds) {
-              const currentIdx = (p.currentVolumeIndex || 1) - 1;
-              setQueuedVolumeIds(p.queuedVolumeIds.slice(currentIdx));
-            }
           }
         },
       });
-      showToast(`Đã đồng bộ ${res.uploadedCount} tập lên Cloud thành công! ✨`);
+      showToast(`Đã đồng bộ ${res.uploadedCount} tập lên Cloud thành công!`);
     } catch (err) {
       if (err.message?.includes('hủy') || abortCtrl.signal.aborted) {
         showToast('Đã dừng tiến trình tải lên hàng loạt.');
@@ -336,17 +322,9 @@ export default function ComicSeriesPage() {
       }
     } finally {
       setIsBatchUploading(false);
-      setQueuedVolumeIds([]);
-      setActiveTasks({});
       setBatchAbortCtrl(null);
       setBatchNotice('');
       await loadData();
-    }
-  };
-
-  const handleCancelBatchUpload = () => {
-    if (batchAbortCtrl) {
-      batchAbortCtrl.abort();
     }
   };
 
@@ -354,7 +332,7 @@ export default function ComicSeriesPage() {
     if (!volumeToEvict) return;
     try {
       await evictLocalVolume(volumeToEvict.id);
-      showToast(`Đã giải phóng bộ nhớ máy cho "${volumeToEvict.title}". Bản sao Cloud vẫn an toàn! 🧹`);
+      showToast(`Đã giải phóng bộ nhớ máy cho "${volumeToEvict.title}". Bản sao Cloud vẫn an toàn!`);
       setVolumeToEvict(null);
       loadData();
     } catch (err) {
@@ -404,7 +382,7 @@ export default function ComicSeriesPage() {
       await updateSeries(seriesId, { title: editTitleText.trim() });
       setSeries((prev) => ({ ...prev, title: editTitleText.trim() }));
       setIsEditingTitle(false);
-      showToast('Đã đổi tên bộ truyện ✨');
+      showToast('Đã đổi tên bộ truyện');
     } catch (err) {
       showToast(`Lỗi cập nhật tên: ${err.message}`);
     }
@@ -412,7 +390,7 @@ export default function ComicSeriesPage() {
 
   const formatMb = (bytes) => (bytes / (1024 * 1024)).toFixed(1);
 
-  // Check how many volumes are unsynced
+  // Đếm các tập chưa sync
   const unsyncedCount = volumes.filter((v) => {
     const s = cloudStatusMap[v.id]?.status;
     return (s === 'local_only' || s === 'uploading' || s === 'interrupted') && !v.isCloudOnly;
@@ -434,7 +412,8 @@ export default function ComicSeriesPage() {
       {/* Top Navigation */}
       <div className={styles.topNav}>
         <Link to="/comics" className={styles.backBtn}>
-          ← Danh Sách Truyện Tranh
+          <IconArrowLeft size={16} />
+          <span>Danh Sách Truyện Tranh</span>
         </Link>
       </div>
 
@@ -445,7 +424,9 @@ export default function ComicSeriesPage() {
             {coverUrl ? (
               <img src={coverUrl} alt={series.title} className={styles.coverImg} />
             ) : (
-              <div className={styles.coverPlaceholder}>🖼️</div>
+              <div className={styles.coverPlaceholder}>
+                <IconBookOpen size={40} />
+              </div>
             )}
           </div>
 
@@ -460,10 +441,11 @@ export default function ComicSeriesPage() {
                     className={styles.titleInput}
                     autoFocus
                   />
-                  <button className={styles.saveTitleBtn} onClick={handleSaveTitle}>
+                  <button type="button" className={styles.saveTitleBtn} onClick={handleSaveTitle}>
                     Lưu
                   </button>
                   <button
+                    type="button"
                     className={styles.cancelTitleBtn}
                     onClick={() => {
                       setEditTitleText(series.title);
@@ -475,14 +457,15 @@ export default function ComicSeriesPage() {
                 </div>
               ) : (
                 <h1 className={styles.seriesTitle}>
-                  {series.title}
+                  <span>{series.title}</span>
                   {!series.isCloudOnly && (
                     <button
+                      type="button"
                       className={styles.editBtn}
                       title="Đổi tên bộ truyện"
                       onClick={() => setIsEditingTitle(true)}
                     >
-                      ✏️
+                      <IconEdit size={16} />
                     </button>
                   )}
                 </h1>
@@ -491,56 +474,55 @@ export default function ComicSeriesPage() {
 
             <div className={styles.statsBadges}>
               <div className={styles.statBadge}>
-                <span className={styles.statIcon}>📚</span>
+                <IconBookOpen size={14} />
                 <span>{volumes.length} tập</span>
               </div>
               <div className={styles.statBadge}>
-                <span className={styles.statIcon}>📄</span>
+                <IconBook size={14} />
                 <span>{series.totalPages || 0} trang</span>
               </div>
               <div className={styles.statBadge}>
-                <span className={styles.statIcon}>💾</span>
+                <IconDevice size={14} />
                 <span>{formatMb(series.totalBytes || 0)} MB</span>
               </div>
             </div>
 
             <div className={styles.headerActions}>
               <button
+                type="button"
                 className={styles.importMoreBtn}
                 onClick={() => setIsImportModalOpen(true)}
                 id="btn-import-more-volumes"
               >
-                + Nhập Thêm Tập (PDF)
+                <IconUpload size={15} />
+                <span>Nhập Thêm Tập (PDF)</span>
               </button>
 
-              {/* Upload all unsynced button */}
+              {/* Upload all unsynced button (B5) */}
               {isLoggedIn && unsyncedCount > 0 && (
-                <>
-                  <button
-                    className={styles.uploadAllBtn}
-                    onClick={handleUploadAllUnsynced}
-                    disabled={isBatchUploading}
-                  >
-                    ☁️ {isBatchUploading ? (batchNotice || 'Đang đồng bộ...') : `Tải lên tất cả (${unsyncedCount} tập)`}
-                  </button>
-                  {isBatchUploading && (
-                    <button
-                      className={styles.cancelBatchBtn}
-                      onClick={handleCancelBatchUpload}
-                      title="Hủy hàng đợi tải lên"
-                    >
-                      🛑 Hủy
-                    </button>
-                  )}
-                </>
+                <button
+                  type="button"
+                  className={styles.uploadAllBtn}
+                  onClick={handleUploadAllUnsynced}
+                  disabled={isBatchUploading}
+                >
+                  <IconCloudUpload size={15} />
+                  <span>
+                    {isBatchUploading
+                      ? (batchNotice || 'Đang đồng bộ...')
+                      : `Tải Lên Tất Cả (${unsyncedCount} tập)`}
+                  </span>
+                </button>
               )}
 
               {!series.isCloudOnly && (
                 <button
+                  type="button"
                   className={styles.deleteSeriesBtn}
                   onClick={handleDeleteSeriesConfirm}
                 >
-                  🗑️ Xóa Khỏi Máy
+                  <IconTrash size={15} />
+                  <span>Xóa Khỏi Máy</span>
                 </button>
               )}
             </div>
@@ -559,6 +541,7 @@ export default function ComicSeriesPage() {
             <div className={styles.emptyVolumes}>
               <p>Chưa có tập nào trong bộ truyện này.</p>
               <button
+                type="button"
                 className={styles.emptyImportBtn}
                 onClick={() => setIsImportModalOpen(true)}
               >
@@ -569,216 +552,99 @@ export default function ComicSeriesPage() {
             <div className={styles.volumeList}>
               {volumes.map((vol) => {
                 const prog = progressMap[vol.id];
-                const readPage = prog ? prog.pageIndex + 1 : 0;
-                const percent = vol.pageCount > 0 && prog
-                  ? Math.round((readPage / vol.pageCount) * 100)
-                  : 0;
+                const hasProgress = !!prog && (prog.pageIndex > 0 || prog.scrollPercent > 0);
 
-                const activeTask = activeTasks[vol.id];
-                const cloudStatus = cloudStatusMap[vol.id] || { status: vol.isCloudOnly ? 'cloud_only' : 'local_only' };
+                // Queue state check
+                const isTaskActive =
+                  syncSnapshot.activeTask && syncSnapshot.activeTask.volumeId === vol.id;
+                const isTaskQueued = syncSnapshot.pendingTasks.some(
+                  (t) => t.volumeId === vol.id
+                );
+
+                const cloudStatus = cloudStatusMap[vol.id] || {
+                  status: vol.isCloudOnly ? 'cloud_only' : 'local_only',
+                };
                 const isSynced = cloudStatus.status === 'synced';
                 const isCloudOnly = cloudStatus.status === 'cloud_only' || vol.isCloudOnly;
-                const isActivelyUploading = activeTask?.phase === 'uploading';
-                const isActivelyDownloading = activeTask?.phase === 'downloading';
-                const isRateLimited = activeTask?.phase === 'rate_limited';
-                const isQueued = isBatchUploading && queuedVolumeIds.includes(vol.id) && !activeTask;
-                const isInterrupted = !activeTask && !isQueued && cloudStatus.status === 'interrupted';
-                const isLocalOnly = !isSynced && !isCloudOnly && !isInterrupted && !isQueued && !activeTask;
+                const isInterrupted = cloudStatus.status === 'interrupted';
+                const isLocalOnly = !isSynced && !isCloudOnly;
 
                 return (
                   <div key={vol.id} className={styles.volumeCard}>
-                    <div className={styles.volumeLeft}>
-                      <span className={styles.volumeOrderBadge}>
-                        Tập {vol.order || 1}
-                      </span>
-                      <div className={styles.volumeMetaInfo}>
-                        <div className={styles.titleRow}>
-                          <h3 className={styles.volumeTitle}>{vol.title}</h3>
-                          {/* Sync Status Badge (only if logged in) */}
-                          {isLoggedIn && (
-                            <span
-                              className={`${styles.statusBadge} ${
-                                isSynced
-                                  ? styles.statusSynced
-                                  : (isActivelyUploading || isRateLimited)
-                                  ? styles.statusUploading
-                                  : isQueued
-                                  ? styles.statusQueued
-                                  : isInterrupted
-                                  ? styles.statusInterrupted
-                                  : isCloudOnly
-                                  ? styles.statusCloud
-                                  : styles.statusLocal
-                              }`}
-                            >
-                              {isSynced && '☁️ Đã đồng bộ'}
-                              {isRateLimited && '⏳ Tạm dừng (chờ giới hạn)'}
-                              {isActivelyUploading && `⏳ Đang tải lên ${activeTask?.percent || 0}%`}
-                              {isQueued && '⏳ Đang chờ'}
-                              {isInterrupted && `⚠ Tải lên dở dang (${cloudStatus.percent || 0}%)`}
-                              {isCloudOnly && '☁️ Chỉ trên cloud'}
-                              {isLocalOnly && '💾 Chỉ trên máy này'}
+                    {/* B1: Cột thông tin tập */}
+                    <div className={styles.volumeMainCol}>
+                      {/* Hàng 1: Số tập nhỏ + Tên tập */}
+                      <div className={styles.volumeRow1}>
+                        <span className={styles.volumeOrderBadge}>
+                          Tập {vol.order || 1}
+                        </span>
+                        <h3 className={styles.volumeTitle} title={vol.title}>
+                          {vol.title}
+                        </h3>
+                      </div>
+
+                      {/* Hàng 2: Huy hiệu trạng thái (dưới tên) + Thông tin số trang, dung lượng */}
+                      <div className={styles.volumeRow2}>
+                        {isTaskActive ? (
+                          <span className={`${styles.statusBadge} ${styles.statusActive}`}>
+                            <IconRefresh size={12} className={styles.spinIcon} />
+                            <span>
+                              Đang {syncSnapshot.activeTask.type === 'download' ? 'tải về' : 'tải lên'}{' '}
+                              {syncSnapshot.activeTask.percent}%
                             </span>
-                          )}
-                        </div>
-
-                        <div className={styles.volumeSubText}>
-                          <span>{vol.pageCount} trang</span>
-                          <span>·</span>
-                          <span>{formatMb(vol.totalBytes || 0)} MB</span>
-                          <span>·</span>
-                          <span className={styles.qualityTag}>{vol.quality || 'balanced'}</span>
-                        </div>
-
-                        {/* Active Progress Bar for Upload / Download */}
-                        {(isActivelyUploading || isActivelyDownloading || isRateLimited) && (
-                          <div className={styles.taskProgressContainer}>
-                            <div className={styles.taskProgressTrack}>
-                              <div
-                                className={styles.taskProgressFill}
-                                style={{ width: `${activeTask?.percent || 0}%` }}
-                              />
-                            </div>
-                            <div className={styles.taskProgressText}>
-                              <span>
-                                {isRateLimited
-                                  ? (activeTask?.message || 'Đã chạm giới hạn thao tác, tự tiếp tục sau...')
-                                  : isActivelyUploading
-                                  ? 'Đang tải lên Cloudflare R2...'
-                                  : 'Đang tải về máy...'}
-                              </span>
-                              <span>{isRateLimited ? '⏳' : `${activeTask?.percent || 0}%`}</span>
-                            </div>
-                          </div>
+                          </span>
+                        ) : isTaskQueued ? (
+                          <span className={`${styles.statusBadge} ${styles.statusQueued}`}>
+                            <IconClock size={12} />
+                            <span>Đang chờ</span>
+                          </span>
+                        ) : isSynced ? (
+                          <span className={`${styles.statusBadge} ${styles.statusSynced}`}>
+                            <IconCloudCheck size={12} />
+                            <span>Đã đồng bộ</span>
+                          </span>
+                        ) : isInterrupted ? (
+                          <span className={`${styles.statusBadge} ${styles.statusInterrupted}`}>
+                            <IconAlertTriangle size={12} />
+                            <span>Dở dang ({cloudStatus.percent || 0}%)</span>
+                          </span>
+                        ) : isCloudOnly ? (
+                          <span className={`${styles.statusBadge} ${styles.statusCloud}`}>
+                            <IconCloud size={12} />
+                            <span>Chỉ trên Cloud</span>
+                          </span>
+                        ) : (
+                          <span className={`${styles.statusBadge} ${styles.statusLocal}`}>
+                            <IconDevice size={12} />
+                            <span>Chỉ trên máy</span>
+                          </span>
                         )}
 
-                        {/* Reading Progress */}
-                        {prog && !isCloudOnly && (
-                          <div className={styles.progressIndicator}>
-                            <span className={styles.progressText}>
-                              Đã đọc trang {readPage}/{vol.pageCount} ({percent}%)
-                            </span>
-                            <div className={styles.miniProgressBar}>
-                              <div
-                                className={styles.miniProgressFill}
-                                style={{ width: `${percent}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
+                        <span className={styles.volumeMetaText}>
+                          {vol.pageCount || 0} trang · {formatMb(vol.totalBytes || 0)} MB
+                        </span>
                       </div>
                     </div>
 
-                    <div className={styles.volumeRight}>
-                      {/* Active Cancel Button */}
-                      {(isActivelyUploading || isActivelyDownloading || isRateLimited) ? (
-                        <button
-                          className={`${styles.syncBtn} ${styles.syncBtnDanger}`}
-                          onClick={() => handleCancelTask(vol.id)}
-                        >
-                          ✕ Hủy
-                        </button>
-                      ) : isQueued ? (
-                        <span className={styles.queuedHint}>Đang trong hàng đợi...</span>
-                      ) : (
-                        <>
-                          {/* If on machine: Read button */}
-                          {!isCloudOnly && (
-                            <button
-                              className={styles.readBtn}
-                              onClick={() => navigate(`/comics/${seriesId}/read/${vol.id}`)}
-                            >
-                              {prog ? 'Đọc Tiếp ➔' : 'Bắt Đầu Đọc ➔'}
-                            </button>
-                          )}
+                    {/* B1: Cột bên phải (Nút Đọc + Nút ⋯) */}
+                    <div className={styles.volumeActionCol}>
+                      <button
+                        type="button"
+                        className={styles.mainReadBtn}
+                        onClick={() => handleReadVolume(vol)}
+                      >
+                        {hasProgress ? 'Đọc Tiếp' : 'Đọc'}
+                      </button>
 
-                          {/* Cloud Sync Actions (Only if logged in) */}
-                          {isLoggedIn && (
-                            <>
-                              {/* Interrupted Actions: Resume & Discard */}
-                              {isInterrupted && (
-                                <>
-                                  <button
-                                    className={`${styles.syncBtn} ${styles.syncBtnResume}`}
-                                    title="Tiếp tục tải lên các trang còn lại"
-                                    disabled={isBatchUploading}
-                                    onClick={() => handleUploadSingle(vol.id)}
-                                  >
-                                    ▶ Tiếp tục
-                                  </button>
-                                  <button
-                                    className={`${styles.syncBtn} ${styles.syncBtnDiscard}`}
-                                    title="Hủy bỏ tiến độ dở dang, đưa về chỉ trên máy"
-                                    disabled={isBatchUploading}
-                                    onClick={() => handleDiscardUpload(vol.id)}
-                                  >
-                                    ✕ Bỏ dở
-                                  </button>
-                                </>
-                              )}
-
-                              {/* Upload Button */}
-                              {isLocalOnly && (
-                                <button
-                                  className={`${styles.syncBtn} ${styles.syncBtnPrimary}`}
-                                  title="Tải tập này lên Cloud"
-                                  disabled={isBatchUploading}
-                                  onClick={() => handleUploadSingle(vol.id)}
-                                >
-                                  ☁️ Tải lên
-                                </button>
-                              )}
-
-                              {/* Download Button */}
-                              {isCloudOnly && (
-                                <button
-                                  className={`${styles.syncBtn} ${styles.syncBtnPrimary}`}
-                                  title="Tải tập này về máy để đọc offline"
-                                  disabled={isBatchUploading}
-                                  onClick={() => handleDownloadSingle(vol.id)}
-                                >
-                                  ⬇️ Tải về
-                                </button>
-                              )}
-
-                              {/* Evict Local Volume (Only if Synced) */}
-                              {isSynced && (
-                                <button
-                                  className={styles.syncBtn}
-                                  title="Xóa trang ảnh trên máy để tiết kiệm dung lượng, vẫn giữ nguyên trên Cloud"
-                                  disabled={isBatchUploading}
-                                  onClick={() => setVolumeToEvict(vol)}
-                                >
-                                  💾 Giải phóng máy
-                                </button>
-                              )}
-
-                              {/* Delete from Cloud (Only if on cloud) */}
-                              {(isSynced || isCloudOnly) && (
-                                <button
-                                  className={`${styles.syncBtn} ${styles.syncBtnDanger}`}
-                                  title="Xóa tập này khỏi Cloud"
-                                  disabled={isBatchUploading}
-                                  onClick={() => setVolumeToDeleteCloud(vol)}
-                                >
-                                  ☁️ Xóa Cloud
-                                </button>
-                              )}
-                            </>
-                          )}
-
-                          {/* Delete Local Volume (if on machine and not synced) */}
-                          {!isCloudOnly && !isSynced && !isBatchUploading && (
-                            <button
-                              className={styles.deleteVolumeBtn}
-                              title="Xóa tập này khỏi máy"
-                              onClick={() => setVolumeToDeleteLocal(vol)}
-                            >
-                              🗑️
-                            </button>
-                          )}
-                        </>
-                      )}
+                      <button
+                        type="button"
+                        className={styles.moreBtn}
+                        onClick={() => setMenuVolume(vol)}
+                        title="Tùy chọn khác"
+                        aria-label="Tùy chọn khác"
+                      >
+                        <IconDotsVertical size={18} />
+                      </button>
                     </div>
                   </div>
                 );
@@ -788,6 +654,206 @@ export default function ComicSeriesPage() {
         </div>
       </div>
 
+      {/* ===== ACTION MENU ⋯ BOTTOM SHEET / POPOVER (B2) ===== */}
+      {menuVolume && (
+        <div className={styles.menuOverlay} onClick={() => setMenuVolume(null)}>
+          <div className={styles.menuSheet} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.menuHeader}>
+              <div className={styles.menuHeaderInfo}>
+                <span className={styles.menuOrderBadge}>Tập {menuVolume.order || 1}</span>
+                <span className={styles.menuTitleText}>{menuVolume.title}</span>
+              </div>
+              <button
+                type="button"
+                className={styles.menuCloseBtn}
+                onClick={() => setMenuVolume(null)}
+                aria-label="Đóng menu"
+              >
+                <IconX size={18} />
+              </button>
+            </div>
+
+            <div className={styles.menuList}>
+              {/* 1. Sửa Số Tập / Tên Tập */}
+              <button
+                type="button"
+                className={styles.menuItem}
+                onClick={() => handleOpenEditModal(menuVolume)}
+              >
+                <IconEdit size={16} />
+                <span>Sửa Số Tập / Tên Tập</span>
+              </button>
+
+              {/* 2. Giải Phóng Máy (chỉ khi đã đồng bộ) */}
+              {cloudStatusMap[menuVolume.id]?.status === 'synced' && (
+                <button
+                  type="button"
+                  className={styles.menuItem}
+                  onClick={() => {
+                    setVolumeToEvict(menuVolume);
+                    setMenuVolume(null);
+                  }}
+                >
+                  <IconDevice size={16} />
+                  <span>Giải Phóng Máy</span>
+                </button>
+              )}
+
+              {/* 3. Tải Về Máy (khi Chỉ trên cloud) */}
+              {(cloudStatusMap[menuVolume.id]?.status === 'cloud_only' || menuVolume.isCloudOnly) && (
+                <button
+                  type="button"
+                  className={styles.menuItem}
+                  onClick={() => {
+                    enqueueDownload(menuVolume.id, seriesId, { volumeTitle: menuVolume.title });
+                    showToast('Đã xếp hàng tải về máy.');
+                    setMenuVolume(null);
+                  }}
+                >
+                  <IconCloudDownload size={16} />
+                  <span>Tải Về Máy</span>
+                </button>
+              )}
+
+              {/* 4. Tải Lên Cloud (khi Chỉ trên máy) */}
+              {cloudStatusMap[menuVolume.id]?.status !== 'synced' &&
+                cloudStatusMap[menuVolume.id]?.status !== 'cloud_only' &&
+                !menuVolume.isCloudOnly &&
+                isLoggedIn && (
+                  <button
+                    type="button"
+                    className={styles.menuItem}
+                    onClick={() => {
+                      enqueueUpload(menuVolume.id, seriesId, { volumeTitle: menuVolume.title });
+                      showToast('Đã xếp hàng tải lên Cloud.');
+                      setMenuVolume(null);
+                    }}
+                  >
+                    <IconCloudUpload size={16} />
+                    <span>Tải Lên Cloud</span>
+                  </button>
+                )}
+
+              {/* 5. Xóa Khỏi Máy (khi chỉ có trên máy) */}
+              {!menuVolume.isCloudOnly && cloudStatusMap[menuVolume.id]?.status !== 'synced' && (
+                <button
+                  type="button"
+                  className={styles.menuItem}
+                  onClick={() => {
+                    setVolumeToDeleteLocal(menuVolume);
+                    setMenuVolume(null);
+                  }}
+                >
+                  <IconTrash size={16} />
+                  <span>Xóa Khỏi Máy</span>
+                </button>
+              )}
+
+              {/* 6. Xóa Cloud (khi synced hoặc cloud_only - màu đỏ) */}
+              {isLoggedIn &&
+                (cloudStatusMap[menuVolume.id]?.status === 'synced' ||
+                  cloudStatusMap[menuVolume.id]?.status === 'cloud_only' ||
+                  menuVolume.isCloudOnly) && (
+                  <button
+                    type="button"
+                    className={`${styles.menuItem} ${styles.menuItemDanger}`}
+                    onClick={() => {
+                      setVolumeToDeleteCloud(menuVolume);
+                      setMenuVolume(null);
+                    }}
+                  >
+                    <IconTrash size={16} />
+                    <span>Xóa Khỏi Cloud</span>
+                  </button>
+                )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== EDIT VOLUME ORDER & TITLE MODAL (D2) ===== */}
+      {volumeToEdit && (
+        <div className={styles.editModalOverlay} onClick={() => setVolumeToEdit(null)}>
+          <div className={styles.editModalBox} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.editModalHeader}>
+              <IconEdit size={18} />
+              <h3>Sửa Số Tập & Tên Tập</h3>
+            </div>
+
+            <div className={styles.editModalBody}>
+              <div className={styles.editField}>
+                <label className={styles.editLabel}>Số Tập</label>
+                <input
+                  type="number"
+                  step="any"
+                  min="1"
+                  className={styles.editOrderInput}
+                  value={editVolOrder}
+                  onChange={(e) => setEditVolOrder(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div className={styles.editField}>
+                <label className={styles.editLabel}>Tên Tập</label>
+                <input
+                  type="text"
+                  className={styles.editTitleInput}
+                  value={editVolTitle}
+                  onChange={(e) => setEditVolTitle(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className={styles.editModalFooter}>
+              <button
+                type="button"
+                className={styles.editCancelBtn}
+                onClick={() => setVolumeToEdit(null)}
+                disabled={isSavingMeta}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className={styles.editSaveBtn}
+                onClick={handleSaveVolumeMeta}
+                disabled={isSavingMeta || !editVolTitle.trim()}
+              >
+                {isSavingMeta ? 'Đang Lưu...' : 'Lưu Thay Đổi'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== PRIORITY DOWNLOAD PROGRESS OVERLAY (A4) ===== */}
+      {priorityDownloadingVol && (
+        <div className={styles.priorityOverlay}>
+          <div className={styles.priorityBox}>
+            <div className={styles.priorityIconWrap}>
+              <IconCloudDownload size={32} />
+            </div>
+            <h3 className={styles.priorityTitle}>Đang Tải Tập Về Máy Để Đọc...</h3>
+            <p className={styles.priorityVolName}>
+              Tập {priorityDownloadingVol.order}: {priorityDownloadingVol.title}
+            </p>
+
+            <div className={styles.priorityProgressTrack}>
+              <div
+                className={styles.priorityProgressFill}
+                style={{ width: `${priorityProgress}%` }}
+              />
+            </div>
+            <div className={styles.priorityPercent}>{priorityProgress}%</div>
+
+            <p className={styles.priorityHint}>
+              Trình đọc sẽ tự động mở ngay sau khi tải xong. Vui lòng giữ tab này mở.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Import Modal */}
       <ComicImportModal
         isOpen={isImportModalOpen}
@@ -796,7 +862,7 @@ export default function ComicSeriesPage() {
         initialSeriesTitle={series.title}
         allSeries={[series]}
         onImportSuccess={() => {
-          showToast('Nhập tập mới thành công! ✨');
+          showToast('Nhập tập mới thành công!');
           loadData();
         }}
       />
@@ -805,7 +871,7 @@ export default function ComicSeriesPage() {
       {volumeToDeleteLocal && (
         <div className={styles.deleteModalOverlay} onClick={() => setVolumeToDeleteLocal(null)}>
           <div className={styles.deleteModalBox} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.deleteModalTitle}>Xác nhận xóa tập khỏi máy</h3>
+            <h3 className={styles.deleteModalTitle}>Xác Nhận Xóa Tập Khỏi Máy</h3>
             <p className={styles.deleteModalDesc}>
               Bạn có chắc muốn xóa <strong>"{volumeToDeleteLocal.title}"</strong> ({volumeToDeleteLocal.pageCount} trang, {formatMb(volumeToDeleteLocal.totalBytes || 0)} MB)?
             </p>
@@ -814,12 +880,14 @@ export default function ComicSeriesPage() {
             </p>
             <div className={styles.deleteModalActions}>
               <button
+                type="button"
                 className={styles.deleteCancelBtn}
                 onClick={() => setVolumeToDeleteLocal(null)}
               >
                 Hủy
               </button>
               <button
+                type="button"
                 className={styles.deleteConfirmBtn}
                 onClick={handleDeleteLocalVolume}
               >
@@ -834,21 +902,23 @@ export default function ComicSeriesPage() {
       {volumeToEvict && (
         <div className={styles.deleteModalOverlay} onClick={() => setVolumeToEvict(null)}>
           <div className={styles.deleteModalBox} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.deleteModalTitle}>Giải phóng bộ nhớ máy</h3>
+            <h3 className={styles.deleteModalTitle}>Giải Phóng Bộ Nhớ Máy</h3>
             <p className={styles.deleteModalDesc}>
               Xóa dữ liệu ảnh trong máy của tập <strong>"{volumeToEvict.title}"</strong> ({formatMb(volumeToEvict.totalBytes || 0)} MB) để tiết kiệm dung lượng?
             </p>
             <p className={styles.deleteModalDesc} style={{ color: '#38bdf8' }}>
-              🛡️ <strong>Bản sao trên Cloudflare R2 vẫn được giữ nguyên vẹn 100%.</strong> Bạn có thể tải lại về máy bất cứ lúc nào.
+              Bản sao trên Cloud vẫn được giữ nguyên vẹn. Bạn có thể tải lại về máy bất cứ lúc nào.
             </p>
             <div className={styles.deleteModalActions}>
               <button
+                type="button"
                 className={styles.deleteCancelBtn}
                 onClick={() => setVolumeToEvict(null)}
               >
                 Hủy
               </button>
               <button
+                type="button"
                 className={styles.deleteConfirmBtn}
                 style={{ background: '#0284c7', borderColor: '#38bdf8' }}
                 onClick={handleConfirmEvict}
@@ -864,7 +934,7 @@ export default function ComicSeriesPage() {
       {volumeToDeleteCloud && (
         <div className={styles.deleteModalOverlay} onClick={() => setVolumeToDeleteCloud(null)}>
           <div className={styles.deleteModalBox} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.deleteModalTitle}>Xóa tập khỏi Cloud</h3>
+            <h3 className={styles.deleteModalTitle}>Xóa Tập Khỏi Cloud</h3>
             <p className={styles.deleteModalDesc}>
               Xác nhận xóa tập <strong>"{volumeToDeleteCloud.title}"</strong> khỏi Cloudflare R2 và Supabase?
             </p>
@@ -873,12 +943,14 @@ export default function ComicSeriesPage() {
             </p>
             <div className={styles.deleteModalActions}>
               <button
+                type="button"
                 className={styles.deleteCancelBtn}
                 onClick={() => setVolumeToDeleteCloud(null)}
               >
                 Hủy
               </button>
               <button
+                type="button"
                 className={styles.deleteConfirmBtn}
                 onClick={handleConfirmDeleteCloud}
               >

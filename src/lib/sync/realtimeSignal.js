@@ -380,7 +380,7 @@ export function notifyOtherDevices(scopes = []) {
     return;
   }
 
-  const validScopes = ['progress', 'cultivation', 'library', 'content', 'settings'];
+  const validScopes = ['progress', 'cultivation', 'library', 'content', 'settings', 'comics'];
   const inputList = Array.isArray(scopes) ? scopes : [scopes];
   for (const s of inputList) {
     if (validScopes.includes(s)) {
@@ -437,6 +437,10 @@ async function flushOutboundSignal() {
 /**
  * Xử lý gói tin tín hiệu nhận được từ thiết bị khác
  */
+export function notifyComicsChanged() {
+  notifyOtherDevices(['comics']);
+}
+
 function handleIncomingSignal(payload) {
   // 1. Kiểm tra tính hợp lệ cơ bản
   if (!payload || payload.v !== 1) return;
@@ -453,6 +457,24 @@ function handleIncomingSignal(payload) {
     src: 'realtime',
     evt: 'realtime_signal_received',
   });
+
+  // Tách tín hiệu comics để phát sự kiện riêng biệt
+  const scopes = Array.isArray(payload.s) ? payload.s : [];
+  const hasComics = scopes.includes('comics');
+  const hasNovelScopes = scopes.some((s) => s !== 'comics');
+
+  if (hasComics && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    try {
+      window.dispatchEvent(
+        new CustomEvent('tcl_comic_realtime_signal', { detail: payload })
+      );
+    } catch {}
+  }
+
+  // Nếu chỉ có tín hiệu comics, không kích hoạt luồng đồng bộ truyện chữ
+  if (!hasNovelScopes) {
+    return;
+  }
 
   // 4. Debounce 1.5 giây để gộp tin dồn dập
   if (_inboundDebounceTimer) {

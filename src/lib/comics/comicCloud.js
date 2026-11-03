@@ -14,6 +14,7 @@
  */
 
 import { supabase as defaultSupabase } from '../supabaseClient.js';
+import { notifyComicsChanged } from '../sync/realtimeSignal.js';
 
 let activeDefaultSupabase = defaultSupabase;
 
@@ -542,6 +543,11 @@ export async function uploadVolume(volumeId, options = {}) {
     localStorage.removeItem(progressKey);
   } catch {}
 
+  // A6: Phát tín hiệu realtime thông báo tập đã sẵn sàng trên Cloud
+  try {
+    notifyComicsChanged();
+  } catch {}
+
   if (onProgress) {
     onProgress({
       current: totalTasks,
@@ -872,6 +878,10 @@ export async function downloadVolume(volumeId, options = {}) {
       });
     }
 
+    try {
+      localStorage.removeItem(`tcl_comic_no_autodl_${volumeId}`);
+    } catch {}
+
     return { ok: true, volumeId };
   } catch (err) {
     // Cleanup incomplete volume on abort or failure
@@ -915,6 +925,12 @@ export async function evictLocalVolume(volumeId, options = {}) {
 
   // Safe to delete local volume & pages
   await deleteVolume(volumeId);
+
+  // Ghi dấu để cơ chế tự động tải không kéo lại tập này (A5)
+  try {
+    localStorage.setItem(`tcl_comic_no_autodl_${volumeId}`, '1');
+  } catch {}
+
   return { ok: true, volumeId };
 }
 
@@ -1003,6 +1019,16 @@ export async function deleteVolumeFromCloud(volumeId, options = {}) {
     .eq('volume_id', volumeId)
     .eq('user_id', user.id);
 
+  // A8: Ghi dấu để không tự động tải lên lại tập đã chủ động xóa Cloud
+  try {
+    localStorage.setItem(`tcl_comic_no_autoupl_${volumeId}`, '1');
+  } catch {}
+
+  // A6: Phát tín hiệu realtime báo xóa tập trên Cloud
+  try {
+    notifyComicsChanged();
+  } catch {}
+
   return { ok: true, volumeId };
 }
 
@@ -1087,6 +1113,70 @@ export async function pullComicProgressCloud(volumeId, options = {}) {
 }
 
 // -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// UPDATE VOLUME METADATA (ORDER & TITLE)
+// -----------------------------------------------------------------------------
+
+/**
+ * Cập nhật số tập và tên tập (D2).
+ * Lưu vào IndexedDB local và, nếu tập đã có trên Cloud, cập nhật bảng comic_volumes,
+ * sau đó phát tín hiệu realtime A6.
+ */
+export async function updateVolumeMetadata(volumeId, { order, title }, options = {}) {
+  if (!volumeId) throw new Error('Thiếu volumeId.');
+  const { customSupabase = null } = options;
+  const client = customSupabase || activeDefaultSupabase;
+
+  const parsedOrder = Number(order) || 1;
+  const cleanTitle = String(title || '').trim();
+
+  // 1. Cập nhật local DB nếu có
+  const local = await getVolume(volumeId);
+  if (local) {
+    await updateVolume(volumeId, {
+      order: parsedOrder,
+      title: cleanTitle,
+      updatedAt: Date.now(),
+    });
+  }
+
+  // 2. Cập nhật Cloud nếu đã đăng nhập và tập đã tồn tại trên Cloud
+  const user = await getCloudUser(client);
+  if (user) {
+    const { data: remoteVol } = await client
+      .from('comic_volumes')
+      .select('id')
+      .eq('id', volumeId)
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (remoteVol) {
+      const { error: updErr } = await client
+        .from('comic_volumes')
+        .update({
+          order_no: parsedOrder,
+          title: cleanTitle,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', volumeId)
+        .eq('user_id', user.id);
+
+      if (updErr) {
+        throw new Error(`Lỗi cập nhật thông tin tập trên Cloud: ${updErr.message}`);
+      }
+
+      // Phát tín hiệu A6 cho các thiết bị khác đồng bộ
+      try {
+        notifyComicsChanged();
+      } catch {}
+    }
+  }
+
+  return { ok: true, volumeId, order: parsedOrder, title: cleanTitle };
+}
+
 // MULTI-VOLUME BATCH UPLOAD QUEUE
 // -----------------------------------------------------------------------------
 

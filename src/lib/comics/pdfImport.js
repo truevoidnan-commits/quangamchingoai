@@ -24,6 +24,7 @@ import {
   parseVolumeOrder,
   cleanVolumeTitle,
   getComicsStorageStats,
+  getVolumes,
   requestStoragePersistence,
 } from './comicDb.js';
 
@@ -453,35 +454,82 @@ export async function importPdfVolume(file, options = {}) {
 }
 
 /**
- * Batch import multiple PDF files sequentially
+ * Batch import multiple PDF files sequentially (D1).
+ * Accepts either an array of File objects or an array of { file, order, title }.
+ * If order is not specified and filename contains no number, assigns sequentially
+ * starting from (maxExistingOrder + 1), rather than defaulting all to 1.
  */
-export async function importMultiplePdfs(files, options = {}) {
+export async function importMultiplePdfs(items, options = {}) {
   const { onProgress, signal, seriesId, quality = 'balanced' } = options;
-  const fileList = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
-  if (fileList.length === 0) {
+  if (!items || items.length === 0) {
     throw new Error('Không tìm thấy file PDF nào');
   }
 
-  // Sort files naturally by filename so Volume 1 is imported before Volume 2
-  fileList.sort((a, b) => {
-    const orderA = parseVolumeOrder(a.name, 9999);
-    const orderB = parseVolumeOrder(b.name, 9999);
-    if (orderA !== orderB) return orderA - orderB;
-    return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  // Find maximum order of existing volumes in this series if seriesId is known
+  let existingMaxOrder = 0;
+  if (seriesId) {
+    try {
+      const existingVolumes = await getVolumes(seriesId);
+      if (existingVolumes && existingVolumes.length > 0) {
+        existingMaxOrder = Math.max(...existingVolumes.map((v) => Number(v.order) || 0), 0);
+      }
+    } catch {}
+  }
+
+  const rawList = Array.from(items)
+    .map((item) => {
+      if (item instanceof File || (item.name && !item.file)) {
+        return { file: item, order: undefined, title: undefined };
+      }
+      return {
+        file: item.file,
+        order: item.order,
+        title: item.title,
+      };
+    })
+    .filter((x) => x.file && x.file.name.toLowerCase().endsWith('.pdf'));
+
+  if (rawList.length === 0) {
+    throw new Error('Không tìm thấy file PDF nào');
+  }
+
+  // Allocate sequential order starting from (existingMaxOrder + 1) for files without numbers
+  let unnumberedCounter = 1;
+  const normalizedList = rawList.map((item) => {
+    let finalOrder = typeof item.order === 'number' && !isNaN(item.order) ? item.order : null;
+    if (finalOrder === null) {
+      const parsed = parseVolumeOrder(item.file.name, null);
+      if (parsed !== null) {
+        finalOrder = parsed;
+      } else {
+        finalOrder = existingMaxOrder + unnumberedCounter++;
+      }
+    }
+    const finalTitle = item.title || cleanVolumeTitle(item.file.name, finalOrder);
+    return {
+      file: item.file,
+      order: finalOrder,
+      title: finalTitle,
+    };
   });
+
+  // Sort naturally by order
+  normalizedList.sort((a, b) => a.order - b.order);
 
   const results = [];
   let currentTargetSeriesId = seriesId;
 
-  for (let i = 0; i < fileList.length; i++) {
+  for (let i = 0; i < normalizedList.length; i++) {
     if (signal?.aborted) throw new Error('Đã hủy nhập hàng loạt');
-    const file = fileList[i];
+    const { file, order, title } = normalizedList[i];
 
     const result = await importPdfVolume(file, {
       ...options,
+      inputVolumeOrder: order,
+      inputVolumeTitle: title,
       seriesId: currentTargetSeriesId,
       currentVol: i + 1,
-      totalVols: fileList.length,
+      totalVols: normalizedList.length,
       quality,
       signal,
       onProgress,

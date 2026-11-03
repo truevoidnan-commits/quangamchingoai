@@ -14,6 +14,14 @@ import {
   pushComicProgressCloud,
   pullComicProgressCloud,
 } from '../lib/comics/comicCloud.js';
+import {
+  IconArrowLeft,
+  IconChevronLeft,
+  IconChevronRight,
+  IconScroll,
+  IconPages,
+  IconX,
+} from '../components/comics/ComicIcons.jsx';
 import styles from './ComicReaderPage.module.css';
 
 const VIRTUAL_WINDOW_SIZE = 5; // ±5 pages in memory
@@ -27,7 +35,11 @@ export default function ComicReaderPage() {
   const [pageMeta, setPageMeta] = useState([]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [readingMode, setReadingMode] = useState(() => {
-    return localStorage.getItem('tcl_comic_mode') || 'vertical'; // 'vertical' | 'page'
+    try {
+      return localStorage.getItem('tcl_comic_mode') || 'vertical';
+    } catch {
+      return 'vertical';
+    }
   });
   const [showToolbars, setShowToolbars] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -35,32 +47,42 @@ export default function ComicReaderPage() {
   // Map of loaded blob URLs: { [pageIndex]: string }
   const [pageUrls, setPageUrls] = useState({});
 
-  // Passive-open guard: do not write progress until user genuinely interacts
+  // Jump popover state (C3)
+  const [isJumpOpen, setIsJumpOpen] = useState(false);
+  const [jumpValue, setJumpValue] = useState('');
+  const [jumpError, setJumpError] = useState('');
+
+  // Passive-open guard: do not write progress until user genuinely interacts (C4)
   const hasUserEngagedRef = useRef(false);
   const initialScrollRestoredRef = useRef(false);
   const containerRef = useRef(null);
   const pageRefs = useRef({});
   const hideToolbarTimeoutRef = useRef(null);
 
-  // Auto-hide toolbar after 3.5s of inactivity
+  // Double-tap detection refs (C1)
+  const lastTouchTimeRef = useRef(0);
+  const lastTouchPosRef = useRef({ x: 0, y: 0 });
+  const singleTapTimerRef = useRef(null);
+
+  // Auto-hide toolbar after 4s of inactivity
   const scheduleHideToolbar = useCallback(() => {
     if (hideToolbarTimeoutRef.current) {
       clearTimeout(hideToolbarTimeoutRef.current);
     }
     hideToolbarTimeoutRef.current = setTimeout(() => {
       setShowToolbars(false);
-    }, 4000);
+    }, 4500);
   }, []);
 
-  const toggleToolbars = () => {
+  const toggleToolbars = useCallback(() => {
     setShowToolbars((prev) => {
       const next = !prev;
       if (next) scheduleHideToolbar();
       return next;
     });
-  };
+  }, [scheduleHideToolbar]);
 
-  // 1. Initial Load: Volume, Volumes list (for prev/next), PageMeta, and Progress
+  // 1. Initial Load: Volume, Volumes list, PageMeta, and Progress
   useEffect(() => {
     let isCancelled = false;
 
@@ -68,7 +90,6 @@ export default function ComicReaderPage() {
       setLoading(true);
       try {
         recordVolumeOpened(volumeId);
-        // Background LRU eviction check for other synced volumes
         autoEvictIfStorageFull({ activeVolumeId: volumeId }).catch(() => {});
 
         const [vol, vols, meta] = await Promise.all([
@@ -87,16 +108,13 @@ export default function ComicReaderPage() {
         setAllVolumes(vols);
 
         const total = vol.pageCount || meta.length || 1;
-        // Construct fallback metadata if empty
         const fullMeta = Array.from({ length: total }, (_, i) => {
           return meta[i] || { index: i, w: vol.widthHint || 1200, h: Math.round((vol.widthHint || 1200) * 1.4) };
         });
         setPageMeta(fullMeta);
 
-        // Check local saved progress
         let savedProgress = getComicProgress(volumeId);
 
-        // Check Cloud progress (if logged in and newer)
         try {
           const cloudProgress = await pullComicProgressCloud(volumeId);
           if (cloudProgress) {
@@ -104,9 +122,10 @@ export default function ComicReaderPage() {
           }
         } catch {}
 
-        const startIdx = savedProgress && typeof savedProgress.pageIndex === 'number'
-          ? Math.min(savedProgress.pageIndex, total - 1)
-          : 0;
+        const startIdx =
+          savedProgress && typeof savedProgress.pageIndex === 'number'
+            ? Math.min(savedProgress.pageIndex, total - 1)
+            : 0;
 
         setCurrentPageIndex(startIdx);
         setLoading(false);
@@ -133,7 +152,6 @@ export default function ComicReaderPage() {
 
     let isSubscribed = true;
 
-    // Identify which pages need to be loaded
     const neededIndices = [];
     for (let i = minIdx; i <= maxIdx; i++) {
       if (!pageUrls[i]) {
@@ -141,7 +159,6 @@ export default function ComicReaderPage() {
       }
     }
 
-    // Load missing pages
     if (neededIndices.length > 0) {
       Promise.all(
         neededIndices.map(async (idx) => {
@@ -161,7 +178,6 @@ export default function ComicReaderPage() {
           for (const item of loaded) {
             if (item) next[item.idx] = item.url;
           }
-          // Revoke distant URLs
           for (const key of Object.keys(next)) {
             const num = parseInt(key, 10);
             if (num < minIdx - 2 || num > maxIdx + 2) {
@@ -202,19 +218,23 @@ export default function ComicReaderPage() {
     }
   }, [loading, readingMode, currentPageIndex]);
 
-  // 4. Save progress only after genuine user interaction
-  const recordProgress = useCallback((newPageIndex) => {
-    if (!hasUserEngagedRef.current) return; // PASSIVE OPEN GUARD!
-    const scrollPercent = pageMeta.length > 0 ? Math.round(((newPageIndex + 1) / pageMeta.length) * 100) : 0;
-    saveComicProgress(volumeId, {
-      pageIndex: newPageIndex,
-      scrollPercent,
-    });
-    pushComicProgressCloud(volumeId, {
-      pageIndex: newPageIndex,
-      scrollPercent,
-    });
-  }, [volumeId, pageMeta.length]);
+  // 4. Save progress only after genuine user interaction (Passive-open guard)
+  const recordProgress = useCallback(
+    (newPageIndex) => {
+      if (!hasUserEngagedRef.current) return;
+      const scrollPercent =
+        pageMeta.length > 0 ? Math.round(((newPageIndex + 1) / pageMeta.length) * 100) : 0;
+      saveComicProgress(volumeId, {
+        pageIndex: newPageIndex,
+        scrollPercent,
+      });
+      pushComicProgressCloud(volumeId, {
+        pageIndex: newPageIndex,
+        scrollPercent,
+      });
+    },
+    [volumeId, pageMeta.length]
+  );
 
   // 5. Vertical scroll observer to update active page
   useEffect(() => {
@@ -222,7 +242,6 @@ export default function ComicReaderPage() {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        // Find visible page closest to viewport top
         let highestVisible = null;
         let maxRatio = 0;
         entries.forEach((entry) => {
@@ -257,7 +276,6 @@ export default function ComicReaderPage() {
     };
   }, [readingMode, loading, recordProgress]);
 
-  // Mark user interaction on genuine user scroll or touch
   const handleUserScroll = () => {
     if (initialScrollRestoredRef.current) {
       hasUserEngagedRef.current = true;
@@ -265,19 +283,22 @@ export default function ComicReaderPage() {
   };
 
   // 6. Navigation: Next / Prev page
-  const goToPage = useCallback((newIndex) => {
-    hasUserEngagedRef.current = true;
-    const clamped = Math.max(0, Math.min(pageMeta.length - 1, newIndex));
-    setCurrentPageIndex(clamped);
-    recordProgress(clamped);
+  const goToPage = useCallback(
+    (newIndex) => {
+      hasUserEngagedRef.current = true;
+      const clamped = Math.max(0, Math.min(pageMeta.length - 1, newIndex));
+      setCurrentPageIndex(clamped);
+      recordProgress(clamped);
 
-    if (readingMode === 'vertical') {
-      const el = pageRefs.current[clamped];
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
+      if (readingMode === 'vertical') {
+        const el = pageRefs.current[clamped];
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
       }
-    }
-  }, [pageMeta.length, readingMode, recordProgress]);
+    },
+    [pageMeta.length, readingMode, recordProgress]
+  );
 
   const handleNextPage = useCallback(() => {
     if (currentPageIndex < pageMeta.length - 1) {
@@ -291,9 +312,60 @@ export default function ComicReaderPage() {
     }
   }, [currentPageIndex, goToPage]);
 
-  // 7. Keyboard Navigation
+  // 7. Touch Double-Tap Handler & Accidental Page-Turn Protection (C1)
+  const handleTouchEnd = (e) => {
+    if (e.changedTouches.length === 0) return;
+    const touch = e.changedTouches[0];
+    const now = Date.now();
+    const dt = now - lastTouchTimeRef.current;
+    const dist = Math.hypot(
+      touch.clientX - lastTouchPosRef.current.x,
+      touch.clientY - lastTouchPosRef.current.y
+    );
+
+    if (dt < 280 && dist < 12) {
+      // DOUBLE TAP PHÁT HIỆN!
+      // 1. Hủy bỏ hẹn giờ lật trang đơn để tránh lật nhầm (C1)
+      if (singleTapTimerRef.current) {
+        clearTimeout(singleTapTimerRef.current);
+        singleTapTimerRef.current = null;
+      }
+      // 2. Chuyển đổi hiện/ẩn thanh điều khiển
+      toggleToolbars();
+      lastTouchTimeRef.current = 0;
+    } else {
+      // Cú chạm đầu tiên: lưu tọa độ và thời gian
+      lastTouchTimeRef.current = now;
+      lastTouchPosRef.current = { x: touch.clientX, y: touch.clientY };
+
+      // Ở chế độ "Từng Trang", nếu chạm vào vùng lật trang bên cạnh thì hoãn thực thi ~285ms
+      if (readingMode === 'page') {
+        const width = window.innerWidth;
+        const ratio = touch.clientX / width;
+        if (ratio < 0.35) {
+          singleTapTimerRef.current = setTimeout(() => {
+            singleTapTimerRef.current = null;
+            handlePrevPage();
+          }, 285);
+        } else if (ratio > 0.65) {
+          singleTapTimerRef.current = setTimeout(() => {
+            singleTapTimerRef.current = null;
+            handleNextPage();
+          }, 285);
+        }
+      }
+    }
+  };
+
+  // Desktop double-click toggle (C1)
+  const handleDoubleClick = () => {
+    toggleToolbars();
+  };
+
+  // 8. Keyboard Navigation
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (isJumpOpen) return; // Không can thiệp phím khi đang mở popover nhập số trang
       if (e.key === 'ArrowRight' || e.key === 'PageDown' || (readingMode === 'page' && e.key === ' ')) {
         e.preventDefault();
         handleNextPage();
@@ -306,20 +378,38 @@ export default function ComicReaderPage() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleNextPage, handlePrevPage, readingMode]);
+  }, [handleNextPage, handlePrevPage, readingMode, isJumpOpen]);
 
-  // Mode switch
-  const handleModeChange = (mode) => {
-    setReadingMode(mode);
-    localStorage.setItem('tcl_comic_mode', mode);
+  // Mode switch: toggle between 'vertical' and 'page'
+  const toggleReadingMode = () => {
+    const nextMode = readingMode === 'vertical' ? 'page' : 'vertical';
+    setReadingMode(nextMode);
+    try {
+      localStorage.setItem('tcl_comic_mode', nextMode);
+    } catch {}
     scheduleHideToolbar();
   };
 
+  // Jump to page confirm (C3)
+  const handleConfirmJump = () => {
+    const val = parseInt(jumpValue, 10);
+    if (isNaN(val) || val < 1 || val > pageMeta.length) {
+      setJumpError(`Trang hợp lệ từ 1 đến ${pageMeta.length}`);
+      return;
+    }
+    goToPage(val - 1);
+    setIsJumpOpen(false);
+    setJumpError('');
+  };
+
   // Find Prev / Next Volume
-  const sortedVolumes = [...allVolumes].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const sortedVolumes = [...allVolumes].sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
   const currentVolIdx = sortedVolumes.findIndex((v) => v.id === volumeId);
   const prevVolume = currentVolIdx > 0 ? sortedVolumes[currentVolIdx - 1] : null;
-  const nextVolume = currentVolIdx >= 0 && currentVolIdx < sortedVolumes.length - 1 ? sortedVolumes[currentVolIdx + 1] : null;
+  const nextVolume =
+    currentVolIdx >= 0 && currentVolIdx < sortedVolumes.length - 1
+      ? sortedVolumes[currentVolIdx + 1]
+      : null;
 
   if (loading) {
     return (
@@ -335,49 +425,65 @@ export default function ComicReaderPage() {
       className={styles.readerRoot}
       onWheel={handleUserScroll}
       onTouchMove={handleUserScroll}
+      onTouchEnd={handleTouchEnd}
+      onDoubleClick={handleDoubleClick}
       ref={containerRef}
     >
-      {/* ===== TOP TOOLBAR ===== */}
-      <div className={`${styles.topToolbar} ${showToolbars ? styles.toolbarVisible : styles.toolbarHidden}`}>
+      {/* ===== TOP TOOLBAR (C2) ===== */}
+      <div
+        className={`${styles.topToolbar} ${showToolbars ? styles.toolbarVisible : styles.toolbarHidden}`}
+        onClick={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+      >
         <div className={styles.topToolbarInner}>
+          {/* Nút quay lại chỉ có biểu tượng SVG mũi tên, không có chữ Thoát (C2) */}
           <button
-            className={styles.exitBtn}
+            type="button"
+            className={styles.backBtn}
             onClick={() => navigate(`/comics/${seriesId}`)}
-            title="Thoát trình đọc"
+            title="Quay lại danh sách tập"
+            aria-label="Quay lại danh sách tập"
           >
-            ← Thoát
+            <IconArrowLeft size={20} />
           </button>
 
-          <div className={styles.topTitleWrap}>
-            <span className={styles.topVolumeTitle}>{volume?.title}</span>
-            <span className={styles.topPageCount}>
-              Trang {currentPageIndex + 1} / {pageMeta.length}
-            </span>
+          {/* Tên truyện / tập nằm giữa, nổi bật nhất, ellipsis một dòng, bỏ dòng Trang x/y (C2) */}
+          <div className={styles.topCenterTitle} title={volume?.title}>
+            <span className={styles.topTitleText}>{volume?.title}</span>
           </div>
 
-          <div className={styles.modeSwitcher}>
-            <button
-              className={`${styles.modeBtn} ${readingMode === 'vertical' ? styles.modeBtnActive : ''}`}
-              onClick={() => handleModeChange('vertical')}
-              title="Cuộn dọc liên tục"
-            >
-              📜 Cuộn Dọc
-            </button>
-            <button
-              className={`${styles.modeBtn} ${readingMode === 'page' ? styles.modeBtnActive : ''}`}
-              onClick={() => handleModeChange('page')}
-              title="Xem từng trang"
-            >
-              📄 Từng Trang
-            </button>
-          </div>
+          {/* Một nút chuyển chế độ hiển thị icon của chế độ sẽ chuyển sang (C2) */}
+          <button
+            type="button"
+            className={styles.modeToggleBtn}
+            onClick={toggleReadingMode}
+            title={
+              readingMode === 'vertical'
+                ? 'Chuyển sang chế độ Từng Trang'
+                : 'Chuyển sang chế độ Cuộn Dọc'
+            }
+            aria-label={
+              readingMode === 'vertical'
+                ? 'Chuyển sang chế độ Từng Trang'
+                : 'Chuyển sang chế độ Cuộn Dọc'
+            }
+          >
+            {readingMode === 'vertical' ? (
+              <IconPages size={20} />
+            ) : (
+              <IconScroll size={20} />
+            )}
+          </button>
         </div>
       </div>
 
       {/* ===== READER VIEWPORT ===== */}
       {readingMode === 'vertical' ? (
         /* Vertical Scroll Mode */
-        <div className={styles.verticalScrollContainer} onClick={toggleToolbars} onScroll={handleUserScroll}>
+        <div
+          className={styles.verticalScrollContainer}
+          onScroll={handleUserScroll}
+        >
           <div className={styles.verticalStream}>
             {pageMeta.map((meta, idx) => {
               const url = pageUrls[idx];
@@ -411,28 +517,8 @@ export default function ComicReaderPage() {
           </div>
         </div>
       ) : (
-        /* Page-by-Page Mode */
+        /* Page-by-Page Mode (C1) */
         <div className={styles.singlePageContainer}>
-          {/* Left half click -> Prev */}
-          <div
-            className={styles.pageClickZoneLeft}
-            onClick={handlePrevPage}
-            title="Trang trước"
-          />
-
-          {/* Center click -> Toggle toolbars */}
-          <div
-            className={styles.pageClickZoneCenter}
-            onClick={toggleToolbars}
-          />
-
-          {/* Right half click -> Next */}
-          <div
-            className={styles.pageClickZoneRight}
-            onClick={handleNextPage}
-            title="Trang sau"
-          />
-
           <div
             className={styles.singlePageWrap}
             style={{
@@ -450,59 +536,128 @@ export default function ComicReaderPage() {
             ) : (
               <div className={styles.pagePlaceholder}>
                 <div className={styles.spinner} />
-                <span className={styles.placeholderText}>Đang tải trang {currentPageIndex + 1}...</span>
+                <span className={styles.placeholderText}>
+                  Đang tải trang {currentPageIndex + 1}...
+                </span>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* ===== BOTTOM TOOLBAR ===== */}
-      <div className={`${styles.bottomToolbar} ${showToolbars ? styles.toolbarVisible : styles.toolbarHidden}`}>
+      {/* ===== BOTTOM TOOLBAR (C3) ===== */}
+      <div
+        className={`${styles.bottomToolbar} ${showToolbars ? styles.toolbarVisible : styles.toolbarHidden}`}
+        onClick={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+      >
         <div className={styles.bottomToolbarInner}>
-          {/* Jump Slider */}
-          <div className={styles.sliderWrap}>
-            <span className={styles.sliderPageLabel}>1</span>
-            <input
-              type="range"
-              min="0"
-              max={Math.max(0, pageMeta.length - 1)}
-              value={currentPageIndex}
-              onChange={(e) => goToPage(parseInt(e.target.value, 10))}
-              className={styles.sliderInput}
-              aria-label="Chuyển nhanh trang"
-            />
-            <span className={styles.sliderPageLabel}>{pageMeta.length}</span>
-          </div>
-
-          {/* Volume Switcher Controls */}
-          <div className={styles.volumeNavRow}>
-            <button
-              className={styles.volNavBtn}
-              disabled={!prevVolume}
-              onClick={() => {
-                if (prevVolume) navigate(`/comics/${seriesId}/read/${prevVolume.id}`);
-              }}
-            >
-              ⏮️ Tập trước: {prevVolume ? prevVolume.title : 'Hết'}
-            </button>
-
-            <span className={styles.indicatorPill}>
-              {currentPageIndex + 1} / {pageMeta.length}
+          {/* Nút Tập Trước: icon mũi tên SVG (C3) */}
+          <button
+            type="button"
+            className={styles.volChevronBtn}
+            disabled={!prevVolume}
+            onClick={() => {
+              if (prevVolume) navigate(`/comics/${seriesId}/read/${prevVolume.id}`);
+            }}
+            title={prevVolume ? `Tập trước: Tập ${prevVolume.order}` : 'Không có tập trước'}
+            aria-label="Tập trước"
+          >
+            <IconChevronLeft size={22} />
+            <span className={styles.volMiniLabel}>
+              {prevVolume ? `Tập ${prevVolume.order}` : ''}
             </span>
+          </button>
 
-            <button
-              className={styles.volNavBtn}
-              disabled={!nextVolume}
-              onClick={() => {
-                if (nextVolume) navigate(`/comics/${seriesId}/read/${nextVolume.id}`);
-              }}
-            >
-              Tập sau: {nextVolume ? nextVolume.title : 'Hết'} ⏭️
-            </button>
-          </div>
+          {/* Nút số trang "X / Y" mở popover nhảy trang (C3) */}
+          <button
+            type="button"
+            className={styles.pageJumpBtn}
+            onClick={() => {
+              setJumpValue(String(currentPageIndex + 1));
+              setJumpError('');
+              setIsJumpOpen(true);
+            }}
+            title="Nhấn để nhảy tới trang"
+            aria-label="Nhấn để nhảy tới trang"
+          >
+            <span>{currentPageIndex + 1} / {pageMeta.length}</span>
+          </button>
+
+          {/* Nút Tập Tiếp: icon mũi tên SVG (C3) */}
+          <button
+            type="button"
+            className={styles.volChevronBtn}
+            disabled={!nextVolume}
+            onClick={() => {
+              if (nextVolume) navigate(`/comics/${seriesId}/read/${nextVolume.id}`);
+            }}
+            title={nextVolume ? `Tập tiếp: Tập ${nextVolume.order}` : 'Không có tập kế'}
+            aria-label="Tập tiếp"
+          >
+            <span className={styles.volMiniLabel}>
+              {nextVolume ? `Tập ${nextVolume.order}` : ''}
+            </span>
+            <IconChevronRight size={22} />
+          </button>
         </div>
       </div>
+
+      {/* ===== NUMERIC PAGE JUMP POPOVER (C3) ===== */}
+      {isJumpOpen && (
+        <div
+          className={styles.jumpOverlay}
+          onClick={() => {
+            setIsJumpOpen(false);
+            setJumpError('');
+          }}
+        >
+          <div className={styles.jumpPopover} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.jumpHeader}>
+              <span className={styles.jumpTitle}>Đến Trang</span>
+              <span className={styles.jumpRange}>(1 – {pageMeta.length})</span>
+              <button
+                type="button"
+                className={styles.jumpCloseBtn}
+                onClick={() => {
+                  setIsJumpOpen(false);
+                  setJumpError('');
+                }}
+                aria-label="Đóng"
+              >
+                <IconX size={16} />
+              </button>
+            </div>
+
+            <div className={styles.jumpInputRow}>
+              <input
+                type="number"
+                min="1"
+                max={pageMeta.length}
+                className={styles.jumpInput}
+                value={jumpValue}
+                onChange={(e) => {
+                  setJumpValue(e.target.value);
+                  setJumpError('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirmJump();
+                }}
+                autoFocus
+              />
+              <button
+                type="button"
+                className={styles.jumpSubmitBtn}
+                onClick={handleConfirmJump}
+              >
+                Đi
+              </button>
+            </div>
+
+            {jumpError && <div className={styles.jumpError}>{jumpError}</div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

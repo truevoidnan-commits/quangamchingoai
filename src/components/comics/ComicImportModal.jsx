@@ -1,6 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { QUALITY_PRESETS, importMultiplePdfs } from '../../lib/comics/pdfImport.js';
 import { isCloudAvailable, uploadAllUnsyncedVolumes } from '../../lib/comics/comicCloud.js';
+import { getVolumes, parseVolumeOrder, cleanVolumeTitle } from '../../lib/comics/comicDb.js';
+import {
+  IconBookOpen,
+  IconFolder,
+  IconX,
+  IconCloudUpload,
+  IconAlertTriangle,
+  IconRefresh,
+  IconTrash,
+} from './ComicIcons.jsx';
 import styles from './ComicImportModal.module.css';
 
 export default function ComicImportModal({
@@ -11,7 +21,7 @@ export default function ComicImportModal({
   allSeries = [],
   onImportSuccess,
 }) {
-  const [files, setFiles] = useState([]);
+  const [fileConfigs, setFileConfigs] = useState([]);
   const [targetSeriesMode, setTargetSeriesMode] = useState(initialSeriesId ? 'existing' : 'new');
   const [selectedSeriesId, setSelectedSeriesId] = useState(initialSeriesId || (allSeries[0]?.id || ''));
   const [newSeriesTitle, setNewSeriesTitle] = useState(initialSeriesTitle || '');
@@ -20,7 +30,14 @@ export default function ComicImportModal({
   const [progress, setProgress] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [autoUpload, setAutoUpload] = useState(() => localStorage.getItem('tcl_comic_auto_upload') !== 'false');
+  const [autoUpload, setAutoUpload] = useState(() => {
+    try {
+      return localStorage.getItem('tcl_comic_auto_upload') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [maxExistingOrder, setMaxExistingOrder] = useState(0);
 
   const abortControllerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -36,24 +53,88 @@ export default function ComicImportModal({
     }
   }, [initialSeriesId]);
 
+  // Lấy số tập lớn nhất hiện có khi chọn bộ truyện có sẵn
+  useEffect(() => {
+    if (targetSeriesMode === 'existing' && selectedSeriesId) {
+      getVolumes(selectedSeriesId)
+        .then((vols) => {
+          if (vols && vols.length > 0) {
+            const max = Math.max(...vols.map((v) => Number(v.order) || 0), 0);
+            setMaxExistingOrder(max);
+          } else {
+            setMaxExistingOrder(0);
+          }
+        })
+        .catch(() => setMaxExistingOrder(0));
+    } else {
+      setMaxExistingOrder(0);
+    }
+  }, [targetSeriesMode, selectedSeriesId]);
+
   if (!isOpen) return null;
 
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files || []).filter((f) => f.name.toLowerCase().endsWith('.pdf'));
     if (selected.length === 0) return;
-    setFiles(selected);
+
+    let unnumberedCounter = 1;
+    const configs = selected.map((file, idx) => {
+      const parsed = parseVolumeOrder(file.name, null);
+      let order;
+      if (parsed !== null) {
+        order = parsed;
+      } else {
+        // D1: Gán tuần tự từ maxExistingOrder + 1 nếu tên file không có số
+        order = maxExistingOrder + unnumberedCounter++;
+      }
+      const title = cleanVolumeTitle(file.name, order);
+      return {
+        id: `${file.name}_${file.size}_${idx}_${Date.now()}`,
+        file,
+        order,
+        title,
+      };
+    });
+
+    setFileConfigs(configs);
     setErrorMsg('');
 
-    // If no series title specified yet and creating new, suggest from first file
+    // Gợi ý tên bộ truyện nếu đang tạo mới và chưa nhập
     if (!newSeriesTitle && targetSeriesMode === 'new') {
       const baseName = selected[0].name.replace(/\.pdf$/i, '').replace(/[_+]/g, ' ').trim();
-      const suggested = baseName.replace(/(?:tập|vol(?:ume)?\.?|quyển|chap(?:ter)?\.?)\s*\d+.*$/i, '').trim() || baseName;
+      const suggested =
+        baseName.replace(/(?:tập|vol(?:ume)?\.?|quyển|chap(?:ter)?\.?)\s*\d+.*$/i, '').trim() || baseName;
       setNewSeriesTitle(suggested);
     }
   };
 
+  const handleOrderChange = (idx, value) => {
+    const num = parseFloat(value);
+    setFileConfigs((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], order: isNaN(num) ? value : num };
+      return next;
+    });
+  };
+
+  const handleTitleChange = (idx, value) => {
+    setFileConfigs((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], title: value };
+      return next;
+    });
+  };
+
+  const handleRemoveFile = (idx) => {
+    setFileConfigs((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // Phát hiện các số tập bị trùng nhau (D1)
+  const orderList = fileConfigs.map((c) => Number(c.order)).filter((n) => !isNaN(n));
+  const duplicateOrders = [...new Set(orderList.filter((item, index) => orderList.indexOf(item) !== index))];
+
   const handleStartImport = async () => {
-    if (files.length === 0) {
+    if (fileConfigs.length === 0) {
       setErrorMsg('Vui lòng chọn ít nhất một file PDF.');
       return;
     }
@@ -71,7 +152,7 @@ export default function ComicImportModal({
       const seriesId = targetSeriesMode === 'existing' ? selectedSeriesId : null;
       const seriesTitle = targetSeriesMode === 'new' ? newSeriesTitle.trim() : '';
 
-      const res = await importMultiplePdfs(files, {
+      const res = await importMultiplePdfs(fileConfigs, {
         seriesId,
         seriesTitle,
         quality,
@@ -83,7 +164,7 @@ export default function ComicImportModal({
 
       setIsImporting(false);
 
-      // Auto-upload to Cloud if enabled and logged in
+      // Tự động tải lên Cloud nếu được bật
       if (autoUpload && isLoggedIn && res?.seriesId) {
         uploadAllUnsyncedVolumes(res.seriesId).catch((err) => {
           console.warn('[ComicCloud] Tự động tải lên thất bại:', err);
@@ -119,12 +200,14 @@ export default function ComicImportModal({
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <div className={styles.titleWrap}>
-            <span className={styles.headerIcon}>📚</span>
+            <span className={styles.headerIcon}>
+              <IconBookOpen size={22} />
+            </span>
             <h2 className={styles.modalTitle}>Nhập Truyện Tranh (PDF)</h2>
           </div>
           {!isImporting && (
             <button className={styles.closeBtn} onClick={onClose} aria-label="Đóng">
-              ✕
+              <IconX size={20} />
             </button>
           )}
         </div>
@@ -135,10 +218,7 @@ export default function ComicImportModal({
           {!isImporting ? (
             <>
               {/* File Drop Area */}
-              <div
-                className={styles.dropZone}
-                onClick={() => fileInputRef.current?.click()}
-              >
+              <div className={styles.dropZone} onClick={() => fileInputRef.current?.click()}>
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -147,21 +227,69 @@ export default function ComicImportModal({
                   style={{ display: 'none' }}
                   onChange={handleFileChange}
                 />
-                <span className={styles.uploadIcon}>📂</span>
-                <p className={styles.dropPrompt}>
-                  Nhấn để chọn một hoặc nhiều file PDF tập truyện
-                </p>
-                <p className={styles.dropSub}>
-                  Mỗi file ứng với 1 tập (hỗ trợ file nặng 50–100MB+)
-                </p>
-
-                {files.length > 0 && (
-                  <div className={styles.fileSummary}>
-                    Đã chọn <strong>{files.length} tập</strong> (tổng dung lượng ~
-                    {formatMb(files.reduce((acc, f) => acc + f.size, 0))} MB)
-                  </div>
-                )}
+                <span className={styles.dropIcon}>
+                  <IconFolder size={36} />
+                </span>
+                <p className={styles.dropPrompt}>Nhấn để chọn một hoặc nhiều file PDF tập truyện</p>
+                <p className={styles.dropSub}>Mỗi file ứng với 1 tập (hỗ trợ file nặng 50–100MB+)</p>
               </div>
+
+              {/* Editable File List Table (D1) */}
+              {fileConfigs.length > 0 && (
+                <div className={styles.fileListSection}>
+                  <div className={styles.fileListHeader}>
+                    <span>Danh sách tập đã chọn ({fileConfigs.length} tập · ~{formatMb(fileConfigs.reduce((acc, f) => acc + (f.file?.size || 0), 0))} MB)</span>
+                  </div>
+
+                  {duplicateOrders.length > 0 && (
+                    <div className={styles.duplicateWarning}>
+                      <IconAlertTriangle size={16} />
+                      <span>
+                        Chú ý: Các tập có số {duplicateOrders.join(', ')} đang bị trùng. Hãy điều chỉnh số tập để hiển thị đúng thứ tự.
+                      </span>
+                    </div>
+                  )}
+
+                  <div className={styles.fileListTable}>
+                    {fileConfigs.map((item, idx) => (
+                      <div key={item.id} className={styles.fileRow}>
+                        <div className={styles.fileOrderCol}>
+                          <label className={styles.miniLabel}>Số tập</label>
+                          <input
+                            type="number"
+                            step="any"
+                            min="1"
+                            className={styles.miniNumberInput}
+                            value={item.order}
+                            onChange={(e) => handleOrderChange(idx, e.target.value)}
+                            aria-label={`Số tập cho ${item.file.name}`}
+                          />
+                        </div>
+                        <div className={styles.fileTitleCol}>
+                          <label className={styles.miniLabel}>Tên tập hiển thị</label>
+                          <input
+                            type="text"
+                            className={styles.miniTextInput}
+                            value={item.title}
+                            onChange={(e) => handleTitleChange(idx, e.target.value)}
+                            aria-label={`Tên tập cho ${item.file.name}`}
+                          />
+                          <div className={styles.fileNameHint}>{item.file.name}</div>
+                        </div>
+                        <button
+                          type="button"
+                          className={styles.removeFileBtn}
+                          onClick={() => handleRemoveFile(idx)}
+                          title="Bỏ file này"
+                          aria-label="Bỏ file này"
+                        >
+                          <IconTrash size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Series Option */}
               <div className={styles.formGroup}>
@@ -217,7 +345,7 @@ export default function ComicImportModal({
 
               {/* Quality Preset */}
               <div className={styles.formGroup}>
-                <label className={styles.label}>Chất Lượng Tối Ưu Hóa</label>
+                <label className={styles.label}>Chất Lượng Tối Ưu Hóa (theo chiều rộng)</label>
                 <div className={styles.qualityGrid}>
                   {Object.values(QUALITY_PRESETS).map((preset) => (
                     <div
@@ -241,10 +369,15 @@ export default function ComicImportModal({
                       checked={autoUpload}
                       onChange={(e) => {
                         setAutoUpload(e.target.checked);
-                        localStorage.setItem('tcl_comic_auto_upload', String(e.target.checked));
+                        try {
+                          localStorage.setItem('tcl_comic_auto_upload', String(e.target.checked));
+                        } catch {}
                       }}
                     />
-                    <span>☁️ Tự động tải lên Cloud sau khi nhập xong</span>
+                    <span className={styles.checkboxContent}>
+                      <IconCloudUpload size={16} />
+                      <span>Tự động tải lên Cloud sau khi nhập xong</span>
+                    </span>
                   </label>
                 </div>
               )}
@@ -252,18 +385,16 @@ export default function ComicImportModal({
           ) : (
             /* Progress view during import */
             <div className={styles.progressContainer}>
-              <div className={styles.progressPulseIcon}>⚙️</div>
-              <h3 className={styles.progressTitle}>
-                Đang xử lý truyện tranh...
-              </h3>
-              
+              <div className={styles.progressPulseIcon}>
+                <IconRefresh size={40} />
+              </div>
+              <h3 className={styles.progressTitle}>Đang xử lý truyện tranh...</h3>
+
               {progress && (
                 <>
                   <div className={styles.progressSubtitle}>
                     {progress.volumeTitle && <strong>{progress.volumeTitle}</strong>}
-                    {progress.totalVols > 1 && (
-                      <span> (Tập {progress.currentVol}/{progress.totalVols})</span>
-                    )}
+                    {progress.totalVols > 1 && <span> (Tập {progress.currentVol}/{progress.totalVols})</span>}
                   </div>
 
                   <div className={styles.progressBarWrap}>
@@ -280,15 +411,13 @@ export default function ComicImportModal({
                       Trang: {progress.currentPage} / {progress.totalPages} (
                       {progress.totalPages ? Math.round((progress.currentPage / progress.totalPages) * 100) : 0}%)
                     </span>
-                    <span>
-                      Dung lượng WebP: {formatMb(progress.currentBytes || 0)} MB
-                    </span>
+                    <span>Dung lượng WebP: {formatMb(progress.currentBytes || 0)} MB</span>
                   </div>
                 </>
               )}
 
               <p className={styles.progressNote}>
-                ⚡ Đang chuyển đổi trực tiếp trên trình duyệt, không tốn data mạng. Vui lòng giữ tab này mở.
+                Đang chuyển đổi trực tiếp trên trình duyệt, không tốn data mạng. Vui lòng giữ tab này mở.
               </p>
             </div>
           )}
@@ -303,14 +432,15 @@ export default function ComicImportModal({
               <button
                 className={styles.submitBtn}
                 onClick={handleStartImport}
-                disabled={files.length === 0}
+                disabled={fileConfigs.length === 0}
               >
-                Bắt Đầu Nhập ({files.length} tập)
+                Bắt Đầu Nhập ({fileConfigs.length} tập)
               </button>
             </>
           ) : (
             <button className={styles.cancelImportBtn} onClick={handleCancel}>
-              🛑 Hủy Quá Trình Nhập
+              <IconX size={16} />
+              <span>Hủy Quá Trình Nhập</span>
             </button>
           )}
         </div>

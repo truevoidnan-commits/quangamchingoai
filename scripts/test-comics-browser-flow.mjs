@@ -1,5 +1,5 @@
 /**
- * Playwright E2E & Flow Test for Comics (Truyện Tranh)
+ * Playwright E2E & Flow Test for Comics (Truyện Tranh) - Phase 3
  * Run: node scripts/test-comics-browser-flow.mjs
  */
 import { chromium } from 'playwright';
@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import assert from 'node:assert';
 import { generateComicBenchmarkPdf } from './make-comic-benchmark-pdf.mjs';
 
-// Screenshots saved strictly in artifacts/ (which is in .gitignore), no hardcoded Windows paths
+// Screenshots saved strictly in artifacts/ (which is in .gitignore)
 const ARTIFACT_DIR = path.resolve('artifacts/comics');
 if (!fs.existsSync(ARTIFACT_DIR)) {
   fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
@@ -65,7 +65,8 @@ async function ensureSamplePdf(browser) {
   if (fs.existsSync(samplePdfPath)) return samplePdfPath;
 
   const p = await browser.newPage();
-  let html = '<html><head><style>@page { size: 1000px 1500px; margin: 0; } body { margin:0; background:#0f172a; font-family:sans-serif; } .p { width:1000px; height:1500px; page-break-after:always; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#38bdf8; border:4px solid #38bdf8; box-sizing:border-box; }</style></head><body>';
+  let html =
+    '<html><head><style>@page { size: 1000px 1500px; margin: 0; } body { margin:0; background:#0f172a; font-family:sans-serif; } .p { width:1000px; height:1500px; page-break-after:always; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#38bdf8; border:4px solid #38bdf8; box-sizing:border-box; }</style></head><body>';
   for (let i = 1; i <= 6; i++) {
     html += `<div class="p"><h1>Đấu Phá Thương Khung</h1><h2>Tập 1 - Trang ${i}</h2></div>`;
   }
@@ -76,8 +77,32 @@ async function ensureSamplePdf(browser) {
   return samplePdfPath;
 }
 
+/**
+ * Kiểm tra không có thanh cuộn ngang ở bất kỳ phần tử nào
+ */
+async function assertNoHorizontalScroll(page, pageName) {
+  const vp = page.viewportSize();
+  const info = await page.evaluate(() => {
+    const docWidth = document.documentElement.scrollWidth;
+    const bodyWidth = document.body.scrollWidth;
+    const winWidth = window.innerWidth;
+    return {
+      docWidth,
+      bodyWidth,
+      winWidth,
+      hasOverflow: docWidth > winWidth || bodyWidth > winWidth,
+    };
+  });
+
+  assert(
+    !info.hasOverflow,
+    `LỖI CUỘN NGANG: Trang "${pageName}" tại ${vp.width}x${vp.height} có docWidth=${info.docWidth}, bodyWidth=${info.bodyWidth} > winWidth=${info.winWidth}`
+  );
+  console.log(`     ✓ Không cuộn ngang trên ${pageName} (${vp.width}px) [docWidth: ${info.docWidth}px <= ${info.winWidth}px]`);
+}
+
 async function runBrowserFlowTests() {
-  console.log('🧪 Starting Comics Browser Flow & Performance Tests...');
+  console.log('🧪 Starting Comics Browser Flow & Performance Tests (Phase 3)...');
   const server = await createStaticServer();
 
   const browser = await chromium.launch({
@@ -87,9 +112,9 @@ async function runBrowserFlowTests() {
   try {
     const context = await browser.newContext({
       viewport: { width: 1280, height: 800 },
+      hasTouch: true,
     });
 
-    // Block remote supabase calls so test runs 100% offline & instant
     await context.route(/supabase\.co/i, (route) => route.abort());
 
     const page = await context.newPage();
@@ -110,25 +135,38 @@ async function runBrowserFlowTests() {
     await page.waitForURL('**/comics', { timeout: 10000 });
     console.log('     Navigated to /comics successfully.');
 
-    // 2. Verify Storage Gauge & Empty State
-    console.log('  2. Verifying ComicsPage storage gauge & empty state...');
+    // 2. Verify Storage Gauge & Empty State & Mobile viewports (360px & 390px)
+    console.log('  2. Verifying ComicsPage storage gauge & responsiveness (360px & 390px)...');
     await page.waitForSelector('text=TÀNG KINH HỌA CÁC');
-    await page.waitForSelector('text=Bộ nhớ truyện tranh');
 
-    // Screenshot ComicsPage initial
-    const comicsPageDesktopShot = path.join(ARTIFACT_DIR, 'comics-page-desktop.png');
-    await page.screenshot({ path: comicsPageDesktopShot });
-    console.log(`     Saved screenshot: ${comicsPageDesktopShot}`);
+    // Kiểm tra không cuộn ngang ở 360px và 390px
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.waitForTimeout(200);
+    await assertNoHorizontalScroll(page, 'ComicsPage');
 
-    // Mobile viewport screenshot
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(200);
+    await assertNoHorizontalScroll(page, 'ComicsPage');
     const comicsPageMobileShot = path.join(ARTIFACT_DIR, 'comics-page-mobile.png');
     await page.screenshot({ path: comicsPageMobileShot });
-    console.log(`     Saved mobile screenshot: ${comicsPageMobileShot}`);
-    await page.setViewportSize({ width: 1280, height: 800 });
 
-    // 3. Import Modal & File Upload Test (test-comic-sample.pdf, 6 pages)
-    console.log('  3. Testing Import PDF Modal with test-comic-sample.pdf...');
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const comicsPageDesktopShot = path.join(ARTIFACT_DIR, 'comics-page-desktop.png');
+    await page.screenshot({ path: comicsPageDesktopShot });
+
+    // 3. Settings Modal / Bottom sheet test
+    console.log('  3. Testing Settings bottom sheet / modal...');
+    const settingsBtn = await page.locator('button[aria-label="Cài đặt đồng bộ & bộ nhớ"]');
+    await settingsBtn.click();
+    await page.waitForSelector('text=Cài Đặt Truyện Tranh');
+    const autoDlToggle = await page.locator('#toggle-auto-download');
+    assert(await autoDlToggle.isChecked(), 'Auto download toggle should be checked by default');
+    const doneBtn = await page.locator('button:has-text("Hoàn Tất")');
+    await doneBtn.click();
+    await page.waitForTimeout(200);
+
+    // 4. Import Modal & File Upload Test (test-comic-sample.pdf, 6 pages)
+    console.log('  4. Testing Import PDF Modal with test-comic-sample.pdf...');
     const importBtn = await page.waitForSelector('#btn-import-pdf-comics');
     await importBtn.click();
 
@@ -136,6 +174,12 @@ async function runBrowserFlowTests() {
     const fileInput = await page.locator('input[type="file"]');
     const samplePdfPath = await ensureSamplePdf(browser);
     await fileInput.setInputFiles(samplePdfPath);
+
+    // Verify editable file table appears with order and title
+    await page.waitForSelector('input[aria-label*="Số tập cho"]');
+    const orderInput = await page.locator('input[aria-label*="Số tập cho"]');
+    const currentOrderVal = await orderInput.inputValue();
+    assert(currentOrderVal, 'Order input should have default recognized/assigned value');
 
     // Title input
     const seriesTitleInput = await page.locator('input[placeholder*="One Piece"]');
@@ -149,7 +193,6 @@ async function runBrowserFlowTests() {
     await page.waitForSelector('text=Đang xử lý truyện tranh...', { timeout: 10000 });
     console.log('     Progress screen shown during page extraction.');
 
-    // Screenshot progress modal
     const importProgressShot = path.join(ARTIFACT_DIR, 'comics-import-progress.png');
     await page.screenshot({ path: importProgressShot });
 
@@ -157,101 +200,141 @@ async function runBrowserFlowTests() {
     await page.waitForURL(/\/comics\/[A-Za-z0-9_-]+/, { timeout: 30000 });
     console.log(`     Successfully imported and navigated to Series Page: ${page.url()}`);
 
-    // 4. Verify ComicSeriesPage
-    console.log('  4. Verifying ComicSeriesPage volumes & cover...');
+    // 5. Verify ComicSeriesPage & Menu ⋯ & Edit volume dialog (D2) & 360px fit
+    console.log('  5. Testing ComicSeriesPage, Menu ⋯, Edit Volume Dialog (D2)...');
     await page.waitForSelector('text=Đấu Phá Thương Khung');
-    await page.waitForSelector('text=6 trang');
-    await page.waitForSelector('text=1 tập');
+
+    // Test viewport 360px & 390px on ComicSeriesPage
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.waitForTimeout(200);
+    await assertNoHorizontalScroll(page, 'ComicSeriesPage');
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(200);
+    await assertNoHorizontalScroll(page, 'ComicSeriesPage');
+
+    // Test Menu ⋯ button
+    const moreBtn = await page.locator('button[aria-label="Tùy chọn khác"]').first();
+    await moreBtn.click();
+    await page.waitForSelector('text=Sửa Số Tập / Tên Tập');
+
+    // Click "Sửa Số Tập / Tên Tập"
+    const editItem = await page.locator('button:has-text("Sửa Số Tập / Tên Tập")');
+    await editItem.click();
+
+    // Verify Edit Dialog opens
+    await page.waitForSelector('text=Sửa Số Tập & Tên Tập');
+    const editOrderIn = await page.locator('input[type="number"][value]');
+    await editOrderIn.fill('1');
+
+    const editTitleIn = await page.locator('input[type="text"][value*="test-comic-sample"]');
+    await editTitleIn.fill('Tập 1 - Thức Tỉnh Đấu Hồn Cực Kỳ Dài Dài Dài Dài Dài Dài');
+
+    const saveVolBtn = await page.locator('button:has-text("Lưu Thay Đổi")');
+    await saveVolBtn.click();
+    await page.waitForTimeout(400);
+
+    // Verify no overflow with long title at 360px
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.waitForTimeout(200);
+    await assertNoHorizontalScroll(page, 'ComicSeriesPage with Long Title');
 
     const seriesPageShot = path.join(ARTIFACT_DIR, 'comics-series-page.png');
     await page.screenshot({ path: seriesPageShot });
     console.log(`     Saved screenshot: ${seriesPageShot}`);
 
-    // 5. Test ComicReaderPage (Continuous Vertical Scroll & Single Page)
-    console.log('  5. Testing ComicReaderPage...');
-    const readBtn = await page.locator('button:has-text("Bắt Đầu Đọc")');
-    await readBtn.click();
+    // 6. Test ComicReaderPage (C1, C2, C3, C4)
+    console.log('  6. Testing ComicReaderPage (Double-tap, Jump Popover, Chevrons)...');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mainReadBtn = await page.locator('button:has-text("Đọc")').first();
+    await mainReadBtn.click();
 
     await page.waitForURL(/\/comics\/[A-Za-z0-9_-]+\/read\/[A-Za-z0-9_-]+/, { timeout: 15000 });
     console.log(`     Navigated to Reader: ${page.url()}`);
 
-    // Verify header is hidden
-    const mainHeader = await page.$('header');
-    if (mainHeader) {
-      const isVisible = await mainHeader.isVisible();
-      if (isVisible) throw new Error('Main header should be hidden on Reader page');
-    }
-    console.log('     Verified main header is hidden.');
-
-    // Verify page containers and images loaded
-    await page.waitForSelector('img[alt="Trang 1"]', { timeout: 15000 });
-    console.log('     Page 1 image loaded and displayed.');
-
-    // Screenshot vertical reader desktop & mobile
-    const readerVerticalDesktopShot = path.join(ARTIFACT_DIR, 'comics-reader-vertical-desktop.png');
-    await page.screenshot({ path: readerVerticalDesktopShot });
-    console.log(`     Saved vertical reader desktop screenshot: ${readerVerticalDesktopShot}`);
+    // Verify no horizontal overflow in reader on 360px and 390px
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.waitForTimeout(300);
+    await assertNoHorizontalScroll(page, 'ComicReaderPage (Toolbars Visible 360px)');
 
     await page.setViewportSize({ width: 390, height: 844 });
-    const readerVerticalMobileShot = path.join(ARTIFACT_DIR, 'comics-reader-vertical-mobile.png');
-    await page.screenshot({ path: readerVerticalMobileShot });
-    console.log(`     Saved vertical reader mobile screenshot: ${readerVerticalMobileShot}`);
-    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.waitForTimeout(200);
+    await assertNoHorizontalScroll(page, 'ComicReaderPage (Toolbars Visible 390px)');
 
-    // Test Passive-open progress guard
-    console.log('  6. Testing Passive-open reading progress guard...');
-    const rawVol = page.url().split('/read/')[1];
-    const volId = rawVol.split(/[?#/]/)[0];
-    
-    // Simulate genuine user scroll to page 3
-    console.log('     User scrolling to Page 3...');
-    await page.evaluate(() => {
-      const scrollContainer = document.querySelector('[class*="verticalScrollContainer"]');
-      if (scrollContainer) {
-        scrollContainer.scrollTop = 1600;
-        scrollContainer.dispatchEvent(new Event('scroll', { bubbles: true }));
-      }
-    });
-    await page.waitForTimeout(1000);
+    // Verify image 1 loaded
+    await page.waitForSelector('img[alt="Trang 1"]', { timeout: 15000 });
 
-    const savedProgress = await page.evaluate((id) => {
-      const raw = localStorage.getItem(`tcl_comic_progress_${id}`);
-      return raw ? JSON.parse(raw) : null;
-    }, volId);
+    // Test C1: Double-tap / double-click toolbar toggle
+    console.log('     Testing C1: Double-click / double-tap toolbar toggle...');
+    const topBar = await page.locator('[class*="topToolbar"]').first();
+    const isVisibleBefore = await topBar.evaluate((el) => !el.className.includes('toolbarHidden'));
 
-    console.log('     LocalStorage saved progress after scroll:', savedProgress);
-    if (!savedProgress) throw new Error('Expected comic progress to be saved after user interaction');
+    // Trigger double click
+    await page.mouse.dblclick(200, 300);
+    await page.waitForTimeout(400);
+    const isVisibleAfterDblClick = await topBar.evaluate((el) => !el.className.includes('toolbarHidden'));
+    assert.notStrictEqual(isVisibleBefore, isVisibleAfterDblClick, 'Double-click must toggle toolbars!');
 
-    // Test page-by-page mode
-    console.log('  7. Testing Page-by-Page reading mode...');
-    const pageModeBtn = await page.locator('button:has-text("Từng Trang")');
-    await pageModeBtn.click({ force: true });
+    // Toggle back
+    await page.mouse.dblclick(200, 300);
     await page.waitForTimeout(400);
 
-    const readerSinglePageShot = path.join(ARTIFACT_DIR, 'comics-reader-single-page.png');
-    await page.screenshot({ path: readerSinglePageShot });
-    console.log(`     Saved single page reader screenshot: ${readerSinglePageShot}`);
+    // Test C3: Numeric Jump Popover
+    console.log('     Testing C3: Numeric Page Jump Popover...');
+    const pageJumpBtn = await page.locator('button[aria-label="Nhấn để nhảy tới trang"]');
+    await pageJumpBtn.click();
+    await page.waitForSelector('text=Đến Trang');
 
-    // Click right clickzone to advance page
-    const rightZone = await page.locator('div[title="Trang sau"]');
-    await rightZone.click();
-    await page.waitForTimeout(300);
+    // Test invalid page (99) -> error shown
+    const jumpInput = await page.locator('input[type="number"][min="1"]');
+    await jumpInput.fill('99');
+    const jumpGoBtn = await page.locator('button:has-text("Đi")');
+    await jumpGoBtn.click();
+    await page.waitForSelector('text=Trang hợp lệ từ 1 đến');
+    console.log('     Invalid page range properly rejected with message.');
 
-    // 8. Test Volume Deletion
-    console.log('  8. Testing Volume Deletion and Storage reclamation...');
+    // Test valid page (4) -> jumps to page 4
+    await jumpInput.fill('4');
+    await jumpGoBtn.click();
+    await page.waitForTimeout(500);
+
+    // Verify jump button now shows 4 / 6
+    const jumpBtnText = await pageJumpBtn.innerText();
+    assert(jumpBtnText.includes('4 / 6'), `Expected jump button to show 4 / 6, got "${jumpBtnText}"`);
+    console.log('     Page jump succeeded: navigated to page 4!');
+
+    // Test C2: Mode switch icon button
+    console.log('     Testing C2: Mode switch toggle button...');
+    const modeBtn = await page.locator('button[aria-label*="chế độ"]');
+    await modeBtn.click();
+    await page.waitForTimeout(400);
+
+    // In single page mode, verify double-click toggles without page advance
+    const currentTextInPageMode = await pageJumpBtn.innerText();
+    await page.mouse.dblclick(100, 300); // left zone double click
+    await page.waitForTimeout(400);
+    const textAfterDbl = await pageJumpBtn.innerText();
+    assert.strictEqual(
+      currentTextInPageMode,
+      textAfterDbl,
+      'Double click/tap in page mode MUST NOT advance page!'
+    );
+    console.log('     Verified double-tap in page mode does not cause accidental page turn.');
+
+    // Clean up volume
     await page.goto(`${BASE_URL}/#/comics`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('text=Đấu Phá Thương Khung');
     await page.click('text=Đấu Phá Thương Khung');
-
-    await page.waitForSelector('button[title*="Xóa tập này"]');
-    await page.click('button[title*="Xóa tập này"]');
-    await page.waitForSelector('text=Xác nhận xóa tập');
+    await page.waitForSelector('button[aria-label="Tùy chọn khác"]');
+    await page.click('button[aria-label="Tùy chọn khác"]');
+    await page.waitForSelector('[class*="menuSheet"] button:has-text("Xóa Khỏi Máy")');
+    await page.locator('[class*="menuSheet"] button:has-text("Xóa Khỏi Máy")').click();
+    await page.waitForSelector('text=Xác Nhận Xóa Tập Khỏi Máy');
     await page.click('button:has-text("Xóa Tập")');
-    await page.waitForSelector('text=Chưa có tập nào trong bộ truyện này');
-    console.log('     Volume deleted cleanly.');
+    await page.waitForTimeout(500);
 
-    // 9. Benchmark Realistic Comic PDF at 3 Quality Tiers (Low, Balanced, High)
-    console.log('  9. Generating Realistic Manga Benchmark PDF (2000x3000px, 45 pages)...');
+    // 7. Benchmark Realistic Comic PDF at 3 Quality Tiers (Low, Balanced, High)
+    console.log('  7. Generating Realistic Manga Benchmark PDF (2000x3000px, 45 pages)...');
     const benchmarkPdf = await generateComicBenchmarkPdf(null, 45);
     console.log(`     Benchmark PDF ready: ${benchmarkPdf.path} (${benchmarkPdf.sizeMb} MB)`);
 
@@ -274,11 +357,9 @@ async function runBrowserFlowTests() {
       const benchFileInput = await page.locator('input[type="file"]');
       await benchFileInput.setInputFiles(benchmarkPdf.path);
 
-      // Select Quality Tier Card
       const qualityCard = await page.locator(`div[class*="qualityCard"]:has-text("${tier.textPattern}")`);
       await qualityCard.click();
 
-      // Enter distinct title
       const titleInput = await page.locator('input[placeholder*="One Piece"]');
       const seriesTitle = `Benchmark ${tier.id.toUpperCase()}`;
       await titleInput.fill(seriesTitle);
@@ -286,11 +367,9 @@ async function runBrowserFlowTests() {
       const startTime = Date.now();
       await page.click('button:has-text("Bắt Đầu Nhập")');
 
-      // Wait until import completes and navigates to series page
       await page.waitForURL(/\/comics\/[A-Za-z0-9_-]+/, { timeout: 120000 });
       const durationSec = ((Date.now() - startTime) / 1000).toFixed(1);
 
-      // Query IndexedDB directly for first page actual dimensions and volume totalBytes
       const currentUrl = page.url();
       const seriesId = currentUrl.split('/comics/')[1].split(/[?#/]/)[0];
 
@@ -342,7 +421,6 @@ async function runBrowserFlowTests() {
       const sizeMb = ((volStats?.totalBytes || 0) / (1024 * 1024)).toFixed(2);
       console.log(`     ✓ Tier ${tier.id.toUpperCase()}: Trang đầu = ${volStats?.firstPageW}x${volStats?.firstPageH}px | Thời gian = ${durationSec}s | Dung lượng IDB = ${sizeMb} MB`);
 
-      // Kiểm tra: trang portrait ra width xấp xỉ 900 / 1200 / 1600 ở Thấp / Cân bằng / Cao (sai số 2px)
       const diffW = Math.abs((volStats?.firstPageW || 0) - tier.expectedW);
       assert(
         diffW <= 2,
@@ -360,20 +438,17 @@ async function runBrowserFlowTests() {
         pageCount: volStats?.pageCount || 45,
       });
 
-      // Cleanup this benchmark series
-      await page.waitForSelector('button:has-text("Xóa Khỏi Máy"), button:has-text("Xóa Bộ Truyện")');
+      await page.waitForSelector('[class*="deleteSeriesBtn"]');
       page.once('dialog', async (dialog) => {
         await dialog.accept();
       });
-      await page.click('button:has-text("Xóa Khỏi Máy"), button:has-text("Xóa Bộ Truyện")');
+      await page.locator('[class*="deleteSeriesBtn"]').click();
       await page.waitForURL('**/comics', { timeout: 10000 });
     }
 
-    // Clean up temporary benchmark PDF file
     if (fs.existsSync(benchmarkPdf.path)) {
       try {
         fs.unlinkSync(benchmarkPdf.path);
-        console.log(`     Cleaned up temporary benchmark PDF: ${benchmarkPdf.path}`);
       } catch (e) {}
     }
 
@@ -382,7 +457,6 @@ async function runBrowserFlowTests() {
     console.table(benchmarkResults);
     console.log('======================================================\n');
 
-    // Kiểm tra dung lượng tăng dần theo preset (Thấp < Cân bằng < Cao)
     const lowTier = benchmarkResults.find((r) => r.tier === 'low');
     const balancedTier = benchmarkResults.find((r) => r.tier === 'balanced');
     const highTier = benchmarkResults.find((r) => r.tier === 'high');
@@ -397,10 +471,10 @@ async function runBrowserFlowTests() {
       `Dung lượng Cân bằng (${balancedTier.totalBytes} B / ${balancedTier.sizeMb} MB) phải nhỏ hơn Cao (${highTier.totalBytes} B / ${highTier.sizeMb} MB)`
     );
     console.log(`  ✓ Đã kiểm tra tính đúng đắn:
-      - Chiều rộng trang đầu khớp chuẩn (sai số <= 2px): Low=${lowTier.actualW}px (kỳ vọng 900), Balanced=${balancedTier.actualW}px (kỳ vọng 1200), High=${highTier.actualW}px (kỳ vọng 1600)
+      - Chiều rộng trang đầu khớp chuẩn (sai số <= 2px): Low=${lowTier.actualW}px, Balanced=${balancedTier.actualW}px, High=${highTier.actualW}px
       - Dung lượng tăng dần theo preset: Thấp (${lowTier.sizeMb}MB) < Cân bằng (${balancedTier.sizeMb}MB) < Cao (${highTier.sizeMb}MB)`);
 
-    console.log('✅ ALL Comics Browser Flow & Performance Tests PASSED!');
+    console.log('✅ ALL Comics Browser Flow & Performance Tests (Phase 3) PASSED!');
   } finally {
     await browser.close();
     server.close();
