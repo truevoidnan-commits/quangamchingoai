@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import NovelCard from '../components/ui/NovelCard';
 import Footer from '../components/layout/Footer';
 import VaultLockModal from '../components/vault/VaultLockModal';
@@ -264,6 +264,20 @@ export default function LibraryPage() {
           <div className={styles.neonBar} aria-hidden="true" />
         </div>
       </section>
+
+      {/* ===== TAB SWITCHER ===== */}
+      {!isVaultMode && (
+        <div className={styles.tabSwitcherWrap}>
+          <div className={styles.tabSwitcher}>
+            <div className={`${styles.tabItem} ${styles.tabItemActive}`}>
+              📖 Truyện Chữ
+            </div>
+            <Link to="/comics" className={styles.tabItem} id="tab-comics">
+              🖼️ Truyện Tranh
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* ===== VAULT TOP BAR (If in Vault Mode) ===== */}
       {isVaultMode && (

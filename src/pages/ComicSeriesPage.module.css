@@ -1,0 +1,537 @@
+.page {
+  min-height: 100vh;
+  background: #080c14;
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.topNav {
+  padding: 1.25rem 2rem 0;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  color: #38bdf8;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.backBtn:hover {
+  color: #7dd3fc;
+  transform: translateX(-3px);
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 4rem;
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Series Header Card */
+.seriesHeader {
+  display: flex;
+  gap: 2rem;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 16px;
+  padding: 1.75rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  align-items: center;
+}
+
+.coverWrap {
+  width: 160px;
+  height: 220px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #090e17;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.coverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.coverPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: #475569;
+}
+
+.seriesInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+}
+
+.seriesTitle {
+  margin: 0;
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  line-height: 1.3;
+}
+
+.editBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  padding: 0.2rem;
+}
+
+.editBtn:hover {
+  opacity: 1;
+}
+
+.editTitleWrap {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 500px;
+}
+
+.titleInput {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background: #090e17;
+  border: 1px solid #38bdf8;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  outline: none;
+}
+
+.saveTitleBtn {
+  background: #0284c7;
+  color: #fff;
+  border: none;
+  padding: 0 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cancelTitleBtn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  border: none;
+  padding: 0 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.statsBadges {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.statBadge {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.statIcon {
+  font-size: 1rem;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.importMoreBtn {
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: #fff;
+  border: none;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.4);
+  transition: all 0.2s;
+}
+
+.importMoreBtn:hover {
+  box-shadow: 0 0 20px rgba(37, 99, 235, 0.6);
+  transform: translateY(-1px);
+}
+
+.deleteSeriesBtn {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.deleteSeriesBtn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #fff;
+}
+
+/* Volume List Section */
+.volumeSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.volumeSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.volumeSectionTitle {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+  color: #f1f5f9;
+}
+
+.volumeList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.volumeCard {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  transition: all 0.2s;
+}
+
+.volumeCard:hover {
+  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(15, 23, 42, 0.85);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.volumeLeft {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex: 1;
+}
+
+.volumeOrderBadge {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.volumeMetaInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+}
+
+.volumeTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.volumeSubText {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.qualityTag {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.progressIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.progressText {
+  font-size: 0.75rem;
+  color: #34d399;
+  font-weight: 500;
+}
+
+.miniProgressBar {
+  width: 100px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.miniProgressFill {
+  height: 100%;
+  background: #10b981;
+}
+
+.volumeRight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.readBtn {
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: #fff;
+  border: none;
+  padding: 0.55rem 1.15rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.3);
+}
+
+.readBtn:hover {
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.5);
+  transform: translateY(-1px);
+}
+
+.deleteVolumeBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.deleteVolumeBtn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.emptyVolumes {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #94a3b8;
+}
+
+.emptyImportBtn {
+  background: #0284c7;
+  color: #fff;
+  border: none;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+/* Loading & Modal & Toast */
+.loadingPage {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #94a3b8;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(56, 189, 248, 0.2);
+  border-top-color: #38bdf8;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.deleteModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 7, 14, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.deleteModalBox {
+  width: 100%;
+  max-width: 440px;
+  background: #0f172a;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  color: #f1f5f9;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.deleteModalTitle {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+  color: #f87171;
+}
+
+.deleteModalDesc {
+  margin: 0 0 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+.deleteModalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.deleteCancelBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cbd5e1;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.deleteConfirmBtn {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid #38bdf8;
+  color: #38bdf8;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.3);
+  z-index: 2000;
+  font-weight: 500;
+}
+
+@media (max-width: 640px) {
+  .seriesHeader {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1.25rem;
+  }
+  .titleRow {
+    justify-content: center;
+  }
+  .seriesTitle {
+    font-size: 1.5rem;
+  }
+  .statsBadges {
+    justify-content: center;
+  }
+  .headerActions {
+    justify-content: center;
+    width: 100%;
+  }
+  .importMoreBtn, .deleteSeriesBtn {
+    flex: 1;
+    text-align: center;
+  }
+  .volumeCard {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .volumeLeft {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .volumeRight {
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+  }
+}

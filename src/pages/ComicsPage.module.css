@@ -1,0 +1,553 @@
+.page {
+  min-height: 100vh;
+  background: #080c14;
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.banner {
+  position: relative;
+  padding: 3rem 1.5rem 2rem;
+  text-align: center;
+  overflow: hidden;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(14, 165, 233, 0.15), transparent);
+}
+
+.bannerBg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bannerGlow1 {
+  position: absolute;
+  top: -40%;
+  left: 30%;
+  width: 40%;
+  height: 150%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
+}
+
+.bannerGlow2 {
+  position: absolute;
+  top: -20%;
+  right: 20%;
+  width: 35%;
+  height: 120%;
+  background: radial-gradient(circle, rgba(129, 140, 248, 0.1) 0%, transparent 70%);
+}
+
+.bannerContent {
+  position: relative;
+  z-index: 1;
+}
+
+.appTitle {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  text-shadow: 0 0 30px rgba(56, 189, 248, 0.3);
+}
+
+.appSubtitle {
+  margin: 0.6rem 0 1rem;
+  color: #94a3b8;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+}
+
+.neonBar {
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+  margin: 0 auto;
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+}
+
+/* Tab Switcher */
+.tabSwitcherWrap {
+  display: flex;
+  justify-content: center;
+  margin: -0.75rem 0 1.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.tabSwitcher {
+  display: inline-flex;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 30px;
+  padding: 4px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.tabItem {
+  padding: 0.5rem 1.25rem;
+  border-radius: 25px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tabItem:hover {
+  color: #f1f5f9;
+}
+
+.tabItemActive {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(129, 140, 248, 0.25));
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Storage Gauge */
+.storageGauge {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.storageGaugeWarning {
+  border-color: rgba(234, 179, 8, 0.4);
+  background: rgba(40, 30, 10, 0.4);
+}
+
+.gaugeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.gaugeInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  flex-wrap: wrap;
+}
+
+.gaugeIcon {
+  font-size: 1.1rem;
+}
+
+.gaugeSub {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.persistWrap {
+  display: flex;
+  align-items: center;
+}
+
+.persistBadge {
+  font-size: 0.8rem;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 0.25rem 0.65rem;
+  border-radius: 12px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.persistBtn {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.persistBtn:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+}
+
+.gaugeTrack {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.gaugeFill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+  transition: width 0.3s ease;
+}
+
+.gaugeFillWarning {
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
+}
+
+.gaugeWarningText {
+  font-size: 0.8rem;
+  color: #fbbf24;
+}
+
+/* Actions Bar */
+.actionsBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.sectionTitle {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+  color: #f1f5f9;
+}
+
+.importBtn {
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: #fff;
+  border: none;
+  padding: 0.65rem 1.35rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.4);
+  transition: all 0.2s;
+}
+
+.importBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(37, 99, 235, 0.6);
+}
+
+/* Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 1.5rem;
+}
+
+.card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.2);
+}
+
+.coverWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: #090e17;
+  overflow: hidden;
+}
+
+.coverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.card:hover .coverImg {
+  transform: scale(1.04);
+}
+
+.coverPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: #475569;
+}
+
+.coverGradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.9) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+.cardDeleteBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  opacity: 0;
+}
+
+.card:hover .cardDeleteBtn {
+  opacity: 1;
+}
+
+.cardDeleteBtn:hover {
+  background: rgba(239, 68, 68, 0.8);
+  color: #fff;
+  border-color: #ef4444;
+}
+
+.cardBody {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-top: auto;
+}
+
+.cardSize {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+/* Empty & Loading */
+.loadingWrap,
+.emptyWrap {
+  padding: 4rem 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: #94a3b8;
+}
+
+.emptyIcon {
+  font-size: 3.5rem;
+}
+
+.emptyWrap h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #e2e8f0;
+}
+
+.emptyWrap p {
+  max-width: 440px;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.emptyImportBtn {
+  margin-top: 0.5rem;
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.4);
+  transition: all 0.2s;
+}
+
+.emptyImportBtn:hover {
+  box-shadow: 0 0 25px rgba(37, 99, 235, 0.6);
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(56, 189, 248, 0.2);
+  border-top-color: #38bdf8;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Delete Modal */
+.deleteModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 7, 14, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.deleteModalBox {
+  width: 100%;
+  max-width: 440px;
+  background: #0f172a;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  color: #f1f5f9;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.deleteModalTitle {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+  color: #f87171;
+}
+
+.deleteModalDesc {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+.deleteModalWarning {
+  margin: 0 0 1.25rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.deleteModalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.deleteCancelBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cbd5e1;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.deleteConfirmBtn {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.deleteConfirmBtn:hover {
+  background: #b91c1c;
+}
+
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid #38bdf8;
+  color: #38bdf8;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.3);
+  z-index: 2000;
+  font-weight: 500;
+  animation: toastIn 0.3s ease;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  .appTitle {
+    font-size: 1.75rem;
+  }
+  .actionsBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .importBtn {
+    text-align: center;
+  }
+}

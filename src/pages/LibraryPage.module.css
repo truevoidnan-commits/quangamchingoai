@@ -92,6 +92,50 @@
   animation: neonPulse 2.5s ease-in-out infinite;
 }
 
+/* ===== TAB SWITCHER ===== */
+.tabSwitcherWrap {
+  display: flex;
+  justify-content: center;
+  margin: -10px 0 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.tabSwitcher {
+  display: inline-flex;
+  background: rgba(13, 22, 36, 0.85);
+  border: 1px solid rgba(255, 204, 0, 0.25);
+  border-radius: 30px;
+  padding: 4px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.tabItem {
+  padding: 6px 18px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tabItem:hover {
+  color: #f1f5f9;
+}
+
+.tabItemActive {
+  background: linear-gradient(135deg, rgba(255, 204, 0, 0.2), rgba(245, 158, 11, 0.2));
+  color: #ffcc00 !important;
+  border: 1px solid rgba(255, 204, 0, 0.4);
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.25);
+}
+
 /* ===== TOOLBAR ===== */
 .toolbar {
   display: flex;

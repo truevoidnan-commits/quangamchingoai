@@ -12,6 +12,7 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-jszip': ['jszip'],
+          'vendor-pdf': ['pdfjs-dist'],
         },
       },
     },

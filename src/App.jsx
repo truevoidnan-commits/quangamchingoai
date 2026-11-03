@@ -20,6 +20,9 @@ const AddNovelPage = lazyWithRetry(() => import('./pages/AddNovelPage'), 'AddNov
 const EditNovelPage = lazyWithRetry(() => import('./pages/EditNovelPage'), 'EditNovelPage');
 const AddChapterPage = lazyWithRetry(() => import('./pages/AddChapterPage'), 'AddChapterPage');
 const SearchPage = lazyWithRetry(() => import('./pages/SearchPage'), 'SearchPage');
+const ComicsPage = lazyWithRetry(() => import('./pages/ComicsPage'), 'ComicsPage');
+const ComicSeriesPage = lazyWithRetry(() => import('./pages/ComicSeriesPage'), 'ComicSeriesPage');
+const ComicReaderPage = lazyWithRetry(() => import('./pages/ComicReaderPage'), 'ComicReaderPage');
 
 import { preloadCoreArtifactIcons } from './lib/artifactIcons';
 import { startBackgroundPrefetch } from './lib/backgroundPrefetch';
@@ -41,6 +44,7 @@ function ScrollRestorer() {
     preloadCoreArtifactIcons();
     startBackgroundPrefetch();
     runMigrationV2().catch(() => {});
+    import('./lib/comics/comicDb.js').then((m) => m.cleanOrphanImportingVolumes()).catch(() => {});
     pullCultivationBeforeMeditation().finally(() => {
       initAutoSync();
     });
@@ -132,6 +136,9 @@ function MainLayout() {
           <Route path="/sanctum" element={<Suspense fallback={<RouteLoadingFallback />}><SanctumPage /></Suspense>} />
           <Route path="/sync" element={<Suspense fallback={<RouteLoadingFallback />}><SyncPage /></Suspense>} />
           <Route path="/backup" element={<Suspense fallback={<RouteLoadingFallback />}><BackupPage /></Suspense>} />
+          <Route path="/comics" element={<Suspense fallback={<RouteLoadingFallback />}><ComicsPage /></Suspense>} />
+          <Route path="/comics/:seriesId" element={<Suspense fallback={<RouteLoadingFallback />}><ComicSeriesPage /></Suspense>} />
+          <Route path="/comics/:seriesId/read/:volumeId" element={<Suspense fallback={<RouteLoadingFallback />}><ComicReaderPage /></Suspense>} />
         </Routes>
       </main>
     </>
