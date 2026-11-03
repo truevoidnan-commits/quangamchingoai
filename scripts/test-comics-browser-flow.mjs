@@ -113,7 +113,7 @@ async function runBrowserFlowTests() {
     // 2. Verify Storage Gauge & Empty State
     console.log('  2. Verifying ComicsPage storage gauge & empty state...');
     await page.waitForSelector('text=TÀNG KINH HỌA CÁC');
-    await page.waitForSelector('text=Bộ nhớ truyện tranh:');
+    await page.waitForSelector('text=Bộ nhớ truyện tranh');
 
     // Screenshot ComicsPage initial
     const comicsPageDesktopShot = path.join(ARTIFACT_DIR, 'comics-page-desktop.png');
@@ -243,8 +243,8 @@ async function runBrowserFlowTests() {
     await page.waitForSelector('text=Đấu Phá Thương Khung');
     await page.click('text=Đấu Phá Thương Khung');
 
-    await page.waitForSelector('button[title="Xóa tập này"]');
-    await page.click('button[title="Xóa tập này"]');
+    await page.waitForSelector('button[title*="Xóa tập này"]');
+    await page.click('button[title*="Xóa tập này"]');
     await page.waitForSelector('text=Xác nhận xóa tập');
     await page.click('button:has-text("Xóa Tập")');
     await page.waitForSelector('text=Chưa có tập nào trong bộ truyện này');
@@ -361,11 +361,11 @@ async function runBrowserFlowTests() {
       });
 
       // Cleanup this benchmark series
-      await page.waitForSelector('button:has-text("Xóa Bộ Truyện")');
+      await page.waitForSelector('button:has-text("Xóa Khỏi Máy"), button:has-text("Xóa Bộ Truyện")');
       page.once('dialog', async (dialog) => {
         await dialog.accept();
       });
-      await page.click('button:has-text("Xóa Bộ Truyện")');
+      await page.click('button:has-text("Xóa Khỏi Máy"), button:has-text("Xóa Bộ Truyện")');
       await page.waitForURL('**/comics', { timeout: 10000 });
     }
 

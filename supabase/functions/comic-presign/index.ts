@@ -9,6 +9,7 @@ import {
   validatePresignRequest,
   checkQuota,
   checkRateLimit,
+  calculateEffectiveUsedBytes,
   getCorsHeaders,
   PUT_EXPIRATION_SECONDS,
   GET_EXPIRATION_SECONDS,
@@ -130,7 +131,11 @@ Deno.serve(async (req: Request) => {
       const retryAfter = Math.max(1, Math.ceil((nextHour.getTime() - Date.now()) / 1000));
 
       return new Response(
-        JSON.stringify({ error: rateLimitCheck.error, code: rateLimitCheck.code }),
+        JSON.stringify({
+          error: rateLimitCheck.error,
+          code: rateLimitCheck.code,
+          retryAfterSeconds: retryAfter,
+        }),
         {
           status: 429,
           headers: {
@@ -154,15 +159,16 @@ Deno.serve(async (req: Request) => {
 
     // 7. Process Actions
     if (action === 'put') {
-      // 7.1 Check User Quota (Sum total_bytes of ready + uploading volumes <= 8GB)
+      // 7.1 Check User Quota (Sum total_bytes of ready + uploading volumes excluding this volumeId <= 8GB)
       const { data: volData, error: volErr } = await supabaseAdmin
         .from('comic_volumes')
-        .select('total_bytes')
+        .select('id, total_bytes')
         .eq('user_id', uid)
         .is('deleted_at', null);
 
       if (!volErr && volData) {
-        const usedBytes = volData.reduce((acc, row) => acc + (Number(row.total_bytes) || 0), 0);
+        // Exclude the current volume being uploaded to prevent double-counting
+        const usedBytes = calculateEffectiveUsedBytes(volData, volumeId);
         const quotaCheck = checkQuota({
           usedBytes,
           incomingBytes: totalBytes || 0,

@@ -6,7 +6,7 @@
 export const MAX_BATCH_SIZE = 100;
 export const MAX_PAGE_BYTES = 15 * 1024 * 1024; // 15MB per page
 export const MAX_USER_QUOTA_BYTES = 8 * 1024 * 1024 * 1024; // 8GB total per user
-export const MAX_HOURLY_OPS = 3000;
+export const MAX_HOURLY_OPS = 12000;
 export const PUT_EXPIRATION_SECONDS = 900; // 15 minutes
 export const GET_EXPIRATION_SECONDS = 3600; // 1 hour
 
@@ -164,14 +164,25 @@ export function checkQuota({ usedBytes = 0, incomingBytes = 0, maxQuotaBytes = M
 }
 
 /**
- * Checks rate limit (max 3000 operations per hour per user)
+ * Calculates effective used bytes for quota check, safely excluding the volume
+ * currently being uploaded to prevent double-counting.
+ */
+export function calculateEffectiveUsedBytes(existingVolumeRows, currentVolumeId) {
+  if (!Array.isArray(existingVolumeRows)) return 0;
+  return existingVolumeRows
+    .filter((row) => row && row.id !== currentVolumeId)
+    .reduce((acc, row) => acc + (Number(row.total_bytes) || 0), 0);
+}
+
+/**
+ * Checks rate limit (max 12000 operations per hour per user)
  */
 export function checkRateLimit({ currentHourlyOps = 0, incomingOps = 0, maxHourlyOps = MAX_HOURLY_OPS }) {
   const projected = Number(currentHourlyOps) + Number(incomingOps);
   if (projected > maxHourlyOps) {
     return {
       ok: false,
-      error: 'Đã vượt quá giới hạn 3000 thao tác/giờ. Vui lòng thử lại sau.',
+      error: `Đã vượt quá giới hạn ${maxHourlyOps} thao tác/giờ. Vui lòng thử lại sau.`,
       code: 'RATE_LIMIT_EXCEEDED',
       projected,
       maxHourlyOps,
@@ -193,7 +204,7 @@ export function getCorsHeaders(origin) {
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-api-version',
     'Access-Control-Max-Age': '3600',
   };
 }

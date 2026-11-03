@@ -17,7 +17,7 @@ Tài liệu này hướng dẫn chi tiết từng bước cho người dùng thi
    - `comic_series`
    - `comic_volumes`
    - `comic_progress`
-   - `comic_ops_hourly`
+   - `comic_ops_hourly` (quản lý hạn mức tối đa 12.000 thao tác/giờ/người dùng, đảm bảo đồng bộ mượt mà toàn bộ ~125 tập truyện)
 
 ---
 

@@ -40,9 +40,11 @@ export default function ComicSeriesPage() {
   const [editTitleText, setEditTitleText] = useState('');
   const [toastMsg, setToastMsg] = useState('');
 
-  // Active tasks for up/down: { [volumeId]: { phase: 'uploading'|'downloading', percent, abortCtrl } }
+  // Active tasks for up/down: { [volumeId]: { phase: 'uploading'|'downloading'|'rate_limited', percent, abortCtrl, message } }
   const [activeTasks, setActiveTasks] = useState({});
   const [isBatchUploading, setIsBatchUploading] = useState(false);
+  const [batchAbortCtrl, setBatchAbortCtrl] = useState(null);
+  const [batchNotice, setBatchNotice] = useState('');
 
   // Modals for confirmations
   const [volumeToDeleteLocal, setVolumeToDeleteLocal] = useState(null);
@@ -259,11 +261,26 @@ export default function ComicSeriesPage() {
   };
 
   const handleUploadAllUnsynced = async () => {
+    const abortCtrl = new AbortController();
+    setBatchAbortCtrl(abortCtrl);
     setIsBatchUploading(true);
+    setBatchNotice('Đang bắt đầu đồng bộ...');
+
     try {
       const res = await uploadAllUnsyncedVolumes(seriesId, {
+        signal: abortCtrl.signal,
         onProgress: (p) => {
-          if (p.volumeId) {
+          if (p.phase === 'rate_limited') {
+            const msg = p.message || 'Đã chạm giới hạn thao tác, tự tiếp tục sau...';
+            setBatchNotice(msg);
+            if (p.volumeId) {
+              setActiveTasks((prev) => ({
+                ...prev,
+                [p.volumeId]: { phase: 'rate_limited', percent: 0, message: msg },
+              }));
+            }
+          } else if (p.volumeId) {
+            setBatchNotice(`Đang tải tập ${p.currentVolumeIndex || 1}/${p.totalVolumesCount || 1}...`);
             setActiveTasks((prev) => ({
               ...prev,
               [p.volumeId]: { phase: 'uploading', percent: p.percent },
@@ -273,11 +290,24 @@ export default function ComicSeriesPage() {
       });
       showToast(`Đã đồng bộ ${res.uploadedCount} tập lên Cloud thành công! ✨`);
       setActiveTasks({});
+      setBatchNotice('');
       loadData();
     } catch (err) {
-      showToast(`Lỗi đồng bộ hàng loạt: ${err.message}`);
+      if (err.message?.includes('hủy')) {
+        showToast('Đã dừng tiến trình tải lên hàng loạt.');
+      } else {
+        showToast(`Lỗi đồng bộ hàng loạt: ${err.message}`);
+      }
     } finally {
       setIsBatchUploading(false);
+      setBatchAbortCtrl(null);
+      setBatchNotice('');
+    }
+  };
+
+  const handleCancelBatchUpload = () => {
+    if (batchAbortCtrl) {
+      batchAbortCtrl.abort();
     }
   };
 
@@ -446,13 +476,24 @@ export default function ComicSeriesPage() {
 
               {/* Upload all unsynced button */}
               {isLoggedIn && unsyncedCount > 0 && (
-                <button
-                  className={styles.uploadAllBtn}
-                  onClick={handleUploadAllUnsynced}
-                  disabled={isBatchUploading}
-                >
-                  ☁️ {isBatchUploading ? 'Đang đồng bộ...' : `Tải lên tất cả (${unsyncedCount} tập)`}
-                </button>
+                <>
+                  <button
+                    className={styles.uploadAllBtn}
+                    onClick={handleUploadAllUnsynced}
+                    disabled={isBatchUploading}
+                  >
+                    ☁️ {isBatchUploading ? (batchNotice || 'Đang đồng bộ...') : `Tải lên tất cả (${unsyncedCount} tập)`}
+                  </button>
+                  {isBatchUploading && (
+                    <button
+                      className={styles.cancelBatchBtn}
+                      onClick={handleCancelBatchUpload}
+                      title="Hủy hàng đợi tải lên"
+                    >
+                      🛑 Hủy
+                    </button>
+                  )}
+                </>
               )}
 
               {!series.isCloudOnly && (
@@ -499,7 +540,8 @@ export default function ComicSeriesPage() {
                 const isSynced = cloudStatus.status === 'synced';
                 const isLocalOnly = cloudStatus.status === 'local_only';
                 const isCloudOnly = cloudStatus.status === 'cloud_only' || vol.isCloudOnly;
-                const isUploading = activeTask?.phase === 'uploading' || cloudStatus.status === 'uploading';
+                const isRateLimited = activeTask?.phase === 'rate_limited';
+                const isUploading = activeTask?.phase === 'uploading' || cloudStatus.status === 'uploading' || isRateLimited;
                 const isDownloading = activeTask?.phase === 'downloading';
 
                 return (
@@ -525,7 +567,8 @@ export default function ComicSeriesPage() {
                               }`}
                             >
                               {isSynced && '☁️ Đã đồng bộ'}
-                              {isUploading && `⏳ Đang tải lên ${activeTask?.percent || cloudStatus.percent || 0}%`}
+                              {isRateLimited && '⏳ Tạm dừng (chờ giới hạn)'}
+                              {!isRateLimited && isUploading && `⏳ Đang tải lên ${activeTask?.percent || cloudStatus.percent || 0}%`}
                               {isCloudOnly && '☁️ Chỉ trên cloud'}
                               {isLocalOnly && '💾 Chỉ trên máy này'}
                             </span>
@@ -551,9 +594,13 @@ export default function ComicSeriesPage() {
                             </div>
                             <div className={styles.taskProgressText}>
                               <span>
-                                {isUploading ? 'Đang tải lên Cloudflare R2...' : 'Đang tải về máy...'}
+                                {isRateLimited
+                                  ? (activeTask?.message || 'Đã chạm giới hạn thao tác, tự tiếp tục sau...')
+                                  : isUploading
+                                  ? 'Đang tải lên Cloudflare R2...'
+                                  : 'Đang tải về máy...'}
                               </span>
-                              <span>{activeTask?.percent || 0}%</span>
+                              <span>{isRateLimited ? '⏳' : `${activeTask?.percent || 0}%`}</span>
                             </div>
                           </div>
                         )}

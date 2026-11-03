@@ -16,6 +16,7 @@ import {
   validatePresignRequest,
   checkQuota,
   checkRateLimit,
+  calculateEffectiveUsedBytes,
   getCorsHeaders,
   MAX_BATCH_SIZE,
   MAX_PAGE_BYTES,
@@ -25,12 +26,14 @@ import {
   GET_EXPIRATION_SECONDS,
 } from '../supabase/functions/comic-presign/validate.js';
 import {
+  callComicPresign,
   uploadVolume,
   downloadVolume,
   evictLocalVolume,
   listRemote,
   pushComicProgressCloud,
   pullComicProgressCloud,
+  uploadAllUnsyncedVolumes,
   asyncPool,
 } from '../src/lib/comics/comicCloud.js';
 import { setComicDBForTesting } from '../src/lib/comics/comicDb.js';
@@ -159,21 +162,51 @@ async function runAllCloudTests() {
   assert.strictEqual(quotaExceeded.code, 'QUOTA_EXCEEDED');
   console.log('      ✓ Chặn vượt hạn mức 8GB với thông báo chuẩn tiếng Việt.');
 
-  // 1.5 Rate Limiting (3000 Ops / Hour)
-  console.log('  1.5 Kiểm tra giới hạn tốc độ 3000 thao tác/giờ (checkRateLimit)...');
-  const rateOk = checkRateLimit({ currentHourlyOps: 2900, incomingOps: 50 });
+  // 1.4.1 Quota Double-Count Check
+  console.log('  1.4.1 Kiểm tra chống tính trùng (double-count) quota khi upload volume...');
+  const existingRows = [
+    { id: 'vol_other_1', total_bytes: 7.6 * 1024 * 1024 * 1024 },
+    { id: 'vol_uploading_now', total_bytes: 300 * 1024 * 1024 },
+  ];
+  // Tập đang upload: loại trừ chính nó -> used = 7.6GB, cộng 0.3GB = 7.9GB <= 8GB
+  const effectiveUsed = calculateEffectiveUsedBytes(existingRows, 'vol_uploading_now');
+  assert.strictEqual(effectiveUsed, 7.6 * 1024 * 1024 * 1024);
+  const quotaNearLimit = checkQuota({
+    usedBytes: effectiveUsed,
+    incomingBytes: 300 * 1024 * 1024,
+  });
+  assert.strictEqual(quotaNearLimit.ok, true, 'Volume gần 8GB không được bị từ chối nhầm do tính trùng');
+
+  // Tập mới vượt 8GB: used = 7.9GB, cộng 0.5GB = 8.4GB > 8GB -> Phải bị từ chối
+  const effectiveForNew = calculateEffectiveUsedBytes(existingRows, 'vol_brand_new');
+  const quotaOverLimit = checkQuota({
+    usedBytes: effectiveForNew,
+    incomingBytes: 500 * 1024 * 1024,
+  });
+  assert.strictEqual(quotaOverLimit.ok, false, 'Volume mới vượt 8GB phải bị từ chối');
+  assert.strictEqual(quotaOverLimit.code, 'QUOTA_EXCEEDED');
+  console.log('      ✓ Chống tính trùng quota thành công: volume gần 8GB hợp lệ, volume mới vượt 8GB bị chặn.');
+
+  // 1.5 Rate Limiting (12000 Ops / Hour)
+  console.log('  1.5 Kiểm tra giới hạn tốc độ 12000 thao tác/giờ (checkRateLimit)...');
+  const rateOk = checkRateLimit({ currentHourlyOps: 11900, incomingOps: 50 });
   assert.strictEqual(rateOk.ok, true);
   assert.strictEqual(rateOk.remaining, 50);
 
-  const rateExceeded = checkRateLimit({ currentHourlyOps: 2950, incomingOps: 60 });
+  const rateExceeded = checkRateLimit({ currentHourlyOps: 11950, incomingOps: 60 });
   assert.strictEqual(rateExceeded.ok, false);
   assert.strictEqual(rateExceeded.code, 'RATE_LIMIT_EXCEEDED');
-  console.log('      ✓ Chặn vượt rate limit 3000 ops/giờ thành công.');
+  console.log('      ✓ Chặn vượt rate limit 12000 ops/giờ thành công.');
 
   // 1.6 CORS Headers
   console.log('  1.6 Kiểm tra tiêu đề CORS...');
   const cors1 = getCorsHeaders('https://truevoidnan-commits.github.io');
   assert.strictEqual(cors1['Access-Control-Allow-Origin'], 'https://truevoidnan-commits.github.io');
+  assert.strictEqual(
+    cors1['Access-Control-Allow-Headers'].includes('x-supabase-api-version'),
+    true,
+    'CORS phải cho phép header x-supabase-api-version'
+  );
 
   const cors2 = getCorsHeaders('http://localhost:5173');
   assert.strictEqual(cors2['Access-Control-Allow-Origin'], 'http://localhost:5173');
@@ -365,7 +398,17 @@ async function runAllCloudTests() {
       };
     },
     functions: {
-      invoke: async (name, { body }) => {
+      invoke: async (name, options = {}) => {
+        const body = options?.body || {};
+        // Assert: Không được truyền bất kỳ header tuỳ biến nào (như x-signal) để tránh lỗi CORS preflight
+        if (options?.headers) {
+          assert.strictEqual(
+            options.headers['x-signal'],
+            undefined,
+            'Tuyệt đối không được truyền header tuỳ biến x-signal vào functions.invoke'
+          );
+        }
+
         if (body.action === 'put' || body.action === 'get') {
           const urls = {};
           (body.pages || []).forEach((p) => {
@@ -391,7 +434,12 @@ async function runAllCloudTests() {
   // 2.1 Test Upload Volume Normal Flow
   console.log('  2.1 Kiểm tra uploadVolume luồng chuẩn...');
   const uploadedUrls = [];
+  const verifiedUrls = [];
   const mockFetchSuccess = async (url, init) => {
+    if (init?.method === 'HEAD' || (init?.method === 'GET' && init?.headers?.Range)) {
+      verifiedUrls.push({ url, method: init.method });
+      return { ok: true, status: 200 };
+    }
     uploadedUrls.push({ url, method: init?.method, headers: init?.headers });
     return {
       ok: true,
@@ -411,13 +459,57 @@ async function runAllCloudTests() {
   assert.strictEqual(remoteVol?.status, 'ready');
   assert.strictEqual(remoteVol?.title, 'Tập 01: Thiếu Niên Thiên Tài');
   // 3 pages + 1 cover = 4 uploads
-  assert.strictEqual(uploadedUrls.length, 4);
-  console.log('      ✓ Tập truyện được tải lên đầy đủ (3 trang + bìa) và chuyển trạng thái "ready".');
+  assert.strictEqual(uploadedUrls.length, 4, '4 tệp ảnh được tải lên (3 trang + bìa)');
+  // Verification: 1 last page + 1 cover = 2 verified URLs
+  assert.strictEqual(verifiedUrls.length, 2, '2 tệp được kiểm tra HEAD trước khi đặt status=ready');
+  console.log('      ✓ Tập truyện được tải lên đầy đủ, xác minh HEAD thành công và chuyển trạng thái "ready".');
+
+  // 2.1.1 Test Verification Failure before setting ready
+  console.log('  2.1.1 Kiểm tra xác minh thất bại trước khi đặt status="ready"...');
+  const failVolId = 'vol_test_fail_verify';
+  inMemoryVolumes.set(failVolId, {
+    id: failVolId,
+    seriesId: testSeriesId,
+    title: 'Tập Lỗi Xác Minh',
+    order: 2,
+    pageCount: 2,
+    totalBytes: 1000000,
+    quality: 'balanced',
+    importState: 'ready',
+  });
+  inMemoryPages.set(`${failVolId}:00000`, { volumeId: failVolId, index: 0, blob: { size: 500000 } });
+  inMemoryPages.set(`${failVolId}:00001`, { volumeId: failVolId, index: 1, blob: { size: 500000 } });
+
+  const mockFetchFailVerify = async (url, init) => {
+    if (init?.method === 'HEAD' || (init?.method === 'GET' && init?.headers?.Range)) {
+      // Simulate last page or cover not accessible (HTTP 404)
+      return { ok: false, status: 404 };
+    }
+    return { ok: true, status: 200, blob: async () => ({ size: 500000, type: 'image/webp' }) };
+  };
+
+  await assert.rejects(
+    async () => {
+      await uploadVolume(failVolId, {
+        customSupabase: mockSupabase,
+        customFetch: mockFetchFailVerify,
+      });
+    },
+    /Xác minh.*thất bại/,
+    'Phải báo lỗi khi bước kiểm tra xác minh trang cuối/bìa thất bại'
+  );
+
+  const failRemoteVol = remoteVolumesTable.get(failVolId);
+  assert.notStrictEqual(failRemoteVol?.status, 'ready', 'Tập lỗi xác minh tuyệt đối không được chuyển status="ready"');
+  console.log('      ✓ Xác minh thất bại ngăn chặn thành công việc đánh dấu status="ready".');
 
   // 2.2 Test Retry with Backoff
   console.log('  2.2 Kiểm tra cơ chế retry tối đa 4 lần với lũy thừa thời gian chờ...');
   let failedAttempts = 0;
   const mockFetchRetry = async (url, init) => {
+    if (init?.method === 'HEAD' || (init?.method === 'GET' && init?.headers?.Range)) {
+      return { ok: true, status: 200 };
+    }
     if (failedAttempts < 2) {
       failedAttempts++;
       throw new Error('Mạng bị gián đoạn giả lập');
@@ -577,6 +669,150 @@ async function runAllCloudTests() {
   const pulledB = await pullComicProgressCloud(progressVolId, { customSupabase: mockSupabase });
   assert.strictEqual(pulledB?.pageIndex, 12, 'Local mới hơn phải được giữ nguyên');
   console.log('      ✓ Cơ chế so khớp tiến độ đọc Last-Write-Wins hoạt động hoàn hảo.');
+
+  // 2.8 Test 429 Rate Limiting & 413 Quota in callComicPresign
+  console.log('  2.8 Kiểm tra xử lý lỗi 429 (RATE_LIMITED) và 413 (QUOTA_EXCEEDED) trong presign...');
+
+  // 429 rate limit error
+  const mockSupabase429 = {
+    ...mockSupabase,
+    functions: {
+      invoke: async () => ({
+        data: null,
+        error: {
+          message: 'Edge Function returned a non-2xx status code',
+          context: {
+            status: 429,
+            headers: { 'Retry-After': '120' },
+            json: async () => ({
+              error: 'Đã vượt quá giới hạn 12000 thao tác/giờ. Vui lòng thử lại sau.',
+              code: 'RATE_LIMIT_EXCEEDED',
+              retryAfterSeconds: 120,
+            }),
+          },
+        },
+      }),
+    },
+  };
+
+  try {
+    await callComicPresign({ action: 'put', volumeId: 'test_vol_429' }, { customSupabase: mockSupabase429 });
+    assert.fail('Phải ném lỗi khi gặp 429');
+  } catch (err) {
+    assert.strictEqual(err.code, 'RATE_LIMITED');
+    assert.strictEqual(err.retryAfterSeconds, 120);
+    assert.strictEqual(err.message.includes('2 phút'), true);
+  }
+  console.log('      ✓ callComicPresign bắt 429 và đọc header Retry-After chuẩn xác (code=RATE_LIMITED).');
+
+  // 413 quota error
+  const mockSupabase413 = {
+    ...mockSupabase,
+    functions: {
+      invoke: async () => ({
+        data: null,
+        error: {
+          message: 'Payload Too Large',
+          context: {
+            status: 413,
+            json: async () => ({
+              error: 'Dung lượng lưu trữ truyện tranh trên Cloud đã vượt mức tối đa 8GB.',
+              code: 'QUOTA_EXCEEDED',
+            }),
+          },
+        },
+      }),
+    },
+  };
+
+  try {
+    await callComicPresign({ action: 'put', volumeId: 'test_vol_413' }, { customSupabase: mockSupabase413 });
+    assert.fail('Phải ném lỗi khi gặp 413');
+  } catch (err) {
+    assert.strictEqual(err.code, 'QUOTA_EXCEEDED');
+  }
+  console.log('      ✓ callComicPresign bắt 413 chuẩn xác (code=QUOTA_EXCEEDED).');
+
+  // 2.9 Test uploadAllUnsyncedVolumes pauses on 429 and resumes
+  console.log('  2.9 Kiểm tra uploadAllUnsyncedVolumes tạm dừng khi gặp 429 và tự tiếp tục...');
+  const queueSeriesId = 'series_queue_test';
+  inMemorySeries.set(queueSeriesId, { id: queueSeriesId, title: 'Hàng Đợi Test' });
+  remoteSeriesTable.set(queueSeriesId, { id: queueSeriesId, title: 'Hàng Đợi Test', user_id: validUid, deleted_at: null });
+
+  const qVol1 = 'vol_q_01';
+  const qVol2 = 'vol_q_02';
+
+  inMemoryVolumes.set(qVol1, { id: qVol1, seriesId: queueSeriesId, title: 'Tập Q1', order: 1, pageCount: 1, totalBytes: 100000, importState: 'ready' });
+  inMemoryVolumes.set(qVol2, { id: qVol2, seriesId: queueSeriesId, title: 'Tập Q2', order: 2, pageCount: 1, totalBytes: 100000, importState: 'ready' });
+
+  inMemoryPages.set(`${qVol1}:00000`, { volumeId: qVol1, index: 0, blob: { size: 100000 } });
+  inMemoryPages.set(`${qVol2}:00000`, { volumeId: qVol2, index: 0, blob: { size: 100000 } });
+
+  let qAttempts = 0;
+  const queueProgressEvents = [];
+  const mockSupabaseQueueRateLimit = {
+    ...mockSupabase,
+    functions: {
+      invoke: async (name, options) => {
+        const body = options?.body;
+        // Lần đầu tải qVol1: giả lập gặp 429 với Retry-After = 1 giây
+        if (body.volumeId === qVol1 && qAttempts === 0) {
+          qAttempts++;
+          return {
+            data: null,
+            error: {
+              message: 'Rate limit',
+              context: {
+                status: 429,
+                headers: { 'Retry-After': '1' },
+                json: async () => ({
+                  error: 'Rate limit exceeded',
+                  code: 'RATE_LIMIT_EXCEEDED',
+                  retryAfterSeconds: 1,
+                }),
+              },
+            },
+          };
+        }
+        return mockSupabase.functions.invoke(name, options);
+      },
+    },
+  };
+
+  const queueRes = await uploadAllUnsyncedVolumes(queueSeriesId, {
+    customSupabase: mockSupabaseQueueRateLimit,
+    customFetch: async (url, init) => ({ ok: true, status: 200, blob: async () => ({ size: 100000 }) }),
+    onProgress: (p) => queueProgressEvents.push(p),
+  });
+
+  assert.strictEqual(queueRes.uploadedCount, 2, 'Cả 2 tập đều phải tải lên thành công sau khi hết 429');
+  assert.strictEqual(
+    queueProgressEvents.some((p) => p.phase === 'rate_limited'),
+    true,
+    'Hàng đợi phải phát sự kiện rate_limited thông báo cho UI'
+  );
+  assert.strictEqual(remoteVolumesTable.get(qVol1)?.status, 'ready');
+  assert.strictEqual(remoteVolumesTable.get(qVol2)?.status, 'ready');
+  console.log('      ✓ Hàng đợi tạm dừng khi gặp 429, chờ hết hạn và tự tiếp tục tải trọn vẹn cả 2 tập.');
+
+  // 2.10 Test uploadAllUnsyncedVolumes stops immediately on 413 Quota
+  console.log('  2.10 Kiểm tra uploadAllUnsyncedVolumes dừng ngay khi gặp 413 Quota...');
+  const queueSeries413 = 'series_queue_413';
+  inMemorySeries.set(queueSeries413, { id: queueSeries413, title: 'Hàng Đợi 413' });
+  const q413Vol = 'vol_q_413';
+  inMemoryVolumes.set(q413Vol, { id: q413Vol, seriesId: queueSeries413, title: 'Tập Vượt Quota', order: 1, pageCount: 1, totalBytes: 100000, importState: 'ready' });
+  inMemoryPages.set(`${q413Vol}:00000`, { volumeId: q413Vol, index: 0, blob: { size: 100000 } });
+
+  await assert.rejects(
+    async () => {
+      await uploadAllUnsyncedVolumes(queueSeries413, {
+        customSupabase: mockSupabase413,
+        customFetch: async () => ({ ok: true, status: 200 }),
+      });
+    },
+    /vượt quá hạn mức lưu trữ Cloud 8GB/i
+  );
+  console.log('      ✓ Hàng đợi dừng ngay lập tức và báo rõ khi chạm 413 Quota.');
 
   console.log('\n======================================================');
   console.log('✅ TOÀN BỘ CÁC BÀI TEST COMIC CLOUD SYNC (PHASE 2) ĐÃ PASS 100%!');

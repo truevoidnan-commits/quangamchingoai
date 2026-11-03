@@ -88,30 +88,96 @@ export async function isCloudAvailable(customSupabase = null) {
  * Calls the Supabase Edge Function 'comic-presign'
  */
 export async function callComicPresign(payload, { customSupabase = null, signal = null } = {}) {
+  if (signal?.aborted) {
+    throw new Error('Thao tác đã bị hủy');
+  }
+
   const client = customSupabase || defaultSupabase;
   const user = await getCloudUser(client);
   if (!user) {
     throw new Error('Chưa đăng nhập Supabase. Vui lòng đăng nhập để sử dụng tính năng Cloud.');
   }
 
+  // Strictly no custom headers passed to functions.invoke to avoid CORS preflight failures
   const { data, error } = await client.functions.invoke('comic-presign', {
     body: payload,
-    headers: signal ? { 'x-signal': 'active' } : undefined,
   });
 
+  if (signal?.aborted) {
+    throw new Error('Thao tác đã bị hủy');
+  }
+
   if (error) {
-    // Check for specific error status or message
-    const msg = error.message || 'Lỗi kết nối máy chủ Cloud';
-    if (msg.includes('413') || error.context?.status === 413) {
-      throw new Error('Dung lượng lưu trữ truyện tranh trên Cloud đã vượt mức tối đa 8GB.');
+    let retryAfterSeconds = 3600;
+    let errCode = error.code || null;
+    let errMsg = error.message || 'Lỗi kết nối máy chủ Cloud';
+
+    // 1. Check Retry-After header from error.context
+    const headers = error.context?.headers;
+    let retryHeader = null;
+    if (headers) {
+      if (typeof headers.get === 'function') {
+        retryHeader = headers.get('retry-after') || headers.get('Retry-After');
+      } else if (typeof headers === 'object') {
+        retryHeader = headers['retry-after'] || headers['Retry-After'];
+      }
     }
-    if (msg.includes('429') || error.context?.status === 429) {
-      throw new Error('Đã vượt quá giới hạn 3000 thao tác/giờ. Vui lòng thử lại sau.');
+    if (retryHeader) {
+      const parsed = parseInt(retryHeader, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        retryAfterSeconds = parsed;
+      }
     }
-    throw new Error(msg);
+
+    // 2. Check JSON body in error.context if available
+    try {
+      if (typeof error.context?.json === 'function') {
+        const body = await error.context.json();
+        if (body?.retryAfterSeconds) retryAfterSeconds = Number(body.retryAfterSeconds);
+        if (body?.code) errCode = body.code;
+        if (body?.error) errMsg = body.error;
+      } else if (error.context?.body) {
+        const parsedBody = typeof error.context.body === 'string' ? JSON.parse(error.context.body) : error.context.body;
+        if (parsedBody?.retryAfterSeconds) retryAfterSeconds = Number(parsedBody.retryAfterSeconds);
+        if (parsedBody?.code) errCode = parsedBody.code;
+        if (parsedBody?.error) errMsg = parsedBody.error;
+      }
+    } catch {}
+
+    const is429 = error.context?.status === 429 || error.status === 429 || errMsg.includes('429') || errCode === 'RATE_LIMIT_EXCEEDED';
+    const is413 = error.context?.status === 413 || error.status === 413 || errMsg.includes('413') || errCode === 'QUOTA_EXCEEDED';
+
+    if (is429) {
+      const minutes = Math.ceil(retryAfterSeconds / 60);
+      const customErr = new Error(`Đã chạm giới hạn thao tác, tự tiếp tục sau ${minutes} phút`);
+      customErr.code = 'RATE_LIMITED';
+      customErr.retryAfterSeconds = retryAfterSeconds;
+      throw customErr;
+    }
+
+    if (is413) {
+      const customErr = new Error('Dung lượng lưu trữ truyện tranh trên Cloud đã vượt mức tối đa 8GB.');
+      customErr.code = 'QUOTA_EXCEEDED';
+      throw customErr;
+    }
+
+    throw new Error(errMsg);
   }
 
   if (data?.error) {
+    if (data.code === 'RATE_LIMIT_EXCEEDED' || data.retryAfterSeconds) {
+      const retrySec = Number(data.retryAfterSeconds) || 3600;
+      const minutes = Math.ceil(retrySec / 60);
+      const customErr = new Error(`Đã chạm giới hạn thao tác, tự tiếp tục sau ${minutes} phút`);
+      customErr.code = 'RATE_LIMITED';
+      customErr.retryAfterSeconds = retrySec;
+      throw customErr;
+    }
+    if (data.code === 'QUOTA_EXCEEDED') {
+      const customErr = new Error(data.error || 'Dung lượng lưu trữ truyện tranh trên Cloud đã vượt mức tối đa 8GB.');
+      customErr.code = 'QUOTA_EXCEEDED';
+      throw customErr;
+    }
     throw new Error(data.error);
   }
 
@@ -354,7 +420,55 @@ export async function uploadVolume(volumeId, options = {}) {
     reportProgress();
   }
 
-  // 6. Finalize volume status on Supabase to 'ready'
+  // 6. Verification step before setting 'ready':
+  // Verify last page and cover exist on Cloud using presigned GET with HEAD (or Range bytes=0-0)
+  const lastPageIndex = Math.max(0, (vol.pageCount || 1) - 1);
+  const verifyPresign = await callComicPresign(
+    {
+      action: 'get',
+      volumeId,
+      pages: [lastPageIndex],
+      cover: true,
+    },
+    { customSupabase: client, signal }
+  );
+
+  const checkFileExists = async (signedUrl, label) => {
+    if (!signedUrl) return;
+    try {
+      // 1. Try HEAD request
+      let checkRes = await customFetch(signedUrl, {
+        method: 'HEAD',
+        signal,
+      });
+
+      // 2. If HEAD returns 403 / 405 (method not allowed / SigV4 verb mismatch), try GET with Range bytes=0-0
+      if (checkRes.status === 403 || checkRes.status === 405) {
+        checkRes = await customFetch(signedUrl, {
+          method: 'GET',
+          headers: { Range: 'bytes=0-0' },
+          signal,
+        });
+      }
+
+      if (checkRes.status !== 200 && checkRes.status !== 206) {
+        throw new Error(`HTTP ${checkRes.status}`);
+      }
+    } catch (err) {
+      throw new Error(`Xác minh ${label} trên Cloud thất bại (${err.message}). Không thể đánh dấu tập hoàn tất.`);
+    }
+  };
+
+  const lastPageUrl = verifyPresign?.urls?.[lastPageIndex];
+  if (lastPageUrl) {
+    await checkFileExists(lastPageUrl, `trang cuối (trang ${lastPageIndex + 1})`);
+  }
+
+  if (verifyPresign?.coverUrl) {
+    await checkFileExists(verifyPresign.coverUrl, 'ảnh bìa');
+  }
+
+  // 7. Finalize volume status on Supabase to 'ready'
   const coverKey = `${user.id}/${volumeId}/cover.webp`;
   const { error: readyErr } = await client
     .from('comic_volumes')
@@ -926,7 +1040,7 @@ export async function pullComicProgressCloud(volumeId, options = {}) {
  * Uploads all unsynced volumes of a series sequentially
  */
 export async function uploadAllUnsyncedVolumes(seriesId, options = {}) {
-  const { onProgress, signal, customSupabase = null } = options;
+  const { onProgress, signal, customSupabase = null, customFetch = null } = options;
   const remoteInfo = await listRemote({ customSupabase });
   const { getVolumes } = await import('./comicDb.js');
   const localVolumes = await getVolumes(seriesId);
@@ -939,23 +1053,87 @@ export async function uploadAllUnsyncedVolumes(seriesId, options = {}) {
   if (unsynced.length === 0) return { uploadedCount: 0 };
 
   let currentVolIndex = 0;
-  for (const vol of unsynced) {
+  for (let i = 0; i < unsynced.length; i++) {
     if (signal?.aborted) throw new Error('Thao tác đã bị hủy');
-    currentVolIndex++;
+    const vol = unsynced[i];
+    currentVolIndex = i + 1;
 
-    await uploadVolume(vol.id, {
-      signal,
-      customSupabase,
-      onProgress: (p) => {
+    try {
+      await uploadVolume(vol.id, {
+        signal,
+        customSupabase,
+        customFetch,
+        onProgress: (p) => {
+          if (onProgress) {
+            onProgress({
+              ...p,
+              currentVolumeIndex: currentVolIndex,
+              totalVolumesCount: unsynced.length,
+            });
+          }
+        },
+      });
+    } catch (err) {
+      if (err.name === 'AbortError' || signal?.aborted) {
+        throw new Error('Thao tác đã bị hủy');
+      }
+
+      // 413 Quota Exceeded: Stop entire queue immediately and report clearly
+      if (err.code === 'QUOTA_EXCEEDED') {
+        throw new Error('Đã vượt quá hạn mức lưu trữ Cloud 8GB. Hàng đợi tải lên đã dừng.');
+      }
+
+      // 429 Rate Limited: Pause queue, wait until Retry-After expires, then resume this volume
+      if (err.code === 'RATE_LIMITED') {
+        const waitSec = Math.max(1, Number(err.retryAfterSeconds) || 60);
+        const minutes = Math.ceil(waitSec / 60);
+        const waitMsg = `Đã chạm giới hạn thao tác, tự tiếp tục sau ${minutes} phút`;
+
         if (onProgress) {
           onProgress({
-            ...p,
+            phase: 'rate_limited',
+            percent: 0,
+            volumeId: vol.id,
+            volumeTitle: vol.title,
             currentVolumeIndex: currentVolIndex,
             totalVolumesCount: unsynced.length,
+            waitingSeconds: waitSec,
+            message: waitMsg,
           });
         }
-      },
-    });
+
+        // Wait interruptibly with 1s ticks
+        const waitStart = Date.now();
+        const waitMs = waitSec * 1000;
+        while (Date.now() - waitStart < waitMs) {
+          if (signal?.aborted) throw new Error('Thao tác đã bị hủy');
+          const elapsed = Math.floor((Date.now() - waitStart) / 1000);
+          const remain = Math.max(0, waitSec - elapsed);
+          const remainMin = Math.ceil(remain / 60);
+          if (onProgress && remain % 5 === 0) {
+            onProgress({
+              phase: 'rate_limited',
+              percent: 0,
+              volumeId: vol.id,
+              volumeTitle: vol.title,
+              currentVolumeIndex: currentVolIndex,
+              totalVolumesCount: unsynced.length,
+              waitingSeconds: remain,
+              message: `Đã chạm giới hạn thao tác, tự tiếp tục sau ${remainMin} phút`,
+            });
+          }
+          await new Promise((r) => setTimeout(r, Math.min(1000, waitMs - (Date.now() - waitStart))));
+        }
+
+        // Decrement i to retry the same volume without marking subsequent volumes as failed
+        // Resume mechanism in uploadVolume will skip pages already uploaded
+        i--;
+        continue;
+      }
+
+      // Other unexpected errors
+      throw err;
+    }
   }
 
   return { uploadedCount: unsynced.length };

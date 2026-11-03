@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS public.comic_progress (
 );
 
 -- 4. BẢNG RATE LIMIT THAO TÁC / GIỜ (comic_ops_hourly)
--- Dùng để giới hạn tối đa 3000 thao tác/giờ/người dùng trong Supabase Edge Function
+-- Dùng để giới hạn tối đa 12000 thao tác/giờ/người dùng trong Supabase Edge Function
 CREATE TABLE IF NOT EXISTS public.comic_ops_hourly (
   user_id UUID NOT NULL,
   hour TIMESTAMPTZ NOT NULL,
