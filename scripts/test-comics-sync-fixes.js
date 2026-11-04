@@ -611,6 +611,7 @@ async function runAllTests() {
   console.log('========================================================');
   console.log('TẤT CẢ CÁC BÀI TEST TẢI VỀ ≥100 TRANG & ĐỒNG BỘ ĐỔI TÊN ĐÃ ĐẠT 100%!');
   console.log('========================================================\n');
+  process.exit(0);
 }
 
 runAllTests().catch((err) => {

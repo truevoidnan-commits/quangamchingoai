@@ -133,8 +133,8 @@ export default function ComicSeriesPage() {
       setSeries(s);
       setEditTitleText(s.title);
 
-      // Lấy danh sách tập local
-      const localVols = await getVolumes(seriesId);
+      // Lấy danh sách tập local (bao gồm cả tập dở dang)
+      const localVols = await getVolumes(seriesId, true);
       const localVolMap = {};
       for (const lv of localVols) {
         localVolMap[lv.id] = lv;
@@ -223,6 +223,11 @@ export default function ComicSeriesPage() {
 
   // Bấm Đọc vào một tập (A4)
   const handleReadVolume = async (vol) => {
+    if (vol.importState === 'importing') {
+      showToast('Tập này đang nhập dở dang, vui lòng bấm "Nhập lại" hoặc "Xóa".');
+      return;
+    }
+
     const cloudStatus = cloudStatusMap[vol.id] || {
       status: vol.isCloudOnly ? 'cloud_only' : 'local_only',
     };
@@ -567,6 +572,7 @@ export default function ComicSeriesPage() {
                 const isCloudOnly = cloudStatus.status === 'cloud_only' || vol.isCloudOnly;
                 const isInterrupted = cloudStatus.status === 'interrupted';
                 const isLocalOnly = !isSynced && !isCloudOnly;
+                const isImporting = vol.importState === 'importing';
 
                 return (
                   <div key={vol.id} className={styles.volumeCard}>
@@ -584,7 +590,12 @@ export default function ComicSeriesPage() {
 
                       {/* Hàng 2: Trạng thái tinh gọn (S1-S3) + metadata */}
                       <div className={styles.volumeRow2}>
-                        {isTaskActive ? (
+                        {isImporting ? (
+                          <span className={`${styles.statusBadge} ${styles.statusInterrupted}`}>
+                            <IconAlertTriangle size={12} />
+                            <span>Dở dang</span>
+                          </span>
+                        ) : isTaskActive ? (
                           <span className={`${styles.statusBadge} ${styles.statusActive}`}>
                             <IconRefresh size={12} className={styles.spinIcon} />
                             <span>
@@ -668,7 +679,36 @@ export default function ComicSeriesPage() {
 
                     {/* B1: Cột bên phải (Nút Đọc / Hủy + Nút ⋯) */}
                     <div className={styles.volumeActionCol}>
-                      {isTaskActive || isTaskQueued ? (
+                      {isImporting ? (
+                        <>
+                          <button
+                            type="button"
+                            className={styles.reimportBtn}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await deleteVolume(vol.id);
+                              await loadData();
+                              setIsImportModalOpen(true);
+                            }}
+                            title="Nhập lại tập này"
+                          >
+                            Nhập lại
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.deleteIncompleteBtn}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await deleteVolume(vol.id);
+                              await loadData();
+                              showToast(`Đã xóa tập dở dang "${vol.title}"`);
+                            }}
+                            title="Xóa tập dở dang"
+                          >
+                            Xóa
+                          </button>
+                        </>
+                      ) : isTaskActive || isTaskQueued ? (
                         <button
                           type="button"
                           className={styles.cancelBtn}

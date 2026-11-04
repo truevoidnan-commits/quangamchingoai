@@ -12,6 +12,7 @@
     "compute-daoanh-bbox": "node scripts/compute-daoanh-bbox.mjs"
   },
   "dependencies": {
+    "@jsquash/webp": "^1.5.0",
     "@supabase/supabase-js": "^2.118.0",
     "idb": "^8.0.0",
     "jszip": "^3.10.1",

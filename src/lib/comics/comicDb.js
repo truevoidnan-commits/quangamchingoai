@@ -337,6 +337,7 @@ export async function savePagesBulk(pages) {
       volumeId: page.volumeId,
       index: page.index,
       blob: page.blob,
+      mime: page.mime || page.blob?.type || 'image/webp',
       w: page.w,
       h: page.h,
     });
@@ -442,35 +443,13 @@ export async function deleteSeries(seriesId) {
 // ---- Orphan Cleanup ----
 
 /**
- * Cleans up any leftover volumes stuck in 'importing' state
- * (e.g. if the tab was closed or user aborted mid-import).
+ * Legacy hook for cleanup: does NOT auto-delete importing volumes without user knowledge.
+ * Incomplete / interrupted volumes are presented to the user in the UI with
+ * explicit "Nhập lại" and "Xóa" buttons.
  */
 export async function cleanOrphanImportingVolumes() {
-  try {
-    const db = await getComicDB();
-    const allVolumes = await db.getAll('volumes');
-    const stuck = allVolumes.filter((v) => v.importState === 'importing');
-    
-    for (const vol of stuck) {
-      console.warn(`[ComicDB] Cleaning up incomplete importing volume: ${vol.id} (${vol.title})`);
-      await deleteVolume(vol.id);
-
-      // If series now has zero volumes, check if it was newly created
-      if (vol.seriesId) {
-        const remaining = await getVolumes(vol.seriesId, true);
-        if (remaining.length === 0) {
-          const s = await db.get('series', vol.seriesId);
-          // Only auto-delete empty series if it was created very recently (within 1 hour)
-          if (s && Date.now() - (s.createdAt || 0) < 3600000) {
-            console.warn(`[ComicDB] Cleaning empty newly-created series: ${vol.seriesId}`);
-            await db.delete('series', vol.seriesId);
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('[ComicDB] Error during orphan cleanup:', err);
-  }
+  // Preserved for API stability; no silent auto-deletion
+  return;
 }
 
 // ---- Storage Estimate Helper ----

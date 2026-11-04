@@ -512,3 +512,17 @@
 .spinIcon {
   animation: spin 2s linear infinite;
 }
+
+.encoderNotice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  margin-top: 0.75rem;
+  text-align: left;
+}

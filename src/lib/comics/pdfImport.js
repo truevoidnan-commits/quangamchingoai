@@ -100,31 +100,105 @@ export async function loadPdfJs() {
   return pdfjsLibPromise;
 }
 
+export function setPdfJsForTesting(mock) {
+  pdfjsLibPromise = Promise.resolve(mock);
+}
+
+let canvasWebpSupported = null;
+
 /**
- * Renders an image/canvas to a WebP blob
+ * Detects whether the current browser canvas supports native WebP encoding.
+ * Cached once at the module level.
+ * On iOS Safari / WebKit, toBlob('image/webp') returns an image/png blob without error,
+ * so we explicitly verify that blob.type === 'image/webp'.
  */
-function canvasToWebpBlob(canvas, quality) {
-  return new Promise((resolve, reject) => {
+export async function isCanvasWebpSupported() {
+  if (canvasWebpSupported !== null) {
+    return canvasWebpSupported;
+  }
+  if (typeof document === 'undefined') {
+    canvasWebpSupported = false;
+    return false;
+  }
+  try {
+    const testCanvas = document.createElement('canvas');
+    testCanvas.width = 1;
+    testCanvas.height = 1;
+    const blob = await new Promise((resolve) => {
+      testCanvas.toBlob(resolve, 'image/webp', 0.8);
+    });
+    canvasWebpSupported = Boolean(blob && blob.type === 'image/webp');
+  } catch (e) {
+    canvasWebpSupported = false;
+  }
+  return canvasWebpSupported;
+}
+
+export function _setCanvasWebpSupportedForTesting(val) {
+  canvasWebpSupported = val;
+}
+
+/**
+ * Encodes canvas to blob using a robust 3-tier fallback pipeline:
+ * 1) Native canvas WebP (fast, unchanged for Desktop / Android)
+ * 2) WASM WebP via @jsquash/webp (dynamic import, for iOS Safari/WebKit)
+ * 3) Native canvas JPEG (quality * 0.9, checking blob.type === 'image/jpeg')
+ * NEVER saves uncompressed PNG!
+ * 
+ * @param {HTMLCanvasElement} canvas
+ * @param {number} quality (0..1)
+ * @param {CanvasRenderingContext2D} [ctx]
+ * @returns {Promise<{ blob: Blob, encoder: 'canvas-webp'|'wasm-webp'|'jpeg' }>}
+ */
+export async function encodeCanvasToBlob(canvas, quality = 0.8, ctx = null) {
+  // Tier 1: Native canvas WebP
+  const hasNativeWebp = await isCanvasWebpSupported();
+  if (hasNativeWebp) {
     try {
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            // Fallback for browsers that don't support image/webp in toBlob
-            canvas.toBlob((jpegBlob) => {
-              if (jpegBlob) resolve(jpegBlob);
-              else reject(new Error('Canvas toBlob failed'));
-            }, 'image/jpeg', quality);
-          }
-        },
-        'image/webp',
-        quality
-      );
-    } catch (err) {
-      reject(err);
+      const blob = await new Promise((resolve) => {
+        canvas.toBlob(resolve, 'image/webp', quality);
+      });
+      if (blob && blob.type === 'image/webp') {
+        return { blob, encoder: 'canvas-webp' };
+      }
+    } catch (e) {
+      console.warn('[PDF Import] Native canvas WebP encoding failed, attempting WASM fallback:', e);
     }
-  });
+  }
+
+  // Tier 2: WASM WebP (@jsquash/webp)
+  try {
+    const { encodeCanvasWithWasm } = await import('./webpEncoder.js');
+    const blob = await encodeCanvasWithWasm(canvas, quality, ctx);
+    if (blob && blob.type === 'image/webp') {
+      return { blob, encoder: 'wasm-webp' };
+    }
+  } catch (wasmErr) {
+    console.warn('[PDF Import] WASM WebP encoding failed, attempting JPEG fallback:', wasmErr);
+  }
+
+  // Tier 3: Native canvas JPEG (quality * 0.9)
+  try {
+    const jpegQuality = Math.max(0.1, Math.min(1.0, quality * 0.9));
+    const blob = await new Promise((resolve) => {
+      canvas.toBlob(resolve, 'image/jpeg', jpegQuality);
+    });
+    if (blob && blob.type === 'image/jpeg') {
+      return { blob, encoder: 'jpeg' };
+    }
+  } catch (jpegErr) {
+    console.warn('[PDF Import] Native JPEG encoding failed:', jpegErr);
+  }
+
+  // If even JPEG failed or returned non-JPEG
+  throw new Error('Thiết bị không mã hoá được ảnh');
+}
+
+/**
+ * Backward-compatible wrapper that returns the encoded Blob & encoder
+ */
+async function canvasToWebpBlob(canvas, quality, ctx = null) {
+  return encodeCanvasToBlob(canvas, quality, ctx);
 }
 
 /**
@@ -141,7 +215,7 @@ async function generateThumbnailBlob(sourceCanvas, maxThumbEdge = 300) {
   const ctx = thumbCanvas.getContext('2d');
   ctx.drawImage(sourceCanvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
 
-  const blob = await canvasToWebpBlob(thumbCanvas, 0.8);
+  const { blob } = await canvasToWebpBlob(thumbCanvas, 0.8, ctx);
   thumbCanvas.width = 1;
   thumbCanvas.height = 1;
   return blob;
@@ -159,19 +233,26 @@ async function generateThumbnailBlob(sourceCanvas, maxThumbEdge = 300) {
  * @param {'low'|'balanced'|'high'} [options.quality='balanced']
  * @param {AbortSignal} [options.signal]
  * @param {Function} [options.onProgress] - ({ currentVol, totalVols, currentPage, totalPages, phase, currentBytes })
+ * @param {Function} [options.onToast] - (msg: string) => void
  */
 export async function importPdfVolume(file, options = {}) {
   const {
     seriesId: inputSeriesId,
     seriesTitle: inputSeriesTitle,
-    volumeTitle: inputVolumeTitle,
-    volumeOrder: inputVolumeOrder,
+    volumeTitle: optVolumeTitle,
+    inputVolumeTitle: altVolumeTitle,
+    volumeOrder: optVolumeOrder,
+    inputVolumeOrder: altVolumeOrder,
     quality = 'balanced',
     signal,
     onProgress,
+    onToast,
     currentVol = 1,
     totalVols = 1,
   } = options;
+
+  const rawVolumeTitle = optVolumeTitle !== undefined ? optVolumeTitle : altVolumeTitle;
+  const rawVolumeOrder = optVolumeOrder !== undefined ? optVolumeOrder : altVolumeOrder;
 
   if (!file) throw new Error('Không có file PDF để nhập');
   if (signal?.aborted) throw new Error('Đã hủy nhập');
@@ -210,10 +291,13 @@ export async function importPdfVolume(file, options = {}) {
   }
 
   // 4. Derive Volume title & order
-  const resolvedOrder = typeof inputVolumeOrder === 'number'
-    ? inputVolumeOrder
+  const numOrder = typeof rawVolumeOrder === 'number' ? rawVolumeOrder : parseFloat(rawVolumeOrder);
+  const resolvedOrder = (!isNaN(numOrder) && isFinite(numOrder))
+    ? numOrder
     : parseVolumeOrder(file.name, 1);
-  const resolvedVolumeTitle = inputVolumeTitle || cleanVolumeTitle(file.name, resolvedOrder);
+  const resolvedVolumeTitle = (typeof rawVolumeTitle === 'string' && rawVolumeTitle.trim())
+    ? rawVolumeTitle.trim()
+    : cleanVolumeTitle(file.name, resolvedOrder);
 
   // 5. Create Volume record in 'importing' state
   const volumeRecord = await saveVolume({
@@ -292,6 +376,8 @@ export async function importPdfVolume(file, options = {}) {
     const BATCH_SIZE = 5; // Batch write to IndexedDB every 5 pages
     let pageBatch = [];
     let firstPageCoverBlob = null;
+    let encoderUsed = 'canvas-webp';
+    let firstPageKb = 0;
     const maxCanvasPixels = getMaxCanvasPixels();
 
     for (let pageNum = 1; pageNum <= numPages; pageNum++) {
@@ -341,15 +427,29 @@ export async function importPdfVolume(file, options = {}) {
         firstPageCoverBlob = await generateThumbnailBlob(canvas, 320);
       }
 
-      // Convert page canvas to WebP
-      const webpBlob = await canvasToWebpBlob(canvas, qualityConfig.quality);
-      const pageByteSize = webpBlob.size;
+      // Convert page canvas to WebP / fallback with 3-tier pipeline
+      const { blob: pageBlob, encoder } = await canvasToWebpBlob(canvas, qualityConfig.quality, ctx);
+      encoderUsed = encoder;
+      if (pageNum === 1) {
+        firstPageKb = Math.round(pageBlob.size / 1024);
+        if (encoder !== 'canvas-webp') {
+          if (typeof onToast === 'function') {
+            onToast('Thiết bị này dùng bộ nén riêng, nhập có thể chậm hơn');
+          } else if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('comic-toast', {
+              detail: 'Thiết bị này dùng bộ nén riêng, nhập có thể chậm hơn'
+            }));
+          }
+        }
+      }
+      const pageByteSize = pageBlob.size;
       totalBytes += pageByteSize;
 
       const pageItem = {
         volumeId,
         index: pageNum - 1, // 0-based index
-        blob: webpBlob,
+        blob: pageBlob,
+        mime: pageBlob.type,
         w: targetW,
         h: targetH,
       };
@@ -372,6 +472,9 @@ export async function importPdfVolume(file, options = {}) {
         pageBatch = [];
       }
 
+      // Yield between pages to keep UI responsive
+      await new Promise((r) => setTimeout(r, 0));
+
       if (onProgress) {
         onProgress({
           currentVol,
@@ -388,6 +491,10 @@ export async function importPdfVolume(file, options = {}) {
     // Cleanup reusable canvas
     canvas.width = 1;
     canvas.height = 1;
+
+    // Diagnostic log
+    const avgKb = numPages > 0 ? Math.round(totalBytes / numPages / 1024) : 0;
+    console.info(`[PDF Import] encoder=${encoderUsed}, trang đầu ${firstPageKb} KB, trung bình ${avgKb} KB/trang`);
 
     // 8. Update series cover if this series does not have one yet
     if (firstPageCoverBlob) {
@@ -505,7 +612,9 @@ export async function importMultiplePdfs(items, options = {}) {
         finalOrder = existingMaxOrder + unnumberedCounter++;
       }
     }
-    const finalTitle = item.title || cleanVolumeTitle(item.file.name, finalOrder);
+    const finalTitle = (typeof item.title === 'string' && item.title.trim())
+      ? item.title.trim()
+      : cleanVolumeTitle(item.file.name, finalOrder);
     return {
       file: item.file,
       order: finalOrder,
@@ -525,6 +634,8 @@ export async function importMultiplePdfs(items, options = {}) {
 
     const result = await importPdfVolume(file, {
       ...options,
+      volumeOrder: order,
+      volumeTitle: title,
       inputVolumeOrder: order,
       inputVolumeTitle: title,
       seriesId: currentTargetSeriesId,

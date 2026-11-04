@@ -31,6 +31,7 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.json': 'application/json',
   '.pdf': 'application/pdf',
+  '.wasm': 'application/wasm',
 };
 
 function createStaticServer() {

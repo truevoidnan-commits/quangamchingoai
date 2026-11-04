@@ -422,10 +422,11 @@ export async function uploadVolume(volumeId, options = {}) {
         const blob = await getBlobFn();
         if (!blob) throw new Error(`Không tìm thấy dữ liệu ảnh cho ${label}`);
 
+        const contentType = blob.type || 'image/webp';
         const res = await customFetch(presignedUrl, {
           method: 'PUT',
           headers: {
-            'Content-Type': 'image/webp',
+            'Content-Type': contentType,
             'Cache-Control': 'public,max-age=31536000,immutable',
           },
           body: blob,

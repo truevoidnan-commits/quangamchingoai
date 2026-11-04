@@ -29,6 +29,7 @@ export default function ComicImportModal({
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [encoderNotice, setEncoderNotice] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [autoUpload, setAutoUpload] = useState(() => {
     try {
@@ -41,6 +42,14 @@ export default function ComicImportModal({
 
   const abortControllerRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const handleComicToast = (e) => {
+      if (e.detail) setEncoderNotice(e.detail);
+    };
+    window.addEventListener('comic-toast', handleComicToast);
+    return () => window.removeEventListener('comic-toast', handleComicToast);
+  }, []);
 
   useEffect(() => {
     isCloudAvailable().then(setIsLoggedIn);
@@ -157,6 +166,7 @@ export default function ComicImportModal({
         seriesTitle,
         quality,
         signal: abortControllerRef.current.signal,
+        onToast: (msg) => setEncoderNotice(msg),
         onProgress: (p) => {
           setProgress(p);
         },
@@ -414,6 +424,13 @@ export default function ComicImportModal({
                     <span>Dung lượng WebP: {formatMb(progress.currentBytes || 0)} MB</span>
                   </div>
                 </>
+              )}
+
+              {encoderNotice && (
+                <div className={styles.encoderNotice}>
+                  <IconAlertTriangle size={15} />
+                  <span>{encoderNotice}</span>
+                </div>
               )}
 
               <p className={styles.progressNote}>

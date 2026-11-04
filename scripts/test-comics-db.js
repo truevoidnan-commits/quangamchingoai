@@ -259,8 +259,8 @@ async function runTests() {
   assert.equal(await getVolume(v2.id), undefined);
   assert.equal(await getPage(v2.id, 0), undefined);
 
-  // 9. Test Orphan Cleanup for stuck importing volumes
-  console.log('  9. Testing cleanOrphanImportingVolumes...');
+  // 9. Test Incomplete/Importing Volume Preservation (Does not auto-delete without user choice)
+  console.log('  9. Testing cleanOrphanImportingVolumes does not auto-delete without user consent...');
   const s2 = await saveSeries({ title: 'Series Test Cleanup' });
   const stuckVol = await saveVolume({
     seriesId: s2.id,
@@ -269,23 +269,57 @@ async function runTests() {
     importState: 'importing',
   });
   await savePagesBulk([
-    { volumeId: stuckVol.id, index: 0, blob: 'temp_blob', w: 800, h: 1000 },
+    { volumeId: stuckVol.id, index: 0, blob: 'temp_blob', mime: 'image/webp', w: 800, h: 1000 },
   ]);
 
   // Before cleanup: volume and pages exist
   assert.ok(await getVolume(stuckVol.id));
   assert.ok(await getPage(stuckVol.id, 0));
 
-  // Run orphan cleanup
+  // Run orphan cleanup: should NOT silently delete
   await cleanOrphanImportingVolumes();
 
-  // After cleanup: stuck volume and its pages are purged
+  // Volume remains for user to choose 'Nhập lại' or 'Xóa'
+  assert.ok(await getVolume(stuckVol.id), 'Tập dở dang không bị tự ý xóa');
+
+  // Explicit user deletion
+  await deleteVolume(stuckVol.id);
   assert.equal(await getVolume(stuckVol.id), undefined);
   assert.equal(await getPage(stuckVol.id, 0), undefined);
-  // And the empty new series was cleaned up too
-  assert.equal(await getSeries(s2.id), null);
+
+  // 10. Test Custom Title & Order override during import
+  console.log('  10. Testing custom volume title & order override (Tập Đặc Biệt, order 7, file abc_vol3.pdf)...');
+  const filename = 'abc_vol3.pdf';
+  const customTitle = 'Tập Đặc Biệt';
+  const customOrder = 7;
+
+  const resolvedOrder = typeof customOrder === 'number' ? customOrder : parseVolumeOrder(filename, 1);
+  const resolvedTitle = (typeof customTitle === 'string' && customTitle.trim())
+    ? customTitle.trim()
+    : cleanVolumeTitle(filename, resolvedOrder);
+
+  const customVol = await saveVolume({
+    seriesId: s2.id,
+    title: resolvedTitle,
+    order: resolvedOrder,
+    pageCount: 1,
+    sourceName: filename,
+    importState: 'ready',
+  });
+
+  const fetchedCustomVol = await getVolume(customVol.id);
+  assert.equal(fetchedCustomVol.title, 'Tập Đặc Biệt', 'Title phải là "Tập Đặc Biệt"');
+  assert.equal(fetchedCustomVol.order, 7, 'Order phải là 7');
+
+  // Also test MIME type persistence
+  await savePagesBulk([
+    { volumeId: customVol.id, index: 0, blob: 'fake_jpeg_blob', mime: 'image/jpeg', w: 1000, h: 1500 }
+  ]);
+  const fetchedPage = await getPage(customVol.id, 0);
+  assert.equal(fetchedPage.mime, 'image/jpeg', 'MIME type image/jpeg phải được lưu đúng');
 
   console.log('✅ ALL ComicDB Unit Tests PASSED!');
+  process.exit(0);
 }
 
 runTests().catch((err) => {
