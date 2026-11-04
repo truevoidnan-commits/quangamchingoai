@@ -86,6 +86,13 @@ Tài liệu này hướng dẫn chi tiết từng bước cho người dùng thi
 
 ## BƯỚC 4: Triển Khai Edge Function `comic-presign`
 
+> [!IMPORTANT]
+> **CẬP NHẬT PHASE 4 (Xóa Đồng Bộ Toàn Diện & Dọn Dẹp R2):**
+> Trong Phase 4, logic xử lý hành động `delete-volume` đã được nâng cấp để liệt kê prefix và xóa trực tiếp từng object trên R2 với mã trả về HTTP 502 chuẩn xác, đồng thời rate limit xóa được nâng lên 15.000 ops/giờ.
+> **Người dùng cần deploy lại Edge Function `comic-presign`** (cập nhật lại cả `index.ts` và `validate.js`).
+> **KHÔNG CẦN CHẠY BẤT KỲ FILE SQL MỚI NÀO** (schema Supabase Phase 2 được giữ nguyên vẹn 100%).
+
+
 Bạn có thể triển khai bằng 1 trong 2 cách sau:
 
 ### Cách A: Dán Mã Trực Tiếp Trên Supabase Dashboard (Không cần cài đặt CLI)

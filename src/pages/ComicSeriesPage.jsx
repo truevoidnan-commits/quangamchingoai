@@ -13,7 +13,8 @@ import {
   listRemote,
   downloadVolume,
   evictLocalVolume,
-  deleteVolumeFromCloud,
+  deleteVolumeEverywhere,
+  deleteSeriesEverywhere,
   uploadAllUnsyncedVolumes,
   updateVolumeMetadata,
 } from '../lib/comics/comicCloud.js';
@@ -45,6 +46,7 @@ import {
   IconClock,
   IconUpload,
   IconX,
+  IconCheck,
   IconAlertTriangle,
 } from '../components/comics/ComicIcons.jsx';
 import styles from './ComicSeriesPage.module.css';
@@ -84,10 +86,11 @@ export default function ComicSeriesPage() {
   const [priorityDownloadingVol, setPriorityDownloadingVol] = useState(null);
   const [priorityProgress, setPriorityProgress] = useState(0);
 
-  // Confirmation Modals
-  const [volumeToDeleteLocal, setVolumeToDeleteLocal] = useState(null);
+  // Confirmation Modals (P1)
+  const [volumeToDelete, setVolumeToDelete] = useState(null);
+  const [seriesToDelete, setSeriesToDelete] = useState(null);
   const [volumeToEvict, setVolumeToEvict] = useState(null);
-  const [volumeToDeleteCloud, setVolumeToDeleteCloud] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Batch upload state
   const [isBatchUploading, setIsBatchUploading] = useState(false);
@@ -342,39 +345,33 @@ export default function ComicSeriesPage() {
     }
   };
 
-  const handleConfirmDeleteCloud = async () => {
-    if (!volumeToDeleteCloud) return;
+  const handleDeleteVolumeEverywhere = async () => {
+    if (!volumeToDelete) return;
     try {
-      await deleteVolumeFromCloud(volumeToDeleteCloud.id);
-      showToast(`Đã xóa vĩnh viễn "${volumeToDeleteCloud.title}" khỏi Cloud.`);
-      setVolumeToDeleteCloud(null);
-      loadData();
-    } catch (err) {
-      showToast(`Lỗi xóa khỏi Cloud: ${err.message}`);
-    }
-  };
-
-  const handleDeleteLocalVolume = async () => {
-    if (!volumeToDeleteLocal) return;
-    try {
-      await deleteVolume(volumeToDeleteLocal.id);
-      showToast(`Đã xóa "${volumeToDeleteLocal.title}" khỏi máy.`);
-      setVolumeToDeleteLocal(null);
-      loadData();
+      setIsDeleting(true);
+      await deleteVolumeEverywhere(volumeToDelete.id);
+      showToast(`Đã xóa tập "${volumeToDelete.title}" trên mọi thiết bị và Cloud.`);
+      setVolumeToDelete(null);
+      await loadData();
     } catch (err) {
       showToast(`Lỗi xóa: ${err.message}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  const handleDeleteSeriesConfirm = async () => {
-    if (!window.confirm(`Xác nhận xóa bộ truyện "${series?.title}" cùng tất cả các tập trên máy?`)) {
-      return;
-    }
+  const handleDeleteSeriesEverywhere = async () => {
+    if (!seriesToDelete) return;
     try {
-      await deleteSeries(seriesId);
+      setIsDeleting(true);
+      await deleteSeriesEverywhere(seriesId);
+      showToast(`Đã xóa bộ truyện "${series.title}" trên mọi thiết bị và Cloud.`);
+      setSeriesToDelete(null);
       navigate('/comics', { replace: true });
     } catch (err) {
       showToast(`Lỗi xóa bộ truyện: ${err.message}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -517,16 +514,14 @@ export default function ComicSeriesPage() {
                 </button>
               )}
 
-              {!series.isCloudOnly && (
-                <button
-                  type="button"
-                  className={styles.deleteSeriesBtn}
-                  onClick={handleDeleteSeriesConfirm}
-                >
-                  <IconTrash size={15} />
-                  <span>Xóa Khỏi Máy</span>
-                </button>
-              )}
+              <button
+                type="button"
+                className={styles.deleteSeriesBtn}
+                onClick={() => setSeriesToDelete({ ...series, volumeCount: volumes.length, totalBytes: series.totalBytes || volumes.reduce((acc, v) => acc + (v.totalBytes || 0), 0) })}
+              >
+                <IconTrash size={15} />
+                <span>Xóa Bộ Truyện</span>
+              </button>
             </div>
           </div>
         </div>
@@ -586,20 +581,19 @@ export default function ComicSeriesPage() {
                         </h3>
                       </div>
 
-                      {/* Hàng 2: Huy hiệu trạng thái (dưới tên) + Thông tin số trang, dung lượng */}
+                      {/* Hàng 2: Trạng thái tinh gọn (S1-S3) + metadata */}
                       <div className={styles.volumeRow2}>
                         {isTaskActive ? (
                           <span className={`${styles.statusBadge} ${styles.statusActive}`}>
                             <IconRefresh size={12} className={styles.spinIcon} />
                             <span>
-                              Đang {syncSnapshot.activeTask.type === 'download' ? 'tải về' : 'tải lên'}{' '}
-                              {syncSnapshot.activeTask.percent}%
+                              Đang đồng bộ {syncSnapshot.activeTask.percent}%
                             </span>
                           </span>
                         ) : isTaskQueued ? (
-                          <span className={`${styles.statusBadge} ${styles.statusQueued}`}>
+                          <span className={`${styles.statusBadge} ${(typeof navigator !== 'undefined' && navigator.onLine === false) ? styles.statusOffline : styles.statusQueued}`}>
                             <IconClock size={12} />
-                            <span>Đang chờ</span>
+                            <span>{(typeof navigator !== 'undefined' && navigator.onLine === false) ? 'Chờ mạng' : 'Đang chờ'}</span>
                           </span>
                         ) : volFailure ? (
                           <span
@@ -608,27 +602,61 @@ export default function ComicSeriesPage() {
                           >
                             <IconAlertTriangle size={12} />
                             <span>Lỗi đồng bộ</span>
-                          </span>
-                        ) : isSynced ? (
-                          <span className={`${styles.statusBadge} ${styles.statusSynced}`}>
-                            <IconCloudCheck size={12} />
-                            <span>Đã đồng bộ</span>
+                            <button
+                              type="button"
+                              className={styles.inlineRetryBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                retryFailedVolume(vol.id, seriesId, {
+                                  type: volFailure.type || (vol.isCloudOnly ? 'download' : 'upload'),
+                                  volumeTitle: vol.title,
+                                });
+                                showToast(`Đang thử lại đồng bộ cho "${vol.title}"...`);
+                              }}
+                            >
+                              Thử lại
+                            </button>
                           </span>
                         ) : isInterrupted ? (
                           <span className={`${styles.statusBadge} ${styles.statusInterrupted}`}>
                             <IconAlertTriangle size={12} />
                             <span>Dở dang ({cloudStatus.percent || 0}%)</span>
                           </span>
+                        ) : isSynced ? (
+                          /* S1: Đã đồng bộ không hiện nhãn chữ, chỉ một dấu tích SVG nhỏ mờ */
+                          <span className={styles.statusSyncedMark} title="Đã đồng bộ">
+                            <IconCheck size={14} />
+                          </span>
                         ) : isCloudOnly ? (
-                          <span className={`${styles.statusBadge} ${styles.statusCloud}`}>
-                            <IconCloud size={12} />
-                            <span>Chỉ trên Cloud</span>
-                          </span>
+                          /* S3: Chưa tải về máy này */
+                          <button
+                            type="button"
+                            className={styles.quickSyncIconBtn}
+                            title="Chưa tải về máy này"
+                            aria-label="Chưa tải về máy này"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              enqueueDownload(vol.id, seriesId, { volumeTitle: vol.title, isManual: true });
+                              showToast(`Đã xếp hàng tải về "${vol.title}"`);
+                            }}
+                          >
+                            <IconCloud size={14} />
+                          </button>
                         ) : (
-                          <span className={`${styles.statusBadge} ${styles.statusLocal}`}>
-                            <IconDevice size={12} />
-                            <span>Chỉ trên máy</span>
-                          </span>
+                          /* S3: Chưa lên Cloud */
+                          <button
+                            type="button"
+                            className={styles.quickSyncIconBtn}
+                            title="Chưa lên Cloud"
+                            aria-label="Chưa lên Cloud"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              enqueueUpload(vol.id, seriesId, { volumeTitle: vol.title, isManual: true });
+                              showToast(`Đã xếp hàng tải lên "${vol.title}"`);
+                            }}
+                          >
+                            <IconDevice size={14} />
+                          </button>
                         )}
 
                         <span className={styles.volumeMetaText}>
@@ -790,38 +818,18 @@ export default function ComicSeriesPage() {
                   </button>
                 )}
 
-              {/* 5. Xóa Khỏi Máy (khi chỉ có trên máy) */}
-              {!menuVolume.isCloudOnly && cloudStatusMap[menuVolume.id]?.status !== 'synced' && (
-                <button
-                  type="button"
-                  className={styles.menuItem}
-                  onClick={() => {
-                    setVolumeToDeleteLocal(menuVolume);
-                    setMenuVolume(null);
-                  }}
-                >
-                  <IconTrash size={16} />
-                  <span>Xóa Khỏi Máy</span>
-                </button>
-              )}
-
-              {/* 6. Xóa Cloud (khi synced hoặc cloud_only - màu đỏ) */}
-              {isLoggedIn &&
-                (cloudStatusMap[menuVolume.id]?.status === 'synced' ||
-                  cloudStatusMap[menuVolume.id]?.status === 'cloud_only' ||
-                  menuVolume.isCloudOnly) && (
-                  <button
-                    type="button"
-                    className={`${styles.menuItem} ${styles.menuItemDanger}`}
-                    onClick={() => {
-                      setVolumeToDeleteCloud(menuVolume);
-                      setMenuVolume(null);
-                    }}
-                  >
-                    <IconTrash size={16} />
-                    <span>Xóa Khỏi Cloud</span>
-                  </button>
-                )}
+              {/* 5. Xóa (đỏ, xóa ở mọi nơi - P1) */}
+              <button
+                type="button"
+                className={`${styles.menuItem} ${styles.menuItemDanger}`}
+                onClick={() => {
+                  setVolumeToDelete(menuVolume);
+                  setMenuVolume(null);
+                }}
+              >
+                <IconTrash size={16} />
+                <span>Xóa</span>
+              </button>
             </div>
           </div>
         </div>
@@ -936,31 +944,60 @@ export default function ComicSeriesPage() {
         }}
       />
 
-      {/* Modal: Xác nhận xóa tập cục bộ */}
-      {volumeToDeleteLocal && (
-        <div className={styles.deleteModalOverlay} onClick={() => setVolumeToDeleteLocal(null)}>
+      {/* Modal: Xác nhận xóa tập ở mọi nơi (P1) */}
+      {volumeToDelete && (
+        <div className={styles.deleteModalOverlay} onClick={() => !isDeleting && setVolumeToDelete(null)}>
           <div className={styles.deleteModalBox} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.deleteModalTitle}>Xác Nhận Xóa Tập Khỏi Máy</h3>
+            <h3 className={styles.deleteModalTitle}>Xác Nhận Xóa Tập Truyện</h3>
             <p className={styles.deleteModalDesc}>
-              Bạn có chắc muốn xóa <strong>"{volumeToDeleteLocal.title}"</strong> ({volumeToDeleteLocal.pageCount} trang, {formatMb(volumeToDeleteLocal.totalBytes || 0)} MB)?
-            </p>
-            <p className={styles.deleteModalWarning}>
-              Tập này chưa được tải lên Cloud. Thao tác này sẽ xóa vĩnh viễn trên máy.
+              Xóa tập truyện này (Tập {volumeToDelete.order || 1}: {volumeToDelete.title}, {volumeToDelete.pageCount || 0} trang, {formatMb(volumeToDelete.totalBytes || 0)} MB)? Sẽ xóa trên mọi thiết bị và trên Cloud, không thể khôi phục.
             </p>
             <div className={styles.deleteModalActions}>
               <button
                 type="button"
                 className={styles.deleteCancelBtn}
-                onClick={() => setVolumeToDeleteLocal(null)}
+                disabled={isDeleting}
+                onClick={() => setVolumeToDelete(null)}
               >
                 Hủy
               </button>
               <button
                 type="button"
                 className={styles.deleteConfirmBtn}
-                onClick={handleDeleteLocalVolume}
+                disabled={isDeleting}
+                onClick={handleDeleteVolumeEverywhere}
               >
-                Xóa Tập
+                {isDeleting ? 'Đang Xóa...' : 'Xóa'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Xác nhận xóa cả bộ truyện (P1) */}
+      {seriesToDelete && (
+        <div className={styles.deleteModalOverlay} onClick={() => !isDeleting && setSeriesToDelete(null)}>
+          <div className={styles.deleteModalBox} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.deleteModalTitle}>Xác Nhận Xóa Bộ Truyện</h3>
+            <p className={styles.deleteModalDesc}>
+              Xóa bộ truyện này ({seriesToDelete.volumeCount || volumes.length} tập, {formatMb(seriesToDelete.totalBytes || 0)} MB)? Sẽ xóa trên mọi thiết bị và trên Cloud, không thể khôi phục.
+            </p>
+            <div className={styles.deleteModalActions}>
+              <button
+                type="button"
+                className={styles.deleteCancelBtn}
+                disabled={isDeleting}
+                onClick={() => setSeriesToDelete(null)}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className={styles.deleteConfirmBtn}
+                disabled={isDeleting}
+                onClick={handleDeleteSeriesEverywhere}
+              >
+                {isDeleting ? 'Đang Xóa...' : 'Xóa'}
               </button>
             </div>
           </div>
@@ -993,37 +1030,6 @@ export default function ComicSeriesPage() {
                 onClick={handleConfirmEvict}
               >
                 Giải Phóng Bộ Nhớ
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Xác nhận Xóa khỏi Cloud */}
-      {volumeToDeleteCloud && (
-        <div className={styles.deleteModalOverlay} onClick={() => setVolumeToDeleteCloud(null)}>
-          <div className={styles.deleteModalBox} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.deleteModalTitle}>Xóa Tập Khỏi Cloud</h3>
-            <p className={styles.deleteModalDesc}>
-              Xác nhận xóa tập <strong>"{volumeToDeleteCloud.title}"</strong> khỏi Cloudflare R2 và Supabase?
-            </p>
-            <p className={styles.deleteModalWarning}>
-              Thao tác này sẽ xóa toàn bộ trang ảnh đã lưu trên Cloud và không thể khôi phục từ Cloud.
-            </p>
-            <div className={styles.deleteModalActions}>
-              <button
-                type="button"
-                className={styles.deleteCancelBtn}
-                onClick={() => setVolumeToDeleteCloud(null)}
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                className={styles.deleteConfirmBtn}
-                onClick={handleConfirmDeleteCloud}
-              >
-                Xóa Khỏi Cloud
               </button>
             </div>
           </div>

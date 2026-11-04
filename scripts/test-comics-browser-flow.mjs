@@ -321,17 +321,36 @@ async function runBrowserFlowTests() {
     );
     console.log('     Verified double-tap in page mode does not cause accidental page turn.');
 
-    // Clean up volume
+    // Clean up volume (P1: Unified Xóa, verify no "Xóa Cloud", modal copy, and 0-volume series card removal)
     await page.goto(`${BASE_URL}/#/comics`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('text=Đấu Phá Thương Khung');
     await page.click('text=Đấu Phá Thương Khung');
     await page.waitForSelector('button[aria-label="Tùy chọn khác"]');
     await page.click('button[aria-label="Tùy chọn khác"]');
-    await page.waitForSelector('[class*="menuSheet"] button:has-text("Xóa Khỏi Máy")');
-    await page.locator('[class*="menuSheet"] button:has-text("Xóa Khỏi Máy")').click();
-    await page.waitForSelector('text=Xác Nhận Xóa Tập Khỏi Máy');
-    await page.click('button:has-text("Xóa Tập")');
-    await page.waitForTimeout(500);
+
+    // P1: Menu ⋯ must have "Xóa", and must NOT have "Xóa Cloud"
+    await page.waitForSelector('[class*="menuSheet"] button:has-text("Xóa")');
+    const cloudDelCount = await page.locator('[class*="menuSheet"] button:has-text("Xóa Khỏi Cloud")').count();
+    assert.strictEqual(cloudDelCount, 0, 'Menu ⋯ của tập không còn nút "Xóa Khỏi Cloud"');
+
+    await page.locator('[class*="menuSheet"] button:has-text("Xóa")').click();
+    await page.waitForSelector('text=Xác Nhận Xóa Tập Truyện');
+
+    // Verify modal text has pages and MB
+    const volModalDesc = await page.locator('[class*="deleteModalDesc"]').innerText();
+    assert(volModalDesc.includes('trang') && volModalDesc.includes('MB'), `Modal xóa tập phải chứa số trang và dung lượng: ${volModalDesc}`);
+    assert(volModalDesc.includes('Sẽ xóa trên mọi thiết bị và trên Cloud'), 'Modal xóa tập phải thông báo xóa ở mọi nơi');
+
+    // Click "Xóa"
+    await page.locator('[class*="deleteConfirmBtn"]').click();
+    await page.waitForTimeout(800);
+
+    // P4: Return to ComicsPage and verify empty series (0 volumes) has disappeared!
+    await page.goto(`${BASE_URL}/#/comics`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(600);
+    const emptySeriesCount = await page.locator('text=Đấu Phá Thương Khung').count();
+    assert.strictEqual(emptySeriesCount, 0, 'Thẻ bộ truyện rỗng (0 tập) phải tự biến mất khỏi danh sách!');
+    console.log('     ✓ Verified P1 unified delete & P4 0-volume series card disappearance!');
 
     // 7. Benchmark Realistic Comic PDF at 3 Quality Tiers (Low, Balanced, High)
     console.log('  7. Generating Realistic Manga Benchmark PDF (2000x3000px, 45 pages)...');
@@ -439,10 +458,15 @@ async function runBrowserFlowTests() {
       });
 
       await page.waitForSelector('[class*="deleteSeriesBtn"]');
-      page.once('dialog', async (dialog) => {
-        await dialog.accept();
-      });
       await page.locator('[class*="deleteSeriesBtn"]').click();
+      await page.waitForSelector('[class*="deleteModalBox"]');
+
+      // Verify modal text displays volume count and MB
+      const seriesModalDesc = await page.locator('[class*="deleteModalDesc"]').innerText();
+      assert(seriesModalDesc.includes('tập') && seriesModalDesc.includes('MB'), `Modal xóa bộ phải hiển thị số tập và dung lượng: ${seriesModalDesc}`);
+      assert(seriesModalDesc.includes('Sẽ xóa trên mọi thiết bị và trên Cloud'), 'Modal xóa bộ phải thông báo xóa ở mọi nơi');
+
+      await page.locator('[class*="deleteConfirmBtn"]').click();
       await page.waitForURL('**/comics', { timeout: 10000 });
     }
 

@@ -1063,3 +1063,58 @@
     font-size: 0.82rem;
   }
 }
+
+
+.statusOffline {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #94a3b8;
+}
+
+.statusSyncedMark {
+  display: inline-flex;
+  align-items: center;
+  color: #10b981;
+  opacity: 0.7;
+  padding: 0 0.2rem;
+}
+
+.quickSyncIconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.quickSyncIconBtn:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.inlineRetryBtn {
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 0.25rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.inlineRetryBtn:hover {
+  background: #ef4444;
+  color: #fff;
+}

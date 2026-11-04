@@ -10,6 +10,7 @@ import {
 import {
   listRemote,
   autoEvictIfStorageFull,
+  deleteSeriesEverywhere,
 } from '../lib/comics/comicCloud.js';
 import {
   subscribeSyncQueue,
@@ -55,6 +56,7 @@ export default function ComicsPage() {
   });
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [seriesToDelete, setSeriesToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [syncSnapshot, setSyncSnapshot] = useState({
@@ -82,24 +84,35 @@ export default function ComicsPage() {
         listRemote(),
       ]);
 
-      // Hợp nhất danh sách bộ truyện local với danh sách trên Cloud
-      const mergedSeries = [...localList];
-      const localIds = new Set(localList.map((s) => s.id));
+      // Hợp nhất danh sách bộ truyện local với danh sách trên Cloud (P4: loại bỏ bộ rỗng)
+      const mergedSeries = [];
+      const localIds = new Set();
+
+      for (const s of localList) {
+        if ((s.volumeCount || 0) > 0) {
+          mergedSeries.push(s);
+          localIds.add(s.id);
+        } else {
+          deleteSeries(s.id).catch(() => {});
+        }
+      }
 
       if (cloudRes.isLoggedIn && cloudRes.remoteSeries) {
         for (const rs of cloudRes.remoteSeries) {
           if (!localIds.has(rs.id)) {
             const volCount =
               cloudRes.remoteVolumes?.filter((v) => v.series_id === rs.id && v.status === 'ready').length || 0;
-            mergedSeries.push({
-              id: rs.id,
-              title: rs.title,
-              volumeCount: volCount,
-              totalPages: 0,
-              totalBytes: 0,
-              isCloudOnly: true,
-              updatedAt: new Date(rs.updated_at || Date.now()).getTime(),
-            });
+            if (volCount > 0) {
+              mergedSeries.push({
+                id: rs.id,
+                title: rs.title,
+                volumeCount: volCount,
+                totalPages: 0,
+                totalBytes: 0,
+                isCloudOnly: true,
+                updatedAt: new Date(rs.updated_at || Date.now()).getTime(),
+              });
+            }
           }
         }
       }
@@ -144,12 +157,15 @@ export default function ComicsPage() {
   const handleDeleteSeries = async () => {
     if (!seriesToDelete) return;
     try {
-      await deleteSeries(seriesToDelete.id);
-      showToast(`Đã xóa bộ truyện "${seriesToDelete.title}"`);
+      setIsDeleting(true);
+      await deleteSeriesEverywhere(seriesToDelete.id);
+      showToast(`Đã xóa bộ truyện "${seriesToDelete.title}" trên mọi thiết bị và Cloud.`);
       setSeriesToDelete(null);
-      loadData();
+      await loadData();
     } catch (err) {
       showToast(`Lỗi xóa: ${err.message}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -607,20 +623,18 @@ function SeriesCard({ series, onClick, onDelete }) {
           </div>
         )}
         <div className={styles.coverGradient} />
-        {!series.isCloudOnly && (
-          <button
-            type="button"
-            className={styles.cardDeleteBtn}
-            title="Xóa bộ truyện"
-            aria-label="Xóa bộ truyện"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-          >
-            <IconTrash size={14} />
-          </button>
-        )}
+        <button
+          type="button"
+          className={styles.cardDeleteBtn}
+          title="Xóa bộ truyện"
+          aria-label="Xóa bộ truyện"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+        >
+          <IconTrash size={14} />
+        </button>
       </div>
 
       <div className={styles.cardBody}>

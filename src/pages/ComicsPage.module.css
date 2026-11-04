@@ -917,3 +917,10 @@
     display: none;
   }
 }
+
+
+@media (hover: none), (max-width: 640px) {
+  .cardDeleteBtn {
+    opacity: 0.85;
+  }
+}

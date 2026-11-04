@@ -22,6 +22,7 @@ import {
   uploadVolume,
   downloadVolume,
   isCloudAvailable,
+  isVolumeTombstoned,
 } from './comicCloud.js';
 import { getVolume } from './comicDb.js';
 
@@ -172,6 +173,24 @@ export function resumeSync() {
     }
   } catch {}
   notifySubscribers();
+
+  if (_rateLimitResumeAt && Date.now() < _rateLimitResumeAt) {
+    if (!_rateLimitTimer) {
+      const waitMs = _rateLimitResumeAt - Date.now();
+      _rateLimitTimer = setTimeout(() => {
+        _rateLimitTimer = null;
+        _rateLimitResumeAt = null;
+        notifySubscribers();
+        if (!_isPaused) {
+          triggerProcess();
+        }
+      }, waitMs);
+    }
+    return;
+  } else {
+    _rateLimitResumeAt = null;
+  }
+
   triggerProcess();
   checkAndTriggerAutoSync().catch(() => {});
 }
@@ -205,7 +224,7 @@ export function getQueueSnapshot() {
     isPaused: _isPaused,
     storageWarning: _storageWarning,
     uploadQuotaExceeded: _uploadQuotaExceeded,
-    rateLimitInfo: _rateLimitResumeAt
+    rateLimitInfo: _rateLimitResumeAt && Date.now() < _rateLimitResumeAt
       ? {
           resumeAt: _rateLimitResumeAt,
           waitMinutes: Math.max(1, Math.ceil((_rateLimitResumeAt - Date.now()) / 60000)),
@@ -566,6 +585,10 @@ export function enqueueDownload(volumeId, seriesId, { priority = false, volumeTi
  * Đưa tập vào hàng đợi tải lên
  */
 export function enqueueUpload(volumeId, seriesId, { priority = false, volumeTitle = '', isManual = false } = {}) {
+  if (typeof isVolumeTombstoned === 'function' && isVolumeTombstoned(volumeId)) {
+    console.log('[ComicSyncQueue] Volume ' + volumeId + ' is tombstoned, skipping upload.');
+    return;
+  }
   if (isManual) {
     try {
       if (typeof localStorage !== 'undefined') {
@@ -591,9 +614,11 @@ export function enqueueUpload(volumeId, seriesId, { priority = false, volumeTitl
 
 function scheduleLockRetry() {
   if (_lockRetryTimer || _queue.length === 0) return;
+  if (_rateLimitResumeAt && Date.now() < _rateLimitResumeAt) return;
   _lockRetryTimer = setTimeout(() => {
     _lockRetryTimer = null;
     if (_queue.length > 0 && !_isProcessing && !_isPaused) {
+      if (_rateLimitResumeAt && Date.now() < _rateLimitResumeAt) return;
       triggerProcess();
     }
   }, 5000);
@@ -638,6 +663,9 @@ export function triggerProcess() {
     clearLockRetry();
     return;
   }
+  if (_rateLimitResumeAt && Date.now() < _rateLimitResumeAt) {
+    return;
+  }
 
   if (typeof navigator !== 'undefined' && navigator.locks?.request) {
     navigator.locks
@@ -651,7 +679,7 @@ export function triggerProcess() {
         try {
           await processQueueLoop();
         } finally {
-          if (_queue.length > 0 && !_isPaused) {
+          if (_queue.length > 0 && !_isPaused && !(_rateLimitResumeAt && Date.now() < _rateLimitResumeAt)) {
             scheduleLockRetry();
           }
         }
@@ -669,6 +697,7 @@ export function triggerProcess() {
  */
 async function processQueueLoop() {
   if (_isProcessing) return;
+  if (_rateLimitResumeAt && Date.now() < _rateLimitResumeAt) return;
   _isProcessing = true;
 
   try {
@@ -864,6 +893,9 @@ export async function checkAndTriggerAutoSync() {
 
       // A3: Tự tải lên các tập 'local_only' (ngừng toàn bộ nếu vượt hạn mức Cloud 8GB)
       if (info.status === 'local_only' && autoUpl && !_uploadQuotaExceeded) {
+        if (typeof isVolumeTombstoned === 'function' && isVolumeTombstoned(volId)) {
+          continue;
+        }
         const fail = getVolumeFailure(volId, 'upload');
         if (fail && (fail.stopped || now < (fail.nextRetryAt || 0))) {
           continue; // Bỏ qua nếu đang trong thời gian nghỉ hoặc đã bị ngừng

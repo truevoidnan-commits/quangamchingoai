@@ -11,9 +11,11 @@ import {
   checkRateLimit,
   calculateEffectiveUsedBytes,
   getCorsHeaders,
+  parseS3ListXml,
   PUT_EXPIRATION_SECONDS,
   GET_EXPIRATION_SECONDS,
   MAX_HOURLY_OPS,
+  MAX_HOURLY_DELETE_OPS,
   MAX_USER_QUOTA_BYTES,
 } from './validate.js';
 
@@ -120,9 +122,9 @@ Deno.serve(async (req: Request) => {
 
     const currentOps = opRows?.ops || 0;
     const rateLimitCheck = checkRateLimit({
+      action,
       currentHourlyOps: currentOps,
       incomingOps: totalOps,
-      maxHourlyOps: MAX_HOURLY_OPS,
     });
 
     if (!rateLimitCheck.ok) {
@@ -157,9 +159,37 @@ Deno.serve(async (req: Request) => {
 
     const r2Endpoint = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}`;
 
+    // Helper: List all objects under prefix
+    const listAllObjectsWithPrefix = async (prefix: string) => {
+      let allKeys: string[] = [];
+      let continuationToken: string | null = null;
+      do {
+        const listUrl = new URL(r2Endpoint);
+        listUrl.searchParams.set('list-type', '2');
+        listUrl.searchParams.set('prefix', prefix);
+        if (continuationToken) {
+          listUrl.searchParams.set('continuation-token', continuationToken);
+        }
+
+        const listRes = await aws.fetch(listUrl.toString());
+        if (!listRes.ok) {
+          const errText = await listRes.text();
+          console.error('[R2 List Error]:', listRes.status, errText);
+          return { ok: false, error: errText, status: listRes.status, keys: [] };
+        }
+
+        const xml = await listRes.text();
+        const parsed = parseS3ListXml(xml);
+        allKeys.push(...parsed.keys);
+        continuationToken = parsed.nextContinuationToken;
+      } while (continuationToken);
+
+      return { ok: true, keys: allKeys, status: 200 };
+    };
+
     // 7. Process Actions
     if (action === 'put') {
-      // 7.1 Check User Quota (Sum total_bytes of ready + uploading volumes excluding this volumeId <= 8GB)
+      // 7.1 Check User Quota
       const { data: volData, error: volErr } = await supabaseAdmin
         .from('comic_volumes')
         .select('id, total_bytes')
@@ -167,7 +197,6 @@ Deno.serve(async (req: Request) => {
         .is('deleted_at', null);
 
       if (!volErr && volData) {
-        // Exclude the current volume being uploaded to prevent double-counting
         const usedBytes = calculateEffectiveUsedBytes(volData, volumeId);
         const quotaCheck = checkQuota({
           usedBytes,
@@ -275,57 +304,80 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'delete-volume') {
-      // 7.6 List all objects under <uid>/<volumeId>/ and delete them
+      // E1: Liệt kê theo prefix `<uid>/<volumeId>/` rồi xóa từng object bằng DELETE đơn giản (tối đa 8 song song)
       const prefix = `${uid}/${volumeId}/`;
+      const listRes = await listAllObjectsWithPrefix(prefix);
+      if (!listRes.ok) {
+        return new Response(
+          JSON.stringify({
+            error: `Lỗi khi liệt kê tệp trên R2 để xóa: ${listRes.error || ''}`,
+            code: 'R2_DELETE_FAILED',
+            failed: 0,
+          }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const keysToDelete = listRes.keys;
       let deletedCount = 0;
-      let continuationToken: string | null = null;
+      let failedCount = 0;
 
-      do {
-        const listUrl = new URL(r2Endpoint);
-        listUrl.searchParams.set('list-type', '2');
-        listUrl.searchParams.set('prefix', prefix);
-        if (continuationToken) {
-          listUrl.searchParams.set('continuation-token', continuationToken);
-        }
+      if (keysToDelete.length > 0) {
+        const CONCURRENCY = 8;
+        for (let i = 0; i < keysToDelete.length; i += CONCURRENCY) {
+          const chunk = keysToDelete.slice(i, i + CONCURRENCY);
+          const results = await Promise.all(
+            chunk.map(async (key) => {
+              try {
+                const delUrl = `${r2Endpoint}/${key}`;
+                const delRes = await aws.fetch(delUrl, { method: 'DELETE' });
+                if (delRes.ok || delRes.status === 204 || delRes.status === 404) {
+                  return { ok: true, key };
+                }
+                const errText = await delRes.text();
+                console.error(`[R2 DELETE Error] ${key}:`, delRes.status, errText);
+                return { ok: false, key, error: errText };
+              } catch (delErr: any) {
+                console.error(`[R2 DELETE Exception] ${key}:`, delErr);
+                return { ok: false, key, error: delErr?.message || String(delErr) };
+              }
+            })
+          );
 
-        const listRes = await aws.fetch(listUrl.toString());
-        if (!listRes.ok) {
-          const errText = await listRes.text();
-          console.error('[R2 List Error]:', errText);
-          break;
-        }
-
-        const xml = await listRes.text();
-        const keyMatches = [...xml.matchAll(/<Key>(.*?)<\/Key>/g)].map((m) => m[1]);
-
-        if (keyMatches.length > 0) {
-          const deleteXml = `<?xml version="1.0" encoding="UTF-8"?>
-<Delete>
-  <Quiet>true</Quiet>
-  ${keyMatches.map((k) => `<Object><Key>${k}</Key></Object>`).join('')}
-</Delete>`;
-
-          const deleteUrl = new URL(r2Endpoint);
-          deleteUrl.searchParams.set('delete', '');
-
-          const deleteRes = await aws.fetch(deleteUrl.toString(), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/xml' },
-            body: deleteXml,
-          });
-
-          if (deleteRes.ok) {
-            deletedCount += keyMatches.length;
-          } else {
-            console.error('[R2 Delete Error]:', await deleteRes.text());
+          for (const r of results) {
+            if (r.ok) deletedCount++;
+            else failedCount++;
           }
         }
+      }
 
-        const tokenMatch = xml.match(/<NextContinuationToken>(.*?)<\/NextContinuationToken>/);
-        continuationToken = tokenMatch ? tokenMatch[1] : null;
-      } while (continuationToken);
+      if (failedCount > 0) {
+        return new Response(
+          JSON.stringify({
+            error: `Xóa tệp trên Cloud thất bại: ${failedCount} tệp không xóa được`,
+            code: 'R2_DELETE_FAILED',
+            failed: failedCount,
+            deleted: deletedCount,
+          }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
-      // Record delete ops in rate limit
+      // Xác nhận lại prefix rỗng
+      const verifyRes = await listAllObjectsWithPrefix(prefix);
+      if (!verifyRes.ok || verifyRes.keys.length > 0) {
+        const remaining = verifyRes.keys?.length || 1;
+        return new Response(
+          JSON.stringify({
+            error: `Xác minh sau khi xóa thất bại: Cloud vẫn còn ${remaining} tệp dở dang`,
+            code: 'R2_DELETE_FAILED',
+            failed: remaining,
+          }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // E2: Ghi nhận số thao tác đã xóa vào hạn mức giờ (comic_ops_hourly)
       const opsToRecord = Math.max(1, deletedCount);
       await supabaseAdmin.from('comic_ops_hourly').upsert(
         {
@@ -338,6 +390,7 @@ Deno.serve(async (req: Request) => {
 
       return new Response(
         JSON.stringify({
+          success: true,
           deletedCount,
           volumeId,
         }),

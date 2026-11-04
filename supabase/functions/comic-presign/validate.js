@@ -7,6 +7,7 @@ export const MAX_BATCH_SIZE = 100;
 export const MAX_PAGE_BYTES = 15 * 1024 * 1024; // 15MB per page
 export const MAX_USER_QUOTA_BYTES = 8 * 1024 * 1024 * 1024; // 8GB total per user
 export const MAX_HOURLY_OPS = 12000;
+export const MAX_HOURLY_DELETE_OPS = 15000; // Dedicated higher limit for delete (E2)
 export const PUT_EXPIRATION_SECONDS = 900; // 15 minutes
 export const GET_EXPIRATION_SECONDS = 3600; // 1 hour
 
@@ -64,6 +65,19 @@ export function buildObjectKey(uid, volumeId, pageIndexOrCover) {
   }
 
   throw new Error(`Chỉ số trang không hợp lệ: ${pageIndexOrCover}`);
+}
+
+/**
+ * Parses XML output from S3 ListObjectsV2
+ */
+export function parseS3ListXml(xml) {
+  if (!xml || typeof xml !== 'string') return { keys: [], nextContinuationToken: null };
+  const keys = [...xml.matchAll(/<Key>(.*?)<\/Key>/g)].map((m) => m[1]);
+  const tokenMatch = xml.match(/<NextContinuationToken>(.*?)<\/NextContinuationToken>/);
+  return {
+    keys,
+    nextContinuationToken: tokenMatch ? tokenMatch[1] : null,
+  };
 }
 
 /**
@@ -175,22 +189,23 @@ export function calculateEffectiveUsedBytes(existingVolumeRows, currentVolumeId)
 }
 
 /**
- * Checks rate limit (max 12000 operations per hour per user)
+ * Checks rate limit (max 12000 operations per hour per user, or 15000 for delete)
  */
-export function checkRateLimit({ currentHourlyOps = 0, incomingOps = 0, maxHourlyOps = MAX_HOURLY_OPS }) {
+export function checkRateLimit({ action = 'put', currentHourlyOps = 0, incomingOps = 0, maxHourlyOps = null }) {
+  const limit = maxHourlyOps ?? (action === 'delete-volume' ? MAX_HOURLY_DELETE_OPS : MAX_HOURLY_OPS);
   const projected = Number(currentHourlyOps) + Number(incomingOps);
-  if (projected > maxHourlyOps) {
+  if (projected > limit) {
     return {
       ok: false,
-      error: `Đã vượt quá giới hạn ${maxHourlyOps} thao tác/giờ. Vui lòng thử lại sau.`,
+      error: `Đã vượt quá giới hạn ${limit} thao tác/giờ. Vui lòng thử lại sau.`,
       code: 'RATE_LIMIT_EXCEEDED',
       projected,
-      maxHourlyOps,
+      maxHourlyOps: limit,
     };
   }
   return {
     ok: true,
-    remaining: maxHourlyOps - projected,
+    remaining: limit - projected,
   };
 }
 
