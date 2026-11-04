@@ -220,6 +220,18 @@ function createMockSupabase() {
     },
     functions: {
       invoke: async (fnName, { body } = {}) => {
+        if (fnName === 'comic-presign' && body && (body.action === 'get' || body.action === 'put')) {
+          const totalOps = (body.pages || []).length + (body.cover ? 1 : 0);
+          if (totalOps > 100) {
+            return {
+              data: null,
+              error: {
+                message: `Số lượng URL tối đa mỗi lần là 100 (đang yêu cầu ${totalOps})`,
+                code: 'BATCH_SIZE_EXCEEDED',
+              },
+            };
+          }
+        }
         return presignHandler(body);
       },
     },

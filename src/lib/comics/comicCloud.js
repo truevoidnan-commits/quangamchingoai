@@ -644,6 +644,11 @@ export async function uploadVolume(volumeId, options = {}) {
     .eq('user_id', user.id)
     .is('cover_key', null);
 
+  const nowUpload = Date.now();
+  await updateVolume(volumeId, { metaUpdatedAt: nowUpload, updatedAt: nowUpload });
+  const { updateSeries: dbUpdateSeriesLocal } = await import('./comicDb.js');
+  await dbUpdateSeriesLocal(vol.seriesId, { metaUpdatedAt: nowUpload, updatedAt: nowUpload });
+
   // Clean up localStorage upload resume cache
   try {
     localStorage.removeItem(progressKey);
@@ -694,6 +699,11 @@ export async function listRemote(options = {}) {
       cloudQuotaBytes: 8 * 1024 * 1024 * 1024,
     };
   }
+
+  // 0. Flush any pending offline metadata if online (LỖI 2)
+  try {
+    await flushPendingMetadata({ customSupabase: client });
+  } catch {}
 
   // Helper for tombstone queries with safe fallback for partial mocks
   const fetchTombstones = async (table, selectCols) => {
@@ -826,6 +836,77 @@ export async function listRemote(options = {}) {
         await purgeLocalVolumeData(lv.id);
       } else {
         localVolMap[lv.id] = lv;
+      }
+    }
+  }
+
+  // SỬA LỖI 2: Kéo metadata về (pull) cho Volume và Series theo Last-Write-Wins
+  const { updateVolume: dbUpdateVolume, updateSeries: dbUpdateSeries } = await import('./comicDb.js');
+
+  // Pull volume metadata
+  for (const rv of rawRemoteVolumes) {
+    if (_tombstoneVolumeIds.has(rv.id)) continue;
+    const local = localVolMap[rv.id];
+    if (!local) continue;
+
+    // Trong lúc đang chờ đẩy thì KHÔNG để pull ghi đè bản sửa local (SỬA 4)
+    const isPending = typeof localStorage !== 'undefined' && localStorage.getItem(`tcl_comic_meta_pending_${rv.id}`);
+    if (isPending) continue;
+
+    const remoteTitle = rv.title != null ? String(rv.title).trim() : '';
+    const remoteOrder = rv.order_no != null ? Number(rv.order_no) : local.order;
+    const localTitle = local.title != null ? String(local.title).trim() : '';
+    const localOrder = Number(local.order);
+
+    const titleDiff = remoteTitle !== '' && remoteTitle !== localTitle;
+    const orderDiff = rv.order_no != null && remoteOrder !== localOrder;
+
+    // Chỉ áp dụng khi giá trị thực sự khác (SỬA 3)
+    if (titleDiff || orderDiff) {
+      const remoteUpdatedAt = new Date(rv.updated_at || 0).getTime();
+      const localMetaUpdatedAt = Number(local.metaUpdatedAt) || Number(local.updatedAt) || Number(local.createdAt) || 0;
+
+      // Quy tắc last-write-wins theo updated_at (SỬA 2)
+      if (remoteUpdatedAt > localMetaUpdatedAt) {
+        const patch = {
+          metaUpdatedAt: remoteUpdatedAt,
+          updatedAt: remoteUpdatedAt,
+        };
+        if (titleDiff) patch.title = remoteTitle;
+        if (orderDiff) patch.order = remoteOrder;
+
+        await dbUpdateVolume(local.id, patch);
+        Object.assign(local, patch);
+      }
+    }
+  }
+
+  // Pull series metadata
+  for (const rs of rawRemoteSeries) {
+    if (_tombstoneSeriesIds.has(rs.id)) continue;
+    const localS = refreshedLocalSeries.find((s) => s.id === rs.id);
+    if (!localS) continue;
+
+    const isPending = typeof localStorage !== 'undefined' && localStorage.getItem(`tcl_comic_meta_pending_${rs.id}`);
+    if (isPending) continue;
+
+    const remoteTitle = rs.title != null ? String(rs.title).trim() : '';
+    const localTitle = localS.title != null ? String(localS.title).trim() : '';
+
+    const titleDiff = remoteTitle !== '' && remoteTitle !== localTitle;
+
+    if (titleDiff) {
+      const remoteUpdatedAt = new Date(rs.updated_at || 0).getTime();
+      const localMetaUpdatedAt = Number(localS.metaUpdatedAt) || Number(localS.updatedAt) || Number(localS.createdAt) || 0;
+
+      if (remoteUpdatedAt > localMetaUpdatedAt) {
+        const patch = {
+          title: remoteTitle,
+          metaUpdatedAt: remoteUpdatedAt,
+          updatedAt: remoteUpdatedAt,
+        };
+        await dbUpdateSeries(localS.id, patch);
+        Object.assign(localS, patch);
       }
     }
   }
@@ -1008,6 +1089,7 @@ export async function downloadVolume(volumeId, options = {}) {
     series = await saveSeries({
       id: remoteVol.series_id,
       title: remoteSeries?.title || 'Bộ truyện Cloud',
+      metaUpdatedAt: new Date(remoteSeries?.updated_at || Date.now()).getTime(),
     });
   }
 
@@ -1020,6 +1102,7 @@ export async function downloadVolume(volumeId, options = {}) {
     pageCount: remoteVol.page_count || 0,
     totalBytes: Number(remoteVol.total_bytes) || 0,
     quality: remoteVol.quality || 'balanced',
+    metaUpdatedAt: new Date(remoteVol.updated_at || Date.now()).getTime(),
     importState: 'importing',
     pageMeta: [],
   });
@@ -1045,7 +1128,32 @@ export async function downloadVolume(volumeId, options = {}) {
   reportProgress();
 
   try {
-    // 4. Download in batches of 100 pages
+    // 4. SỬA LỖI 1: Tải ảnh bìa bằng lời gọi riêng (pages: [], cover: true) để đảm bảo tổng số URL không vượt quá 100
+    try {
+      if (signal?.aborted) throw new Error('Thao tác đã bị hủy');
+      const coverPresign = await callComicPresign(
+        {
+          action: 'get',
+          volumeId,
+          pages: [],
+          cover: true,
+        },
+        { customSupabase: client, signal }
+      );
+      if (coverPresign?.coverUrl) {
+        const coverRes = await customFetch(coverPresign.coverUrl, { signal });
+        if (coverRes.ok) {
+          const coverBlob = await coverRes.blob();
+          const { updateSeries } = await import('./comicDb.js');
+          await updateSeries(series.id, { coverBlob });
+        }
+      }
+    } catch (e) {
+      if (signal?.aborted) throw e;
+      console.warn('[ComicCloud] Failed to download cover:', e);
+    }
+
+    // 5. Tải các trang theo lô tối đa 100 trang (cover: false, tuyệt đối không vượt 100 URL)
     for (let b = 0; b < pagesList.length; b += UPLOAD_BATCH_SIZE) {
       if (signal?.aborted) throw new Error('Thao tác đã bị hủy');
 
@@ -1055,7 +1163,7 @@ export async function downloadVolume(volumeId, options = {}) {
           action: 'get',
           volumeId,
           pages: batch,
-          cover: b === 0, // Request cover on first batch
+          cover: false,
         },
         { customSupabase: client, signal }
       );
@@ -1102,26 +1210,14 @@ export async function downloadVolume(volumeId, options = {}) {
 
       // Save batch to IndexedDB
       await savePagesBulk(pageBatchItems);
-
-      // Save Cover on first batch if available
-      if (b === 0 && presignData?.coverUrl) {
-        try {
-          const coverRes = await customFetch(presignData.coverUrl, { signal });
-          if (coverRes.ok) {
-            const coverBlob = await coverRes.blob();
-            const { updateSeries } = await import('./comicDb.js');
-            await updateSeries(series.id, { coverBlob });
-          }
-        } catch (e) {
-          console.warn('[ComicCloud] Failed to download cover:', e);
-        }
-      }
     }
 
-    // 5. Update local volume to ready
+    // 6. Update local volume to ready
+    const metaTime = new Date(remoteVol.updated_at || Date.now()).getTime();
     await updateVolume(volumeId, {
       importState: 'ready',
       pageMeta: pageMeta.filter(Boolean),
+      metaUpdatedAt: metaTime,
     });
 
     if (onProgress) {
@@ -1560,6 +1656,88 @@ export async function pullComicProgressCloud(volumeId, options = {}) {
  * Lưu vào IndexedDB local và, nếu tập đã có trên Cloud, cập nhật bảng comic_volumes,
  * sau đó phát tín hiệu realtime A6.
  */
+/**
+ * Đẩy các thay đổi metadata đang chờ trong localStorage lên Cloud khi có mạng (LỖI 2).
+ */
+export async function flushPendingMetadata(options = {}) {
+  const { customSupabase = null } = options;
+  const client = customSupabase || activeDefaultSupabase;
+
+  if (typeof localStorage === 'undefined') return { flushedCount: 0 };
+  const isOnline = typeof navigator === 'undefined' || navigator.onLine !== false;
+  if (!isOnline) return { flushedCount: 0 };
+
+  let user = null;
+  try {
+    user = await getCloudUser(client);
+  } catch {}
+  if (!user) return { flushedCount: 0 };
+
+  let flushedCount = 0;
+  const keysToProcess = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('tcl_comic_meta_pending_')) {
+      keysToProcess.push(k);
+    }
+  }
+
+  for (const k of keysToProcess) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const item = JSON.parse(raw);
+      if (!item || !item.id) continue;
+
+      if (item.type === 'volume') {
+        const { error } = await client
+          .from('comic_volumes')
+          .update({
+            order_no: Number(item.order) || 1,
+            title: item.title,
+            updated_at: new Date(item.metaUpdatedAt || Date.now()).toISOString(),
+          })
+          .eq('id', item.id)
+          .eq('user_id', user.id);
+
+        if (!error) {
+          localStorage.removeItem(k);
+          flushedCount++;
+        }
+      } else if (item.type === 'series') {
+        const { error } = await client
+          .from('comic_series')
+          .update({
+            title: item.title,
+            updated_at: new Date(item.metaUpdatedAt || Date.now()).toISOString(),
+          })
+          .eq('id', item.id)
+          .eq('user_id', user.id);
+
+        if (!error) {
+          localStorage.removeItem(k);
+          flushedCount++;
+        }
+      }
+    } catch (err) {
+      console.warn('[ComicCloud] Error flushing pending metadata item ' + k + ':', err);
+    }
+  }
+
+  if (flushedCount > 0) {
+    try {
+      notifyComicsChanged();
+    } catch {}
+  }
+
+  return { flushedCount };
+}
+
+/**
+ * Cập nhật số tập và tên tập (D2 & LỖI 2).
+ * Lưu vào IndexedDB local và, nếu tập đã có trên Cloud, cập nhật bảng comic_volumes,
+ * sau đó phát tín hiệu realtime notifyComicsChanged().
+ */
 export async function updateVolumeMetadata(volumeId, { order, title }, options = {}) {
   if (!volumeId) throw new Error('Thiếu volumeId.');
   const { customSupabase = null } = options;
@@ -1567,6 +1745,7 @@ export async function updateVolumeMetadata(volumeId, { order, title }, options =
 
   const parsedOrder = Number(order) || 1;
   const cleanTitle = String(title || '').trim();
+  const now = Date.now();
 
   // 1. Cập nhật local DB nếu có
   const local = await getVolume(volumeId);
@@ -1574,44 +1753,174 @@ export async function updateVolumeMetadata(volumeId, { order, title }, options =
     await updateVolume(volumeId, {
       order: parsedOrder,
       title: cleanTitle,
-      updatedAt: Date.now(),
+      metaUpdatedAt: now,
+      updatedAt: now,
     });
   }
 
   // 2. Cập nhật Cloud nếu đã đăng nhập và tập đã tồn tại trên Cloud
-  const user = await getCloudUser(client);
-  if (user) {
-    const { data: remoteVol } = await client
-      .from('comic_volumes')
-      .select('id')
-      .eq('id', volumeId)
-      .eq('user_id', user.id)
-      .is('deleted_at', null)
-      .maybeSingle();
+  const isOnline = typeof navigator === 'undefined' || navigator.onLine !== false;
+  let user = null;
+  try {
+    user = await getCloudUser(client);
+  } catch {}
 
-    if (remoteVol) {
-      const { error: updErr } = await client
+  if (user && isOnline) {
+    try {
+      const { data: remoteVol } = await client
         .from('comic_volumes')
-        .update({
-          order_no: parsedOrder,
-          title: cleanTitle,
-          updated_at: new Date().toISOString(),
-        })
+        .select('id')
         .eq('id', volumeId)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .maybeSingle();
 
-      if (updErr) {
-        throw new Error(`Lỗi cập nhật thông tin tập trên Cloud: ${updErr.message}`);
+      if (remoteVol) {
+        const { error: updErr } = await client
+          .from('comic_volumes')
+          .update({
+            order_no: parsedOrder,
+            title: cleanTitle,
+            updated_at: new Date(now).toISOString(),
+          })
+          .eq('id', volumeId)
+          .eq('user_id', user.id);
+
+        if (updErr) {
+          throw new Error(`Lỗi cập nhật thông tin tập trên Cloud: ${updErr.message}`);
+        }
+
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem(`tcl_comic_meta_pending_${volumeId}`);
+          }
+        } catch {}
+
+        try {
+          notifyComicsChanged();
+        } catch {}
       }
-
-      // Phát tín hiệu A6 cho các thiết bị khác đồng bộ
+    } catch (err) {
+      console.warn('[ComicCloud] Failed to push volume metadata to cloud:', err);
       try {
-        notifyComicsChanged();
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(`tcl_comic_meta_pending_${volumeId}`, JSON.stringify({
+            type: 'volume',
+            id: volumeId,
+            order: parsedOrder,
+            title: cleanTitle,
+            metaUpdatedAt: now,
+          }));
+        }
       } catch {}
     }
+  } else if (user && !isOnline) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`tcl_comic_meta_pending_${volumeId}`, JSON.stringify({
+          type: 'volume',
+          id: volumeId,
+          order: parsedOrder,
+          title: cleanTitle,
+          metaUpdatedAt: now,
+        }));
+      }
+    } catch {}
   }
 
   return { ok: true, volumeId, order: parsedOrder, title: cleanTitle };
+}
+
+/**
+ * Cập nhật tên bộ truyện (title) đồng bộ giữa các thiết bị (LỖI 2).
+ * Lưu vào IndexedDB local và, nếu bộ truyện đã có trên Cloud, cập nhật bảng comic_series,
+ * sau đó phát tín hiệu realtime notifyComicsChanged().
+ */
+export async function updateSeriesMetadata(seriesId, { title }, options = {}) {
+  if (!seriesId) throw new Error('Thiếu seriesId.');
+  const { customSupabase = null } = options;
+  const client = customSupabase || activeDefaultSupabase;
+
+  const cleanTitle = String(title || '').trim();
+  const now = Date.now();
+
+  // 1. Cập nhật local DB
+  const { getSeries, updateSeries } = await import('./comicDb.js');
+  const local = await getSeries(seriesId);
+  if (local) {
+    await updateSeries(seriesId, {
+      title: cleanTitle,
+      metaUpdatedAt: now,
+      updatedAt: now,
+    });
+  }
+
+  // 2. Cập nhật Cloud nếu đã đăng nhập và bộ đã tồn tại trên Cloud
+  const isOnline = typeof navigator === 'undefined' || navigator.onLine !== false;
+  let user = null;
+  try {
+    user = await getCloudUser(client);
+  } catch {}
+
+  if (user && isOnline) {
+    try {
+      const { data: remoteSeries } = await client
+        .from('comic_series')
+        .select('id')
+        .eq('id', seriesId)
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (remoteSeries) {
+        const { error: updErr } = await client
+          .from('comic_series')
+          .update({
+            title: cleanTitle,
+            updated_at: new Date(now).toISOString(),
+          })
+          .eq('id', seriesId)
+          .eq('user_id', user.id);
+
+        if (updErr) throw new Error(`Lỗi cập nhật tên bộ truyện trên Cloud: ${updErr.message}`);
+
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem(`tcl_comic_meta_pending_${seriesId}`);
+          }
+        } catch {}
+
+        try {
+          notifyComicsChanged();
+        } catch {}
+      }
+    } catch (err) {
+      console.warn('[ComicCloud] Failed to push series metadata to cloud:', err);
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(`tcl_comic_meta_pending_${seriesId}`, JSON.stringify({
+            type: 'series',
+            id: seriesId,
+            title: cleanTitle,
+            metaUpdatedAt: now,
+          }));
+        }
+      } catch {}
+    }
+  } else if (user && !isOnline) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`tcl_comic_meta_pending_${seriesId}`, JSON.stringify({
+          type: 'series',
+          id: seriesId,
+          title: cleanTitle,
+          metaUpdatedAt: now,
+        }));
+      }
+    } catch {}
+  }
+
+  return { ok: true, seriesId, title: cleanTitle };
 }
 
 // MULTI-VOLUME BATCH UPLOAD QUEUE

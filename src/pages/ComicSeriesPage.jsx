@@ -17,6 +17,7 @@ import {
   deleteSeriesEverywhere,
   uploadAllUnsyncedVolumes,
   updateVolumeMetadata,
+  updateSeriesMetadata,
 } from '../lib/comics/comicCloud.js';
 import {
   subscribeSyncQueue,
@@ -106,8 +107,8 @@ export default function ComicSeriesPage() {
     if (!seriesId) return;
     try {
       await cleanOrphanImportingVolumes();
-      let s = await getSeries(seriesId);
       const cloudRes = await listRemote();
+      let s = await getSeries(seriesId);
       setIsLoggedIn(cloudRes.isLoggedIn);
 
       // Nếu bộ truyện chưa có local, kiểm tra trên Cloud
@@ -378,7 +379,7 @@ export default function ComicSeriesPage() {
   const handleSaveTitle = async () => {
     if (!editTitleText.trim()) return;
     try {
-      await updateSeries(seriesId, { title: editTitleText.trim() });
+      await updateSeriesMetadata(seriesId, { title: editTitleText.trim() });
       setSeries((prev) => ({ ...prev, title: editTitleText.trim() }));
       setIsEditingTitle(false);
       showToast('Đã đổi tên bộ truyện');

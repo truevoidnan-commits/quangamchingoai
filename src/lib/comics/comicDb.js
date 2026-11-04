@@ -233,6 +233,7 @@ export async function saveSeries(series) {
     id: series.id || nanoid(),
     title: (series.title || 'Bộ truyện chưa đặt tên').trim(),
     coverBlob: series.coverBlob || null,
+    metaUpdatedAt: series.metaUpdatedAt || now,
     createdAt: series.createdAt || now,
     updatedAt: now,
   };
@@ -284,6 +285,7 @@ export async function saveVolume(volume) {
     totalBytes: volume.totalBytes || 0,
     quality: volume.quality || 'balanced',
     sourceName: volume.sourceName || '',
+    metaUpdatedAt: volume.metaUpdatedAt || now,
     createdAt: volume.createdAt || now,
     updatedAt: now,
     importState: volume.importState || 'importing',

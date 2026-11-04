@@ -78,11 +78,11 @@ export default function ComicsPage() {
   const loadData = useCallback(async () => {
     try {
       await cleanOrphanImportingVolumes();
-      const [localList, stats, cloudRes] = await Promise.all([
-        getAllSeries(),
+      const [stats, cloudRes] = await Promise.all([
         getComicsStorageStats(),
         listRemote(),
       ]);
+      const localList = await getAllSeries();
 
       // Hợp nhất danh sách bộ truyện local với danh sách trên Cloud (P4 & Sửa 1, 4: tính cả 'uploading' và 10 phút bảo vệ, không delete thụ động)
       const TEN_MINUTES_MS = 10 * 60 * 1000;

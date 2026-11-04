@@ -411,6 +411,17 @@ async function runAllCloudTests() {
         }
 
         if (body.action === 'put' || body.action === 'get') {
+          const pageList = body.pages || [];
+          const totalOps = pageList.length + (body.cover ? 1 : 0);
+          if (totalOps > 100) {
+            return {
+              data: null,
+              error: {
+                message: `Số lượng URL tối đa mỗi lần là 100 (đang yêu cầu ${totalOps})`,
+                code: 'BATCH_SIZE_EXCEEDED',
+              },
+            };
+          }
           const urls = {};
           (body.pages || []).forEach((p) => {
             urls[p] = `https://mock-r2.cloud/${body.volumeId}/${p}.webp?signed=true`;
