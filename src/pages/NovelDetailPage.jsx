@@ -1,11 +1,34 @@
-import { useState, useEffect, useTransition, useCallback } from 'react';
+import { useState, useEffect, useTransition, useCallback, lazy, Suspense } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getNovel, getChapters, deleteChapterDB, searchChapters } from '../lib/db';
-import { getReadingProgress, updateLibraryItem, getLibrary } from '../lib/storage';
+import { getReadingProgress, updateLibraryItem, getLibrary, isVaultSessionUnlocked } from '../lib/storage';
 import { pullNovelProgressNow } from '../lib/sync/syncEngine.js';
 import Footer from '../components/layout/Footer';
 import GlobalReplaceModal from '../components/reader/GlobalReplaceModal';
 import styles from './NovelDetailPage.module.css';
+
+const NovelExportModal = lazy(() => import('../components/novel/NovelExportModal'));
+
+function DownloadIcon({ size = 15, className = '' }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
 
 export default function NovelDetailPage() {
   const { id, novelId } = useParams();
@@ -29,6 +52,7 @@ export default function NovelDetailPage() {
 
   // Global find & replace modal state
   const [globalReplaceOpen, setGlobalReplaceOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [progressVer, setProgressVer] = useState(0);
 
   useEffect(() => {
@@ -142,6 +166,9 @@ export default function NovelDetailPage() {
   const progress = getReadingProgress(activeNovelId);
   const mainChapters = chapters.filter(c => !c.isExtra);
   const extraChapters = chapters.filter(c => c.isExtra);
+
+  const isVaultNovel = Boolean(novel?.isHidden || getLibrary({ includeHidden: true }).find((n) => n.id === activeNovelId)?.isHidden);
+  const canShowExport = !isVaultNovel || isVaultSessionUnlocked();
 
   // Find resume chapter
   const resumeChapter = progress.chapterId
@@ -267,6 +294,19 @@ export default function NovelDetailPage() {
                     >
                       ✏️ Sửa truyện
                     </button>
+                    {canShowExport && (
+                      <button
+                        className="btn-ghost"
+                        onClick={() => setExportModalOpen(true)}
+                        disabled={chapters.length === 0}
+                        title={chapters.length === 0 ? 'Truyện chưa có chương nào để tải về' : 'Tải về máy (EPUB hoặc TXT)'}
+                        id="btn-export-novel"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      >
+                        <DownloadIcon size={15} />
+                        Tải Về
+                      </button>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -292,6 +332,19 @@ export default function NovelDetailPage() {
                   >
                     ✏️ Sửa truyện
                   </button>
+                  {canShowExport && (
+                    <button
+                      className="btn-ghost"
+                      onClick={() => setExportModalOpen(true)}
+                      disabled={chapters.length === 0}
+                      title={chapters.length === 0 ? 'Truyện chưa có chương nào để tải về' : 'Tải về máy (EPUB hoặc TXT)'}
+                      id="btn-export-novel"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <DownloadIcon size={15} />
+                      Tải Về
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -549,6 +602,18 @@ export default function NovelDetailPage() {
       )}
 
       {/* Global Replace Modal */}
+
+      {/* Novel Export Modal */}
+      {exportModalOpen && canShowExport && (
+        <Suspense fallback={null}>
+          <NovelExportModal
+            novel={novel}
+            chapters={chapters}
+            onClose={() => setExportModalOpen(false)}
+          />
+        </Suspense>
+      )}
+
       <GlobalReplaceModal
         isOpen={globalReplaceOpen}
         onClose={() => setGlobalReplaceOpen(false)}
