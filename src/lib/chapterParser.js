@@ -6,7 +6,7 @@
  * - Tách bạch chuẩn xác từng đoạn văn (<p>), giữ layout thoáng đãng như ứng dụng đọc cao cấp
  */
 
-import { normalizeVietnamese, formatChapterContent, capFirstLetters } from './textFixer';
+import { normalizeVietnamese, formatChapterContent, capFirstLetters } from './textFixer.js';
 
 /**
  * Trích xuất số chương từ tiêu đề (dùng chung cho cả existing và parsed chapters)

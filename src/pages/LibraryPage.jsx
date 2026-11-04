@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import NovelCard from '../components/ui/NovelCard';
 import Footer from '../components/layout/Footer';
@@ -19,6 +19,7 @@ import { saveNovel, saveChaptersBulk } from '../lib/db';
 import { addToLibrary } from '../lib/storage';
 import { useCultivation } from '../hooks/useCultivation';
 import { runMigrationV2 } from '../lib/migration';
+const NovelExportModal = lazy(() => import('../components/novel/NovelExportModal'));
 import styles from './LibraryPage.module.css';
 
 export default function LibraryPage() {
@@ -31,6 +32,7 @@ export default function LibraryPage() {
   const [search, setSearch] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null); // novel to confirm delete
   const [seeded, setSeeded] = useState(false);
+  const [novelToExport, setNovelToExport] = useState(null);
 
   // Hidden Vault States (persisted across session so going back doesn't lock)
   const [isVaultUnlocked, setIsVaultUnlocked] = useState(() => isVaultSessionUnlocked());
@@ -399,6 +401,10 @@ export default function LibraryPage() {
                 onDelete={handleDeleteRequest}
                 onHide={handleHideNovel}
                 onUnhide={handleUnhideNovel}
+                onExport={(n) => {
+                  if (n.isHidden && !isVaultUnlocked) return;
+                  setNovelToExport(n);
+                }}
               />
             ))}
           </div>
@@ -406,6 +412,18 @@ export default function LibraryPage() {
       </main>
 
       <Footer />
+
+      
+      {/* Novel Export Modal */}
+      {novelToExport && (
+        <Suspense fallback={null}>
+          <NovelExportModal
+            novel={novelToExport}
+            novelId={novelToExport.id}
+            onClose={() => setNovelToExport(null)}
+          />
+        </Suspense>
+      )}
 
       {/* Vault Password Modal */}
       <VaultLockModal
