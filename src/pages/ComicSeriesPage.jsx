@@ -11,7 +11,6 @@ import {
 } from '../lib/comics/comicDb.js';
 import {
   listRemote,
-  uploadVolume,
   downloadVolume,
   evictLocalVolume,
   deleteVolumeFromCloud,
@@ -23,6 +22,9 @@ import {
   priorityDownloadVolume,
   enqueueDownload,
   enqueueUpload,
+  cancelTask,
+  retryFailedVolume,
+  getVolumeFailure,
 } from '../lib/comics/comicSyncQueue.js';
 import { supabase } from '../lib/supabaseClient.js';
 import ComicImportModal from '../components/comics/ComicImportModal.jsx';
@@ -560,6 +562,7 @@ export default function ComicSeriesPage() {
                 const isTaskQueued = syncSnapshot.pendingTasks.some(
                   (t) => t.volumeId === vol.id
                 );
+                const volFailure = getVolumeFailure(vol.id);
 
                 const cloudStatus = cloudStatusMap[vol.id] || {
                   status: vol.isCloudOnly ? 'cloud_only' : 'local_only',
@@ -598,6 +601,14 @@ export default function ComicSeriesPage() {
                             <IconClock size={12} />
                             <span>Đang chờ</span>
                           </span>
+                        ) : volFailure ? (
+                          <span
+                            className={`${styles.statusBadge} ${styles.statusError}`}
+                            title={volFailure.lastError}
+                          >
+                            <IconAlertTriangle size={12} />
+                            <span>Lỗi đồng bộ</span>
+                          </span>
                         ) : isSynced ? (
                           <span className={`${styles.statusBadge} ${styles.statusSynced}`}>
                             <IconCloudCheck size={12} />
@@ -626,15 +637,30 @@ export default function ComicSeriesPage() {
                       </div>
                     </div>
 
-                    {/* B1: Cột bên phải (Nút Đọc + Nút ⋯) */}
+                    {/* B1: Cột bên phải (Nút Đọc / Hủy + Nút ⋯) */}
                     <div className={styles.volumeActionCol}>
-                      <button
-                        type="button"
-                        className={styles.mainReadBtn}
-                        onClick={() => handleReadVolume(vol)}
-                      >
-                        {hasProgress ? 'Đọc Tiếp' : 'Đọc'}
-                      </button>
+                      {isTaskActive || isTaskQueued ? (
+                        <button
+                          type="button"
+                          className={styles.cancelBtn}
+                          onClick={() => {
+                            cancelTask(vol.id);
+                            showToast(`Đã hủy tác vụ cho "${vol.title}"`);
+                          }}
+                          title="Hủy tác vụ đồng bộ"
+                        >
+                          <IconX size={13} />
+                          <span>Hủy</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.mainReadBtn}
+                          onClick={() => handleReadVolume(vol)}
+                        >
+                          {hasProgress ? 'Đọc Tiếp' : 'Đọc'}
+                        </button>
+                      )}
 
                       <button
                         type="button"
@@ -674,6 +700,36 @@ export default function ComicSeriesPage() {
             </div>
 
             <div className={styles.menuList}>
+              {/* Thông tin lỗi đồng bộ & Nút thử lại nếu có */}
+              {(() => {
+                const fail = menuVolume ? getVolumeFailure(menuVolume.id) : null;
+                if (!fail) return null;
+                return (
+                  <div className={styles.menuFailureCard}>
+                    <div className={styles.menuFailureHeader}>
+                      <IconAlertTriangle size={15} />
+                      <span>Lỗi Đồng Bộ ({fail.type === 'upload' ? 'Tải lên' : 'Tải về'})</span>
+                    </div>
+                    <p className={styles.menuFailureReason}>{fail.lastError}</p>
+                    <button
+                      type="button"
+                      className={styles.menuRetryBtn}
+                      onClick={() => {
+                        retryFailedVolume(menuVolume.id, seriesId, {
+                          type: fail.type || (menuVolume.isCloudOnly ? 'download' : 'upload'),
+                          volumeTitle: menuVolume.title,
+                        });
+                        showToast(`Đang thử lại đồng bộ cho "${menuVolume.title}"...`);
+                        setMenuVolume(null);
+                      }}
+                    >
+                      <IconRefresh size={14} />
+                      <span>Thử Lại Ngay</span>
+                    </button>
+                  </div>
+                );
+              })()}
+
               {/* 1. Sửa Số Tập / Tên Tập */}
               <button
                 type="button"
@@ -705,7 +761,7 @@ export default function ComicSeriesPage() {
                   type="button"
                   className={styles.menuItem}
                   onClick={() => {
-                    enqueueDownload(menuVolume.id, seriesId, { volumeTitle: menuVolume.title });
+                    enqueueDownload(menuVolume.id, seriesId, { volumeTitle: menuVolume.title, isManual: true });
                     showToast('Đã xếp hàng tải về máy.');
                     setMenuVolume(null);
                   }}
@@ -724,7 +780,7 @@ export default function ComicSeriesPage() {
                     type="button"
                     className={styles.menuItem}
                     onClick={() => {
-                      enqueueUpload(menuVolume.id, seriesId, { volumeTitle: menuVolume.title });
+                      enqueueUpload(menuVolume.id, seriesId, { volumeTitle: menuVolume.title, isManual: true });
                       showToast('Đã xếp hàng tải lên Cloud.');
                       setMenuVolume(null);
                     }}
@@ -850,6 +906,19 @@ export default function ComicSeriesPage() {
             <p className={styles.priorityHint}>
               Trình đọc sẽ tự động mở ngay sau khi tải xong. Vui lòng giữ tab này mở.
             </p>
+
+            <button
+              type="button"
+              className={styles.priorityCancelBtn}
+              onClick={() => {
+                cancelTask(priorityDownloadingVol.id);
+                setPriorityDownloadingVol(null);
+                showToast(`Đã hủy tải tập "${priorityDownloadingVol.title}"`);
+              }}
+            >
+              <IconX size={14} />
+              <span>Hủy Tải Về</span>
+            </button>
           </div>
         </div>
       )}

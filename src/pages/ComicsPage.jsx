@@ -19,6 +19,8 @@ import {
   setAutoUploadEnabled,
   pauseSync,
   resumeSync,
+  cancelTask,
+  clearUploadQuotaExceeded,
 } from '../lib/comics/comicSyncQueue.js';
 import { supabase } from '../lib/supabaseClient.js';
 import ComicImportModal from '../components/comics/ComicImportModal.jsx';
@@ -107,6 +109,9 @@ export default function ComicsPage() {
       setSeriesList(mergedSeries);
       setStorageStats(stats);
       setCloudInfo(cloudRes);
+      if (cloudRes.cloudUsageBytes < 8 * 1024 * 1024 * 1024) {
+        clearUploadQuotaExceeded();
+      }
     } catch (err) {
       console.error('Error loading comics series:', err);
     } finally {
@@ -273,6 +278,20 @@ export default function ComicsPage() {
                   Giải Phóng
                 </button>
               </div>
+            ) : syncSnapshot.uploadQuotaExceeded ? (
+              <div className={styles.syncAlertWarning}>
+                <div className={styles.syncAlertLeft}>
+                  <IconAlertTriangle size={15} />
+                  <span>Dung lượng Cloud đã đầy (vượt 8GB), đã dừng tự tải lên.</span>
+                </div>
+              </div>
+            ) : syncSnapshot.rateLimitInfo ? (
+              <div className={styles.syncAlertWarning}>
+                <div className={styles.syncAlertLeft}>
+                  <IconAlertTriangle size={15} />
+                  <span>Đã chạm giới hạn, tự tiếp tục sau {syncSnapshot.rateLimitInfo.waitMinutes} phút.</span>
+                </div>
+              </div>
             ) : syncSnapshot.isProcessing && syncSnapshot.activeTask ? (
               <div className={styles.syncAlertActive}>
                 <div className={styles.syncAlertLeft}>
@@ -284,15 +303,29 @@ export default function ComicsPage() {
                     {syncSnapshot.pendingTasks.length > 0 && ` · Còn ${syncSnapshot.pendingTasks.length} tập chờ`}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className={styles.syncPauseBtn}
-                  onClick={pauseSync}
-                  title="Tạm dừng tự động"
-                >
-                  <IconPause size={13} />
-                  <span>Tạm dừng</span>
-                </button>
+                <div className={styles.syncActionsRight}>
+                  <button
+                    type="button"
+                    className={styles.syncCancelTaskBtn}
+                    onClick={() => {
+                      cancelTask(syncSnapshot.activeTask.volumeId);
+                      showToast(`Đã hủy tác vụ cho "${syncSnapshot.activeTask.volumeTitle}"`);
+                    }}
+                    title="Hủy tác vụ đang chạy"
+                  >
+                    <IconX size={12} />
+                    <span>Hủy</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.syncPauseBtn}
+                    onClick={pauseSync}
+                    title="Tạm dừng tự động"
+                  >
+                    <IconPause size={13} />
+                    <span>Tạm dừng</span>
+                  </button>
+                </div>
               </div>
             ) : syncSnapshot.isPaused ? (
               <div className={styles.syncAlertPaused}>
