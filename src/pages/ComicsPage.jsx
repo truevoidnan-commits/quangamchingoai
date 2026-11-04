@@ -84,7 +84,14 @@ export default function ComicsPage() {
         listRemote(),
       ]);
 
-      // Hợp nhất danh sách bộ truyện local với danh sách trên Cloud (P4: loại bỏ bộ rỗng)
+      // Hợp nhất danh sách bộ truyện local với danh sách trên Cloud (P4 & Sửa 1, 4: tính cả 'uploading' và 10 phút bảo vệ, không delete thụ động)
+      const TEN_MINUTES_MS = 10 * 60 * 1000;
+      const isRecentTime = (t) => {
+        if (!t) return false;
+        const time = typeof t === 'number' ? t : new Date(t).getTime();
+        return !isNaN(time) && (Date.now() - time) < TEN_MINUTES_MS;
+      };
+
       const mergedSeries = [];
       const localIds = new Set();
 
@@ -92,8 +99,6 @@ export default function ComicsPage() {
         if ((s.volumeCount || 0) > 0) {
           mergedSeries.push(s);
           localIds.add(s.id);
-        } else {
-          deleteSeries(s.id).catch(() => {});
         }
       }
 
@@ -101,8 +106,14 @@ export default function ComicsPage() {
         for (const rs of cloudRes.remoteSeries) {
           if (!localIds.has(rs.id)) {
             const volCount =
-              cloudRes.remoteVolumes?.filter((v) => v.series_id === rs.id && v.status === 'ready').length || 0;
-            if (volCount > 0) {
+              cloudRes.remoteVolumes?.filter(
+                (v) =>
+                  v.series_id === rs.id &&
+                  (v.status === 'ready' || v.status === 'uploading' || isRecentTime(v.updated_at) || isRecentTime(v.created_at))
+              ).length || 0;
+            const isRecentSeries = isRecentTime(rs.updated_at) || isRecentTime(rs.created_at);
+
+            if (volCount > 0 || isRecentSeries) {
               mergedSeries.push({
                 id: rs.id,
                 title: rs.title,

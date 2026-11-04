@@ -98,6 +98,8 @@ import {
   isVolumeTombstoned,
   isSeriesTombstoned,
   setTombstonesForTesting,
+  uploadVolume,
+  isKnownCloudVolume,
 } from '../src/lib/comics/comicCloud.js';
 
 import {
@@ -127,8 +129,9 @@ function createMockDB() {
       return val ? JSON.parse(JSON.stringify(val)) : undefined;
     },
     put: async (table, val) => {
-      tables[table].set(val.id, JSON.parse(JSON.stringify(val)));
-      return val.id;
+      const k = val.key || val.id;
+      tables[table].set(k, JSON.parse(JSON.stringify(val)));
+      return k;
     },
     delete: async (table, key) => {
       tables[table].delete(key);
@@ -141,7 +144,11 @@ function createMockDB() {
       return {
         objectStore: (name) => ({
           get: async (k) => tables[name]?.get(k),
-          put: async (v) => tables[name]?.set(v.id || `${v.volumeId}_${v.index}`, v),
+          put: async (v) => {
+            const k = v.key || v.id || `${v.volumeId}_${v.index}`;
+            tables[name]?.set(k, v);
+            return k;
+          },
           delete: async (k) => tables[name]?.delete(k),
           index: (idxName) => ({
             openCursor: async (range) => {
@@ -578,11 +585,13 @@ async function runAllTests() {
     mockSupabase._db.comic_series = [];
     mockSupabase._db.comic_volumes = [];
 
-    // Tạo một bộ truyện rỗng (0 tập) trên Supabase
+    // Tạo một bộ truyện rỗng (0 tập) trên Supabase (cũ hơn 10 phút để không kích hoạt bảo vệ 10 phút)
     mockSupabase._db.comic_series.push({
       id: 'series_empty_cloud',
       user_id: mockSupabase._user.id,
       title: 'Bộ Rỗng Cloud',
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+      updated_at: new Date(Date.now() - 3600000).toISOString(),
       deleted_at: null,
     });
 
@@ -671,8 +680,277 @@ async function runAllTests() {
     console.log('  -> PASS: S1-S3 logic hiển thị trạng thái tinh gọn đạt 100% yêu cầu.\n');
   }
 
+
+  // =========================================================================
+  // FIX PHASE 4: TEST MULTI-DEVICE THEO 4 KỊCH BẢN BẮT BUỘC
+  // =========================================================================
+
+  // --- Kịch bản A ---
+  console.log('[Test 10] Kịch bản A: Thiết bị A đang tải lên tập đầu (uploading, 0 ready). Thiết bị B gọi listRemote nhiều lần: không soft-delete, B thấy bộ đang tải, dữ liệu A toàn vẹn.');
+  {
+    mockDB._tables.series.clear();
+    mockDB._tables.volumes.clear();
+    mockDB._tables.pages.clear();
+    mockSupabase._db.comic_series = [];
+    mockSupabase._db.comic_volumes = [];
+    localStorage.clear();
+    setTombstonesForTesting();
+
+    // Thiết bị A: lưu bộ và tập local
+    await saveSeries({ id: 'series_sc_a', title: 'Truyện Mới Của A' });
+    await saveVolume({ id: 'vol_sc_a1', seriesId: 'series_sc_a', title: 'Tập 1', pageCount: 20 });
+
+    // A đã bắt đầu upload: Supabase có series và volume với status 'uploading'
+    mockSupabase._db.comic_series.push({
+      id: 'series_sc_a',
+      user_id: mockSupabase._user.id,
+      title: 'Truyện Mới Của A',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      deleted_at: null,
+    });
+    mockSupabase._db.comic_volumes.push({
+      id: 'vol_sc_a1',
+      series_id: 'series_sc_a',
+      user_id: mockSupabase._user.id,
+      title: 'Tập 1',
+      status: 'uploading',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      deleted_at: null,
+    });
+
+    // Thiết bị B: tạo một mockDB riêng (B chưa có dữ liệu local của series_sc_a)
+    const mockDB_B = createMockDB();
+    setComicDBForTesting(mockDB_B);
+
+    // B poll listRemote 3 lần
+    for (let i = 0; i < 3; i++) {
+      const resB = await listRemote({ customSupabase: mockSupabase });
+      const seriesRow = mockSupabase._db.comic_series.find((s) => s.id === 'series_sc_a');
+      assert.strictEqual(seriesRow.deleted_at, null, `Lần poll ${i + 1}: comic_series tuyệt đối không bị ghi deleted_at!`);
+      const foundInB = resB.remoteSeries.some((s) => s.id === 'series_sc_a');
+      assert.strictEqual(foundInB, true, `Lần poll ${i + 1}: Thiết bị B phải thấy bộ đang tải lên (status=uploading / 10 phút bảo vệ)`);
+    }
+
+    // Trả lại mockDB về Thiết bị A: dữ liệu của A hoàn toàn nguyên vẹn
+    setComicDBForTesting(mockDB);
+    const seriesA = await getSeries('series_sc_a');
+    const volA1 = await getVolume('vol_sc_a1');
+    assert.ok(seriesA, 'Thiết bị A vẫn giữ nguyên bộ truyện');
+    assert.ok(volA1, 'Thiết bị A vẫn giữ nguyên tập truyện');
+
+    console.log('  -> PASS: Kịch bản A thành công: B poll không làm mất dữ liệu của A.\n');
+  }
+
+  // --- Kịch bản B ---
+  console.log('[Test 11] Kịch bản B: Nhận tombstone bộ truyện từ Cloud nhưng trên máy có tập local-only chưa từng lên Cloud: bảo toàn tập và bộ, hồi sinh khi upload.');
+  {
+    mockDB._tables.series.clear();
+    mockDB._tables.volumes.clear();
+    mockDB._tables.pages.clear();
+    mockSupabase._db.comic_series = [];
+    mockSupabase._db.comic_volumes = [];
+    localStorage.clear();
+    setTombstonesForTesting();
+
+    // Trên Supabase, series_sc_b bị tombstone từ trước (bị xóa bởi thiết bị khác)
+    mockSupabase._db.comic_series.push({
+      id: 'series_sc_b',
+      user_id: mockSupabase._user.id,
+      title: 'Bộ Bị Tombstone',
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+      updated_at: new Date(Date.now() - 3600000).toISOString(),
+      deleted_at: new Date(Date.now() - 1800000).toISOString(),
+    });
+
+    // Trên Thiết bị B: có series_sc_b và 1 tập local-only 'vol_b_local' (chưa từng lên Cloud)
+    await saveSeries({ id: 'series_sc_b', title: 'Bộ Bị Tombstone' });
+    await saveVolume({ id: 'vol_b_local', seriesId: 'series_sc_b', title: 'Tập Local Của B', pageCount: 1 });
+    await savePagesBulk([
+      { volumeId: 'vol_b_local', index: 0, blob: new Blob(['fake-img']), w: 800, h: 1200 },
+    ]);
+
+    // B gọi listRemote(): nhận tombstone của series_sc_b
+    await listRemote({ customSupabase: mockSupabase });
+
+    // Xác nhận:
+    // 1. vol_b_local KHÔNG bị xóa
+    const volLocal = await getVolume('vol_b_local');
+    assert.ok(volLocal, 'Tập local-only vol_b_local KHÔNG được bị xóa');
+
+    // 2. Hồ sơ bộ truyện series_sc_b KHÔNG bị xóa và được gỡ tombstone
+    const seriesLocal = await getSeries('series_sc_b');
+    assert.ok(seriesLocal, 'Hồ sơ bộ truyện local series_sc_b KHÔNG được bị xóa vì còn tập local');
+    assert.strictEqual(isSeriesTombstoned('series_sc_b'), false, 'series_sc_b phải được gỡ khỏi tombstone set');
+
+    // 3. B thực hiện tải lên tập vol_b_local
+    mockSupabase.setPresignHandler(async (body) => {
+      if (body.action === 'batch-upload') {
+        return {
+          data: {
+            urls: [{ index: 0, url: 'http://mock-upload/0' }],
+            coverUrl: 'http://mock-upload/cover',
+          },
+          error: null,
+        };
+      }
+      if (body.action === 'get') {
+        return {
+          data: {
+            urls: { 0: 'http://mock-get/0' },
+            coverUrl: 'http://mock-get/cover',
+          },
+          error: null,
+        };
+      }
+      return { data: { success: true }, error: null };
+    });
+
+    const mockFetch = async () => ({
+      ok: true,
+      status: 200,
+      blob: async () => ({ size: 500000, type: 'image/webp' }),
+    });
+
+    const uploadRes = await uploadVolume('vol_b_local', {
+      customSupabase: mockSupabase,
+      customFetch: mockFetch,
+    });
+    assert.strictEqual(uploadRes.ok, true, 'Upload tập vol_b_local thành công');
+
+    // Xác nhận series_sc_b và vol_b_local trên Supabase đã được hồi sinh (deleted_at: null)
+    const remoteSeries = mockSupabase._db.comic_series.find((s) => s.id === 'series_sc_b');
+    assert.strictEqual(remoteSeries.deleted_at, null, 'series_sc_b trên Supabase phải được hồi sinh (deleted_at: null)');
+
+    const remoteVol = mockSupabase._db.comic_volumes.find((v) => v.id === 'vol_b_local');
+    assert.strictEqual(remoteVol.deleted_at, null, 'vol_b_local trên Supabase có deleted_at: null');
+    assert.strictEqual(remoteVol.status, 'ready', 'vol_b_local trên Supabase có status: ready');
+
+    console.log('  -> PASS: Kịch bản B thành công: bảo vệ tập local và hồi sinh bộ truyện.\n');
+  }
+
+  // --- Kịch bản C ---
+  console.log('[Test 12] Kịch bản C: Nhận tombstone bộ truyện từ Cloud và trên máy chỉ có tập đã từng đồng bộ: toàn bộ tập và bộ bị xóa sạch.');
+  {
+    mockDB._tables.series.clear();
+    mockDB._tables.volumes.clear();
+    mockDB._tables.pages.clear();
+    mockSupabase._db.comic_series = [];
+    mockSupabase._db.comic_volumes = [];
+    localStorage.clear();
+
+    // vol_sc_c1 là tập đã từng đồng bộ từ Cloud
+    setTombstonesForTesting({ knownCloud: ['vol_sc_c1'] });
+
+    await saveSeries({ id: 'series_sc_c', title: 'Bộ C Cloud' });
+    await saveVolume({ id: 'vol_sc_c1', seriesId: 'series_sc_c', title: 'Tập C1', pageCount: 10 });
+
+    // Trên Supabase: series_sc_c có deleted_at
+    mockSupabase._db.comic_series.push({
+      id: 'series_sc_c',
+      user_id: mockSupabase._user.id,
+      title: 'Bộ C Cloud',
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+      updated_at: new Date(Date.now() - 3600000).toISOString(),
+      deleted_at: new Date(Date.now() - 1000).toISOString(),
+    });
+
+    // B gọi listRemote()
+    await listRemote({ customSupabase: mockSupabase });
+
+    // Xác nhận: vol_sc_c1 và series_sc_c bị xóa sạch khỏi IndexedDB
+    const vol = await getVolume('vol_sc_c1');
+    const series = await getSeries('series_sc_c');
+    assert.strictEqual(vol, undefined, 'vol_sc_c1 phải bị xóa vì đã từng đồng bộ từ Cloud');
+    assert.strictEqual(series, null, 'series_sc_c phải bị xóa vì không còn tập nào');
+    assert.strictEqual(isSeriesTombstoned('series_sc_c'), true, 'series_sc_c vẫn giữ tombstone');
+
+    console.log('  -> PASS: Kịch bản C thành công: đồng bộ tombstone dọn sạch các tập đã sync.\n');
+  }
+
+  // --- Kịch bản D ---
+  console.log('[Test 13] Kịch bản D: Người dùng chủ động xóa tập cuối cùng của bộ: comic_series được đánh dấu deleted_at trên Supabase, thiết bị khác đồng bộ xóa sạch.');
+  {
+    mockDB._tables.series.clear();
+    mockDB._tables.volumes.clear();
+    mockDB._tables.pages.clear();
+    mockSupabase._db.comic_series = [];
+    mockSupabase._db.comic_volumes = [];
+    localStorage.clear();
+    setTombstonesForTesting();
+
+    // Giả lập trạng thái đã đồng bộ trên Supabase: bộ series_sc_d chỉ còn đúng 1 tập vol_sc_d1
+    mockSupabase._db.comic_series.push({
+      id: 'series_sc_d',
+      user_id: mockSupabase._user.id,
+      title: 'Bộ D',
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+      updated_at: new Date(Date.now() - 3600000).toISOString(),
+      deleted_at: null,
+    });
+    mockSupabase._db.comic_volumes.push({
+      id: 'vol_sc_d1',
+      series_id: 'series_sc_d',
+      user_id: mockSupabase._user.id,
+      title: 'Tập Cuối Cùng',
+      status: 'ready',
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+      updated_at: new Date(Date.now() - 3600000).toISOString(),
+      deleted_at: null,
+    });
+
+    // Trên Thiết bị A: có cả series và volume trong local IndexedDB
+    await saveSeries({ id: 'series_sc_d', title: 'Bộ D' });
+    await saveVolume({ id: 'vol_sc_d1', seriesId: 'series_sc_d', title: 'Tập Cuối Cùng', pageCount: 10 });
+
+    mockSupabase.setPresignHandler(async (body) => {
+      if (body.action === 'delete-volume') {
+        return { data: { success: true, deletedCount: 10, volumeId: body.volumeId }, error: null };
+      }
+      return { data: { success: true }, error: null };
+    });
+
+    // Thiết bị A xóa tập cuối cùng
+    const delRes = await deleteVolumeEverywhere('vol_sc_d1', { customSupabase: mockSupabase });
+    assert.strictEqual(delRes.ok, true);
+
+    // Xác nhận trên Supabase:
+    // 1. vol_sc_d1 có deleted_at
+    const remVol = mockSupabase._db.comic_volumes.find((v) => v.id === 'vol_sc_d1');
+    assert.ok(remVol.deleted_at, 'vol_sc_d1 phải có deleted_at trên Supabase');
+
+    // 2. comic_series của series_sc_d ĐƯỢC đánh dấu deleted_at vì không còn tập nào!
+    const remSeries = mockSupabase._db.comic_series.find((s) => s.id === 'series_sc_d');
+    assert.ok(remSeries.deleted_at, 'comic_series phải ĐƯỢC đánh dấu deleted_at vì tập cuối cùng đã bị xóa');
+
+    // 3. Trên Thiết bị A: local IndexedDB đã xóa vol_sc_d1 và series_sc_d
+    assert.strictEqual(await getVolume('vol_sc_d1'), undefined);
+    assert.strictEqual(await getSeries('series_sc_d'), null);
+
+    // Bây giờ giả lập Thiết bị B (đã từng đồng bộ vol_sc_d1 từ trước)
+    const mockDB_B = createMockDB();
+    setComicDBForTesting(mockDB_B);
+    setTombstonesForTesting({ knownCloud: ['vol_sc_d1'] });
+
+    await saveSeries({ id: 'series_sc_d', title: 'Bộ D' });
+    await saveVolume({ id: 'vol_sc_d1', seriesId: 'series_sc_d', title: 'Tập Cuối Cùng', pageCount: 10 });
+
+    // Thiết bị B gọi listRemote() để đồng bộ
+    await listRemote({ customSupabase: mockSupabase });
+
+    // Xác nhận trên Thiết bị B: vol_sc_d1 và series_sc_d đều bị xóa sạch
+    assert.strictEqual(await getVolume('vol_sc_d1'), undefined, 'Thiết bị B phải purge vol_sc_d1');
+    assert.strictEqual(await getSeries('series_sc_d'), null, 'Thiết bị B phải purge series_sc_d');
+
+    // Trả lại mockDB cho các test sau nếu có
+    setComicDBForTesting(mockDB);
+
+    console.log('  -> PASS: Kịch bản D thành công: xóa tập cuối kích hoạt xóa bộ trên Cloud và sync dọn sạch các thiết bị khác.\n');
+  }
+
   console.log('========================================');
-  console.log('TẤT CẢ 9 BÀI TEST PHASE 4 ĐÃ ĐẠT 100%!');
+  console.log('TẤT CẢ 13 BÀI TEST PHASE 4 ĐÃ ĐẠT 100%!');
   console.log('========================================\n');
 
 }

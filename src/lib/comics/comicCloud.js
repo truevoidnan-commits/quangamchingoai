@@ -337,17 +337,25 @@ export async function uploadVolume(volumeId, options = {}) {
   const series = await getSeries(vol.seriesId);
   if (!series) throw new Error(`Không tìm thấy bộ truyện cho tập "${volumeId}".`);
 
-  // 1. Ensure series is upserted to Supabase
+  // 1. Ensure series is upserted to Supabase (deleted_at: null để hồi sinh nếu từng bị tombstone - SỬA 3)
   const { error: seriesErr } = await client.from('comic_series').upsert({
     id: series.id,
     user_id: user.id,
     title: series.title,
     created_at: new Date(series.createdAt || Date.now()).toISOString(),
     updated_at: new Date().toISOString(),
+    deleted_at: null,
   });
   if (seriesErr) throw new Error(`Lỗi cập nhật bộ truyện trên Cloud: ${seriesErr.message}`);
 
-  // 2. Upsert volume in 'uploading' state
+  _tombstoneSeriesIds.delete(series.id);
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(TOMBSTONE_SERIES_KEY, JSON.stringify([..._tombstoneSeriesIds]));
+    }
+  } catch {}
+
+  // 2. Upsert volume in 'uploading' state (deleted_at: null - SỬA 3)
   const { error: volErr } = await client.from('comic_volumes').upsert({
     id: vol.id,
     user_id: user.id,
@@ -360,8 +368,18 @@ export async function uploadVolume(volumeId, options = {}) {
     status: 'uploading',
     created_at: new Date(vol.createdAt || Date.now()).toISOString(),
     updated_at: new Date().toISOString(),
+    deleted_at: null,
   });
   if (volErr) throw new Error(`Lỗi đăng ký tập truyện trên Cloud: ${volErr.message}`);
+
+  _tombstoneVolumeIds.delete(vol.id);
+  _knownCloudVolumeIds.add(vol.id);
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(TOMBSTONE_VOLUMES_KEY, JSON.stringify([..._tombstoneVolumeIds]));
+      localStorage.setItem(KNOWN_CLOUD_VOLS_KEY, JSON.stringify([..._knownCloudVolumeIds]));
+    }
+  } catch {}
 
   // 3. Resume logic: read completed pages from localStorage
   const progressKey = `tcl_comic_upload_${volumeId}`;
@@ -611,6 +629,7 @@ export async function uploadVolume(volumeId, options = {}) {
     .update({
       status: 'ready',
       updated_at: new Date().toISOString(),
+      deleted_at: null,
     })
     .eq('id', volumeId)
     .eq('user_id', user.id);
@@ -620,7 +639,7 @@ export async function uploadVolume(volumeId, options = {}) {
   // Update series cover_key if not set
   await client
     .from('comic_series')
-    .update({ cover_key: coverKey, updated_at: new Date().toISOString() })
+    .update({ cover_key: coverKey, updated_at: new Date().toISOString(), deleted_at: null })
     .eq('id', vol.seriesId)
     .eq('user_id', user.id)
     .is('cover_key', null);
@@ -725,25 +744,73 @@ export async function listRemote(options = {}) {
     }
   } catch {}
 
-  // P3: Tombstone reconciliation on local storage
+  // P3: Tombstone reconciliation on local storage (SỬA 2: bảo vệ tập local-only và tập đang upload)
   const { getAllSeries, getVolumes, deleteSeries } = await import('./comicDb.js');
   let cancelTaskFn = null;
+  let getQueueStateFn = null;
   try {
     const queueMod = await import('./comicSyncQueue.js');
     cancelTaskFn = queueMod.cancelTask;
+    getQueueStateFn = queueMod.getVolumeQueueState;
   } catch {}
+
+  const shouldPurgeVolume = (vId, seriesIsTombstoned) => {
+    // Không bao giờ xóa tập đang chạy hoặc đang chờ trong hàng đợi
+    if (getQueueStateFn) {
+      try {
+        const q = getQueueStateFn(vId);
+        if (q && (q.state === 'active' || q.state === 'queued')) {
+          return false;
+        }
+      } catch {}
+    }
+
+    // Không bao giờ xóa tập đang có tiến trình upload dở dang
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('tcl_comic_upload_' + vId);
+        if (raw) {
+          const arr = JSON.parse(raw);
+          if (Array.isArray(arr) && arr.length > 0) return false;
+        }
+      } catch {}
+    }
+
+    // (a) id nằm trong tombstone volumes
+    if (_tombstoneVolumeIds.has(vId)) return true;
+
+    // (b) series bị tombstone VÀ tập là isKnownCloudVolume(id)
+    if (seriesIsTombstoned && isKnownCloudVolume(vId)) return true;
+
+    // Mọi tập local chưa từng thấy trên Cloud (local-only) PHẢI được giữ nguyên
+    return false;
+  };
 
   const localSeries = await getAllSeries();
 
   for (const ls of localSeries) {
     if (_tombstoneSeriesIds.has(ls.id)) {
-      console.log('[ComicCloud] Tombstone: purging local series ' + ls.id);
       const vols = await getVolumes(ls.id, true);
       for (const v of vols) {
-        if (cancelTaskFn) cancelTaskFn(v.id);
-        await purgeLocalVolumeData(v.id);
+        if (shouldPurgeVolume(v.id, true)) {
+          if (cancelTaskFn) cancelTaskFn(v.id);
+          await purgeLocalVolumeData(v.id);
+        }
       }
-      await deleteSeries(ls.id);
+
+      // Kiểm tra nếu bộ truyện còn tập local được giữ lại -> giữ cả hồ sơ bộ local & un-tombstone để hồi sinh
+      const remainingVols = await getVolumes(ls.id, true);
+      if (remainingVols.length === 0) {
+        await deleteSeries(ls.id);
+      } else {
+        console.log('[ComicCloud] Series ' + ls.id + ' bị tombstone nhưng còn ' + remainingVols.length + ' tập local được giữ. Giữ hồ sơ bộ và hồi sinh.');
+        _tombstoneSeriesIds.delete(ls.id);
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(TOMBSTONE_SERIES_KEY, JSON.stringify([..._tombstoneSeriesIds]));
+          }
+        } catch {}
+      }
     }
   }
 
@@ -753,7 +820,7 @@ export async function listRemote(options = {}) {
   for (const ls of refreshedLocalSeries) {
     const vols = await getVolumes(ls.id, true);
     for (const lv of vols) {
-      if (_tombstoneVolumeIds.has(lv.id)) {
+      if (shouldPurgeVolume(lv.id, false)) {
         console.log('[ComicCloud] Tombstone: purging local volume ' + lv.id);
         if (cancelTaskFn) cancelTaskFn(lv.id);
         await purgeLocalVolumeData(lv.id);
@@ -849,29 +916,34 @@ export async function listRemote(options = {}) {
     }
   }
 
-  // P4: Filter out empty series (0 non-deleted volumes) and mark deleted_at on Supabase
+  // P4: Lọc ở client (SỬA 1: BỎ hẳn việc soft-delete series thụ động trong listRemote, tính cả 'uploading' và 10 phút bảo vệ - SỬA 4)
+  const TEN_MINUTES_MS = 10 * 60 * 1000;
+  const isRecentDate = (d) => {
+    if (!d) return false;
+    const t = new Date(d).getTime();
+    return !isNaN(t) && (Date.now() - t) < TEN_MINUTES_MS;
+  };
+
   const activeRemoteSeries = [];
   for (const rs of rawRemoteSeries) {
     if (_tombstoneSeriesIds.has(rs.id)) continue;
+
+    // Đếm các tập remote đang hoạt động: status === 'ready' HOẶC 'uploading', hoặc vừa cập nhật trong 10 phút
     const volCount = rawRemoteVolumes.filter(
-      (v) => v.series_id === rs.id && v.status === 'ready' && !_tombstoneVolumeIds.has(v.id)
+      (v) =>
+        v.series_id === rs.id &&
+        !_tombstoneVolumeIds.has(v.id) &&
+        (v.status === 'ready' || v.status === 'uploading' || isRecentDate(v.updated_at) || isRecentDate(v.created_at))
     ).length;
+
     const localCount = Object.values(localVolMap).filter(
       (v) => v.seriesId === rs.id
     ).length;
 
-    if (volCount === 0 && localCount === 0) {
-      // Empty series! Best effort mark deleted_at on Supabase and delete locally
-      console.log('[ComicCloud] P4: Cleaning up empty series ' + rs.id);
-      client
-        .from('comic_series')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', rs.id)
-        .eq('user_id', user.id)
-        .then(() => {})
-        .catch(() => {});
-      deleteSeries(rs.id).catch(() => {});
-    } else {
+    const isRecentSeries = isRecentDate(rs.updated_at) || isRecentDate(rs.created_at);
+
+    // Chỉ đưa vào danh sách nếu có tập hoặc vừa tạo/cập nhật trong 10 phút
+    if (volCount > 0 || localCount > 0 || isRecentSeries) {
       activeRemoteSeries.push(rs);
     }
   }
@@ -1230,7 +1302,16 @@ export async function deleteVolumeEverywhere(volumeId, options = {}) {
   // If not logged in, or volume has never been on Cloud (no remote row and not known cloud):
   // Just delete local copy!
   if (!user || (!remoteVol && !isKnownCloud)) {
+    const { getVolume, getVolumes, deleteSeries } = await import('./comicDb.js');
+    const localVol = await getVolume(volumeId);
+    const seriesId = localVol?.seriesId;
     await purgeLocalVolumeData(volumeId);
+    if (seriesId) {
+      const remaining = await getVolumes(seriesId, true);
+      if (!remaining || remaining.length === 0) {
+        await deleteSeries(seriesId);
+      }
+    }
     return { ok: true, volumeId, localOnly: true };
   }
 
