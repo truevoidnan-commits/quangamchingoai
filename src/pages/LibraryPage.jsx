@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import NovelCard from '../components/ui/NovelCard';
 import Footer from '../components/layout/Footer';
+import TextBackdrop from '../components/layout/TextBackdrop';
 import VaultLockModal from '../components/vault/VaultLockModal';
 import {
   getLibrary,
@@ -19,9 +20,19 @@ import { saveNovel, saveChaptersBulk } from '../lib/db';
 import { addToLibrary } from '../lib/storage';
 import { useCultivation } from '../hooks/useCultivation';
 import { runMigrationV2 } from '../lib/migration';
-const NovelExportModal = lazy(() => import('../components/novel/NovelExportModal'));
 import LobbyTabs from '../components/ui/LobbyTabs';
+import {
+  IconSearch,
+  IconLock,
+  IconGrid,
+  IconList,
+  IconPlus,
+  IconBook,
+  IconClose,
+} from '../components/novel/NovelIcons';
 import styles from './LibraryPage.module.css';
+
+const NovelExportModal = lazy(() => import('../components/novel/NovelExportModal'));
 
 export default function LibraryPage() {
   const navigate = useNavigate();
@@ -35,7 +46,7 @@ export default function LibraryPage() {
   const [seeded, setSeeded] = useState(false);
   const [novelToExport, setNovelToExport] = useState(null);
 
-  // Hidden Vault States (persisted across session so going back doesn't lock)
+  // Hidden Vault States
   const [isVaultUnlocked, setIsVaultUnlocked] = useState(() => isVaultSessionUnlocked());
   const [isVaultMode, setIsVaultMode] = useState(() => {
     return requestedVault && isVaultSessionUnlocked();
@@ -74,7 +85,7 @@ export default function LibraryPage() {
     }
   }, [requestedVault, isVaultUnlocked]);
 
-  // Listen to background library updates (e.g., from cloud sync)
+  // Listen to background library updates
   useEffect(() => {
     const handleLibraryUpdated = () => {
       refreshLibrary();
@@ -194,14 +205,14 @@ export default function LibraryPage() {
     if (vaultModalMode === 'first_hide' && novelToHidePending) {
       hideNovel(novelToHidePending.id);
       refreshLibrary();
-      showToast(`Đã thiết lập mật khẩu & chuyển "${novelToHidePending.title}" vào Mật Thất 🔒`);
+      showToast(`Đã thiết lập mật khẩu & chuyển "${novelToHidePending.title}" vào Mật Thất`);
       setNovelToHidePending(null);
     } else if (vaultModalMode === 'change') {
-      showToast('Đã đổi mật khẩu Mật Thất thành công ✨');
+      showToast('Đã đổi mật khẩu Mật Thất thành công');
     } else {
       setIsVaultMode(true);
       navigate('/?vault=1');
-      showToast('Đã mở khóa Tàng Kinh Mật Thất 🔓');
+      showToast('Đã mở khóa Tàng Kinh Mật Thất');
     }
   };
 
@@ -210,7 +221,7 @@ export default function LibraryPage() {
     setIsVaultUnlocked(false);
     setIsVaultMode(false);
     navigate('/');
-    showToast('Đã đóng & khóa Mật Thất 🔒');
+    showToast('Đã đóng & khóa Mật Thất');
   };
 
   const handleChangePassword = () => {
@@ -230,40 +241,37 @@ export default function LibraryPage() {
 
     hideNovel(novel.id);
     refreshLibrary();
-    showToast(`Đã ẩn "${novel.title}" vào Mật Thất 🔒`);
+    showToast(`Đã ẩn "${novel.title}" vào Mật Thất`);
   };
 
   const handleUnhideNovel = (novel) => {
     unhideNovel(novel.id);
     refreshLibrary();
-    showToast(`Đã khôi phục "${novel.title}" về Thư Viện Chính 📖`);
+    showToast(`Đã khôi phục "${novel.title}" về Thư Viện Chính`);
   };
 
   return (
     <div className={styles.page}>
-      {/* ===== BANNER ===== */}
-      <section className={`${styles.banner} ${isVaultMode ? styles.vaultBanner : ''}`}>
-        {/* Decorative background */}
-        <div className={styles.bannerBg} aria-hidden="true">
-          {isVaultMode ? (
-            <div className={styles.vaultBannerGlow} />
-          ) : (
-            <>
-              <div className={styles.bannerGlow1} />
-              <div className={styles.bannerGlow2} />
-            </>
-          )}
-        </div>
+      {/* Background Ink-Wash */}
+      <TextBackdrop />
 
+      {/* ===== HERO BANNER ===== */}
+      <section className={`${styles.banner} ${isVaultMode ? styles.vaultBanner : ''}`}>
         <div className={styles.bannerContent}>
+          <div className={styles.bannerBadge}>
+            {isVaultMode ? 'MẬT THẤT' : 'TRUYỆN CHỮ'}
+          </div>
+
           <h1 className={styles.appTitle}>
             {isVaultMode ? 'TÀNG KINH MẬT THẤT' : 'THIÊN CƠ LÂU'}
           </h1>
+
           <p className={styles.appSubtitle}>
             {isVaultMode
               ? 'Không Gian Truyện Ẩn · Cấm Chế Bảo Hộ'
-              : 'Trình đọc truyện chữ'}
+              : 'Trình Đọc Truyện Chữ · Đồng Bộ Mọi Thiết Bị'}
           </p>
+
           <div className={styles.neonBar} aria-hidden="true" />
         </div>
       </section>
@@ -279,131 +287,154 @@ export default function LibraryPage() {
           </button>
           <div className={styles.vaultRightActions}>
             <button className={styles.vaultActionBtn} onClick={handleChangePassword} title="Đổi mật khẩu Mật Thất">
-              ⚙️ Đổi mật khẩu
+              Đổi mật khẩu
             </button>
             <button className={styles.vaultActionBtn} onClick={handleLockVault} title="Khóa Mật Thất ngay">
-              🔒 Khóa lại
+              Khóa lại
             </button>
           </div>
         </div>
       )}
 
-      {/* ===== TOOLBAR ===== */}
-      <div className={styles.toolbar}>
-        <div className={styles.searchWrap}>
-          <span className={styles.searchIcon}>🔍</span>
-          <input
-            type="search"
-            placeholder={isVaultMode ? 'Tìm truyện trong Mật Thất...' : 'Tìm kiếm truyện...'}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className={styles.searchInput}
-            id="search-input"
-            aria-label="Tìm kiếm truyện"
-          />
-        </div>
-
-        <div className={styles.toolbarRight}>
-          {/* Secret Vault Toggle Button */}
-          <button
-            className={`${styles.vaultToggleBtn} ${isVaultMode ? styles.vaultActiveBtn : ''}`}
-            onClick={handleToggleVaultAccess}
-            title={isVaultMode ? 'Quay về Thư Viện Chính' : 'Mở Tàng Kinh Mật Thất (Truyện Ẩn)'}
-          >
-            <span>{isVaultMode ? '📖 Thư Viện' : '🔒 Mật Thất'}</span>
-            {!isVaultMode && hiddenNovels.length > 0 && (
-              <span className={styles.vaultBadgeCount}>{hiddenNovels.length}</span>
+      {/* ===== CONTAINER ===== */}
+      <div className={styles.container}>
+        {/* ===== TOOLBAR ===== */}
+        <div className={styles.toolbar}>
+          {/* Row 1 / Search */}
+          <div className={styles.searchWrap}>
+            <span className={styles.searchIcon} aria-hidden="true">
+              <IconSearch size={16} />
+            </span>
+            <input
+              type="search"
+              placeholder={isVaultMode ? 'Tìm truyện trong Mật Thất...' : 'Tìm kiếm truyện...'}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={styles.searchInput}
+              id="search-input"
+              aria-label="Tìm kiếm truyện"
+            />
+            {search && (
+              <button
+                type="button"
+                className={styles.searchClearBtn}
+                onClick={() => setSearch('')}
+                title="Xóa tìm kiếm"
+              >
+                <IconClose size={14} />
+              </button>
             )}
-          </button>
+          </div>
 
-          {/* View mode toggle */}
-          <button
-            className={`btn-icon ${styles.viewToggle} ${viewMode === 'grid' ? styles.viewActive : ''}`}
-            onClick={() => setViewMode('grid')}
-            aria-label="Xem dạng lưới"
-            title="Lưới"
-          >
-            ▦
-          </button>
-          <button
-            className={`btn-icon ${styles.viewToggle} ${viewMode === 'list' ? styles.viewActive : ''}`}
-            onClick={() => setViewMode('list')}
-            aria-label="Xem dạng danh sách"
-            title="Danh sách"
-          >
-            ☰
-          </button>
+          {/* Toolbar Actions */}
+          <div className={styles.toolbarActions}>
+            {/* Secret Vault Toggle Button */}
+            <button
+              className={`${styles.vaultToggleBtn} ${isVaultMode ? styles.vaultActiveBtn : ''}`}
+              onClick={handleToggleVaultAccess}
+              title={isVaultMode ? 'Quay về Thư Viện Chính' : 'Mở Tàng Kinh Mật Thất (Truyện Ẩn)'}
+            >
+              <IconLock size={15} />
+              <span className={styles.vaultBtnLabel}>{isVaultMode ? 'Thư Viện' : 'Mật Thất'}</span>
+              {!isVaultMode && hiddenNovels.length > 0 && (
+                <span className={styles.vaultBadgeCount}>{hiddenNovels.length}</span>
+              )}
+            </button>
 
-          {/* Add novel button */}
-          {isVaultMode ? (
-            <button
-              className={`btn-gold ${styles.vaultAddBtn}`}
-              style={{
-                background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
-                color: '#ffffff',
-                border: '1px solid rgba(216, 180, 254, 0.4)',
-                boxShadow: '0 0 12px rgba(168, 85, 247, 0.45)',
-              }}
-              onClick={() => navigate('/add-novel?vault=1')}
-              id="btn-add-novel-vault"
-            >
-              + Thêm vào Mật Thất
-            </button>
-          ) : (
-            <button
-              className={`btn-primary ${styles.addBtn} animate-neon-pulse`}
-              onClick={() => navigate('/add-novel')}
-              id="btn-add-novel"
-            >
-              + Thêm truyện
-            </button>
-          )}
+            {/* Segmented Grid / List Control */}
+            <div className={styles.viewSegmentedControl} role="group" aria-label="Chế độ xem">
+              <button
+                type="button"
+                className={`${styles.viewSegmentBtn} ${viewMode === 'grid' ? styles.viewSegmentActive : ''}`}
+                onClick={() => setViewMode('grid')}
+                aria-label="Xem dạng lưới"
+                title="Xem dạng lưới"
+              >
+                <IconGrid size={15} />
+              </button>
+              <button
+                type="button"
+                className={`${styles.viewSegmentBtn} ${viewMode === 'list' ? styles.viewSegmentActive : ''}`}
+                onClick={() => setViewMode('list')}
+                aria-label="Xem dạng danh sách"
+                title="Xem dạng danh sách"
+              >
+                <IconList size={15} />
+              </button>
+            </div>
+
+            {/* Novel count indicator */}
+            <div className={styles.novelCountBadge}>
+              {currentList.length} truyện
+            </div>
+
+            {/* Add Novel Button */}
+            {isVaultMode ? (
+              <button
+                className={styles.addVaultBtn}
+                onClick={() => navigate('/add-novel?vault=1')}
+                id="btn-add-novel-vault"
+              >
+                <IconPlus size={15} />
+                <span>+ Thêm vào Mật Thất</span>
+              </button>
+            ) : (
+              <button
+                className={styles.addBtn}
+                onClick={() => navigate('/add-novel')}
+                id="btn-add-novel"
+              >
+                <IconPlus size={15} />
+                <span>Thêm truyện</span>
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* ===== NOVEL GRID / LIST ===== */}
+        <main className={styles.main}>
+          {filteredList.length === 0 && !search && (
+            <EmptyState
+              isVault={isVaultMode}
+              onAdd={() => navigate(isVaultMode ? '/add-novel?vault=1' : '/add-novel')}
+            />
+          )}
+
+          {filteredList.length === 0 && search && (
+            <div className={styles.noResults}>
+              <p>
+                Không tìm thấy truyện nào phù hợp với "<strong>{search}</strong>"
+              </p>
+            </div>
+          )}
+
+          {filteredList.length > 0 && (
+            <div className={viewMode === 'grid' ? styles.grid : styles.list}>
+              {filteredList.map((novel, idx) => (
+                <NovelCard
+                  key={novel.id}
+                  novel={novel}
+                  viewMode={viewMode}
+                  isVaultMode={isVaultMode}
+                  index={idx}
+                  onClick={handleNovelClick}
+                  onEdit={handleEdit}
+                  onDelete={handleDeleteRequest}
+                  onHide={handleHideNovel}
+                  onUnhide={handleUnhideNovel}
+                  onExport={(n) => {
+                    if (n.isHidden && !isVaultUnlocked) return;
+                    setNovelToExport(n);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </main>
       </div>
-
-      {/* ===== NOVEL GRID / LIST ===== */}
-      <main className={styles.main}>
-        {filteredList.length === 0 && !search && (
-          <EmptyState
-            isVault={isVaultMode}
-            onAdd={() => navigate(isVaultMode ? '/add-novel?vault=1' : '/add-novel')}
-          />
-        )}
-
-        {filteredList.length === 0 && search && (
-          <div className={styles.noResults}>
-            <p>
-              Không tìm thấy truyện nào phù hợp với "<strong>{search}</strong>"
-            </p>
-          </div>
-        )}
-
-        {filteredList.length > 0 && (
-          <div className={viewMode === 'grid' ? styles.grid : styles.list}>
-            {filteredList.map((novel) => (
-              <NovelCard
-                key={novel.id}
-                novel={novel}
-                viewMode={viewMode}
-                isVaultMode={isVaultMode}
-                onClick={handleNovelClick}
-                onEdit={handleEdit}
-                onDelete={handleDeleteRequest}
-                onHide={handleHideNovel}
-                onUnhide={handleUnhideNovel}
-                onExport={(n) => {
-                  if (n.isHidden && !isVaultUnlocked) return;
-                  setNovelToExport(n);
-                }}
-              />
-            ))}
-          </div>
-        )}
-      </main>
 
       <Footer />
 
-      
       {/* Novel Export Modal */}
       {novelToExport && (
         <Suspense fallback={null}>
@@ -432,8 +463,8 @@ export default function LibraryPage() {
 
       {/* Floating Toast Notification */}
       {toastMsg && (
-        <div className={styles.toast}>
-          <span>✨</span>
+        <div className={styles.toast} role="status">
+          <span className={styles.toastDot}>•</span>
           <span>{toastMsg}</span>
         </div>
       )}
@@ -466,23 +497,20 @@ function EmptyState({ isVault, onAdd }) {
   if (isVault) {
     return (
       <div className={styles.emptyState}>
-        <div className={styles.emptyIcon}>🔒</div>
+        <div className={styles.emptyIconWrap}>
+          <IconLock size={36} color="#c084fc" />
+        </div>
         <h2 className={styles.emptyTitle}>Mật Thất trống</h2>
         <p className={styles.emptyDesc}>
-          Chưa có truyện nào trong Mật Thất. Bạn có thể nhấn giữ (hoặc nhấp chuột phải) bất kỳ truyện nào ở Thư Viện Chính để ẩn vào đây, hoặc thêm truyện mới trực tiếp.
+          Chưa có truyện nào trong Mật Thất. Bạn có thể nhấn giữ (hoặc nhấp chuột phải) bất kỳ truyện nào ở Thư Viện Chính để ẩn vào đây.
         </p>
         <button
-          className="btn-gold"
-          style={{
-            background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
-            color: '#ffffff',
-            marginTop: 12,
-            boxShadow: '0 0 14px rgba(168, 85, 247, 0.45)',
-          }}
+          className={styles.emptyAddBtnVault}
           onClick={onAdd}
           id="empty-add-vault-novel"
         >
-          + Thêm truyện vào Mật Thất
+          <IconPlus size={15} />
+          <span>Thêm truyện vào Mật Thất</span>
         </button>
       </div>
     );
@@ -490,13 +518,15 @@ function EmptyState({ isVault, onAdd }) {
 
   return (
     <div className={styles.emptyState}>
-      <div className={styles.emptyIcon}>📖</div>
-      <h2 className={styles.emptyTitle}>Thư viện trống</h2>
-      <p className={styles.emptyDesc}>Chưa có truyện nào. Hãy thêm truyện đầu tiên của bạn!</p>
-      <button className="btn-primary" onClick={onAdd} id="empty-add-novel">
-        + Thêm truyện mới
+      <div className={styles.emptyIconWrap}>
+        <IconBook size={40} />
+      </div>
+      <h2 className={styles.emptyTitle}>Chưa có truyện nào</h2>
+      <p className={styles.emptyDesc}>Hãy thêm tác phẩm đầu tiên để bắt đầu trải nghiệm đọc.</p>
+      <button className={styles.emptyAddBtn} onClick={onAdd} id="empty-add-novel">
+        <IconPlus size={15} />
+        <span>Thêm truyện mới</span>
       </button>
     </div>
   );
 }
-

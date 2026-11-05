@@ -4,6 +4,7 @@ import { getNovel, saveNovel } from '../lib/db';
 import { updateLibraryItem } from '../lib/storage';
 import { resizeCoverImage, makeCoverThumb } from '../lib/chapterParser';
 import Footer from '../components/layout/Footer';
+import TextBackdrop from '../components/layout/TextBackdrop';
 import ImageCropperModal from '../components/ui/ImageCropperModal';
 import styles from './AddNovelPage.module.css'; // Reuse same styles
 
@@ -100,6 +101,7 @@ export default function EditNovelPage() {
 
   return (
     <div className={styles.page}>
+      <TextBackdrop />
       <div className={styles.header}>
         <button className="btn-ghost" onClick={() => navigate(-1)}>← Quay lại</button>
         <h1 className={styles.pageTitle}>Sửa thông tin truyện</h1>

@@ -1,33 +1,44 @@
-import { useState, useEffect, useTransition, useCallback, lazy, Suspense } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useTransition, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getNovel, getChapters, deleteChapterDB, searchChapters } from '../lib/db';
 import { getReadingProgress, updateLibraryItem, getLibrary, isVaultSessionUnlocked } from '../lib/storage';
 import { pullNovelProgressNow } from '../lib/sync/syncEngine.js';
 import Footer from '../components/layout/Footer';
+import TextBackdrop from '../components/layout/TextBackdrop';
+import BottomSheet from '../components/ui/BottomSheet';
 import GlobalReplaceModal from '../components/reader/GlobalReplaceModal';
+import {
+  IconSearch,
+  IconPlay,
+  IconRewind,
+  IconDownload,
+  IconEdit,
+  IconTrash,
+  IconMoreVertical,
+  IconClose,
+  IconCheck,
+  IconSort,
+  IconReplace,
+  IconZap,
+  IconPlus,
+  IconChevronDown,
+  IconChevronUp,
+} from '../components/novel/NovelIcons';
 import styles from './NovelDetailPage.module.css';
 
 const NovelExportModal = lazy(() => import('../components/novel/NovelExportModal'));
 
-function DownloadIcon({ size = 15, className = '' }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  );
+/**
+ * Format and deduplicate description text
+ */
+function cleanDescriptionText(desc, title) {
+  if (!desc) return '';
+  let text = desc.trim();
+  if (title && text.toLowerCase().startsWith(title.trim().toLowerCase())) {
+    text = text.slice(title.trim().length).trim();
+  }
+  text = text.replace(/^(?:mô tả|giới thiệu|nội dung)\s*[:：\-—]\s*/i, '').trim();
+  return text;
 }
 
 export default function NovelDetailPage() {
@@ -39,6 +50,23 @@ export default function NovelDetailPage() {
   const [loading, setLoading] = useState(true);
   const [descExpanded, setDescExpanded] = useState(false);
   const [deleteChapter, setDeleteChapter] = useState(null);
+
+  // Sorting: 'asc' | 'desc'
+  const [sortOrder, setSortOrder] = useState('asc');
+
+  // Screen width detection for mobile bottomsheet vs desktop popover
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // More menu & tools popover state
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
+  const moreBtnRef = useRef(null);
+  const toolsBtnRef = useRef(null);
 
   // In-novel full-text search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,16 +81,20 @@ export default function NovelDetailPage() {
   // Global find & replace modal state
   const [globalReplaceOpen, setGlobalReplaceOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [progressVer, setProgressVer] = useState(0);
+  const [, setProgressVer] = useState(0);
 
   useEffect(() => {
     let active = true;
-    pullNovelProgressNow(activeNovelId).then(res => {
-      if (active && res?.updated) {
-        setProgressVer(v => v + 1);
-      }
-    }).catch(() => {});
-    return () => { active = false; };
+    pullNovelProgressNow(activeNovelId)
+      .then((res) => {
+        if (active && res?.updated) {
+          setProgressVer((v) => v + 1);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, [activeNovelId]);
 
   useEffect(() => {
@@ -108,40 +140,64 @@ export default function NovelDetailPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, activeNovelId]);
 
-  // Tìm kiếm chương thông minh đa chiến lược
-  const findTargetChapter = useCallback((query) => {
-    if (!query || !query.trim() || chapters.length === 0) return null;
-    const cleanQuery = query.trim().toLowerCase();
-
-    // 1. Nếu có chứa số (ví dụ: '483', 'chương 483', 'thứ 483', 'hồi 483', 'ngoại truyện 2')
-    const numberMatch = cleanQuery.match(/(\d+)/);
-    if (numberMatch) {
-      const num = parseInt(numberMatch[1], 10);
-
-      // 1.1 Khớp chính xác số chương theo các mẫu tiêu đề chuẩn
-      const exactTitleMatch = chapters.find(c => {
-        const titleLower = c.title.toLowerCase();
-        const m = titleLower.match(/(?:chương|thứ|đệ|phiên ngoại|ngoại truyện|hồi|quyển|ch\.|c)\s*(\d+)/i)
-               || titleLower.match(/^(\d+)(?:[\s.:\-]|$)/);
-        if (m && parseInt(m[1], 10) === num) return true;
-        return false;
-      });
-      if (exactTitleMatch) return exactTitleMatch;
-
-      // 1.2 Nếu tìm theo số thứ tự (1-based index)
-      if (num >= 1 && num <= chapters.length) {
-        return chapters[num - 1];
+  // Close menus on outside click or Escape
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setMoreMenuOpen(false);
+        setToolsMenuOpen(false);
       }
-    }
+    };
+    const handleClickOutside = (e) => {
+      if (moreMenuOpen && moreBtnRef.current && !moreBtnRef.current.contains(e.target)) {
+        setMoreMenuOpen(false);
+      }
+      if (toolsMenuOpen && toolsBtnRef.current && !toolsBtnRef.current.contains(e.target)) {
+        setToolsMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('click', handleClickOutside);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('click', handleClickOutside);
+    };
+  }, [moreMenuOpen, toolsMenuOpen]);
 
-    // 2. Tìm theo từ khóa trong tiêu đề (ví dụ "kết cục", "ngoại truyện")
-    const textMatch = chapters.find(c => c.title.toLowerCase().includes(cleanQuery));
-    if (textMatch) return textMatch;
+  // Smart chapter search/jump
+  const findTargetChapter = useCallback(
+    (query) => {
+      if (!query || !query.trim() || chapters.length === 0) return null;
+      const cleanQuery = query.trim().toLowerCase();
 
-    return null;
-  }, [chapters]);
+      // 1. Number matching
+      const numberMatch = cleanQuery.match(/(\d+)/);
+      if (numberMatch) {
+        const num = parseInt(numberMatch[1], 10);
+        const exactTitleMatch = chapters.find((c) => {
+          const titleLower = c.title.toLowerCase();
+          const m =
+            titleLower.match(/(?:chương|thứ|đệ|phiên ngoại|ngoại truyện|hồi|quyển|ch\.|c)\s*(\d+)/i) ||
+            titleLower.match(/^(\d+)(?:[\s.:\-]|$)/);
+          if (m && parseInt(m[1], 10) === num) return true;
+          return false;
+        });
+        if (exactTitleMatch) return exactTitleMatch;
 
-  // Cuộn mượt đến chương chỉ định và làm nổi bật
+        if (num >= 1 && num <= chapters.length) {
+          return chapters[num - 1];
+        }
+      }
+
+      // 2. Keyword match
+      const textMatch = chapters.find((c) => c.title.toLowerCase().includes(cleanQuery));
+      if (textMatch) return textMatch;
+
+      return null;
+    },
+    [chapters]
+  );
+
   const doScrollToChapter = useCallback((chId) => {
     if (!chId) return;
     setHighlightedChapterId(chId);
@@ -164,16 +220,26 @@ export default function NovelDetailPage() {
   if (!novel) return <NotFoundState />;
 
   const progress = getReadingProgress(activeNovelId);
-  const mainChapters = chapters.filter(c => !c.isExtra);
-  const extraChapters = chapters.filter(c => c.isExtra);
-
-  const isVaultNovel = Boolean(novel?.isHidden || getLibrary({ includeHidden: true }).find((n) => n.id === activeNovelId)?.isHidden);
+  const isVaultNovel = Boolean(
+    novel?.isHidden || getLibrary({ includeHidden: true }).find((n) => n.id === activeNovelId)?.isHidden
+  );
   const canShowExport = !isVaultNovel || isVaultSessionUnlocked();
 
-  // Find resume chapter
-  const resumeChapter = progress.chapterId
-    ? chapters.find(c => c.id === progress.chapterId)
-    : chapters[0];
+  // Find resume chapter & current reading index
+  const resumeIndex = progress.chapterId ? chapters.findIndex((c) => c.id === progress.chapterId) : 0;
+  const resumeChapter = resumeIndex >= 0 ? chapters[resumeIndex] : chapters[0];
+  const hasProgress = Boolean(progress.chapterId && resumeChapter);
+  const currentChapterNum = resumeIndex >= 0 ? resumeIndex + 1 : 1;
+
+  // Sorted chapters
+  const sortedChapters = [...chapters].sort((a, b) => {
+    const orderA = a.order !== undefined ? a.order : 0;
+    const orderB = b.order !== undefined ? b.order : 0;
+    return sortOrder === 'asc' ? orderA - orderB : orderB - orderA;
+  });
+
+  const mainChapters = sortedChapters.filter((c) => !c.isExtra);
+  const extraChapters = sortedChapters.filter((c) => c.isExtra);
 
   const handleRead = () => {
     if (resumeChapter) navigate(`/novel/${activeNovelId}/read/${resumeChapter.id}`);
@@ -182,7 +248,7 @@ export default function NovelDetailPage() {
   const handleDeleteChapter = async () => {
     if (!deleteChapter) return;
     await deleteChapterDB(deleteChapter.id, activeNovelId);
-    const newChapters = chapters.filter(c => c.id !== deleteChapter.id);
+    const newChapters = chapters.filter((c) => c.id !== deleteChapter.id);
     setChapters(newChapters);
     if (novel) {
       const updatedNovel = {
@@ -197,45 +263,52 @@ export default function NovelDetailPage() {
   };
 
   const isSearchActive = searchQuery.trim().length > 0;
+  const cleanedDesc = cleanDescriptionText(novel.description, novel.title);
 
   return (
     <div className={styles.page}>
-      {/* Hero */}
+      <TextBackdrop />
+
+      {/* ===== HERO SECTION ===== */}
       <div className={styles.hero}>
-        {(novel.coverUrl || novel.coverThumb) ? (
-          <div className={styles.heroBgWrap}>
-            <img src={novel.coverUrl || novel.coverThumb} className={styles.heroBg} alt="" aria-hidden="true" />
-            <div className={styles.heroBgOverlay} />
-          </div>
-        ) : (
-          <div className={styles.heroBgDefault} />
-        )}
+        {/* Blurred background cover */}
+        <div className={styles.heroBgWrap} aria-hidden="true">
+          {(novel.coverUrl || novel.coverThumb) ? (
+            <img
+              src={novel.coverUrl || novel.coverThumb}
+              className={styles.heroBg}
+              alt=""
+            />
+          ) : (
+            <div className={styles.heroBgDefault} />
+          )}
+          <div className={styles.heroBgOverlay} />
+        </div>
 
         <div className={styles.heroContent}>
-          {/* Back */}
-          {(() => {
-            const isVaultNovel = Boolean(getLibrary({ includeHidden: true }).find((n) => n.id === activeNovelId)?.isHidden);
-            return (
-              <button
-                className={`btn-ghost ${styles.backBtn}`}
-                onClick={() => {
-                  if (isVaultNovel) {
-                    navigate('/?vault=1');
-                  } else {
-                    navigate('/');
-                  }
-                }}
-              >
-                {isVaultNovel ? '← Mật Thất' : '← Thư viện'}
-              </button>
-            );
-          })()}
+          {/* Back button */}
+          <button
+            className={styles.backBtn}
+            onClick={() => {
+              if (isVaultNovel) {
+                navigate('/?vault=1');
+              } else {
+                navigate('/');
+              }
+            }}
+          >
+            {isVaultNovel ? '← Mật Thất' : '← Thư viện'}
+          </button>
 
           <div className={styles.heroMain}>
-            {/* Cover */}
+            {/* Floating Cover */}
             <div className={styles.coverWrap}>
               {(novel.coverUrl || novel.coverThumb) ? (
-                <img src={novel.coverUrl || novel.coverThumb} alt={novel.title} className={styles.cover} />
+                <img
+                  src={novel.coverUrl || novel.coverThumb}
+                  alt={novel.title}
+                  className={styles.cover}
+                />
               ) : (
                 <div className={styles.coverDefault}>
                   <span className={styles.coverChar}>{novel.title.charAt(0)}</span>
@@ -243,244 +316,336 @@ export default function NovelDetailPage() {
               )}
             </div>
 
-            {/* Meta */}
+            {/* Meta & Actions */}
             <div className={styles.meta}>
-              <h1 className={styles.title}>{novel.title}</h1>
-              <p className={styles.chapterCount}>
-                <span className={styles.count}>{chapters.length}</span> chương
+              <h1 className={styles.title} title={novel.title}>{novel.title}</h1>
+              <div className={styles.titleAccentLine} aria-hidden="true" />
+
+              <p className={styles.metaLine}>
+                <span>{chapters.length} chương</span>
+                {hasProgress && (
+                  <>
+                    <span className={styles.metaDot}>·</span>
+                    <span className={styles.metaReading}>Đang đọc ch. {currentChapterNum}</span>
+                  </>
+                )}
                 {extraChapters.length > 0 && (
-                  <span className="badge badge-extra" style={{ marginLeft: 8 }}>
-                    {extraChapters.length} ngoại truyện
-                  </span>
+                  <>
+                    <span className={styles.metaDot}>·</span>
+                    <span className={styles.extraTag}>{extraChapters.length} ngoại truyện</span>
+                  </>
                 )}
               </p>
 
-              {/* Reading Progress Action Card */}
-              {progress.chapterId && resumeChapter ? (
-                <div className={styles.progressCard}>
-                  <div className={styles.progressCardHeader}>
-                    <span className={styles.progressTag}>📍 TIẾP TỤC ĐỌC</span>
-                    <span className={styles.progressHint}>Đang dừng tại:</span>
-                  </div>
-                  <div className={styles.progressChapterTitle}>
-                    {resumeChapter.title}
-                  </div>
-                  <div className={styles.progressActions}>
-                    <button
-                      className={`btn-gold ${styles.mainReadBtn}`}
-                      onClick={handleRead}
-                      id="btn-read-novel"
-                    >
-                      ▶ Đọc tiếp ngay
-                    </button>
-                    <button
-                      className="btn-ghost"
-                      onClick={() => navigate(`/novel/${activeNovelId}/read/${chapters[0]?.id}`)}
-                      title="Đọc lại từ chương 1"
-                      id="btn-read-from-start"
-                    >
-                      ⏮️ Đọc từ đầu
-                    </button>
-                    <button
-                      className="btn-ghost"
-                      onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}
-                      id="btn-add-chapter-detail"
-                    >
-                      + Thêm chương
-                    </button>
-                    <button
-                      className="btn-ghost"
-                      onClick={() => navigate(`/novel/${activeNovelId}/edit`)}
-                    >
-                      ✏️ Sửa truyện
-                    </button>
-                    {canShowExport && (
-                      <button
-                        className="btn-ghost"
-                        onClick={() => setExportModalOpen(true)}
-                        disabled={chapters.length === 0}
-                        title={chapters.length === 0 ? 'Truyện chưa có chương nào để tải về' : 'Tải về máy (EPUB hoặc TXT)'}
-                        id="btn-export-novel"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                      >
-                        <DownloadIcon size={15} />
-                        Tải Về
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className={styles.heroActions}>
+              {/* Action Buttons */}
+              <div className={styles.actionToolbar}>
+                {/* Main Action: Read next or Read from start */}
+                <div className={styles.mainReadBlock}>
                   <button
-                    className={`btn-gold ${styles.readBtn}`}
+                    className={styles.mainReadBtn}
                     onClick={handleRead}
                     id="btn-read-novel"
                     disabled={chapters.length === 0}
                   >
-                    ▶ Bắt đầu đọc (Chương 1)
+                    <IconPlay size={16} />
+                    <span>
+                      {hasProgress ? `Đọc tiếp Chương ${currentChapterNum}` : 'Bắt đầu đọc (Chương 1)'}
+                    </span>
                   </button>
-                  <button
-                    className="btn-ghost"
-                    onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}
-                    id="btn-add-chapter-detail"
-                  >
-                    + Thêm chương
-                  </button>
-                  <button
-                    className="btn-ghost"
-                    onClick={() => navigate(`/novel/${activeNovelId}/edit`)}
-                  >
-                    ✏️ Sửa truyện
-                  </button>
-                  {canShowExport && (
-                    <button
-                      className="btn-ghost"
-                      onClick={() => setExportModalOpen(true)}
-                      disabled={chapters.length === 0}
-                      title={chapters.length === 0 ? 'Truyện chưa có chương nào để tải về' : 'Tải về máy (EPUB hoặc TXT)'}
-                      id="btn-export-novel"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                    >
-                      <DownloadIcon size={15} />
-                      Tải Về
-                    </button>
+
+                  {hasProgress && resumeChapter && (
+                    <span className={styles.resumeChapterHint} title={resumeChapter.title}>
+                      {resumeChapter.title}
+                    </span>
                   )}
                 </div>
-              )}
+
+                {/* Secondary Button: Read from Start */}
+                {hasProgress && (
+                  <button
+                    className={styles.secondaryBtn}
+                    onClick={() => navigate(`/novel/${activeNovelId}/read/${chapters[0]?.id}`)}
+                    title="Đọc lại từ chương 1"
+                    id="btn-read-from-start"
+                  >
+                    <IconRewind size={15} />
+                    <span>Đọc từ đầu</span>
+                  </button>
+                )}
+
+                {/* More Actions (⋯) Container */}
+                <div className={styles.moreActionsContainer} ref={moreBtnRef}>
+                  <button
+                    type="button"
+                    className={styles.moreActionsBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMoreMenuOpen(!moreMenuOpen);
+                    }}
+                    title="Thao tác khác"
+                    aria-label="Thao tác khác"
+                    id="btn-more-actions"
+                  >
+                    <IconMoreVertical size={16} />
+                  </button>
+
+                  {/* Desktop Popover Menu */}
+                  {moreMenuOpen && !isMobile && (
+                    <div className={styles.desktopPopoverMenu} onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className={styles.popoverItem}
+                        onClick={() => {
+                          setMoreMenuOpen(false);
+                          navigate(`/novel/${activeNovelId}/add-chapter`);
+                        }}
+                        id="btn-add-chapter-detail"
+                      >
+                        <div className={styles.popoverIconWrap}>
+                          <IconPlus size={16} />
+                        </div>
+                        <span>Thêm chương</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={styles.popoverItem}
+                        onClick={() => {
+                          setMoreMenuOpen(false);
+                          navigate(`/novel/${activeNovelId}/edit`);
+                        }}
+                        id="btn-edit-novel-detail"
+                      >
+                        <div className={styles.popoverIconWrap}>
+                          <IconEdit size={16} />
+                        </div>
+                        <span>Sửa truyện</span>
+                      </button>
+
+                      {canShowExport && (
+                        <button
+                          type="button"
+                          className={styles.popoverItem}
+                          onClick={() => {
+                            setMoreMenuOpen(false);
+                            setExportModalOpen(true);
+                          }}
+                          disabled={chapters.length === 0}
+                          title={chapters.length === 0 ? 'Truyện chưa có chương nào để tải về' : 'Tải về máy (EPUB hoặc TXT)'}
+                          id="btn-export-novel"
+                        >
+                          <div className={styles.popoverIconWrap}>
+                            <IconDownload size={16} />
+                          </div>
+                          <span>Tải về máy</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Description */}
-      {novel.description && (
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>Giới thiệu</h2>
-          <div className={`${styles.desc} ${descExpanded ? styles.descExpanded : ''}`}>
-            <p>{novel.description}</p>
-          </div>
-          {novel.description.length > 200 && (
-            <button
-              className={styles.expandBtn}
-              onClick={() => setDescExpanded(!descExpanded)}
-            >
-              {descExpanded ? 'Thu gọn ▲' : 'Xem thêm ▼'}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* ===== IN-NOVEL SEARCH & TABLE OF CONTENTS ===== */}
-      <div className={styles.section}>
-        <div className={styles.sectionHeaderRow}>
-          <h2 className={styles.sectionTitle}>
-            {isSearchActive ? 'Kết quả tìm kiếm' : 'Mục lục'}
-          </h2>
-          {isSearchActive && (
-            <button className={styles.clearSearchBtn} onClick={() => setSearchQuery('')}>
-              ✕ Xem toàn bộ mục lục
-            </button>
-          )}
-        </div>
-
-        {/* Ô Nhảy Nhanh Đến Số Chương / Tên Chương */}
-        {!isSearchActive && chapters.length > 0 && (
-          <div className={styles.jumpSection}>
-            <form className={styles.jumpBarWrap} onSubmit={handleJumpSubmit}>
-              <span className={styles.jumpIcon}>⚡</span>
-              <input
-                type="text"
-                value={jumpInput}
-                onChange={e => setJumpInput(e.target.value)}
-                placeholder={`Nhập số chương hoặc tên chương để nhảy đến (1 - ${chapters.length})...`}
-                className={styles.jumpInput}
-                id="jump-to-chapter-input"
-              />
-              {jumpInput && (
-                <button
-                  type="button"
-                  className={styles.jumpClearBtn}
-                  onClick={() => {
-                    setJumpInput('');
-                    setHighlightedChapterId(null);
-                  }}
-                  title="Xóa tìm kiếm"
-                >
-                  ✕
-                </button>
-              )}
+      {/* ===== DESCRIPTION (GIỚI THIỆU) ===== */}
+      {cleanedDesc && (
+        <section className={styles.sectionWrap}>
+          <div className={styles.descCard}>
+            <h2 className={styles.sectionTitle}>Giới thiệu</h2>
+            <div className={`${styles.descBody} ${descExpanded ? styles.descExpanded : ''}`}>
+              <p>{cleanedDesc}</p>
+            </div>
+            {cleanedDesc.length > 240 && (
               <button
-                type="submit"
-                className={styles.jumpSubmitBtn}
-                disabled={!matchedJumpChapter}
+                className={styles.expandBtn}
+                onClick={() => setDescExpanded(!descExpanded)}
               >
-                Nhảy tới ↵
-              </button>
-            </form>
-
-            {/* Live Result Feedback Banner */}
-            {jumpInput.trim() && (
-              <div className={styles.jumpResultBar}>
-                {matchedJumpChapter ? (
+                {descExpanded ? (
                   <>
-                    <span className={styles.jumpFoundLabel}>
-                      ✓ Khớp: <strong>{matchedJumpChapter.title}</strong>
-                    </span>
-                    <div className={styles.jumpResultBtns}>
-                      <button
-                        type="button"
-                        className={styles.jumpGoBtn}
-                        onClick={() => doScrollToChapter(matchedJumpChapter.id)}
-                      >
-                        📍 Cuộn tới
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.jumpReadNowBtn}
-                        onClick={() => navigate(`/novel/${activeNovelId}/read/${matchedJumpChapter.id}`)}
-                      >
-                        ▶ Đọc luôn
-                      </button>
-                    </div>
+                    <span>Thu gọn</span>
+                    <IconChevronUp size={14} />
                   </>
                 ) : (
-                  <span className={styles.jumpNotFoundLabel}>
-                    ⚠️ Không tìm thấy chương phù hợp với "{jumpInput}" (Tổng số: {chapters.length} chương)
-                  </span>
+                  <>
+                    <span>Xem thêm</span>
+                    <IconChevronDown size={14} />
+                  </>
                 )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Search bar inside novel & Global Replace */}
-        <div className={styles.searchRowWithTools}>
-          <div className={styles.novelSearchWrap}>
-            <span className={styles.searchIcon}>🔍</span>
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Nhập từ khoá / cụm từ để tìm trong nội dung tất cả các chương..."
-              className={styles.novelSearchInput}
-              id="novel-content-search"
-            />
-            {searchQuery && (
-              <button className={styles.searchClearIcon} onClick={() => setSearchQuery('')} title="Xóa tìm kiếm">
-                ✕
               </button>
             )}
           </div>
+        </section>
+      )}
 
-          <button
-            type="button"
-            className={styles.globalReplaceTriggerBtn}
-            onClick={() => setGlobalReplaceOpen(true)}
-            title="Tìm và thay thế một cụm từ trên toàn bộ truyện"
-          >
-            <span>🔁</span>
-            <span>Thay thế toàn truyện</span>
-          </button>
+      {/* ===== TABLE OF CONTENTS (MỤC LỤC) ===== */}
+      <section className={styles.sectionWrap}>
+        {/* Sticky Toolbar underneath header */}
+        <div className={styles.tocStickyHeader}>
+          <div className={styles.tocHeaderRow}>
+            <h2 className={styles.tocTitle}>
+              {isSearchActive ? 'Kết quả tìm kiếm' : 'Mục lục'}
+              <span className={styles.chapterBadge}>{chapters.length}</span>
+            </h2>
+
+            <div className={styles.tocActionsRow}>
+              {/* Sort button */}
+              <button
+                type="button"
+                className={styles.sortBtn}
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                title={`Sắp xếp: ${sortOrder === 'asc' ? 'Tăng dần (1 → N)' : 'Giảm dần (N → 1)'}`}
+              >
+                <IconSort size={15} />
+                <span className={styles.sortBtnLabel}>{sortOrder === 'asc' ? 'Tăng dần' : 'Giảm dần'}</span>
+              </button>
+
+              {/* Tools dropdown */}
+              <div className={styles.toolsMenuWrap} ref={toolsBtnRef}>
+                <button
+                  type="button"
+                  className={styles.toolsBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setToolsMenuOpen(!toolsMenuOpen);
+                  }}
+                  title="Công cụ bổ trợ"
+                >
+                  <IconMoreVertical size={16} />
+                  <span className={styles.toolsBtnLabel}>Công cụ</span>
+                </button>
+
+                {toolsMenuOpen && (
+                  <div className={styles.toolsDropdown} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className={styles.toolsDropdownItem}
+                      onClick={() => {
+                        setToolsMenuOpen(false);
+                        setGlobalReplaceOpen(true);
+                      }}
+                      title="Tìm và thay thế một cụm từ trên toàn bộ truyện"
+                    >
+                      <div className={styles.toolsIconWrap}>
+                        <IconReplace size={16} />
+                      </div>
+                      <span>Thay thế toàn truyện</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Jump Bar & Search Row */}
+          {!isSearchActive && chapters.length > 0 && (
+            <div className={styles.tocControlsRow}>
+              {/* Quick Jump Bar */}
+              <form className={styles.jumpForm} onSubmit={handleJumpSubmit}>
+                <span className={styles.jumpIcon} aria-hidden="true">
+                  <IconZap size={14} />
+                </span>
+                <input
+                  type="text"
+                  value={jumpInput}
+                  onChange={(e) => setJumpInput(e.target.value)}
+                  placeholder={`Nhập số chương để nhảy tới (1 - ${chapters.length})...`}
+                  className={styles.jumpInput}
+                  id="jump-to-chapter-input"
+                />
+                {jumpInput && (
+                  <button
+                    type="button"
+                    className={styles.jumpClearBtn}
+                    onClick={() => {
+                      setJumpInput('');
+                      setHighlightedChapterId(null);
+                    }}
+                    title="Xóa tìm kiếm"
+                  >
+                    <IconClose size={14} />
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className={styles.jumpSubmitBtn}
+                  disabled={!matchedJumpChapter}
+                >
+                  Nhảy tới ↵
+                </button>
+              </form>
+
+              {/* In-novel content search bar */}
+              <div className={styles.contentSearchWrap}>
+                <span className={styles.searchIcon} aria-hidden="true">
+                  <IconSearch size={14} />
+                </span>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm từ khóa trong nội dung..."
+                  className={styles.contentSearchInput}
+                  id="novel-content-search"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className={styles.searchClearBtn}
+                    onClick={() => setSearchQuery('')}
+                    title="Xóa tìm kiếm"
+                  >
+                    <IconClose size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Live Result Feedback Banner */}
+          {!isSearchActive && jumpInput.trim() && (
+            <div className={styles.jumpResultBar}>
+              {matchedJumpChapter ? (
+                <>
+                  <span className={styles.jumpFoundLabel}>
+                    ✓ Khớp: <strong>{matchedJumpChapter.title}</strong>
+                  </span>
+                  <div className={styles.jumpResultBtns}>
+                    <button
+                      type="button"
+                      className={styles.jumpGoBtn}
+                      onClick={() => doScrollToChapter(matchedJumpChapter.id)}
+                    >
+                      Cuộn tới
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.jumpReadNowBtn}
+                      onClick={() => navigate(`/novel/${activeNovelId}/read/${matchedJumpChapter.id}`)}
+                    >
+                      Đọc luôn
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <span className={styles.jumpNotFoundLabel}>
+                  Không tìm thấy chương phù hợp với "{jumpInput}" (Tổng số: {chapters.length} chương)
+                </span>
+              )}
+            </div>
+          )}
+
+          {isSearchActive && (
+            <div className={styles.searchActiveBar}>
+              <span>
+                Đang tìm: <strong>{searchQuery}</strong>
+              </span>
+              <button className={styles.clearSearchBtn} onClick={() => setSearchQuery('')}>
+                ✕ Xem toàn bộ mục lục
+              </button>
+            </div>
+          )}
         </div>
 
         {/* SEARCH MODE RESULTS */}
@@ -488,7 +653,7 @@ export default function NovelDetailPage() {
           <div className={styles.searchResultsContainer}>
             <div className={styles.searchSummary}>
               {isSearching ? (
-                <span>⏳ Đang tìm kiếm trong {chapters.length} chương...</span>
+                <span>Đang tìm kiếm trong {chapters.length} chương...</span>
               ) : searchResults.length > 0 ? (
                 <span>
                   Tìm thấy <strong>{searchResults.length}</strong> chương chứa cụm từ "
@@ -502,11 +667,13 @@ export default function NovelDetailPage() {
               )}
             </div>
 
-            {searchResults.map(result => (
+            {searchResults.map((result) => (
               <div
                 key={result.id}
                 className={styles.searchResultCard}
-                onClick={() => navigate(`/novel/${activeNovelId}/read/${result.id}?q=${encodeURIComponent(searchQuery)}`)}
+                onClick={() =>
+                  navigate(`/novel/${activeNovelId}/read/${result.id}?q=${encodeURIComponent(searchQuery)}`)
+                }
                 role="button"
                 tabIndex={0}
               >
@@ -515,8 +682,8 @@ export default function NovelDetailPage() {
                     {highlightText(result.title, searchQuery, styles.highlightMark)}
                   </h3>
                   <div className={styles.searchResultBadges}>
-                    {result.isExtra && <span className="badge badge-extra">Ngoại truyện</span>}
-                    <span className="badge badge-cyan">{result.matchCount} đoạn khớp</span>
+                    {result.isExtra && <span className={styles.badgeExtra}>Ngoại truyện</span>}
+                    <span className={styles.badgeMatch}>{result.matchCount} đoạn khớp</span>
                   </div>
                 </div>
 
@@ -534,31 +701,38 @@ export default function NovelDetailPage() {
           </div>
         )}
 
-        {/* NORMAL TABLE OF CONTENTS (when not searching) */}
+        {/* NORMAL CHAPTER GRID / LIST (when not searching) */}
         {!isSearchActive && (
-          <>
+          <div className={styles.chapterContainer}>
             {chapters.length === 0 && (
               <div className={styles.emptyChapters}>
                 <p>Chưa có chương nào.</p>
-                <button className="btn-primary" onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}>
-                  + Thêm chương đầu tiên
+                <button
+                  className={styles.addFirstChapterBtn}
+                  onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}
+                >
+                  <IconPlus size={16} />
+                  <span>Thêm chương đầu tiên</span>
                 </button>
               </div>
             )}
 
-            {/* Main chapters */}
-            {mainChapters.map(ch => (
-              <ChapterRow
-                key={ch.id}
-                chapter={ch}
-                novelId={activeNovelId}
-                isLastRead={progress?.chapterId === ch.id}
-                isHighlighted={highlightedChapterId === ch.id}
-                onDelete={() => setDeleteChapter(ch)}
-              />
-            ))}
+            {/* Main chapters grid */}
+            <div className={styles.chapterGrid}>
+              {mainChapters.map((ch, idx) => (
+                <ChapterRow
+                  key={ch.id}
+                  chapter={ch}
+                  novelId={activeNovelId}
+                  index={sortOrder === 'asc' ? idx + 1 : chapters.length - idx}
+                  isLastRead={progress?.chapterId === ch.id}
+                  isHighlighted={highlightedChapterId === ch.id}
+                  onDelete={() => setDeleteChapter(ch)}
+                />
+              ))}
+            </div>
 
-            {/* Extra divider */}
+            {/* Extra chapters divider */}
             {extraChapters.length > 0 && (
               <>
                 <div className={styles.extraDivider}>
@@ -566,42 +740,94 @@ export default function NovelDetailPage() {
                   <span className={styles.extraLabel}>✦ Ngoại truyện / Phiên ngoại ✦</span>
                   <div className={styles.extraLine} />
                 </div>
-                {extraChapters.map(ch => (
-                  <ChapterRow
-                    key={ch.id}
-                    chapter={ch}
-                    novelId={activeNovelId}
-                    isExtra
-                    isLastRead={progress?.chapterId === ch.id}
-                    isHighlighted={highlightedChapterId === ch.id}
-                    onDelete={() => setDeleteChapter(ch)}
-                  />
-                ))}
+                <div className={styles.chapterGrid}>
+                  {extraChapters.map((ch, idx) => (
+                    <ChapterRow
+                      key={ch.id}
+                      chapter={ch}
+                      novelId={activeNovelId}
+                      index={idx + 1}
+                      isExtra
+                      isLastRead={progress?.chapterId === ch.id}
+                      isHighlighted={highlightedChapterId === ch.id}
+                      onDelete={() => setDeleteChapter(ch)}
+                    />
+                  ))}
+                </div>
               </>
             )}
-          </>
+          </div>
         )}
-      </div>
+      </section>
 
       <Footer />
 
-      {/* Delete chapter confirm */}
-      {deleteChapter && (
-        <div className={styles.confirmOverlay} onClick={() => setDeleteChapter(null)}>
-          <div className={styles.confirmDialog} onClick={e => e.stopPropagation()}>
-            <h3 style={{ color: '#ff6b6b', fontFamily: 'var(--font-serif)', marginBottom: 10 }}>Xóa chương?</h3>
-            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20 }}>
-              Xóa "<strong style={{ color: 'var(--text-primary)' }}>{deleteChapter.title}</strong>"? Không thể hoàn tác.
-            </p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button className="btn-ghost" onClick={() => setDeleteChapter(null)}>Hủy</button>
-              <button className="btn-danger" onClick={handleDeleteChapter}>Xóa chương</button>
-            </div>
-          </div>
+      {/* Mobile More Actions Bottom Sheet */}
+      {isMobile && (
+        <BottomSheet isOpen={moreMenuOpen} onClose={() => setMoreMenuOpen(false)}>
+        <div className={styles.sheetHeader}>
+          <h3 className={styles.sheetTitle}>Thao tác truyện</h3>
+          <button
+            type="button"
+            className={styles.sheetCloseBtn}
+            onClick={() => setMoreMenuOpen(false)}
+            aria-label="Đóng"
+          >
+            <IconClose size={18} />
+          </button>
         </div>
-      )}
+        <div className={styles.sheetActions}>
+          <button
+            type="button"
+            className={styles.sheetActionRow}
+            onClick={() => {
+              setMoreMenuOpen(false);
+              navigate(`/novel/${activeNovelId}/add-chapter`);
+            }}
+            id="btn-add-chapter-detail-mobile"
+          >
+            <div className={styles.sheetIconWrap}>
+              <IconPlus size={18} />
+            </div>
+            <span className={styles.sheetActionLabel}>Thêm chương</span>
+          </button>
 
-      {/* Global Replace Modal */}
+          <button
+            type="button"
+            className={styles.sheetActionRow}
+            onClick={() => {
+              setMoreMenuOpen(false);
+              navigate(`/novel/${activeNovelId}/edit`);
+            }}
+            id="btn-edit-novel-detail-mobile"
+          >
+            <div className={styles.sheetIconWrap}>
+              <IconEdit size={18} />
+            </div>
+            <span className={styles.sheetActionLabel}>Sửa truyện</span>
+          </button>
+
+          {canShowExport && (
+            <button
+              type="button"
+              className={styles.sheetActionRow}
+              onClick={() => {
+                setMoreMenuOpen(false);
+                setExportModalOpen(true);
+              }}
+              disabled={chapters.length === 0}
+              title={chapters.length === 0 ? 'Truyện chưa có chương nào để tải về' : 'Tải về máy (EPUB hoặc TXT)'}
+              id="btn-export-novel"
+            >
+              <div className={styles.sheetIconWrap}>
+                <IconDownload size={18} />
+              </div>
+              <span className={styles.sheetActionLabel}>Tải về máy (EPUB/TXT)</span>
+            </button>
+          )}
+        </div>
+      </BottomSheet>
+      )}
 
       {/* Novel Export Modal */}
       {exportModalOpen && canShowExport && (
@@ -614,22 +840,21 @@ export default function NovelDetailPage() {
         </Suspense>
       )}
 
+      {/* Global Replace Modal */}
       <GlobalReplaceModal
         isOpen={globalReplaceOpen}
         onClose={() => setGlobalReplaceOpen(false)}
         novelId={activeNovelId}
         novelTitle={novel?.title}
         initialSearchText={searchQuery}
-        onSuccess={async (res) => {
-          // Tải lại danh sách chương
+        onSuccess={async () => {
           const chs = await getChapters(activeNovelId);
           setChapters(chs);
-          // Nếu đang tìm kiếm, kích hoạt tìm kiếm lại
           if (searchQuery.trim()) {
             const query = searchQuery.trim();
             setIsSearching(true);
             searchChapters(activeNovelId, query)
-              .then(results => {
+              .then((results) => {
                 setSearchResults(results);
                 setIsSearching(false);
               })
@@ -637,11 +862,31 @@ export default function NovelDetailPage() {
           }
         }}
       />
+
+      {/* Delete chapter confirm */}
+      {deleteChapter && (
+        <div className={styles.confirmOverlay} onClick={() => setDeleteChapter(null)}>
+          <div className={styles.confirmDialog} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.confirmTitle}>Xóa chương?</h3>
+            <p className={styles.confirmMsg}>
+              Xóa "<strong>{deleteChapter.title}</strong>"? Không thể hoàn tác.
+            </p>
+            <div className={styles.confirmActions}>
+              <button className="btn-ghost" onClick={() => setDeleteChapter(null)}>
+                Hủy
+              </button>
+              <button className="btn-danger" onClick={handleDeleteChapter}>
+                Xóa chương
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function ChapterRow({ chapter, novelId, isExtra, isLastRead, isHighlighted, onDelete }) {
+function ChapterRow({ chapter, novelId, index, isExtra, isLastRead, isHighlighted, onDelete }) {
   const navigate = useNavigate();
   const handleOpen = () => {
     navigate(`/novel/${novelId}/read/${chapter.id}`);
@@ -650,40 +895,49 @@ function ChapterRow({ chapter, novelId, isExtra, isLastRead, isHighlighted, onDe
   return (
     <div
       id={`chapter-item-${chapter.id}`}
-      className={`${styles.chapterRow} ${isExtra ? styles.chapterExtra : ''} ${isLastRead ? styles.chapterLastRead : ''} ${isHighlighted ? styles.chapterJumpHighlighted : ''}`}
+      className={`${styles.chapterRow} ${isExtra ? styles.chapterExtra : ''} ${
+        isLastRead ? styles.chapterLastRead : ''
+      } ${isHighlighted ? styles.chapterJumpHighlighted : ''}`}
       onClick={handleOpen}
-      style={{ cursor: 'pointer', userSelect: 'none' }}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleOpen(); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') handleOpen();
+      }}
     >
-      <div className={styles.chapterBtn} style={{ display: 'flex', alignItems: 'center', flex: 1, pointerEvents: 'none' }}>
-        <span className={`${styles.chapterTitle} ${isLastRead ? styles.lastReadTitle : ''}`}>{chapter.title}</span>
-        {isLastRead && <span className="badge badge-gold badge-reading-pulse" style={{ marginLeft: 8, flexShrink: 0 }}>✦ Đang đọc</span>}
-        {isExtra && <span className="badge badge-extra" style={{ marginLeft: 6, flexShrink: 0 }}>Ngoại truyện</span>}
-      </div>
+      {/* Chapter Number */}
+      <span className={styles.chapterNum}>{index}</span>
+
+      {/* Title */}
+      <span className={`${styles.chapterTitle} ${isLastRead ? styles.lastReadTitle : ''}`}>
+        {chapter.title}
+      </span>
+
+      {/* Badges */}
+      {isLastRead && <span className={styles.readingBadge}>Đang đọc</span>}
+      {isExtra && <span className={styles.badgeExtra}>Ngoại truyện</span>}
+
+      {/* Action buttons (Edit / Delete) */}
       <div className={styles.chapterActions} onClick={(e) => e.stopPropagation()}>
         <button
-          className="btn-icon"
+          className={styles.chapterActionBtn}
           title="Sửa chương"
           onClick={(e) => {
             e.stopPropagation();
             navigate(`/novel/${novelId}/edit-chapter/${chapter.id}`);
           }}
-          style={{ fontSize: 13 }}
         >
-          ✏️
+          <IconEdit size={14} />
         </button>
         <button
-          className="btn-icon"
+          className={`${styles.chapterActionBtn} ${styles.chapterDeleteBtn}`}
           title="Xóa chương"
           onClick={(e) => {
             e.stopPropagation();
             onDelete();
           }}
-          style={{ fontSize: 13, color: '#ff6b6b' }}
         >
-          🗑
+          <IconTrash size={14} />
         </button>
       </div>
     </div>
@@ -705,7 +959,9 @@ function NotFoundState() {
       <h2 style={{ fontFamily: 'var(--font-serif)', color: 'var(--accent-gold)', marginBottom: 12 }}>
         Không tìm thấy truyện
       </h2>
-      <button className="btn-ghost" onClick={() => navigate('/')}>← Về thư viện</button>
+      <button className="btn-ghost" onClick={() => navigate('/')}>
+        ← Về thư viện
+      </button>
     </div>
   );
 }

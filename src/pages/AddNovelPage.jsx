@@ -5,6 +5,7 @@ import { saveNovel, saveChaptersBulk, deleteNovelDB } from '../lib/db';
 import { addToLibrary } from '../lib/storage';
 import { parseNovelFile, resizeCoverImage, makeCoverThumb, analyzeChapterSequence } from '../lib/chapterParser';
 import Footer from '../components/layout/Footer';
+import TextBackdrop from '../components/layout/TextBackdrop';
 import ImageCropperModal from '../components/ui/ImageCropperModal';
 import styles from './AddNovelPage.module.css';
 
@@ -167,6 +168,7 @@ export default function AddNovelPage() {
 
   return (
     <div className={styles.page}>
+      <TextBackdrop />
       <div className={styles.header}>
         <button className="btn-ghost" onClick={() => navigate(-1)}>← Quay lại</button>
         <h1 className={styles.pageTitle}>

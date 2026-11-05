@@ -7,6 +7,7 @@ import { normalizeVietnamese, formatChapterContent } from '../lib/textFixer';
 import { parseNovelFile, parseTxtFile, analyzeChapterSequence } from '../lib/chapterParser';
 import WordCounter from '../components/ui/WordCounter';
 import Footer from '../components/layout/Footer';
+import TextBackdrop from '../components/layout/TextBackdrop';
 import styles from './AddChapterPage.module.css';
 
 export default function AddChapterPage() {
@@ -338,6 +339,7 @@ export default function AddChapterPage() {
 
   return (
     <div className={styles.page}>
+      <TextBackdrop />
       <div className={styles.header}>
         <button className="btn-ghost" onClick={() => navigate(-1)}>← Quay lại</button>
         <div className={styles.headerTitleWrap}>

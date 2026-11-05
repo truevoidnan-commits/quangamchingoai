@@ -1,0 +1,12 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(10, 16, 26, 0.68) 0%, rgba(14, 24, 48, 0.84) 45%, rgba(8, 12, 20, 0.96) 100%),
+    radial-gradient(ellipse at 50% 12%, rgba(244, 227, 166, 0.08) 0%, transparent 60%),
+    radial-gradient(circle at 80% 65%, rgba(27, 42, 69, 0.35) 0%, transparent 60%),
+    url('../../assets/images/bg-thu-vien-muc-dem.webp') center top / cover no-repeat,
+    #0a101a;
+}

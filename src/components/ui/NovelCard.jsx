@@ -1,134 +1,39 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { useLongPress } from '../../hooks/useLongPress';
 import BottomSheet from './BottomSheet';
+import { getReadingProgress } from '../../lib/storage';
+import {
+  IconDownload,
+  IconEdit,
+  IconLock,
+  IconEye,
+  IconTrash,
+  IconClose,
+  IconMoreVertical,
+} from '../novel/NovelIcons';
 import styles from './NovelCard.module.css';
 
-/* SVG Icons - Stroke 1.75, round caps/joins */
-function IconDownload({ size = 18, color = 'currentColor', style = {} }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={style}
-      aria-hidden="true"
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  );
-}
-
-function IconEdit({ size = 18, color = 'currentColor', style = {} }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={style}
-      aria-hidden="true"
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-    </svg>
-  );
-}
-
-function IconLock({ size = 18, color = 'currentColor', style = {} }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={style}
-      aria-hidden="true"
-    >
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
-
-function IconEye({ size = 18, color = 'currentColor', style = {} }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={style}
-      aria-hidden="true"
-    >
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function IconTrash({ size = 18, color = 'currentColor', style = {} }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={style}
-      aria-hidden="true"
-    >
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <line x1="10" y1="11" x2="10" y2="17" />
-      <line x1="14" y1="11" x2="14" y2="17" />
-    </svg>
-  );
-}
-
-function IconClose({ size = 18, color = 'currentColor', style = {} }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={style}
-      aria-hidden="true"
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  );
+/**
+ * Deterministic gradient based on title hash for default covers
+ */
+function getCoverGradient(title = '') {
+  let hash = 0;
+  for (let i = 0; i < title.length; i++) {
+    hash = (hash << 5) - hash + title.charCodeAt(i);
+    hash |= 0;
+  }
+  const gradients = [
+    'linear-gradient(145deg, #0e172a 0%, #1e293b 60%, #0f172a 100%)',
+    'linear-gradient(145deg, #0f1c32 0%, #1b2e4b 60%, #0c1524 100%)',
+    'linear-gradient(145deg, #181528 0%, #29233e 60%, #110e1c 100%)',
+    'linear-gradient(145deg, #0d2128 0%, #173742 60%, #0a191f 100%)',
+  ];
+  const idx = Math.abs(hash) % gradients.length;
+  return gradients[idx];
 }
 
 /**
- * NovelCard — 3:4 ratio cover card with bottom sheet action menu on long-press
+ * NovelCard — 3:4 ratio cover card with "Thư Viện Mực Đêm" styling
  */
 export default function NovelCard({
   novel,
@@ -140,6 +45,7 @@ export default function NovelCard({
   onExport,
   isVaultMode = false,
   viewMode = 'grid',
+  index = 0,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const suppressClickRef = useRef(false);
@@ -190,6 +96,27 @@ export default function NovelCard({
     setMenuOpen(false);
     onUnhide?.(novel);
   };
+
+  // Reading progress calculation
+  const progressInfo = useMemo(() => {
+    const prog = getReadingProgress(novel.id);
+    if (!prog || !prog.chapterId) return null;
+
+    let chNum = prog.chapterNumber || prog.chapterIndex;
+    if (!chNum) {
+      // Try extract number from chapterId if format ch-123 or sample-ch-001
+      const m = String(prog.chapterId).match(/(\d+)/);
+      if (m) chNum = parseInt(m[1], 10);
+    }
+    const currentNum = chNum || 1;
+    const total = novel.chapterCount || 1;
+    const percent = Math.min(100, Math.max(1, Math.round((currentNum / total) * 100)));
+
+    return {
+      chapterNum: currentNum,
+      percent,
+    };
+  }, [novel.id, novel.chapterCount]);
 
   // Reusable bottom sheet action menu
   const renderActionSheet = () => (
@@ -287,11 +214,16 @@ export default function NovelCard({
     </BottomSheet>
   );
 
+  const staggerStyle = {
+    '--stagger-index': Math.min(index, 12),
+  };
+
   if (viewMode === 'list') {
     return (
       <>
         <div
           className={`${styles.listItem} ${menuOpen ? styles.menuActive : ''}`}
+          style={staggerStyle}
           {...handlers}
           onContextMenu={handleContextMenu}
           onClick={handleClick}
@@ -302,7 +234,7 @@ export default function NovelCard({
             {(novel.coverThumb || novel.coverUrl) ? (
               <img src={novel.coverThumb || novel.coverUrl} alt={novel.title} loading="lazy" />
             ) : (
-              <DefaultCover title={novel.title} />
+              <DefaultCover title={novel.title} compact />
             )}
           </div>
           <div className={styles.listInfo}>
@@ -315,59 +247,31 @@ export default function NovelCard({
                 </span>
               )}
             </div>
-            <span className="text-muted">{novel.chapterCount} chương</span>
+            <div className={styles.listMetaRow}>
+              <span className={styles.listChapterCount}>{novel.chapterCount} chương</span>
+              {progressInfo && (
+                <>
+                  <span className={styles.metaDot}>·</span>
+                  <span className={styles.listProgressText}>
+                    Ch. {progressInfo.chapterNum}/{novel.chapterCount}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
-          <div className={styles.listActions}>
-            {novel.isHidden || isVaultMode ? (
-              <button
-                className="btn-ghost"
-                style={{ fontSize: 12, padding: '4px 10px', color: '#c084fc', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                onClick={handleUnhide}
-                title="Hiện truyện lại"
-              >
-                <IconEye size={13} color="#c084fc" />
-                Hiện
-              </button>
-            ) : (
-              <button
-                className="btn-ghost"
-                style={{ fontSize: 12, padding: '4px 10px', color: '#a855f7', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                onClick={handleHide}
-                title="Ẩn truyện vào Mật Thất"
-              >
-                <IconLock size={13} color="#a855f7" />
-                Ẩn
-              </button>
-            )}
-            {onExport && (
-              <button
-                className="btn-ghost"
-                style={{ fontSize: 12, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onExport(novel);
-                }}
-                title="Tải về máy"
-              >
-                <IconDownload size={13} />
-                Tải
-              </button>
-            )}
+
+          <div className={styles.listActions} onClick={(e) => e.stopPropagation()}>
             <button
-              className="btn-ghost"
-              style={{ fontSize: 12, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-              onClick={handleEdit}
+              type="button"
+              className={styles.moreBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(true);
+              }}
+              title="Thao tác khác"
+              aria-label="Thao tác khác"
             >
-              <IconEdit size={13} />
-              Sửa
-            </button>
-            <button
-              className="btn-danger"
-              style={{ fontSize: 12, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-              onClick={handleDelete}
-            >
-              <IconTrash size={13} />
-              Xóa
+              <IconMoreVertical size={16} />
             </button>
           </div>
         </div>
@@ -381,6 +285,7 @@ export default function NovelCard({
     <>
       <div
         className={`${styles.card} ${menuOpen ? styles.menuActive : ''}`}
+        style={staggerStyle}
         {...handlers}
         onContextMenu={handleContextMenu}
         onClick={handleClick}
@@ -395,12 +300,36 @@ export default function NovelCard({
           ) : (
             <DefaultCover title={novel.title} />
           )}
+          <div className={styles.coverGradient} aria-hidden="true" />
+          {novel.isHidden && (
+            <span className={styles.cardHiddenTag}>
+              <IconLock size={10} style={{ marginRight: 2 }} />
+              Ẩn
+            </span>
+          )}
         </div>
 
-        {/* Info */}
+        {/* Info on Frosted Glass Base */}
         <div className={styles.info}>
-          <h3 className={styles.title}>{novel.title}</h3>
-          <span className={styles.chapterCount}>{novel.chapterCount} chương</span>
+          <h3 className={styles.title} title={novel.title}>{novel.title}</h3>
+
+          <div className={styles.metaRow}>
+            <span className={styles.chapterCount}>{novel.chapterCount} chương</span>
+            {progressInfo && (
+              <span className={styles.progressText}>
+                Ch. {progressInfo.chapterNum}/{novel.chapterCount}
+              </span>
+            )}
+          </div>
+
+          {progressInfo && (
+            <div className={styles.progressBar} aria-hidden="true">
+              <div
+                className={styles.progressFill}
+                style={{ width: `${progressInfo.percent}%` }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -409,12 +338,17 @@ export default function NovelCard({
   );
 }
 
-function DefaultCover({ title }) {
+function DefaultCover({ title = '', compact = false }) {
   const char = title ? title.charAt(0).toUpperCase() : '?';
+  const gradient = getCoverGradient(title);
+
   return (
-    <div className={styles.defaultCover}>
+    <div
+      className={`${styles.defaultCover} ${compact ? styles.defaultCoverCompact : ''}`}
+      style={{ background: gradient }}
+    >
+      <div className={styles.inkOverlay} aria-hidden="true" />
       <span className={styles.defaultChar}>{char}</span>
-      <div className={styles.defaultDecor}>✦ THIÊN CƠ ✦</div>
     </div>
   );
 }

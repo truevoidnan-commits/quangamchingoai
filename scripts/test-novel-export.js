@@ -603,14 +603,26 @@ await runTest('7.1: Khởi động app và nạp dữ liệu truyện mẫu vào
   });
 });
 
+async function ensureExportBtnVisible(page) {
+  const exportBtn = page.locator('#btn-export-novel').first();
+  if (!(await exportBtn.isVisible())) {
+    const moreBtn = page.locator('#btn-more-actions');
+    if (await moreBtn.isVisible()) {
+      await moreBtn.click();
+    }
+  }
+  await page.waitForSelector('#btn-export-novel', { timeout: 10000 });
+  return page.locator('#btn-export-novel').first();
+}
+
 await runTest('7.2: Mở NovelDetailPage ở 390px, kiểm tra layout và nút Tải Về', async () => {
   await flowPage.goto(`${BASE_URL}/#/novel/test-novel-flow-a`, { waitUntil: 'domcontentloaded' });
-  await flowPage.waitForSelector('#btn-export-novel', { timeout: 10000 });
+  await ensureExportBtnVisible(flowPage);
   await assertNoHorizontalScroll(flowPage, 'NovelDetailPage (390px)');
 });
 
 await runTest('7.3: Mở hộp thoại Tải Về, kiểm tra không cuộn ngang và nút Hủy hoạt động', async () => {
-  const exportBtn = flowPage.locator('#btn-export-novel').first();
+  const exportBtn = await ensureExportBtnVisible(flowPage);
   await exportBtn.click();
 
   await flowPage.waitForSelector('#modal-export-title', { timeout: 5000 });
@@ -624,7 +636,7 @@ await runTest('7.3: Mở hộp thoại Tải Về, kiểm tra không cuộn ngan
 });
 
 await runTest('7.4: Tải về EPUB qua hộp thoại (bắt sự kiện download của Playwright)', async () => {
-  const exportBtn = flowPage.locator('#btn-export-novel').first();
+  const exportBtn = await ensureExportBtnVisible(flowPage);
   await exportBtn.click();
   await flowPage.waitForSelector('#modal-export-title', { timeout: 5000 });
 
@@ -648,7 +660,7 @@ await runTest('7.4: Tải về EPUB qua hộp thoại (bắt sự kiện downloa
 });
 
 await runTest('7.5: Tải về TXT qua hộp thoại (bắt sự kiện download của Playwright)', async () => {
-  const exportBtn = flowPage.locator('#btn-export-novel').first();
+  const exportBtn = await ensureExportBtnVisible(flowPage);
   await exportBtn.click();
   await flowPage.waitForSelector('#modal-export-title', { timeout: 5000 });
 
@@ -673,9 +685,7 @@ await runTest('7.5: Tải về TXT qua hộp thoại (bắt sự kiện download
 
 await runTest('7.6: Truyện chưa có chương nào -> Nút Tải Về bị vô hiệu hóa', async () => {
   await flowPage.goto(`${BASE_URL}/#/novel/test-novel-flow-b`, { waitUntil: 'domcontentloaded' });
-  await flowPage.waitForSelector('#btn-export-novel', { timeout: 10000 });
-
-  const btn = flowPage.locator('#btn-export-novel').first();
+  const btn = await ensureExportBtnVisible(flowPage);
   const isDisabled = await btn.isDisabled();
   assert(isDisabled, 'Nút Tải Về phải bị vô hiệu hóa (disabled) khi truyện có 0 chương');
 

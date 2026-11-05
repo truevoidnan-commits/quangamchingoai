@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { searchChapters, searchAllNovels } from '../lib/db';
 import { getLibrary } from '../lib/storage';
+import TextBackdrop from '../components/layout/TextBackdrop';
 import styles from './SearchPage.module.css';
 
 export default function SearchPage() {
@@ -35,6 +36,7 @@ export default function SearchPage() {
 
   return (
     <div className={styles.page}>
+      <TextBackdrop />
       <div className={styles.header}>
         <button className="btn-ghost" onClick={() => navigate(-1)}>← Quay lại</button>
         <h1 className={styles.title}>Tìm kiếm</h1>
