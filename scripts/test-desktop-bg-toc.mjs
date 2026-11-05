@@ -191,7 +191,7 @@ async function main() {
   
   // 1a. Text lobby Desktop 1920x1080
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await page.goto(`${BASE_URL}/`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(400);
   await assertNoHorizontalScroll(page, 'Lobby truyện chữ 1920x1080');
   const buf1a = await page.screenshot({ fullPage: false });
@@ -199,7 +199,7 @@ async function main() {
 
   // 1b. Text lobby Mobile 390x844
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${BASE_URL}/`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(400);
   await assertNoHorizontalScroll(page, 'Lobby truyện chữ 390x844');
   const buf1b = await page.screenshot({ fullPage: false });
@@ -207,7 +207,7 @@ async function main() {
 
   // 1c. Comics lobby Desktop 1920x1080
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await page.goto(`${BASE_URL}/#/comics`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/#/comics`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(400);
   await assertNoHorizontalScroll(page, 'Lobby truyện tranh 1920x1080');
   const buf1c = await page.screenshot({ fullPage: false });
@@ -215,7 +215,7 @@ async function main() {
 
   // 1d. Comics lobby Mobile 390x844
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${BASE_URL}/#/comics`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/#/comics`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(400);
   await assertNoHorizontalScroll(page, 'Lobby truyện tranh 390x844');
   const buf1d = await page.screenshot({ fullPage: false });
@@ -235,7 +235,7 @@ async function main() {
 
   for (const vp of detailViewports) {
     await page.setViewportSize({ width: vp.w, height: vp.h });
-    await page.goto(`${BASE_URL}/#/novel/test-novel-toc`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}/#/novel/test-novel-toc`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(400);
     await assertNoHorizontalScroll(page, `Chi tiết truyện ${vp.w}px`);
 
@@ -250,12 +250,33 @@ async function main() {
     const bufNorm = await page.screenshot({ fullPage: false });
     await saveOptimizedPng(bufNorm, path.join(outDir, `05-novel-detail-${vp.name}.png`));
 
-    // Scroll down to test sticky header
-    await page.evaluate(() => window.scrollBy(0, 450));
-    await page.waitForTimeout(300);
+    // Scroll down to test sticky header (on mobile <= 700px, hero is ~535px so scroll 750px to stick TOC)
+    await page.evaluate((width) => {
+      document.documentElement.style.scrollBehavior = 'auto';
+      const scrollY = width <= 700 ? 750 : 450;
+      window.scrollTo(0, scrollY);
+      window.dispatchEvent(new Event('scroll'));
+    }, vp.w);
+    await page.waitForTimeout(400);
     await assertNoHorizontalScroll(page, `Chi tiết truyện sticky ${vp.w}px`);
+
+    // Verify sticky TOC on mobile has height <= 90px
+    if (vp.w <= 700) {
+      const stickyHeight = await page.evaluate(() => {
+        const el = document.querySelector('[class*="tocStickyHeader"]');
+        return el ? el.getBoundingClientRect().height : 0;
+      });
+      console.log(`  ✓ Chiều cao sticky TOC ở ${vp.w}px: ${stickyHeight}px (yêu cầu <= 90px)`);
+      assert(stickyHeight <= 90, `Sticky TOC quá cao trên mobile: ${stickyHeight}px > 90px`);
+    }
+
     const bufSticky = await page.screenshot({ fullPage: false });
     await saveOptimizedPng(bufSticky, path.join(outDir, `06-novel-detail-sticky-${vp.name}.png`));
+    if (vp.name === '390') {
+      await saveOptimizedPng(bufSticky, path.join(outDir, 'novel-detail-sticky-390.png'));
+    } else if (vp.name === '1920') {
+      await saveOptimizedPng(bufSticky, path.join(outDir, 'novel-detail-sticky-1920.png'));
+    }
   }
 
   // ==========================================
@@ -263,7 +284,7 @@ async function main() {
   // ==========================================
   console.log('\n--- 3. KIỂM THỬ MODAL TÌM & THAY THẾ TOÀN BỘ TRUYỆN ---');
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto(`${BASE_URL}/#/novel/test-novel-toc`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/#/novel/test-novel-toc`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(300);
 
   // Click tools dropdown -> replace modal
@@ -309,33 +330,89 @@ async function main() {
   await page.waitForTimeout(300);
 
   // ==========================================
-  // PHẦN 4: TRANG THÊM CHƯƠNG (CẢ 2 TAB)
+  // PHẦN 4: TRANG THÊM CHƯƠNG (CẢ 2 TAB VÀ CẢ 2 VIEWPORT 390PX & 1366PX)
   // ==========================================
   console.log('\n--- 4. KIỂM THỬ TRANG THÊM CHƯƠNG MỚI (AddChapterPage) ---');
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto(`${BASE_URL}/#/novel/test-novel-toc/add-chapter`, { waitUntil: 'networkidle' });
+  // 1366px viewport
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto(`${BASE_URL}/#/novel/test-novel-toc/add-chapter`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('[class*="modeTab"]', { timeout: 10000 });
   await page.waitForTimeout(400);
-  await assertNoHorizontalScroll(page, 'Thêm chương tab 1 (thủ công) 1280px');
+  await assertNoHorizontalScroll(page, 'Thêm chương tab 1 (thủ công) 1366px');
 
-  // Tab 1: Nhập thủ công
+  // Verify header library pill button
+  const headerCheck = await page.evaluate(() => {
+    const navBtn = document.querySelector('[class*="navBtn"]');
+    if (!navBtn) return null;
+    const style = window.getComputedStyle(navBtn);
+    return {
+      borderRadius: style.borderRadius,
+      height: style.height,
+    };
+  });
+  if (headerCheck) {
+    console.log(`  ✓ Nút Thư viện header: borderRadius=${headerCheck.borderRadius}, height=${headerCheck.height}`);
+    assert(headerCheck.borderRadius.includes('999') || parseFloat(headerCheck.borderRadius) >= 14, 'Nút Thư viện phải bo tròn pill 999px');
+  }
+
+  // Tab 1: Nhập thủ công 1366px
   const bufAddCh1 = await page.screenshot({ fullPage: false });
   await saveOptimizedPng(bufAddCh1, path.join(outDir, '09-add-chapter-tab1-manual.png'));
 
-  // Tab 2: Thêm từ file
-  const tabs = await page.$$('[class*="modeTab"]');
-  if (tabs.length >= 2) {
-    await tabs[1].click();
-    await page.waitForTimeout(300);
-    await assertNoHorizontalScroll(page, 'Thêm chương tab 2 (file) 1280px');
-    const bufAddCh2 = await page.screenshot({ fullPage: false });
-    await saveOptimizedPng(bufAddCh2, path.join(outDir, '10-add-chapter-tab2-file.png'));
-  }
+  // Switch to Tab 2: Thêm từ file
+  await page.click('button:has-text("Thêm từ file")');
+  await page.waitForTimeout(400);
+  await assertNoHorizontalScroll(page, 'Thêm chương tab 2 (file) 1366px');
+
+  // Check option cards exist and styled
+  const optionCardsInfo = await page.evaluate(() => {
+    const cards = document.querySelectorAll('[class*="optionCardTitle"]');
+    const dots = document.querySelectorAll('[class*="optionRadioCircle"]');
+    const activeCard = document.querySelector('[class*="optionCardActive"]');
+    return {
+      count: cards.length,
+      dotsCount: dots.length,
+      hasActive: Boolean(activeCard),
+      firstCardRadius: activeCard ? window.getComputedStyle(activeCard).borderRadius : null,
+    };
+  });
+  console.log(`  ✓ Option Cards tại 1366px: ${optionCardsInfo.count} thẻ, ${optionCardsInfo.dotsCount} radio circle, active radius: ${optionCardsInfo.firstCardRadius}`);
+  assert(optionCardsInfo.count >= 2, 'Phải có ít nhất 2 option cards');
+  assert(optionCardsInfo.hasActive, 'Phải có thẻ option đang được chọn');
+
+  const bufAddCh2_1366 = await page.screenshot({ fullPage: false });
+  await saveOptimizedPng(bufAddCh2_1366, path.join(outDir, '10-add-chapter-tab2-file.png'));
+  await saveOptimizedPng(bufAddCh2_1366, path.join(outDir, 'add-chapter-tab2-file-1366.png'));
+
+  // Tab 2: Thêm từ file tại 390px
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(300);
+  await assertNoHorizontalScroll(page, 'Thêm chương tab 2 (file) 390px');
+
+  // Verify modeTabs at 390px does not wrap or overflow
+  const modeTabsCheck = await page.evaluate(() => {
+    const tabs = document.querySelector('[class*="modeTabs"]');
+    if (!tabs) return null;
+    const rect = tabs.getBoundingClientRect();
+    const style = window.getComputedStyle(tabs);
+    return {
+      width: rect.width,
+      display: style.display,
+      gridTemplateColumns: style.gridTemplateColumns,
+    };
+  });
+  console.log(`  ✓ ModeTabs tại 390px: width=${modeTabsCheck?.width}px, display=${modeTabsCheck?.display}`);
+  assert(modeTabsCheck?.width <= 365, 'modeTabs không được rộng quá 365px trên mobile');
+
+  const bufAddCh2_390 = await page.screenshot({ fullPage: false });
+  await saveOptimizedPng(bufAddCh2_390, path.join(outDir, 'add-chapter-tab2-file-390.png'));
 
   // ==========================================
   // PHẦN 5: BẢNG TUỲ CHỈNH ĐỌC SÁCH (ReadingSettings)
   // ==========================================
   console.log('\n--- 5. KIỂM THỬ BẢNG TUỲ CHỈNH ĐỌC SÁCH ---');
-  await page.goto(`${BASE_URL}/#/novel/test-novel-toc/read/dp-ch-1`, { waitUntil: 'networkidle' });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`${BASE_URL}/#/novel/test-novel-toc/read/dp-ch-1`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(400);
 
   // Open settings
@@ -343,8 +420,25 @@ async function main() {
   await page.waitForTimeout(400);
 
   await assertNoHorizontalScroll(page, 'Cài đặt đọc sách 1280px');
+
+  // Verify all 6 theme labels have readable colors
+  const themeLabelsCheck = await page.evaluate(() => {
+    const labels = Array.from(document.querySelectorAll('[class*="themeLabel"]'));
+    return labels.map(l => ({
+      text: l.textContent.trim(),
+      color: window.getComputedStyle(l).color,
+    }));
+  });
+  console.log(`  ✓ Kiểm tra nhãn 6 ô màu nền:`, themeLabelsCheck);
+  assert(themeLabelsCheck.length >= 6, 'Phải có đủ 6 ô màu nền');
+  for (const item of themeLabelsCheck) {
+    // None should be nearly black rgb(0,0,0) or dark rgb(31,41,55)
+    assert(!item.color.includes('rgb(31, 41, 55)') && !item.color.includes('rgb(0, 0, 0)'), `Nhãn "${item.text}" không được dùng màu chữ tối: ${item.color}`);
+  }
+
   const bufSettings = await page.screenshot({ fullPage: false });
   await saveOptimizedPng(bufSettings, path.join(outDir, '11-reading-settings.png'));
+  await saveOptimizedPng(bufSettings, path.join(outDir, 'reading-settings-modal.png'));
 
   // ==========================================
   // PHẦN 6: THANH ĐIỀU HƯỚNG CUỐI CHƯƠNG (Reader Bottom Nav)

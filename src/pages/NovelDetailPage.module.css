@@ -412,8 +412,32 @@
 }
 
 .tocStickyHeader.isSticky {
+  background: rgba(12, 18, 34, 0.94);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border-color: rgba(244, 227, 166, 0.22);
   padding: 12px 18px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.tocStickyHeader.isSticky::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  height: 14px;
+  background: rgba(12, 18, 34, 0.94);
+  pointer-events: none;
+  border-radius: 16px 16px 0 0;
+}
+
+.mobileExpandBtn {
+  display: none;
+}
+
+.controlsExpanded {
+  /* dynamic state class */
 }
 
 .tocHeaderRow {
@@ -1218,6 +1242,50 @@
 
   .descCard {
     padding: 14px 16px;
+  }
+
+  .tocStickyHeader.isSticky:not(.controlsExpanded) {
+    padding: 10px 14px;
+    max-height: 85px;
+  }
+
+  .tocStickyHeader.isSticky:not(.controlsExpanded) .tocHeaderRow {
+    margin-bottom: 0;
+  }
+
+  .tocStickyHeader.isSticky:not(.controlsExpanded) .tocControlsRow {
+    display: none;
+  }
+
+  .tocStickyHeader.isSticky.controlsExpanded {
+    padding: 12px 14px;
+    max-height: none;
+  }
+
+  .tocStickyHeader.isSticky.controlsExpanded .tocHeaderRow {
+    margin-bottom: 10px;
+  }
+
+  .mobileExpandBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(22, 32, 52, 0.75);
+    border: 1px solid rgba(244, 227, 166, 0.22);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .mobileExpandBtn:hover,
+  .mobileExpandBtnActive {
+    color: #ffcc00 !important;
+    border-color: rgba(255, 204, 0, 0.55) !important;
+    background: rgba(255, 204, 0, 0.12) !important;
   }
 
   .tocControlsRow {

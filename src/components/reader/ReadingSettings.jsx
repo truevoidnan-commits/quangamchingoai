@@ -118,7 +118,7 @@ export default function ReadingSettings({ isOpen, onClose, settings, onUpdate })
                     style={{ backgroundColor: theme.bg, borderColor: `${theme.text}50` }}
                     aria-hidden="true"
                   />
-                  <span className={styles.themeLabel} style={{ color: isSelected ? '#ffcc00' : theme.text }}>
+                  <span className={styles.themeLabel}>
                     {theme.label}
                   </span>
                   {isSelected && (
