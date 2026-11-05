@@ -55,6 +55,46 @@ export default function NovelDetailPage() {
   // Sorting: 'asc' | 'desc'
   const [sortOrder, setSortOrder] = useState('asc');
 
+  // Sticky TOC header detection
+  const [isTocSticky, setIsTocSticky] = useState(false);
+  const [mobileControlsExpanded, setMobileControlsExpanded] = useState(false);
+  const tocSentinelRef = useRef(null);
+
+  useEffect(() => {
+    const checkSticky = () => {
+      if (!tocSentinelRef.current) return;
+      const rect = tocSentinelRef.current.getBoundingClientRect();
+      setIsTocSticky(rect.top <= 64);
+    };
+
+    window.addEventListener('scroll', checkSticky, { passive: true });
+    window.addEventListener('resize', checkSticky, { passive: true });
+    checkSticky();
+
+    let observer;
+    if (tocSentinelRef.current && typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          setIsTocSticky(!entry.isIntersecting);
+        },
+        { threshold: 0, rootMargin: '-64px 0px 0px 0px' }
+      );
+      observer.observe(tocSentinelRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', checkSticky);
+      window.removeEventListener('resize', checkSticky);
+      if (observer) observer.disconnect();
+    };
+  }, [novel, chapters.length]);
+
+  useEffect(() => {
+    if (!isTocSticky) {
+      setMobileControlsExpanded(false);
+    }
+  }, [isTocSticky]);
+
   // Screen width detection for mobile bottomsheet vs desktop popover
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   useEffect(() => {
@@ -476,7 +516,8 @@ export default function NovelDetailPage() {
       {/* ===== TABLE OF CONTENTS (MỤC LỤC) ===== */}
       <section className={`${styles.sectionWrap} ${styles.tocSection}`}>
         {/* Sticky Toolbar underneath header */}
-        <div className={styles.tocStickyHeader}>
+        <div ref={tocSentinelRef} className={styles.tocSentinel} aria-hidden="true" />
+        <div className={`${styles.tocStickyHeader} ${isTocSticky ? styles.isSticky : ''} ${mobileControlsExpanded ? styles.controlsExpanded : ''}`}>
           <div className={styles.tocHeaderRow}>
             <h2 className={styles.tocTitle}>
               {isSearchActive ? 'Kết quả tìm kiếm' : 'Mục lục'}
@@ -541,6 +582,20 @@ export default function NovelDetailPage() {
                   </button>
                 </PopoverMenu>
               </div>
+
+              {/* Expand/Collapse search & jump on mobile when sticky */}
+              {isTocSticky && !isSearchActive && chapters.length > 0 && (
+                <button
+                  type="button"
+                  className={`${styles.mobileExpandBtn} ${mobileControlsExpanded ? styles.mobileExpandBtnActive : ''}`}
+                  onClick={() => setMobileControlsExpanded(prev => !prev)}
+                  title={mobileControlsExpanded ? 'Thu gọn bộ lọc' : 'Mở rộng tìm kiếm & nhảy chương'}
+                  aria-label={mobileControlsExpanded ? 'Thu gọn bộ lọc' : 'Mở rộng tìm kiếm & nhảy chương'}
+                  aria-expanded={mobileControlsExpanded}
+                >
+                  <IconSearch size={15} />
+                </button>
+              )}
             </div>
           </div>
 

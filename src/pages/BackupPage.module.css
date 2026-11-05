@@ -25,8 +25,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
   background: rgba(56, 189, 248, 0.1);
   border: 1px solid rgba(56, 189, 248, 0.25);
   transition: all 0.2s ease;
@@ -35,6 +35,12 @@
 .backLink:hover {
   background: rgba(56, 189, 248, 0.2);
   transform: translateY(-1px);
+}
+
+.input {
+  box-sizing: border-box;
+  font-family: inherit;
+  border-radius: 6px;
 }
 
 .headerTitle {

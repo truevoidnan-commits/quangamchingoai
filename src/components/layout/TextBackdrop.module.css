@@ -3,10 +3,22 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  transform: translateZ(0);
   background:
     linear-gradient(180deg, rgba(10, 16, 26, 0.68) 0%, rgba(14, 24, 48, 0.84) 45%, rgba(8, 12, 20, 0.96) 100%),
     radial-gradient(ellipse at 50% 12%, rgba(244, 227, 166, 0.08) 0%, transparent 60%),
     radial-gradient(circle at 80% 65%, rgba(27, 42, 69, 0.35) 0%, transparent 60%),
     url('../../assets/images/bg-thu-vien-muc-dem.webp') center top / cover no-repeat,
     #0a101a;
+}
+
+@media (min-width: 900px) and (orientation: landscape), (min-aspect-ratio: 4/3) {
+  .backdrop {
+    background:
+      radial-gradient(ellipse at center, transparent 40%, rgba(5, 8, 16, 0.75) 100%),
+      linear-gradient(180deg, rgba(10, 16, 26, 0.6) 0%, rgba(14, 24, 48, 0.75) 45%, rgba(8, 12, 20, 0.94) 100%),
+      radial-gradient(ellipse at 50% 15%, rgba(244, 227, 166, 0.08) 0%, transparent 60%),
+      url('../../assets/images/bg-thu-vien-muc-dem-wide.webp') center / cover no-repeat,
+      #0a101a;
+  }
 }

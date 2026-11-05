@@ -3,10 +3,22 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  transform: translateZ(0);
   background:
     linear-gradient(180deg, rgba(14, 10, 28, 0.55) 0%, rgba(12, 14, 26, 0.82) 45%, rgba(8, 10, 20, 0.96) 100%),
     radial-gradient(ellipse at 50% 20%, rgba(192, 132, 252, 0.12), transparent 70%),
     radial-gradient(circle at 80% 60%, rgba(15, 42, 53, 0.3), transparent 60%),
     url('../../assets/images/bg-tang-kinh-hoa-cac.webp') center top / cover no-repeat,
     #0b0a18;
+}
+
+@media (min-width: 900px) and (orientation: landscape), (min-aspect-ratio: 4/3) {
+  .backdrop {
+    background:
+      radial-gradient(ellipse at center, transparent 40%, rgba(5, 8, 16, 0.75) 100%),
+      linear-gradient(180deg, rgba(14, 10, 28, 0.5) 0%, rgba(12, 14, 26, 0.75) 45%, rgba(8, 10, 20, 0.94) 100%),
+      radial-gradient(ellipse at 50% 20%, rgba(192, 132, 252, 0.12), transparent 70%),
+      url('../../assets/images/bg-tang-kinh-hoa-cac-wide.webp') center / cover no-repeat,
+      #0b0a18;
+  }
 }

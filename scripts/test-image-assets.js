@@ -397,7 +397,7 @@ async function main() {
   console.log(`========================================\n`);
 }
 
-main().catch(err => {
+main().then(() => { process.exit(0); }).catch(err => {
   console.error('LỖI KIỂM THỬ:', err);
   process.exit(1);
 });

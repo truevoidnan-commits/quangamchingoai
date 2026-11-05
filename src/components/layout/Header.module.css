@@ -60,15 +60,18 @@
 .syncBtn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  padding: 4px 10px;
-  border-radius: 16px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
   font-size: 0.82rem;
   text-decoration: none;
   font-weight: 500;
   transition: all 0.2s ease;
   white-space: nowrap;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .syncBtn:hover {
@@ -135,10 +138,12 @@
   background: linear-gradient(135deg, rgba(255, 204, 0, 0.12), rgba(34, 195, 240, 0.08));
   border: 1px solid var(--border-gold);
   color: #ffcc00;
-  padding: 5px 12px;
-  border-radius: var(--radius-full);
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   font-size: 12px;
   font-family: 'Noto Serif', serif;
@@ -148,6 +153,7 @@
   white-space: nowrap;
   flex-shrink: 1;
   min-width: 0;
+  box-sizing: border-box;
 }
 .cultivationBadge:hover {
   transform: translateY(-1px);
@@ -186,17 +192,38 @@
 }
 
 .navBtn {
-  font-size: 13px;
-  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px !important;
+  background: rgba(22, 32, 52, 0.65);
+  border: 1px solid rgba(244, 227, 166, 0.22);
+  color: #eef2f8;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.navBtn:hover {
+  background: rgba(255, 204, 0, 0.14);
+  border-color: rgba(255, 204, 0, 0.45);
+  color: #ffcc00;
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.2);
+  transform: translateY(-1px);
 }
 
 .navBtnIcon {
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .navBtnText {
@@ -233,17 +260,21 @@
   }
 
   .compact .cultivationBadge {
-    padding: 4px 7px;
+    height: 28px;
+    padding: 0 8px;
     font-size: 11px;
     max-width: 32vw;
     gap: 4px;
+    border-radius: 999px;
   }
 
   /* Sync button on mobile */
   .syncBtn {
-    padding: 4px 7px;
+    height: 28px;
+    padding: 0 8px;
     font-size: 0.78rem;
     gap: 3px;
+    border-radius: 999px;
   }
   .syncTextFull {
     display: none;
@@ -254,18 +285,21 @@
 
   /* Nhãn cảnh giới: max-width khoảng 46vw (hoặc phù hợp), overflow: hidden, text-overflow: ellipsis trên .badgeText */
   .cultivationBadge {
-    padding: 4px 8px;
+    height: 28px;
+    padding: 0 8px;
     font-size: 11px;
     max-width: 46vw;
     gap: 4px;
+    border-radius: 999px;
   }
 
-  /* Nút "📖 Thư viện" (chỉ hiện khi không ở trang chủ): trên màn hẹp chỉ hiện biểu tượng 📖, giữ aria-label "Thư viện", vùng bấm tối thiểu 36x36px */
+  /* Nút "Thư viện" (chỉ hiện khi không ở trang chủ): bo tròn pill 999px, đồng đều độ cao 28px */
   .navBtn {
-    min-width: 36px;
-    min-height: 36px;
-    padding: 0 6px;
-    font-size: 15px;
+    height: 28px;
+    min-width: 28px;
+    padding: 0 8px;
+    border-radius: 999px !important;
+    gap: 4px;
   }
   .navBtnText {
     display: none;

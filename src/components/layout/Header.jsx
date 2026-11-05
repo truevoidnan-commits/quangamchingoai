@@ -4,6 +4,15 @@ import { Link, useLocation } from 'react-router-dom';
 import { useCultivationContext } from '../../context/CultivationContext';
 import styles from './Header.module.css';
 
+function IconBook({ size = 13 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  );
+}
+
 export default function Header() {
   const location = useLocation();
   const isLobby = location.pathname === '/' || location.pathname === '/comics';
@@ -124,12 +133,14 @@ export default function Header() {
               <nav className={styles.nav}>
                 <Link
                   to="/"
-                  className={`btn-ghost ${styles.navBtn}`}
+                  className={styles.navBtn}
                   title="Về Thư viện"
                   aria-label="Thư viện"
                 >
-                  <span className={styles.navBtnIcon}>📖</span>
-                  <span className={styles.navBtnText}> Thư viện</span>
+                  <span className={styles.navBtnIcon}>
+                    <IconBook size={13} />
+                  </span>
+                  <span className={styles.navBtnText}>Thư viện</span>
                 </Link>
               </nav>
             )}

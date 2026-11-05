@@ -40,6 +40,73 @@ import {
 import selectionStyles from '../components/reader/SelectionEditor.module.css';
 import styles from './ReaderPage.module.css';
 
+
+function IconArrowLeft({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
+    </svg>
+  );
+}
+
+function IconList({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  );
+}
+
+function IconReplace({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 4h6v6" />
+      <path d="M4 20h6v-6" />
+      <path d="M20 4l-7 7" />
+      <path d="M4 20l7-7" />
+    </svg>
+  );
+}
+
+function IconPlus({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
+function IconSettings({ size = 17 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="21" x2="4" y2="14" />
+      <line x1="4" y1="10" x2="4" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12" y2="3" />
+      <line x1="20" y1="21" x2="20" y2="16" />
+      <line x1="20" y1="12" x2="20" y2="3" />
+      <line x1="1" y1="14" x2="7" y2="14" />
+      <line x1="9" y1="8" x2="15" y2="8" />
+      <line x1="17" y1="16" x2="23" y2="16" />
+    </svg>
+  );
+}
+
+function IconZap({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+}
+
 export default function ReaderPage() {
   const { id, novelId, chapterId } = useParams();
   const activeNovelId = novelId || id;
@@ -1205,10 +1272,14 @@ export default function ReaderPage() {
 
       {/* ===== CHAPTER NAVIGATION ===== */}
       {!isContentLoading && (
-        <nav className={styles.chapterNav} style={{ borderColor: `${theme.accent}30` }}>
+        <nav className={styles.chapterNav} style={{ backgroundColor: `${theme.bg}f0`, borderColor: `${theme.accent}35` }}>
           <button
             className={styles.navBtn}
-            style={{ color: prevChapter ? theme.accent : `${theme.text}40`, borderColor: prevChapter ? `${theme.accent}50` : `${theme.text}20` }}
+            style={{
+              color: prevChapter ? theme.accent : `${theme.text}60`,
+              borderColor: prevChapter ? `${theme.accent}50` : `${theme.text}25`,
+              backgroundColor: prevChapter ? `${theme.accent}12` : 'transparent'
+            }}
             onClick={() => goToChapter(prevChapter)}
             disabled={!prevChapter}
           >
@@ -1217,13 +1288,23 @@ export default function ReaderPage() {
           <button
             className={styles.tocBtn}
             onClick={() => setTocOpen(true)}
-            style={{ color: theme.accent, borderColor: `${theme.accent}40` }}
+            style={{
+              color: theme.accent,
+              borderColor: `${theme.accent}45`,
+              backgroundColor: `${theme.accent}12`
+            }}
+            title="Mục lục"
+            aria-label="Mục lục"
           >
-            📋
+            <IconList size={18} />
           </button>
           <button
             className={styles.navBtn}
-            style={{ color: nextChapter ? theme.accent : `${theme.text}40`, borderColor: nextChapter ? `${theme.accent}50` : `${theme.text}20` }}
+            style={{
+              color: nextChapter ? theme.accent : `${theme.text}60`,
+              borderColor: nextChapter ? `${theme.accent}50` : `${theme.text}25`,
+              backgroundColor: nextChapter ? `${theme.accent}12` : 'transparent'
+            }}
             onClick={() => goToChapter(nextChapter)}
             disabled={!nextChapter}
           >

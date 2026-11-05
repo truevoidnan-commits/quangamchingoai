@@ -282,7 +282,7 @@ async function main() {
       const backBtn = document.querySelector('button[class*="backBtn"]');
       const coverWrap = document.querySelector('[class*="coverWrap"]');
       const descCard = document.querySelector('[class*="descCard"]');
-      const tocTitle = document.querySelector('[class*="tocTitle"]');
+      const tocTitle = document.querySelector('[class*="tocStickyHeader"]') || document.querySelector('[class*="tocTitle"]');
       const expectedLeft = Math.round((window.innerWidth - 1200) / 2 + 20);
 
       const logoRect = logo ? Math.round(logo.getBoundingClientRect().left) : 0;
