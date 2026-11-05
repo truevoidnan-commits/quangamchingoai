@@ -14,14 +14,15 @@
 .hero {
   position: relative;
   min-height: 280px;
-  overflow: hidden;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 28px;
 }
 
 .heroBgWrap {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  pointer-events: none;
 }
 
 .heroBg {
@@ -48,7 +49,7 @@
 .heroContent {
   position: relative;
   z-index: 1;
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 16px 20px 28px;
   width: 100%;
@@ -275,36 +276,7 @@
   color: var(--text-primary);
 }
 
-/* Desktop Popover Menu */
-.desktopPopoverMenu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  background: rgba(14, 20, 32, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(16px);
-  border-radius: 12px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
-  padding: 6px;
-  min-width: 190px;
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  animation: popoverFadeIn 0.15s ease;
-}
-
-@keyframes popoverFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
+/* Popover Menu Items */
 .popoverItem {
   display: flex;
   align-items: center;
@@ -347,11 +319,19 @@
 
 /* ===== DESCRIPTION (GIỚI THIỆU) ===== */
 .sectionWrap {
-  max-width: 1400px;
+  max-width: 1200px;
   width: 100%;
   margin: 0 auto;
-  padding: 0 20px 24px;
+  padding: 0 20px;
   box-sizing: border-box;
+}
+
+.descSection {
+  margin-bottom: 28px;
+}
+
+.tocSection {
+  margin-bottom: 32px;
 }
 
 .descCard {
@@ -479,23 +459,6 @@
 
 .toolsMenuWrap {
   position: relative;
-}
-
-.toolsDropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  background: rgba(14, 20, 32, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(16px);
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
-  padding: 4px;
-  min-width: 200px;
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
 .toolsDropdownItem {
@@ -1192,5 +1155,14 @@
     height: 38px;
     padding: 0 12px;
     font-size: 12.5px;
+  }
+}
+
+@media (max-width: 600px) {
+  .heroContent {
+    padding: 12px 10px 20px;
+  }
+  .sectionWrap {
+    padding: 0 10px;
   }
 }

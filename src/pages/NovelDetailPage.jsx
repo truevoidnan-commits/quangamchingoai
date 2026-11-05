@@ -6,6 +6,7 @@ import { pullNovelProgressNow } from '../lib/sync/syncEngine.js';
 import Footer from '../components/layout/Footer';
 import TextBackdrop from '../components/layout/TextBackdrop';
 import BottomSheet from '../components/ui/BottomSheet';
+import PopoverMenu from '../components/ui/PopoverMenu';
 import GlobalReplaceModal from '../components/reader/GlobalReplaceModal';
 import {
   IconSearch,
@@ -139,30 +140,7 @@ export default function NovelDetailPage() {
 
     return () => clearTimeout(timer);
   }, [searchQuery, activeNovelId]);
-
-  // Close menus on outside click or Escape
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setMoreMenuOpen(false);
-        setToolsMenuOpen(false);
-      }
-    };
-    const handleClickOutside = (e) => {
-      if (moreMenuOpen && moreBtnRef.current && !moreBtnRef.current.contains(e.target)) {
-        setMoreMenuOpen(false);
-      }
-      if (toolsMenuOpen && toolsBtnRef.current && !toolsBtnRef.current.contains(e.target)) {
-        setToolsMenuOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('click', handleClickOutside);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('click', handleClickOutside);
-    };
-  }, [moreMenuOpen, toolsMenuOpen]);
+  // Menus auto-close handled natively by PopoverMenu & BottomSheet
 
   // Smart chapter search/jump
   const findTargetChapter = useCallback(
@@ -374,9 +352,10 @@ export default function NovelDetailPage() {
                 )}
 
                 {/* More Actions (⋯) Container */}
-                <div className={styles.moreActionsContainer} ref={moreBtnRef}>
+                <div className={styles.moreActionsContainer}>
                   <button
                     type="button"
+                    ref={moreBtnRef}
                     className={styles.moreActionsBtn}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -385,15 +364,26 @@ export default function NovelDetailPage() {
                     title="Thao tác khác"
                     aria-label="Thao tác khác"
                     id="btn-more-actions"
+                    aria-haspopup="menu"
+                    aria-expanded={moreMenuOpen}
+                    aria-controls="novel-detail-more-menu"
                   >
                     <IconMoreVertical size={16} />
                   </button>
 
-                  {/* Desktop Popover Menu */}
-                  {moreMenuOpen && !isMobile && (
-                    <div className={styles.desktopPopoverMenu} onClick={(e) => e.stopPropagation()}>
+                  {/* Desktop Popover Menu via Portal */}
+                  {!isMobile && (
+                    <PopoverMenu
+                      id="novel-detail-more-menu"
+                      isOpen={moreMenuOpen}
+                      onClose={() => setMoreMenuOpen(false)}
+                      triggerRef={moreBtnRef}
+                      ariaLabel="Thao tác truyện"
+                    >
                       <button
                         type="button"
+                        role="menuitem"
+                        tabIndex={0}
                         className={styles.popoverItem}
                         onClick={() => {
                           setMoreMenuOpen(false);
@@ -409,6 +399,8 @@ export default function NovelDetailPage() {
 
                       <button
                         type="button"
+                        role="menuitem"
+                        tabIndex={0}
                         className={styles.popoverItem}
                         onClick={() => {
                           setMoreMenuOpen(false);
@@ -425,6 +417,8 @@ export default function NovelDetailPage() {
                       {canShowExport && (
                         <button
                           type="button"
+                          role="menuitem"
+                          tabIndex={0}
                           className={styles.popoverItem}
                           onClick={() => {
                             setMoreMenuOpen(false);
@@ -440,7 +434,7 @@ export default function NovelDetailPage() {
                           <span>Tải về máy</span>
                         </button>
                       )}
-                    </div>
+                    </PopoverMenu>
                   )}
                 </div>
               </div>
@@ -451,7 +445,7 @@ export default function NovelDetailPage() {
 
       {/* ===== DESCRIPTION (GIỚI THIỆU) ===== */}
       {cleanedDesc && (
-        <section className={styles.sectionWrap}>
+        <section className={`${styles.sectionWrap} ${styles.descSection}`}>
           <div className={styles.descCard}>
             <h2 className={styles.sectionTitle}>Giới thiệu</h2>
             <div className={`${styles.descBody} ${descExpanded ? styles.descExpanded : ''}`}>
@@ -480,7 +474,7 @@ export default function NovelDetailPage() {
       )}
 
       {/* ===== TABLE OF CONTENTS (MỤC LỤC) ===== */}
-      <section className={styles.sectionWrap}>
+      <section className={`${styles.sectionWrap} ${styles.tocSection}`}>
         {/* Sticky Toolbar underneath header */}
         <div className={styles.tocStickyHeader}>
           <div className={styles.tocHeaderRow}>
@@ -502,38 +496,50 @@ export default function NovelDetailPage() {
               </button>
 
               {/* Tools dropdown */}
-              <div className={styles.toolsMenuWrap} ref={toolsBtnRef}>
+              <div className={styles.toolsMenuWrap}>
                 <button
                   type="button"
+                  ref={toolsBtnRef}
                   className={styles.toolsBtn}
                   onClick={(e) => {
                     e.stopPropagation();
                     setToolsMenuOpen(!toolsMenuOpen);
                   }}
                   title="Công cụ bổ trợ"
+                  id="btn-tools-novel"
+                  aria-haspopup="menu"
+                  aria-expanded={toolsMenuOpen}
+                  aria-controls="novel-detail-tools-menu"
                 >
                   <IconMoreVertical size={16} />
                   <span className={styles.toolsBtnLabel}>Công cụ</span>
                 </button>
 
-                {toolsMenuOpen && (
-                  <div className={styles.toolsDropdown} onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      className={styles.toolsDropdownItem}
-                      onClick={() => {
-                        setToolsMenuOpen(false);
-                        setGlobalReplaceOpen(true);
-                      }}
-                      title="Tìm và thay thế một cụm từ trên toàn bộ truyện"
-                    >
-                      <div className={styles.toolsIconWrap}>
-                        <IconReplace size={16} />
-                      </div>
-                      <span>Thay thế toàn truyện</span>
-                    </button>
-                  </div>
-                )}
+                <PopoverMenu
+                  id="novel-detail-tools-menu"
+                  isOpen={toolsMenuOpen}
+                  onClose={() => setToolsMenuOpen(false)}
+                  triggerRef={toolsBtnRef}
+                  ariaLabel="Công cụ bổ trợ"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    tabIndex={0}
+                    className={styles.toolsDropdownItem}
+                    onClick={() => {
+                      setToolsMenuOpen(false);
+                      setGlobalReplaceOpen(true);
+                    }}
+                    title="Tìm và thay thế một cụm từ trên toàn bộ truyện"
+                    id="btn-global-replace"
+                  >
+                    <div className={styles.toolsIconWrap}>
+                      <IconReplace size={16} />
+                    </div>
+                    <span>Thay thế toàn truyện</span>
+                  </button>
+                </PopoverMenu>
               </div>
             </div>
           </div>

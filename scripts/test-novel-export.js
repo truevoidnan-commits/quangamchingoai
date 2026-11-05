@@ -697,6 +697,41 @@ await runTest('7.6: Truyện chưa có chương nào -> Nút Tải Về bị vô
   console.log('     ✓ Nút Tải Về đã bị khóa đúng như kỳ vọng');
 });
 
+
+await runTest('7.7: Desktop 1280px -> Menu ⋯ mở qua Portal, mục Tải về máy không bị che và click được', async () => {
+  await flowPage.setViewportSize({ width: 1280, height: 800 });
+  await flowPage.goto(`${BASE_URL}/#/novel/test-novel-flow-a`, { waitUntil: 'domcontentloaded' });
+  await flowPage.waitForSelector('text=Vũ Động Càn Khôn', { timeout: 5000 });
+  await flowPage.waitForTimeout(300);
+
+  const moreBtn = flowPage.locator('#btn-more-actions');
+  const menu = flowPage.locator('#novel-detail-more-menu');
+  if (!(await menu.isVisible())) {
+    await moreBtn.click();
+  }
+  await flowPage.waitForSelector('#novel-detail-more-menu', { timeout: 5000 });
+
+  // Kiểm tra mục cuối cùng (#btn-export-novel) không bị che khuất bằng elementFromPoint
+  const isUnoccluded = await flowPage.evaluate(() => {
+    const btn = document.getElementById('btn-export-novel');
+    if (!btn) return false;
+    const rect = btn.getBoundingClientRect();
+    const cx = Math.round(rect.left + rect.width / 2);
+    const cy = Math.round(rect.top + rect.height / 2);
+    const topEl = document.elementFromPoint(cx, cy);
+    return btn === topEl || btn.contains(topEl);
+  });
+
+  assert(isUnoccluded, 'Mục menu cuối cùng (#btn-export-novel) phải click được và không bị che khuất');
+
+  // Click mục cuối cùng để xác nhận hoạt động mở modal
+  await flowPage.locator('#btn-export-novel').click();
+  await flowPage.waitForSelector('#modal-export-title', { timeout: 5000 });
+  await flowPage.locator('#btn-close-modal').click();
+  await flowPage.waitForSelector('#modal-export-title', { state: 'detached', timeout: 5000 });
+  console.log('     ✓ Mục menu cuối cùng (#btn-export-novel) hiển thị trọn vẹn và click thành công trên 1280px!');
+});
+
 // Dọn dẹp server và browser
 await browser.close();
 await new Promise((resolve) => server.close(resolve));
@@ -705,3 +740,5 @@ console.log('\n===============================================================')
 console.log(`  TỔNG KẾT: ${passedTests}/${totalTests} BÀI KIỂM THỬ THÀNH CÔNG RỰC RỠ! 🎉`);
 console.log(`  THỜI GIAN TẠO EPUB CHO 3000 CHƯƠNG: ${benchmarkSeconds} GIÂY`);
 console.log('===============================================================\n');
+
+process.exit(0);
