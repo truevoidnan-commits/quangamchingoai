@@ -10,6 +10,35 @@ import Footer from '../components/layout/Footer';
 import TextBackdrop from '../components/layout/TextBackdrop';
 import styles from './AddChapterPage.module.css';
 
+
+function IconPen({ size = 16, className }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+    </svg>
+  );
+}
+
+function IconUpload({ size = 16, className }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  );
+}
+
+function IconFile({ size = 16, className }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+    </svg>
+  );
+}
+
 export default function AddChapterPage() {
   const { id, novelId: rawNovelId, chapterId } = useParams();
   const novelId = rawNovelId || id;
@@ -363,14 +392,16 @@ export default function AddChapterPage() {
               className={`${styles.modeTab} ${mode === 'single' ? styles.modeTabActive : ''}`}
               onClick={() => setMode('single')}
             >
-              ✍️ Nhập thủ công (Từng chương)
+              <IconPen size={15} />
+              <span>Nhập thủ công</span>
             </button>
             <button
               type="button"
               className={`${styles.modeTab} ${mode === 'file' ? styles.modeTabActive : ''}`}
               onClick={() => setMode('file')}
             >
-              📂 Thêm từ file (.txt / .epub)
+              <IconUpload size={15} />
+              <span>Thêm từ file</span>
             </button>
           </div>
         )}
@@ -381,7 +412,10 @@ export default function AddChapterPage() {
             {/* Quick single file loader */}
             {!isEdit && (
               <div className={styles.quickFileBar}>
-                <span className={styles.quickFileTip}>💡 Có file chương lẻ (.txt)?</span>
+                <div className={styles.quickFileLeft}>
+                  <IconFile size={16} className={styles.quickFileIcon} />
+                  <span className={styles.quickFileTip}>Có file chương lẻ (.txt)?</span>
+                </div>
                 <input
                   ref={singleFileRef}
                   type="file"
@@ -392,10 +426,10 @@ export default function AddChapterPage() {
                 />
                 <button
                   type="button"
-                  className={`btn-ghost ${styles.quickFileBtn}`}
+                  className={styles.quickFileBtn}
                   onClick={() => singleFileRef.current?.click()}
                 >
-                  📄 Nạp nội dung từ file .txt vào ô nhập
+                  Nạp nội dung từ file .txt
                 </button>
               </div>
             )}
@@ -466,7 +500,7 @@ export default function AddChapterPage() {
                 onChange={e => setAutoFix(e.target.checked)}
                 className={styles.checkbox}
               />
-              <span className={styles.toggleLabel}>🔧 Tự động sửa lỗi dấu tiếng Việt khi dán/gõ</span>
+              <span className={styles.toggleLabel}>Tự động sửa lỗi dấu tiếng Việt khi dán/gõ</span>
             </label>
 
             {/* Content */}
@@ -489,12 +523,12 @@ export default function AddChapterPage() {
             <div className={styles.actions}>
               <button className="btn-ghost" onClick={() => navigate(-1)}>Hủy</button>
               <button
-                className="btn-gold"
+                className={styles.btnSaveSingle}
                 onClick={handleSaveSingle}
                 disabled={savingSingle || !title.trim()}
                 id="btn-save-chapter"
               >
-                {savingSingle ? '⏳ Đang lưu...' : isEdit ? '💾 Lưu thay đổi' : '💾 Lưu chương'}
+                {savingSingle ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi' : 'Lưu chương'}
               </button>
             </div>
           </div>
@@ -527,7 +561,7 @@ export default function AddChapterPage() {
                   id="batch-novel-file-input"
                 />
                 <div className={styles.dropPlaceholder}>
-                  <span className={styles.dropIcon}>📚</span>
+                  <span className={styles.dropIcon}><IconUpload size={38} /></span>
                   <span className={styles.dropMainText}>
                     Nhấn vào đây hoặc Kéo thả file <strong>.txt / .epub</strong> vào đây
                   </span>
@@ -548,43 +582,60 @@ export default function AddChapterPage() {
                     onChange={e => setAutoFix(e.target.checked)}
                     className={styles.checkbox}
                   />
-                  <span className={styles.toggleLabel}>🔧 Tự động chuẩn hóa dấu tiếng Việt</span>
+                  <span className={styles.toggleLabel}>Tự động chuẩn hóa dấu tiếng Việt</span>
                 </label>
               </div>
 
               <div className={styles.insertPositionWrap}>
                 <span className={styles.subLabel}>Vị trí nối tiếp chương vào truyện:</span>
-                <div className={styles.radioGroup}>
-                  <label className={styles.radioLabel}>
-                    <input
-                      type="radio"
-                      name="startOrder"
-                      value="end"
-                      checked={startOrderMode === 'end'}
-                      onChange={() => setStartOrderMode('end')}
-                    />
-                    <span>Nối tiếp vào cuối truyện (Bắt đầu từ thứ tự <strong>#{nextDefaultOrder}</strong>)</span>
-                  </label>
-                  <label className={styles.radioLabel}>
-                    <input
-                      type="radio"
-                      name="startOrder"
-                      value="custom"
-                      checked={startOrderMode === 'custom'}
-                      onChange={() => setStartOrderMode('custom')}
-                    />
-                    <span>Tùy chỉnh số thứ tự bắt đầu:</span>
-                    {startOrderMode === 'custom' && (
-                      <input
-                        type="number"
-                        value={customStartOrder}
-                        onChange={e => setCustomStartOrder(e.target.value)}
-                        placeholder={`vd: ${nextDefaultOrder}`}
-                        className={styles.customOrderInput}
-                        min={0}
-                      />
-                    )}
-                  </label>
+                <div className={styles.optionCardsGrid}>
+                  <div
+                    className={`${styles.optionCard} ${startOrderMode === 'end' ? styles.optionCardActive : ''}`}
+                    onClick={() => setStartOrderMode('end')}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setStartOrderMode('end'); }}
+                  >
+                    <div className={styles.optionRadioCircle}>
+                      {startOrderMode === 'end' && <div className={styles.optionRadioDot} />}
+                    </div>
+                    <div className={styles.optionCardContent}>
+                      <div className={styles.optionCardTitle}>Nối tiếp vào cuối truyện</div>
+                      <div className={styles.optionCardDesc}>
+                        Bắt đầu từ thứ tự <strong className={styles.goldText}>#{nextDefaultOrder}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`${styles.optionCard} ${startOrderMode === 'custom' ? styles.optionCardActive : ''}`}
+                    onClick={() => setStartOrderMode('custom')}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setStartOrderMode('custom'); }}
+                  >
+                    <div className={styles.optionRadioCircle}>
+                      {startOrderMode === 'custom' && <div className={styles.optionRadioDot} />}
+                    </div>
+                    <div className={styles.optionCardContent}>
+                      <div className={styles.optionCardTitle}>Tùy chỉnh số thứ tự bắt đầu</div>
+                      <div className={styles.optionCardDesc}>
+                        {startOrderMode === 'custom' ? (
+                          <input
+                            type="number"
+                            value={customStartOrder}
+                            onChange={e => setCustomStartOrder(e.target.value)}
+                            placeholder={`vd: ${nextDefaultOrder}`}
+                            className={styles.customOrderInput}
+                            min={0}
+                            onClick={e => e.stopPropagation()}
+                          />
+                        ) : (
+                          <span>Nhập số thứ tự tùy ý</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -631,7 +682,7 @@ export default function AddChapterPage() {
                 <div className={styles.parseResultHeader}>
                   <div className={styles.parseResultSummary}>
                     <span className={styles.parseSuccessBadge}>
-                      ✅ Đã tách được <strong>{parsedChapters.length}</strong> chương
+                      Đã tách được <strong>{parsedChapters.length}</strong> chương
                     </span>
                     {parsedChapters.filter(c => c.isExtra).length > 0 && (
                       <span className="badge badge-extra">
@@ -651,7 +702,7 @@ export default function AddChapterPage() {
                       setBatchFiles([]);
                     }}
                   >
-                    🗑️ Xóa danh sách tải lên
+                    Xóa danh sách tải lên
                   </button>
                 </div>
 
@@ -685,7 +736,7 @@ export default function AddChapterPage() {
                   </div>
                 ) : (
                   <div className={styles.perfectSequenceBox}>
-                    <span>✨ <strong>Thứ tự số chương liền mạch 100%</strong>: Các chương tăng tiến liên tục (+1){existingChapters.length > 0 ? ', kể cả tại điểm nối với truyện đang có' : ''} — không có nhảy số hay thiếu chương.</span>
+                    <span><strong>Thứ tự số chương liền mạch 100%</strong>: Các chương tăng tiến liên tục (+1){existingChapters.length > 0 ? ', kể cả tại điểm nối với truyện đang có' : ''} — không có nhảy số hay thiếu chương.</span>
                   </div>
                 )}
 
@@ -696,7 +747,7 @@ export default function AddChapterPage() {
                     type="text"
                     value={previewFilter}
                     onChange={e => setPreviewFilter(e.target.value)}
-                    placeholder="🔍 Lọc theo tên hoặc số..."
+                    placeholder="Lọc theo tên hoặc số..."
                     className={styles.filterInput}
                   />
                 </div>
@@ -733,7 +784,7 @@ export default function AddChapterPage() {
                                 onClick={() => setExpandedChapterIdx(isExpanded ? null : idx)}
                                 title="Xem trước nội dung"
                               >
-                                {isExpanded ? '▲ Đóng' : '👁️ Xem'}
+                                {isExpanded ? '▲ Đóng' : 'Xem'}
                               </button>
                               <button
                                 type="button"
@@ -773,14 +824,14 @@ export default function AddChapterPage() {
             <div className={styles.actions}>
               <button className="btn-ghost" onClick={() => navigate(-1)}>Hủy</button>
               <button
-                className="btn-gold"
+                className={styles.btnSaveBatch}
                 onClick={handleSaveBatch}
                 disabled={savingBatch || parsedChapters.length === 0}
                 id="btn-save-batch-chapters"
               >
                 {savingBatch
-                  ? `⏳ Đang lưu (${parsedChapters.length} chương)...`
-                  : `💾 Lưu tất cả ${parsedChapters.length} chương vào truyện`}
+                  ? `Đang lưu (${parsedChapters.length} chương)...`
+                  : `Lưu tất cả ${parsedChapters.length} chương vào truyện`}
               </button>
             </div>
           </div>

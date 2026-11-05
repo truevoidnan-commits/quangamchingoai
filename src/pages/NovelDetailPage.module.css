@@ -191,9 +191,9 @@
 }
 
 .mainReadBtn {
-  height: 42px;
+  height: 44px;
   padding: 0 22px;
-  border-radius: 21px;
+  border-radius: 999px;
   background: linear-gradient(135deg, #f59e0b, #d97706);
   border: 1px solid rgba(255, 204, 0, 0.4);
   color: #000;
@@ -229,9 +229,9 @@
 }
 
 .secondaryBtn {
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 20px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.16);
   color: var(--text-secondary);
@@ -257,8 +257,8 @@
 }
 
 .moreActionsBtn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -387,15 +387,33 @@
 }
 
 /* ===== STICKY TOC HEADER ===== */
+.tocSentinel {
+  height: 1px;
+  margin-top: -1px;
+  pointer-events: none;
+  visibility: hidden;
+}
+
 .tocStickyHeader {
   position: sticky;
-  top: 56px;
+  top: 62px;
   z-index: 10;
-  background: rgba(10, 16, 26, 0.94);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 12px 0 14px;
-  margin-bottom: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(244, 227, 166, 0.14);
+  background: linear-gradient(180deg, rgba(20, 30, 52, 0.62), rgba(10, 16, 30, 0.5));
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  transition: padding 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.tocStickyHeader.isSticky {
+  padding: 12px 18px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .tocHeaderRow {
@@ -403,7 +421,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
 .tocTitle {
@@ -418,13 +437,16 @@
 }
 
 .chapterBadge {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
   font-weight: 700;
   color: #ffcc00;
-  background: rgba(255, 204, 0, 0.1);
-  border: 1px solid rgba(255, 204, 0, 0.25);
-  padding: 1px 7px;
-  border-radius: 10px;
+  background: rgba(255, 204, 0, 0.12);
+  border: 1px solid rgba(244, 227, 166, 0.28);
+  padding: 2px 10px;
+  border-radius: 999px;
   font-family: var(--font-sans);
 }
 
@@ -436,25 +458,34 @@
 
 .sortBtn,
 .toolsBtn {
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 8px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(244, 227, 166, 0.2);
   color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 13.5px;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 
 .sortBtn:hover,
 .toolsBtn:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(244, 227, 166, 0.45);
   color: #ffffff;
+}
+
+.sortBtn:focus-visible,
+.toolsBtn:focus-visible {
+  outline: none;
+  border-color: rgba(245, 185, 66, 0.6);
+  box-shadow: 0 0 0 3px rgba(245, 185, 66, 0.35);
 }
 
 .toolsMenuWrap {
@@ -465,13 +496,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 38px;
-  padding: 0 10px;
-  border-radius: 6px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 13.5px;
   cursor: pointer;
   text-align: left;
   transition: all 0.15s ease;
@@ -495,24 +526,35 @@
 
 /* Jump & Content Search Row */
 .tocControlsRow {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 900px) {
+  .tocControlsRow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
 }
 
 .jumpForm {
-  flex: 1;
-  min-width: 220px;
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .jumpIcon {
   position: absolute;
-  left: 10px;
-  color: var(--accent-gold);
+  left: 14px;
+  color: #f59e0b;
   pointer-events: none;
   display: flex;
   align-items: center;
@@ -520,24 +562,30 @@
 
 .jumpInput {
   width: 100%;
-  height: 36px;
-  padding: 0 90px 0 32px;
+  height: 44px;
+  padding: 0 114px 0 42px;
   background: rgba(14, 20, 32, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border: 1px solid rgba(244, 227, 166, 0.2);
+  border-radius: 14px;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 13.5px;
   outline: none;
   box-sizing: border-box;
+  transition: all 0.15s ease;
 }
 
 .jumpInput:focus {
-  border-color: rgba(255, 204, 0, 0.4);
+  border-color: rgba(245, 185, 66, 0.6);
+  box-shadow: 0 0 0 3px rgba(245, 185, 66, 0.35);
+}
+
+.jumpInput::placeholder {
+  color: rgba(148, 163, 184, 0.65);
 }
 
 .jumpClearBtn {
   position: absolute;
-  right: 80px;
+  right: 100px;
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -545,20 +593,33 @@
   display: flex;
   align-items: center;
   padding: 4px;
+  border-radius: 50%;
+}
+
+.jumpClearBtn:hover {
+  color: var(--text-primary);
 }
 
 .jumpSubmitBtn {
   position: absolute;
-  right: 4px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 5px;
-  background: rgba(255, 204, 0, 0.14);
-  border: 1px solid rgba(255, 204, 0, 0.3);
+  right: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 204, 0, 0.16);
+  border: 1px solid rgba(244, 227, 166, 0.35);
   color: #ffcc00;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.jumpSubmitBtn:hover:not(:disabled) {
+  background: rgba(255, 204, 0, 0.28);
+  color: #ffffff;
+  border-color: #ffcc00;
 }
 
 .jumpSubmitBtn:disabled {
@@ -567,16 +628,17 @@
 }
 
 .contentSearchWrap {
-  flex: 1;
-  min-width: 200px;
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .searchIcon {
   position: absolute;
-  left: 10px;
+  left: 14px;
   color: var(--text-muted);
   pointer-events: none;
   display: flex;
@@ -585,19 +647,25 @@
 
 .contentSearchInput {
   width: 100%;
-  height: 36px;
-  padding: 0 30px 0 32px;
+  height: 44px;
+  padding: 0 38px 0 42px;
   background: rgba(14, 20, 32, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border: 1px solid rgba(244, 227, 166, 0.2);
+  border-radius: 14px;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 13.5px;
   outline: none;
   box-sizing: border-box;
+  transition: all 0.15s ease;
 }
 
 .contentSearchInput:focus {
-  border-color: rgba(34, 195, 240, 0.5);
+  border-color: rgba(245, 185, 66, 0.6);
+  box-shadow: 0 0 0 3px rgba(245, 185, 66, 0.35);
+}
+
+.contentSearchInput::placeholder {
+  color: rgba(148, 163, 184, 0.65);
 }
 
 .contentSearchInput::-webkit-search-cancel-button {
@@ -606,7 +674,7 @@
 
 .searchClearBtn {
   position: absolute;
-  right: 8px;
+  right: 10px;
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -614,15 +682,20 @@
   display: flex;
   align-items: center;
   padding: 4px;
+  border-radius: 50%;
+}
+
+.searchClearBtn:hover {
+  color: var(--text-primary);
 }
 
 /* Jump feedback */
 .jumpResultBar {
-  margin-top: 8px;
-  padding: 8px 12px;
+  margin-top: 10px;
+  padding: 10px 14px;
   background: rgba(255, 204, 0, 0.08);
-  border: 1px solid rgba(255, 204, 0, 0.25);
-  border-radius: 8px;
+  border: 1px solid rgba(244, 227, 166, 0.25);
+  border-radius: 14px;
   font-size: 13px;
   display: flex;
   align-items: center;
@@ -641,18 +714,19 @@
 
 .jumpResultBtns {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
 .jumpGoBtn,
 .jumpReadNowBtn {
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 4px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   border: none;
+  transition: all 0.15s ease;
 }
 
 .jumpGoBtn {
@@ -660,13 +734,21 @@
   color: var(--text-primary);
 }
 
+.jumpGoBtn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
 .jumpReadNowBtn {
   background: #ffcc00;
   color: #000;
 }
 
+.jumpReadNowBtn:hover {
+  background: #ffd54f;
+}
+
 .searchActiveBar {
-  margin-top: 8px;
+  margin-top: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -680,6 +762,7 @@
   color: var(--accent-cyan-bright);
   cursor: pointer;
   font-size: 13px;
+  font-weight: 600;
 }
 
 /* Search results container */
@@ -701,16 +784,17 @@
 
 .searchResultCard {
   background: rgba(14, 20, 32, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 12px 16px;
+  border: 1px solid rgba(244, 227, 166, 0.15);
+  border-radius: 14px;
+  padding: 14px 18px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .searchResultCard:hover {
   background: rgba(20, 28, 44, 0.75);
-  border-color: rgba(34, 195, 240, 0.3);
+  border-color: rgba(34, 195, 240, 0.35);
+  transform: translateY(-1px);
 }
 
 .searchResultTop {
@@ -739,7 +823,7 @@
   color: var(--accent-cyan-bright);
   background: rgba(34, 195, 240, 0.12);
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .searchSnippetsList {
@@ -759,8 +843,8 @@
 .highlightMark {
   background: rgba(255, 204, 0, 0.25);
   color: #ffcc00;
-  padding: 0 2px;
-  border-radius: 2px;
+  padding: 0 3px;
+  border-radius: 3px;
 }
 
 /* ===== CHAPTER CONTAINER & GRID ===== */
@@ -800,25 +884,28 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 12px;
-  border-radius: 8px;
-  background: rgba(14, 20, 32, 0.55);
+  padding: 0 14px;
+  border-radius: 14px;
+  background: rgba(14, 20, 32, 0.52);
   border: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   user-select: none;
+  position: relative;
 }
 
 .chapterRow:hover {
-  background: rgba(22, 30, 48, 0.75);
-  border-color: rgba(255, 204, 0, 0.25);
+  transform: translateY(-1px);
+  background: rgba(22, 32, 52, 0.75);
+  border-color: rgba(244, 227, 166, 0.32);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
 }
 
 .chapterNum {
   font-family: 'Noto Serif', serif;
   font-size: 12.5px;
   color: #f4e3a6;
-  min-width: 30px;
+  min-width: 32px;
   flex-shrink: 0;
   text-align: right;
   opacity: 0.85;
@@ -840,16 +927,28 @@
   font-weight: 700;
   color: #000;
   background: #ffcc00;
-  padding: 1px 6px;
-  border-radius: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   flex-shrink: 0;
 }
 
 .chapterLastRead {
-  border-color: rgba(255, 204, 0, 0.4) !important;
-  background: rgba(255, 204, 0, 0.06) !important;
+  border-color: rgba(255, 204, 0, 0.45) !important;
+  background: rgba(255, 204, 0, 0.08) !important;
+}
+
+.chapterLastRead::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 4px;
+  border-radius: 4px;
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
 }
 
 .lastReadTitle {

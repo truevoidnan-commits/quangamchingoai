@@ -55,6 +55,22 @@ export default function NovelDetailPage() {
   // Sorting: 'asc' | 'desc'
   const [sortOrder, setSortOrder] = useState('asc');
 
+  // Sticky TOC header detection
+  const [isTocSticky, setIsTocSticky] = useState(false);
+  const tocSentinelRef = useRef(null);
+
+  useEffect(() => {
+    if (!tocSentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsTocSticky(!entry.isIntersecting);
+      },
+      { threshold: 0, rootMargin: '-60px 0px 0px 0px' }
+    );
+    observer.observe(tocSentinelRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   // Screen width detection for mobile bottomsheet vs desktop popover
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   useEffect(() => {
@@ -476,7 +492,8 @@ export default function NovelDetailPage() {
       {/* ===== TABLE OF CONTENTS (MỤC LỤC) ===== */}
       <section className={`${styles.sectionWrap} ${styles.tocSection}`}>
         {/* Sticky Toolbar underneath header */}
-        <div className={styles.tocStickyHeader}>
+        <div ref={tocSentinelRef} className={styles.tocSentinel} aria-hidden="true" />
+        <div className={`${styles.tocStickyHeader} ${isTocSticky ? styles.isSticky : ''}`}>
           <div className={styles.tocHeaderRow}>
             <h2 className={styles.tocTitle}>
               {isSearchActive ? 'Kết quả tìm kiếm' : 'Mục lục'}

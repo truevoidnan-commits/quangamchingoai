@@ -1,6 +1,62 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { countMatchesInNovel, replaceTextInNovel } from '../../lib/db';
-import styles from './SelectionEditor.module.css';
+import styles from './GlobalReplaceModal.module.css';
+
+function IconReplace({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 4h6v6" />
+      <path d="M4 20h6v-6" />
+      <path d="M20 4l-7 7" />
+      <path d="M4 20l7-7" />
+    </svg>
+  );
+}
+
+function IconClose({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function IconCheck({ size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function IconSearch({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+function IconAlert({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  );
+}
+
+function IconTrash({ size = 15 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
 
 export default function GlobalReplaceModal({
   isOpen,
@@ -119,25 +175,29 @@ export default function GlobalReplaceModal({
   };
 
   const hasMatches = stats && stats.matchCount > 0;
+  const isPureDelete = !replaceText;
+  const matchCount = stats ? stats.matchCount : 0;
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.modalCard} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         {/* Header */}
         <div className={styles.modalHeader}>
           <div className={styles.modalTitleWrap}>
-            <span className={styles.modalIcon}>🔁</span>
+            <div className={styles.modalIcon} aria-hidden="true">
+              <IconReplace size={18} />
+            </div>
             <div>
               <h3 className={styles.modalTitle}>Tìm & Thay Thế Toàn Bộ Truyện</h3>
               {novelTitle && (
-                <div style={{ fontSize: '11.5px', color: '#94a3b8', marginTop: '2px' }}>
-                  Áp dụng cho: <span style={{ color: '#38bdf8' }}>{novelTitle}</span>
+                <div className={styles.novelBadge}>
+                  Áp dụng cho: <span className={styles.novelName}>{novelTitle}</span>
                 </div>
               )}
             </div>
           </div>
-          <button className={styles.closeBtn} onClick={onClose} title="Đóng">
-            ✕
+          <button className={styles.closeBtn} onClick={onClose} title="Đóng" aria-label="Đóng">
+            <IconClose size={15} />
           </button>
         </div>
 
@@ -155,7 +215,7 @@ export default function GlobalReplaceModal({
                   className={styles.toolMiniBtn}
                   onClick={() => setSearchText('')}
                 >
-                  ⌫ Xóa
+                  Xóa
                 </button>
               )}
             </div>
@@ -182,7 +242,7 @@ export default function GlobalReplaceModal({
                   className={styles.toolMiniBtn}
                   onClick={() => setReplaceText('')}
                 >
-                  ⌫ Xóa
+                  Xóa
                 </button>
               )}
             </div>
@@ -205,6 +265,9 @@ export default function GlobalReplaceModal({
                 checked={matchCase}
                 onChange={(e) => setMatchCase(e.target.checked)}
               />
+              <span className={styles.customCheck} aria-hidden="true">
+                <IconCheck size={11} />
+              </span>
               <span>Phân biệt chữ hoa / chữ thường</span>
             </label>
             <label className={styles.checkboxLabel}>
@@ -214,6 +277,9 @@ export default function GlobalReplaceModal({
                 checked={inTitle}
                 onChange={(e) => setInTitle(e.target.checked)}
               />
+              <span className={styles.customCheck} aria-hidden="true">
+                <IconCheck size={11} />
+              </span>
               <span>Áp dụng cho cả tiêu đề chương</span>
             </label>
           </div>
@@ -223,11 +289,16 @@ export default function GlobalReplaceModal({
             <div>
               {loadingStats ? (
                 <div className={`${styles.statBox} ${styles.statBoxLoading}`}>
-                  <span>⏳ Đang quét toàn bộ các chương trong truyện...</span>
+                  <span className={styles.statIcon} aria-hidden="true">
+                    <IconSearch size={16} />
+                  </span>
+                  <span>Đang quét toàn bộ các chương trong truyện...</span>
                 </div>
               ) : hasMatches ? (
                 <div className={`${styles.statBox} ${styles.statBoxFound}`}>
-                  <span>🎯</span>
+                  <span className={styles.statIcon} aria-hidden="true">
+                    <IconCheck size={16} />
+                  </span>
                   <div>
                     Tìm thấy <strong>{stats.matchCount}</strong> lần xuất hiện trong{' '}
                     <strong>{stats.matchingChapters}</strong> / {stats.totalChapters} chương của truyện.
@@ -235,7 +306,9 @@ export default function GlobalReplaceModal({
                 </div>
               ) : (
                 <div className={`${styles.statBox} ${styles.statBoxNone}`}>
-                  <span>⚠️</span>
+                  <span className={styles.statIcon} aria-hidden="true">
+                    <IconAlert size={16} />
+                  </span>
                   <div>
                     Không tìm thấy cụm từ "{searchText}" trong bất kỳ chương nào của truyện.
                   </div>
@@ -247,7 +320,7 @@ export default function GlobalReplaceModal({
           {/* Báo cáo sau khi thay thế thành công */}
           {lastResult && (
             <div className={styles.resultBoxSuccess}>
-              🎉 <strong>Hoàn tất thay thế toàn bộ!</strong>
+              <strong>Hoàn tất cập nhật toàn bộ!</strong>
               <div style={{ marginTop: 4, fontSize: '12.5px' }}>
                 Đã cập nhật <strong>{lastResult.totalReplacements}</strong> vị trí tại{' '}
                 <strong>{lastResult.modifiedChaptersCount}</strong> chương của truyện.
@@ -258,46 +331,34 @@ export default function GlobalReplaceModal({
 
         {/* Footer actions */}
         <div className={styles.modalActions}>
-          <div className={styles.leftActions}>
-            <button
-              type="button"
-              className={styles.btnCancel}
-              onClick={onClose}
-              disabled={isReplacing}
-            >
-              Đóng
-            </button>
-          </div>
+          <button
+            type="button"
+            className={styles.btnCancel}
+            onClick={onClose}
+            disabled={isReplacing}
+          >
+            Đóng
+          </button>
 
           <div className={styles.rightActions}>
-            {hasMatches && !replaceText && (
-              <button
-                type="button"
-                className={styles.btnDeleteDirect}
-                onClick={handleExecuteReplace}
-                disabled={isReplacing}
-              >
-                {isReplacing ? '⏳ Đang xóa...' : `🗑️ Xóa cụm từ toàn truyện (${stats.matchCount})`}
-              </button>
-            )}
-
             <button
               type="button"
-              className={styles.btnSave}
+              className={isPureDelete ? styles.btnSubmitDelete : styles.btnSubmitReplace}
               onClick={handleExecuteReplace}
               disabled={isReplacing || !hasMatches}
-              style={{
-                opacity: (!hasMatches || isReplacing) ? 0.5 : 1,
-                cursor: (!hasMatches || isReplacing) ? 'not-allowed' : 'pointer',
-              }}
+              id="btn-execute-replace"
             >
-              {isReplacing
-                ? '⏳ Đang thay thế...'
-                : (replaceText
-                    ? `🔁 Thay thế toàn bộ (${stats ? stats.matchCount : 0} chỗ)`
-                    : `🗑️ Xóa rỗng toàn bộ (${stats ? stats.matchCount : 0} chỗ)`
-                  )
-              }
+              {isPureDelete && <IconTrash size={15} />}
+              {!isPureDelete && <IconReplace size={15} />}
+              <span>
+                {isReplacing
+                  ? (isPureDelete ? 'Đang xóa...' : 'Đang thay thế...')
+                  : (isPureDelete
+                      ? `Xóa ${matchCount} chỗ`
+                      : `Thay thế ${matchCount} chỗ`
+                    )
+                }
+              </span>
             </button>
           </div>
         </div>

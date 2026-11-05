@@ -1,33 +1,40 @@
 .fab {
   position: fixed;
   bottom: 80px;
-  right: 20px;
+  right: 24px;
   width: 44px;
   height: 44px;
-  border-radius: var(--radius-full);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-cyan);
-  color: var(--accent-cyan);
+  border-radius: 50%;
+  background: rgba(20, 30, 52, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(244, 227, 166, 0.3);
+  color: #ffcc00;
   font-size: 18px;
   font-weight: bold;
-  box-shadow: var(--glow-cyan-sm), var(--shadow-elevated);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 12px rgba(255, 204, 0, 0.2);
   z-index: 50;
   cursor: pointer;
   transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .fab:hover {
-  background: var(--accent-cyan-dim);
-  box-shadow: var(--glow-cyan);
+  background: rgba(255, 204, 0, 0.15);
+  border-color: #ffcc00;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 18px rgba(255, 204, 0, 0.4);
   transform: translateY(-2px);
+  color: #ffffff;
 }
 
 @media (max-width: 768px) {
   .fab {
     bottom: 90px;
     right: 16px;
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     font-size: 16px;
   }
 }
