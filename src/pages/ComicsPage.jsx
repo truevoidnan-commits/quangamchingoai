@@ -27,6 +27,7 @@ import { supabase } from '../lib/supabaseClient.js';
 import ComicImportModal from '../components/comics/ComicImportModal.jsx';
 import Footer from '../components/layout/Footer.jsx';
 import LobbyTabs from '../components/ui/LobbyTabs.jsx';
+import ComicsBackdrop from '../components/comics/ComicsBackdrop.jsx';
 import {
   IconCloud,
   IconCloudCheck,
@@ -234,6 +235,7 @@ export default function ComicsPage() {
 
   return (
     <div className={styles.page}>
+      <ComicsBackdrop />
       {/* ===== BANNER ===== */}
       <section className={styles.banner}>
         <div className={styles.bannerBg} aria-hidden="true">
@@ -259,7 +261,7 @@ export default function ComicsPage() {
         <div className={styles.toolbar}>
           <div className={styles.searchWrap}>
             <span className={styles.searchIcon} aria-hidden="true">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>

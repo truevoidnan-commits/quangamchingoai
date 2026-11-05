@@ -458,6 +458,10 @@ async function runBrowserFlowTests() {
         pageCount: volStats?.pageCount || 45,
       });
 
+      const seriesMoreBtn = page.locator('button[aria-label="Tùy chọn bộ truyện"]');
+      if ((await seriesMoreBtn.count()) > 0) {
+        await seriesMoreBtn.click();
+      }
       await page.waitForSelector('[class*="deleteSeriesBtn"]');
       await page.locator('[class*="deleteSeriesBtn"]').click();
       await page.waitForSelector('[class*="deleteModalBox"]');

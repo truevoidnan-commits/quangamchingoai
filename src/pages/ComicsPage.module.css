@@ -6,20 +6,6 @@
   isolation: isolate;
 }
 
-/* Dedicated background for Tang Kinh Hoa Cac */
-.page::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    linear-gradient(180deg, rgba(14, 10, 28, 0.55) 0%, rgba(12, 14, 26, 0.82) 45%, rgba(8, 10, 20, 0.96) 100%),
-    radial-gradient(ellipse at 50% 20%, rgba(192, 132, 252, 0.12), transparent 70%),
-    radial-gradient(circle at 80% 60%, rgba(15, 42, 53, 0.3), transparent 60%),
-    url('../assets/images/bg-tang-kinh-hoa-cac.webp') center top / cover no-repeat,
-    #0b0a18;
-}
-
 /* ===== BANNER ===== */
 .banner {
   position: relative;
@@ -75,9 +61,10 @@
 
 .appTitle {
   font-family: 'Noto Serif', serif;
-  font-size: clamp(28px, 6.5vw, 46px);
+  font-size: clamp(19px, 5.2vw, 28px);
   font-weight: 800;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
   color: #ffcc00;
   text-shadow:
     0 0 4px #ffcc00,
@@ -85,6 +72,14 @@
     0 0 24px rgba(255, 180, 0, 0.4);
   line-height: 1.15;
   margin-bottom: 10px;
+}
+
+@media (min-width: 600px) {
+  .appTitle {
+    font-size: clamp(28px, 6.5vw, 46px);
+    letter-spacing: 0.18em;
+    white-space: normal;
+  }
 }
 
 .appSubtitle {
@@ -143,6 +138,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 2;
 }
 
 .searchInput {
