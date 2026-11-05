@@ -9,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const distDir = path.resolve(__dirname, '../dist');
 const outDir = path.resolve(__dirname, '../docs/ui-redesign/series');
+const artifactDir = 'C:/Users/ADMIN/.gemini/antigravity/brain/04a8635f-ab90-4862-af83-b6463b1f6a83';
 
 if (!fs.existsSync(outDir)) {
   fs.mkdirSync(outDir, { recursive: true });
@@ -49,13 +50,11 @@ function startServer() {
 }
 
 async function saveOptimizedPng(buffer, targetPath) {
-  // Compress PNG with palette mode & compression level 9 to keep file strictly under 400KB
   let optimized = await sharp(buffer)
     .png({ quality: 90, compressionLevel: 9, palette: true })
     .toBuffer();
 
   if (optimized.length > 390 * 1024) {
-    // If still large, resize slightly or reduce colors
     optimized = await sharp(buffer)
       .png({ colours: 192, compressionLevel: 9, palette: true })
       .toBuffer();
@@ -64,10 +63,19 @@ async function saveOptimizedPng(buffer, targetPath) {
   fs.writeFileSync(targetPath, optimized);
   const kb = optimized.length / 1024;
   console.log(`Saved: ${targetPath} (${kb.toFixed(1)} KB) - ${kb < 400 ? 'PASS < 400KB' : 'FAIL'}`);
+
+  // Also copy to artifacts dir
+  const baseName = path.basename(targetPath);
+  const artifactPath = path.join(artifactDir, baseName);
+  try {
+    fs.writeFileSync(artifactPath, optimized);
+  } catch (e) {
+    // ignore
+  }
 }
 
 async function capture() {
-  console.log('--- BẮT ĐẦU CHỤP ẢNH MINH HỌA GIAO DIỆN COMIC SERIES PAGE ---');
+  console.log('--- BẮT ĐẦU CHỤP LẠI ẢNH MINH HỌA GIAO DIỆN COMIC SERIES PAGE ---');
   const server = await startServer();
   console.log(`Server preview running at ${BASE_URL}`);
 
@@ -85,16 +93,14 @@ async function capture() {
   await page.goto(`${BASE_URL}/#/comics`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(500);
 
-  // Seed IndexedDB mock data
-  console.log('Seeding 121 volumes with color cover and importState: "ready"...');
+  // Seed IndexedDB mock data with 121 volumes and long titles
+  console.log('Seeding 121 volumes with long titles and color cover into IndexedDB...');
   await page.evaluate(async () => {
-    // Generate color cover blob in browser canvas
     const canvas = document.createElement('canvas');
     canvas.width = 600;
     canvas.height = 840;
     const ctx = canvas.getContext('2d');
 
-    // Rich gradient background (purple to dark indigo)
     const grad = ctx.createLinearGradient(0, 0, 600, 840);
     grad.addColorStop(0, '#4c1d95');
     grad.addColorStop(0.45, '#1e1b4b');
@@ -102,7 +108,6 @@ async function capture() {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 600, 840);
 
-    // Cosmic nebula highlights
     ctx.fillStyle = 'rgba(234, 179, 8, 0.2)';
     ctx.beginPath();
     ctx.arc(300, 300, 240, 0, Math.PI * 2);
@@ -113,7 +118,6 @@ async function capture() {
     ctx.arc(150, 500, 180, 0, Math.PI * 2);
     ctx.fill();
 
-    // Gold frame
     ctx.strokeStyle = 'rgba(255, 204, 0, 0.6)';
     ctx.lineWidth = 12;
     ctx.strokeRect(20, 20, 560, 800);
@@ -122,7 +126,6 @@ async function capture() {
     ctx.lineWidth = 3;
     ctx.strokeRect(32, 32, 536, 776);
 
-    // Gold Title text
     ctx.fillStyle = '#ffcc00';
     ctx.shadowColor = '#ffcc00';
     ctx.shadowBlur = 15;
@@ -139,10 +142,8 @@ async function capture() {
     ctx.fillStyle = '#f59e0b';
     ctx.fillText('121 TẬP HOÀN CHỈNH', 300, 500);
 
-    // Convert to Blob
     const coverBlob = await new Promise((res) => canvas.toBlob(res, 'image/webp', 0.9));
 
-    // Open IDB
     const req = indexedDB.open('thien-co-lau-comics', 1);
     await new Promise((resolve, reject) => {
       req.onsuccess = (e) => {
@@ -151,7 +152,6 @@ async function capture() {
         const seriesStore = tx.objectStore('series');
         const volStore = tx.objectStore('volumes');
 
-        // Series with 121 volumes
         const s121 = {
           id: 'series-renameai-121',
           title: 'RenameAI',
@@ -163,7 +163,6 @@ async function capture() {
         };
         seriesStore.put(s121);
 
-        // Empty series
         const sEmpty = {
           id: 'series-empty-test',
           title: 'Bộ Truyện Mới (Chưa Có Tập)',
@@ -175,15 +174,23 @@ async function capture() {
         };
         seriesStore.put(sEmpty);
 
+        const longTitles = [
+          'Tập 1 - Thức Tỉnh Đấu Hồn Cực Kỳ Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài Dài',
+          'Tập 2 - Đại Niết Bàn Vô Địch Thiên Hạ Không Đối Thủ Trong Suốt Mười Vạn Năm Lịch Sử Tu Chân',
+          'Tập 3 - Bí Thuật Thôn Phệ Tinh Cầu Hủy Diệt Càn Khôn Tái Tạo Luân Hồi Tam Sinh Tam Thế Thần Vực',
+          'Tập 4 - Phong Lôi Quyết Đệ Cửu Trọng Thiên Phong Ba Bất Tuyệt Ngạo Thị Quần Hùng Vạn Kiếp Bất Diệt',
+        ];
+
         // Seed 121 volumes with importState = 'ready'
         for (let i = 1; i <= 121; i++) {
           const pages = 40 + (i % 25);
           const bytes = Math.round(pages * 115000 + (i * 1234));
           const volId = `vol-${i}`;
+          const title = i <= 4 ? longTitles[i - 1] : `Tập ${i} - Thần Khí Xuất Thế`;
           volStore.put({
             id: volId,
             seriesId: 'series-renameai-121',
-            title: i === 1 ? 'Tập 1 - Thức Tỉnh Đấu Hồn' : i === 2 ? 'Tập 2 - Đại Niết Bàn' : `Tập ${i}`,
+            title,
             order: i,
             pageCount: pages,
             totalBytes: bytes,
@@ -200,7 +207,6 @@ async function capture() {
       req.onerror = () => reject(req.error);
     });
 
-    // Set Reading progress for Volume 1: Page 18/41 (index 17)
     localStorage.setItem(
       'tcl_comic_progress_vol-1',
       JSON.stringify({
@@ -210,11 +216,10 @@ async function capture() {
       })
     );
 
-    // Set Completed progress for Volume 2
     localStorage.setItem(
       'tcl_comic_progress_vol-2',
       JSON.stringify({
-        pageIndex: 44, // Page 45 of 45 -> completed
+        pageIndex: 44,
         scrollPercent: 100,
         updatedAt: Date.now() - 100000,
       })
@@ -224,12 +229,12 @@ async function capture() {
   console.log('Mock data seeded successfully.');
 
   // ==========================================
-  // 1. Screenshot: Desktop 1280x800 - 121 Volumes
+  // 1. Screenshot: Desktop 1280x800 - 121 Volumes (Long titles, No horizontal overflow)
   // ==========================================
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.evaluate(() => { window.location.hash = '#/comics/series-renameai-121'; });
   await page.waitForSelector('text=RenameAI', { timeout: 10000 });
-  await page.waitForSelector('text=Tập 1 - Thức Tỉnh Đấu Hồn', { timeout: 10000 });
+  await page.waitForSelector('text=Tập 1', { timeout: 10000 });
   await page.waitForTimeout(600);
 
   const shot1Desktop = path.join(outDir, '01-series-121-volumes-desktop.png');
@@ -246,7 +251,7 @@ async function capture() {
   await saveOptimizedPng(buf1Mobile, shot1Mobile);
 
   // ==========================================
-  // 2. Screenshot: Volume Action Menu Open (BottomSheet)
+  // 2. Screenshot: Volume Action Menu Open (BottomSheet with 36px circular icon wraps & left alignment)
   // ==========================================
   const moreBtn = await page.locator('button[aria-label="Tùy chọn khác"]').first();
   await moreBtn.click();
@@ -257,13 +262,12 @@ async function capture() {
   const buf2Menu = await page.screenshot();
   await saveOptimizedPng(buf2Menu, shot2Menu);
 
-  // Close BottomSheet
-  const closeBtn = await page.locator('button[aria-label="Đóng menu"]');
-  await closeBtn.click();
+  // Test Esc key closes sheet
+  await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
 
   // ==========================================
-  // 3. Screenshot: Volume In-Progress State (Trang 18/41 + Gold Bar)
+  // 3. Screenshot: Volume In-Progress State (Trang 18/41 + Gold Bar + "Đang đọc" on separate row)
   // ==========================================
   const shot3Progress = path.join(outDir, '03-volume-in-progress.png');
   const firstRow = await page.locator('[class*="volumeRow"]').first();

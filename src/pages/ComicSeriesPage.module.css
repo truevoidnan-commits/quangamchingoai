@@ -522,19 +522,21 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
+  width: 100%;
 }
 
 @media (min-width: 900px) {
   .volumeGrid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
   }
 }
 
 @media (min-width: 1400px) {
   .volumeGrid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
   }
 }
@@ -543,7 +545,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   padding: 12px 14px;
   border-radius: 12px;
   background: rgba(16, 20, 34, 0.65);
@@ -556,6 +558,10 @@
   contain-intrinsic-size: 0 84px;
   animation: fadeInRow 0.25s ease backwards;
   animation-delay: calc(var(--i, 0) * 35ms);
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .volumeRow:hover {
@@ -593,11 +599,12 @@
 }
 
 .volInfoCol {
-  flex: 1;
+  flex: 1 1 0%;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 3px;
+  overflow: hidden;
 }
 
 .volTitleRow {
@@ -605,6 +612,23 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.readingBadgeRow {
+  display: flex;
+  margin-bottom: 2px;
+}
+
+.readingBadge {
+  font-size: 9px;
+  font-weight: 700;
+  color: #000;
+  background: var(--accent-gold);
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
 }
 
 .volTitle {
@@ -616,7 +640,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1.3;
+  line-height: 1.35;
+  min-width: 0;
 }
 
 .readingBadge {
@@ -686,6 +711,7 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .syncIconSlot {
@@ -765,17 +791,16 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  padding: 0;
   background: rgba(255, 204, 0, 0.12);
   border: 1px solid rgba(255, 204, 0, 0.35);
   color: #ffcc00;
-  font-weight: 700;
-  font-size: 13px;
   cursor: pointer;
   transition: all 0.15s ease;
-  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .mainReadBtn:hover {
@@ -789,7 +814,21 @@
 }
 
 .readLabel {
-  font-weight: 700;
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .mainReadBtn {
+    width: auto;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 18px;
+  }
+  .readLabel {
+    display: inline;
+    font-size: 13px;
+    font-weight: 700;
+  }
 }
 
 .cancelBtn {
@@ -1050,86 +1089,86 @@
 .menuList {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-}
-
-.menuFailureCard {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 10px;
-  padding: 12px;
-  margin-bottom: 6px;
-}
-
-.menuFailureHeader {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #f87171;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-
-.menuFailureReason {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin: 0 0 8px;
-  line-height: 1.4;
-}
-
-.menuRetryBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 6px;
-  background: #f87171;
-  color: #000;
-  font-size: 12px;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
+  gap: 2px;
 }
 
 .menuItem {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
   height: 52px;
-  padding: 0 14px;
+  padding: 0 12px;
   border-radius: 12px;
   border: none;
   background: transparent;
   color: var(--text-primary);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   text-align: left;
-  transition: background 0.15s ease;
+  justify-content: flex-start;
+  transition: background 0.15s ease, color 0.15s ease;
   box-sizing: border-box;
 }
 
 .menuItem:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(34, 195, 240, 0.08);
+  color: var(--accent-cyan-bright);
+}
+
+.menuIconWrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+
+.menuItem:hover .menuIconWrap {
+  background: rgba(34, 195, 240, 0.16);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(34, 195, 240, 0.25);
+}
+
+.menuLabel {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
 }
 
 .menuDivider {
   height: 1px;
   background: rgba(255, 255, 255, 0.08);
-  margin: 4px 0;
+  margin: 6px 4px;
 }
 
 .menuItemDanger {
   color: #f87171;
 }
 
-.menuItemDanger:hover {
-  background: rgba(239, 68, 68, 0.14);
+.menuDangerIconWrap {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
 }
 
+.menuItemDanger:hover {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #fca5a5 !important;
+}
+
+.menuItemDanger:hover .menuDangerIconWrap {
+  background: rgba(239, 68, 68, 0.22);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+}
 /* ========================================== */
 /* EDIT VOLUME MODAL                          */
 /* ========================================== */
@@ -1644,6 +1683,7 @@
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+    word-break: break-word;
     font-size: 13px;
   }
 
@@ -1656,9 +1696,10 @@
   }
 
   .mainReadBtn {
-    height: 32px;
-    padding: 0 10px;
-    font-size: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    padding: 0;
   }
 }
 

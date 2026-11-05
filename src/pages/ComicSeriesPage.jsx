@@ -156,12 +156,14 @@ const VolumeRow = React.memo(function VolumeRow({
 
       {/* 2. Center: Info */}
       <div className={styles.volInfoCol}>
-        <div className={styles.volTitleRow}>
-          <h3 className={styles.volTitle} title={vol.title}>
-            {vol.title}
-          </h3>
-          {isLatestRead && <span className={styles.readingBadge}>Đang đọc</span>}
-        </div>
+        {isLatestRead && (
+          <div className={styles.readingBadgeRow}>
+            <span className={styles.readingBadge}>Đang đọc</span>
+          </div>
+        )}
+        <h3 className={styles.volTitle} title={vol.title}>
+          {vol.title}
+        </h3>
 
         <div className={styles.volSubtitleRow}>
           <span className={styles.volMetaText}>
@@ -288,6 +290,7 @@ const VolumeRow = React.memo(function VolumeRow({
             className={styles.mainReadBtn}
             onClick={() => onRead(vol)}
             title={hasProgress ? 'Đọc tiếp' : 'Đọc'}
+            aria-label={hasProgress ? 'Đọc tiếp' : 'Đọc'}
           >
             <IconPlay size={15} className={styles.readIcon} />
             <span className={styles.readLabel}>{hasProgress ? 'Đọc Tiếp' : 'Đọc'}</span>
@@ -372,6 +375,18 @@ export default function ComicSeriesPage() {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 3000);
   };
+
+  // Close menu sheet on Escape
+  useEffect(() => {
+    if (!menuVolume) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setMenuVolume(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [menuVolume]);
 
   // Close series menu on outside click
   useEffect(() => {
@@ -1263,8 +1278,10 @@ export default function ComicSeriesPage() {
                 className={styles.menuItem}
                 onClick={() => handleOpenEditModal(menuVolume)}
               >
-                <IconEdit size={16} />
-                <span>Sửa Số Tập / Tên Tập</span>
+                <div className={styles.menuIconWrap}>
+                  <IconEdit size={18} />
+                </div>
+                <span className={styles.menuLabel}>Sửa Số Tập / Tên Tập</span>
               </button>
 
               {/* 2. Giải Phóng Máy (chỉ khi đã đồng bộ) */}
@@ -1277,8 +1294,10 @@ export default function ComicSeriesPage() {
                     setMenuVolume(null);
                   }}
                 >
-                  <IconDevice size={16} />
-                  <span>Giải Phóng Máy</span>
+                  <div className={styles.menuIconWrap}>
+                    <IconDevice size={18} />
+                  </div>
+                  <span className={styles.menuLabel}>Giải Phóng Máy</span>
                 </button>
               )}
 
@@ -1292,8 +1311,10 @@ export default function ComicSeriesPage() {
                     setMenuVolume(null);
                   }}
                 >
-                  <IconCloudDownload size={16} />
-                  <span>Tải Về Máy</span>
+                  <div className={styles.menuIconWrap}>
+                    <IconCloudDownload size={18} />
+                  </div>
+                  <span className={styles.menuLabel}>Tải Về Máy</span>
                 </button>
               )}
 
@@ -1310,8 +1331,10 @@ export default function ComicSeriesPage() {
                       setMenuVolume(null);
                     }}
                   >
-                    <IconCloudUpload size={16} />
-                    <span>Tải Lên Cloud</span>
+                    <div className={styles.menuIconWrap}>
+                      <IconCloudUpload size={18} />
+                    </div>
+                    <span className={styles.menuLabel}>Tải Lên Cloud</span>
                   </button>
                 )}
 
@@ -1326,8 +1349,10 @@ export default function ComicSeriesPage() {
                   setMenuVolume(null);
                 }}
               >
-                <IconTrash size={16} />
-                <span>Xóa</span>
+                <div className={`${styles.menuIconWrap} ${styles.menuDangerIconWrap}`}>
+                  <IconTrash size={18} />
+                </div>
+                <span className={styles.menuLabel}>Xóa</span>
               </button>
             </div>
           </div>

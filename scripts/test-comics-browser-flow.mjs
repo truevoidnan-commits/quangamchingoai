@@ -247,7 +247,7 @@ async function runBrowserFlowTests() {
     // 6. Test ComicReaderPage (C1, C2, C3, C4)
     console.log('  6. Testing ComicReaderPage (Double-tap, Jump Popover, Chevrons)...');
     await page.setViewportSize({ width: 390, height: 844 });
-    const mainReadBtn = await page.locator('button:has-text("Đọc")').first();
+    const mainReadBtn = await page.locator('button[aria-label*="Đọc"], button:has-text("Đọc")').first();
     await mainReadBtn.click();
 
     await page.waitForURL(/\/comics\/[A-Za-z0-9_-]+\/read\/[A-Za-z0-9_-]+/, { timeout: 15000 });

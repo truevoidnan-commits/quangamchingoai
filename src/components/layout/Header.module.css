@@ -224,9 +224,19 @@
     font-size: 14px;
     letter-spacing: 0.03em;
   }
-  /* Ở trang con (không phải trang chủ) trên màn hẹp: logo chỉ hiện biểu tượng ✦ (ẩn chữ THIÊN CƠ LÂU) để đủ chỗ */
+  /* Ở trang con (không phải trang chủ) trên màn hẹp: hiển thị logo chữ THIÊN CƠ LÂU vừa vặn */
   .compact .logoText {
-    display: none;
+    display: inline;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .compact .cultivationBadge {
+    padding: 4px 7px;
+    font-size: 11px;
+    max-width: 32vw;
+    gap: 4px;
   }
 
   /* Sync button on mobile */
