@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   getAllSeries,
   deleteSeries,
@@ -26,14 +26,13 @@ import {
 import { supabase } from '../lib/supabaseClient.js';
 import ComicImportModal from '../components/comics/ComicImportModal.jsx';
 import Footer from '../components/layout/Footer.jsx';
+import LobbyTabs from '../components/ui/LobbyTabs.jsx';
 import {
   IconCloud,
   IconCloudCheck,
   IconDevice,
-  IconBook,
   IconBookOpen,
   IconSettings,
-  IconUpload,
   IconTrash,
   IconAlertTriangle,
   IconRefresh,
@@ -47,6 +46,7 @@ import styles from './ComicsPage.module.css';
 export default function ComicsPage() {
   const navigate = useNavigate();
   const [seriesList, setSeriesList] = useState([]);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [storageStats, setStorageStats] = useState(null);
   const [cloudInfo, setCloudInfo] = useState({
@@ -84,7 +84,6 @@ export default function ComicsPage() {
       ]);
       const localList = await getAllSeries();
 
-      // Hợp nhất danh sách bộ truyện local với danh sách trên Cloud (P4 & Sửa 1, 4: tính cả 'uploading' và 10 phút bảo vệ, không delete thụ động)
       const TEN_MINUTES_MS = 10 * 60 * 1000;
       const isRecentTime = (t) => {
         if (!t) return false;
@@ -146,7 +145,6 @@ export default function ComicsPage() {
   useEffect(() => {
     loadData();
 
-    // Lắng nghe thay đổi hàng đợi đồng bộ
     const unsubQueue = subscribeSyncQueue((snap) => {
       setSyncSnapshot(snap);
     });
@@ -210,10 +208,29 @@ export default function ComicsPage() {
 
   const formatMb = (bytes) => (bytes / (1024 * 1024)).toFixed(1);
 
-  // Tính toán dung lượng
+  // Unaccent normalize for client search
+  const norm = (str) =>
+    String(str || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .toLowerCase()
+      .trim();
+
+  const filteredSeries = seriesList.filter((s) => {
+    if (!search.trim()) return true;
+    return norm(s.title).includes(norm(search));
+  });
+
   const cloudUsedGb = (cloudInfo.cloudUsageBytes / (1024 * 1024 * 1024)).toFixed(2);
   const cloudTotalGb = '8.0';
-  const cloudPercent = Math.min(100, Math.round((cloudInfo.cloudUsageBytes / (8 * 1024 * 1024 * 1024)) * 100));
+
+  const storageUsagePercent = Math.min(
+    100,
+    Math.round(((storageStats?.storageUsage || 0) / (storageStats?.storageQuota || 1)) * 100)
+  );
+  const showStorageProgressBar = storageUsagePercent >= 70 || syncSnapshot.storageWarning;
 
   return (
     <div className={styles.page}>
@@ -225,47 +242,70 @@ export default function ComicsPage() {
         </div>
 
         <div className={styles.bannerContent}>
+          <div className={styles.bannerBadge}>TRUYỆN TRANH</div>
           <h1 className={styles.appTitle}>TÀNG KINH HỌA CÁC</h1>
           <p className={styles.appSubtitle}>
-            Đọc truyện tranh mượt mà và lưu ngoại tuyến trên mọi thiết bị.
+            ĐỌC MƯỢT · NGOẠI TUYẾN · ĐỒNG BỘ MỌI THIẾT BỊ
           </p>
           <div className={styles.neonBar} aria-hidden="true" />
         </div>
       </section>
 
       {/* ===== TAB SWITCHER ===== */}
-      <div className={styles.tabSwitcherWrap}>
-        <div className={styles.tabSwitcher}>
-          <Link to="/" className={styles.tabItem}>
-            <IconBook size={15} />
-            <span>Truyện Chữ</span>
-          </Link>
-          <div className={`${styles.tabItem} ${styles.tabItemActive}`}>
-            <IconBookOpen size={15} />
-            <span>Truyện Tranh</span>
-          </div>
-        </div>
-      </div>
+      <LobbyTabs activeTab="comics" />
 
       <div className={styles.container}>
-        {/* ===== COMBINED STORAGE BAR & SETTINGS (B4) ===== */}
-        <div className={styles.compactStorageCard}>
-          <div className={styles.storageTopRow}>
-            <div className={styles.storageStatsGroup}>
+        {/* ===== TOOLBAR ===== */}
+        <div className={styles.toolbar}>
+          <div className={styles.searchWrap}>
+            <span className={styles.searchIcon} aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </span>
+            <input
+              type="search"
+              placeholder="Tìm bộ truyện..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={styles.searchInput}
+              id="search-input"
+              aria-label="Tìm bộ truyện"
+            />
+          </div>
+
+          <button
+            type="button"
+            className={`btn-primary ${styles.importBtn} animate-neon-pulse`}
+            onClick={() => setIsImportModalOpen(true)}
+            id="btn-import-pdf-comics"
+          >
+            + Nhập PDF
+          </button>
+        </div>
+
+        {/* Count text */}
+        <div className={styles.countText}>
+          {filteredSeries.length} bộ
+        </div>
+
+        {/* ===== COMPACT STORAGE BAR ===== */}
+        <div className={styles.compactStorageBar}>
+          <div className={styles.storageBarContent}>
+            <div className={styles.storageInfo}>
+              <IconDevice size={14} className={styles.deviceIcon} />
+              <span className={styles.storageText}>
+                {storageStats ? `${formatMb(storageStats.comicsBytes)} MB trên máy` : 'Đang tính dung lượng...'}
+              </span>
               {cloudInfo.isLoggedIn && (
-                <div className={styles.storagePill} title="Dung lượng đã dùng trên Cloud">
-                  <IconCloud size={15} className={styles.cloudIcon} />
-                  <span>{cloudUsedGb} / {cloudTotalGb} GB</span>
-                </div>
-              )}
-              {cloudInfo.isLoggedIn && storageStats && (
-                <span className={styles.storageDot}>·</span>
-              )}
-              {storageStats && (
-                <div className={styles.storagePill} title="Dung lượng lưu trong máy này">
-                  <IconDevice size={15} className={styles.deviceIcon} />
-                  <span>{formatMb(storageStats.comicsBytes)} MB trên máy</span>
-                </div>
+                <>
+                  <span className={styles.storageDot}>·</span>
+                  <IconCloud size={14} className={styles.cloudIcon} />
+                  <span className={styles.storageText}>
+                    {cloudUsedGb} / {cloudTotalGb} GB
+                  </span>
+                </>
               )}
             </div>
 
@@ -276,153 +316,134 @@ export default function ComicsPage() {
               title="Cài đặt đồng bộ & bộ nhớ"
               aria-label="Cài đặt đồng bộ & bộ nhớ"
             >
-              <IconSettings size={18} />
-              <span className={styles.settingsBtnLabel}>Cài Đặt</span>
+              <IconSettings size={15} />
             </button>
           </div>
 
-          {/* Thin subtle storage bar */}
-          <div className={styles.storageTrackMini}>
-            <div
-              className={styles.storageFillMini}
-              style={{ width: `${cloudInfo.isLoggedIn ? cloudPercent : Math.min(100, Math.round(((storageStats?.storageUsage || 0) / (storageStats?.storageQuota || 1)) * 100))}%` }}
-            />
-          </div>
-
-          {/* ===== AUTO-SYNC STATUS BANNER (A7 & A5) ===== */}
-          <div className={styles.syncStatusWrap}>
-            {syncSnapshot.storageWarning ? (
-              <div className={styles.syncAlertWarning}>
-                <div className={styles.syncAlertLeft}>
-                  <IconAlertTriangle size={15} />
-                  <span>Bộ nhớ máy gần đầy, đã tạm dừng tự tải.</span>
-                </div>
-                <button
-                  type="button"
-                  className={styles.syncCleanBtn}
-                  onClick={handleFreeDeviceSpace}
-                >
-                  Giải Phóng
-                </button>
-              </div>
-            ) : syncSnapshot.uploadQuotaExceeded ? (
-              <div className={styles.syncAlertWarning}>
-                <div className={styles.syncAlertLeft}>
-                  <IconAlertTriangle size={15} />
-                  <span>Dung lượng Cloud đã đầy (vượt 8GB), đã dừng tự tải lên.</span>
-                </div>
-              </div>
-            ) : syncSnapshot.rateLimitInfo ? (
-              <div className={styles.syncAlertWarning}>
-                <div className={styles.syncAlertLeft}>
-                  <IconAlertTriangle size={15} />
-                  <span>Đã chạm giới hạn, tự tiếp tục sau {syncSnapshot.rateLimitInfo.waitMinutes} phút.</span>
-                </div>
-              </div>
-            ) : syncSnapshot.isProcessing && syncSnapshot.activeTask ? (
-              <div className={styles.syncAlertActive}>
-                <div className={styles.syncAlertLeft}>
-                  <IconRefresh size={15} className={styles.spinIcon} />
-                  <span className={styles.syncProgressText}>
-                    Đang {syncSnapshot.activeTask.type === 'download' ? 'tải về' : 'tải lên'}{' '}
-                    {syncSnapshot.activeTask.volumeTitle || 'tập'}{' '}
-                    ({syncSnapshot.activeTask.percent}%)
-                    {syncSnapshot.pendingTasks.length > 0 && ` · Còn ${syncSnapshot.pendingTasks.length} tập chờ`}
-                  </span>
-                </div>
-                <div className={styles.syncActionsRight}>
-                  <button
-                    type="button"
-                    className={styles.syncCancelTaskBtn}
-                    onClick={() => {
-                      cancelTask(syncSnapshot.activeTask.volumeId);
-                      showToast(`Đã hủy tác vụ cho "${syncSnapshot.activeTask.volumeTitle}"`);
-                    }}
-                    title="Hủy tác vụ đang chạy"
-                  >
-                    <IconX size={12} />
-                    <span>Hủy</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.syncPauseBtn}
-                    onClick={pauseSync}
-                    title="Tạm dừng tự động"
-                  >
-                    <IconPause size={13} />
-                    <span>Tạm dừng</span>
-                  </button>
-                </div>
-              </div>
-            ) : syncSnapshot.isPaused ? (
-              <div className={styles.syncAlertPaused}>
-                <div className={styles.syncAlertLeft}>
-                  <IconPause size={15} />
-                  <span>Đã tạm dừng tự động đồng bộ</span>
-                </div>
-                <button
-                  type="button"
-                  className={styles.syncResumeBtn}
-                  onClick={resumeSync}
-                  title="Tiếp tục tự động đồng bộ"
-                >
-                  <IconPlay size={13} />
-                  <span>Tiếp tục</span>
-                </button>
-              </div>
-            ) : cloudInfo.isLoggedIn ? (
-              <div className={styles.syncAlertReady}>
-                <IconCloudCheck size={15} />
-                <span>Đã đồng bộ đầy đủ</span>
-              </div>
-            ) : null}
-          </div>
+          {showStorageProgressBar && (
+            <div className={styles.storageTrackMini}>
+              <div
+                className={styles.storageFillMini}
+                style={{ width: `${storageUsagePercent}%` }}
+              />
+            </div>
+          )}
         </div>
 
-        {/* ===== ACTIONS BAR ===== */}
-        <div className={styles.actionsBar}>
-          <div className={styles.actionsLeft}>
-            <h2 className={styles.sectionTitle}>
-              Danh Sách Bộ Truyện ({seriesList.length})
-            </h2>
-          </div>
-          <button
-            type="button"
-            className={styles.importBtn}
-            onClick={() => setIsImportModalOpen(true)}
-            id="btn-import-pdf-comics"
-          >
-            <IconUpload size={16} />
-            <span>Nhập Truyện Tranh (PDF)</span>
-          </button>
+        {/* ===== AUTO-SYNC ALERTS / PROGRESS ===== */}
+        <div className={styles.syncStatusWrap}>
+          {syncSnapshot.storageWarning ? (
+            <div className={styles.syncAlertWarning}>
+              <div className={styles.syncAlertLeft}>
+                <IconAlertTriangle size={15} />
+                <span>Bộ nhớ máy gần đầy, đã tạm dừng tự tải.</span>
+              </div>
+              <button
+                type="button"
+                className={styles.syncCleanBtn}
+                onClick={handleFreeDeviceSpace}
+              >
+                Giải Phóng
+              </button>
+            </div>
+          ) : syncSnapshot.uploadQuotaExceeded ? (
+            <div className={styles.syncAlertWarning}>
+              <div className={styles.syncAlertLeft}>
+                <IconAlertTriangle size={15} />
+                <span>Dung lượng Cloud đã đầy (vượt 8GB), đã dừng tự tải lên.</span>
+              </div>
+            </div>
+          ) : syncSnapshot.rateLimitInfo ? (
+            <div className={styles.syncAlertWarning}>
+              <div className={styles.syncAlertLeft}>
+                <IconAlertTriangle size={15} />
+                <span>Đã chạm giới hạn, tự tiếp tục sau {syncSnapshot.rateLimitInfo.waitMinutes} phút.</span>
+              </div>
+            </div>
+          ) : syncSnapshot.isProcessing && syncSnapshot.activeTask ? (
+            <div className={styles.syncAlertActive}>
+              <div className={styles.syncAlertLeft}>
+                <IconRefresh size={15} className={styles.spinIcon} />
+                <span className={styles.syncProgressText}>
+                  Đang {syncSnapshot.activeTask.type === 'download' ? 'tải về' : 'tải lên'}{' '}
+                  {syncSnapshot.activeTask.volumeTitle || 'tập'}{' '}
+                  ({syncSnapshot.activeTask.percent}%)
+                  {syncSnapshot.pendingTasks.length > 0 && ` · Còn ${syncSnapshot.pendingTasks.length} tập chờ`}
+                </span>
+              </div>
+              <div className={styles.syncActionsRight}>
+                <button
+                  type="button"
+                  className={styles.syncCancelTaskBtn}
+                  onClick={() => {
+                    cancelTask(syncSnapshot.activeTask.volumeId);
+                    showToast(`Đã hủy tác vụ cho "${syncSnapshot.activeTask.volumeTitle}"`);
+                  }}
+                  title="Hủy tác vụ đang chạy"
+                >
+                  <IconX size={12} />
+                  <span>Hủy</span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.syncPauseBtn}
+                  onClick={pauseSync}
+                  title="Tạm dừng tự động"
+                >
+                  <IconPause size={13} />
+                  <span>Tạm dừng</span>
+                </button>
+              </div>
+            </div>
+          ) : syncSnapshot.isPaused ? (
+            <div className={styles.syncAlertPaused}>
+              <div className={styles.syncAlertLeft}>
+                <IconPause size={15} />
+                <span>Đã tạm dừng tự động đồng bộ</span>
+              </div>
+              <button
+                type="button"
+                className={styles.syncResumeBtn}
+                onClick={resumeSync}
+                title="Tiếp tục tự động đồng bộ"
+              >
+                <IconPlay size={13} />
+                <span>Tiếp tục</span>
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {/* ===== SERIES GRID ===== */}
         {loading ? (
-          <div className={styles.loadingWrap}>
-            <div className={styles.spinner} />
-            <p>Đang tải danh sách truyện tranh...</p>
+          <div className={styles.grid}>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className={styles.skeletonCard}>
+                <div className={styles.skeletonCover} />
+                <div className={styles.skeletonBody}>
+                  <div className={styles.skeletonTitle} />
+                  <div className={styles.skeletonMeta} />
+                </div>
+              </div>
+            ))}
           </div>
-        ) : seriesList.length === 0 ? (
+        ) : filteredSeries.length === 0 ? (
           <div className={styles.emptyWrap}>
-            <span className={styles.emptyIcon}>
+            <div className={styles.emptyIcon}>
               <IconBookOpen size={48} />
-            </span>
-            <h3>Chưa có truyện tranh nào</h3>
-            <p>
-              Nhập file PDF tập truyện để bắt đầu đọc tranh offline mượt mà hoặc đồng bộ giữa các thiết bị.
-            </p>
+            </div>
+            <h3 className={styles.emptyTitle}>Chưa có bộ truyện nào</h3>
             <button
               type="button"
-              className={styles.emptyImportBtn}
+              className={`btn-primary ${styles.emptyImportBtn} animate-neon-pulse`}
               onClick={() => setIsImportModalOpen(true)}
             >
-              + Nhập Tập Đầu Tiên
+              + Nhập PDF
             </button>
           </div>
         ) : (
           <div className={styles.grid}>
-            {seriesList.map((series) => (
+            {filteredSeries.map((series) => (
               <SeriesCard
                 key={series.id}
                 series={series}
@@ -434,7 +455,7 @@ export default function ComicsPage() {
         )}
       </div>
 
-      {/* ===== SETTINGS BOTTOM SHEET / MODAL (B4) ===== */}
+      {/* ===== SETTINGS BOTTOM SHEET / MODAL ===== */}
       {isSettingsOpen && (
         <div className={styles.settingsOverlay} onClick={() => setIsSettingsOpen(false)}>
           <div className={styles.settingsBox} onClick={(e) => e.stopPropagation()}>
@@ -454,7 +475,7 @@ export default function ComicsPage() {
             </div>
 
             <div className={styles.settingsBody}>
-              {/* Tự động tải về thiết bị (A2) */}
+              {/* Tự động tải về thiết bị */}
               <div className={styles.settingItem}>
                 <div className={styles.settingText}>
                   <label htmlFor="toggle-auto-download" className={styles.settingLabel}>
@@ -473,7 +494,7 @@ export default function ComicsPage() {
                 />
               </div>
 
-              {/* Tự động tải lên Cloud (A3) */}
+              {/* Tự động tải lên Cloud */}
               <div className={styles.settingItem}>
                 <div className={styles.settingText}>
                   <label htmlFor="toggle-auto-upload" className={styles.settingLabel}>
@@ -575,7 +596,7 @@ export default function ComicsPage() {
               {seriesToDelete.volumeCount} tập ({formatMb(seriesToDelete.totalBytes || 0)} MB)?
             </p>
             <p className={styles.deleteModalWarning}>
-              Hành động này sẽ xóa vĩnh viễn toàn bộ trang ảnh đã lưu trên máy.
+              Sẽ xóa trên mọi thiết bị và trên Cloud. Hành động này không thể hoàn tác.
             </p>
             <div className={styles.deleteModalActions}>
               <button
@@ -589,8 +610,9 @@ export default function ComicsPage() {
                 type="button"
                 className={styles.deleteConfirmBtn}
                 onClick={handleDeleteSeries}
+                disabled={isDeleting}
               >
-                Xóa Bộ Truyện
+                {isDeleting ? 'Đang Xóa...' : 'Xóa Bộ Truyện'}
               </button>
             </div>
           </div>
@@ -634,6 +656,12 @@ function SeriesCard({ series, onClick, onDelete }) {
           </div>
         )}
         <div className={styles.coverGradient} />
+        {series.isCloudOnly && (
+          <span className={styles.cloudOnlyTag}>
+            <IconCloud size={11} />
+            <span>Trên Cloud</span>
+          </span>
+        )}
         <button
           type="button"
           className={styles.cardDeleteBtn}
@@ -649,26 +677,14 @@ function SeriesCard({ series, onClick, onDelete }) {
       </div>
 
       <div className={styles.cardBody}>
-        <div className={styles.titleRow}>
-          <h3 className={styles.cardTitle} title={series.title}>
-            {series.title}
-          </h3>
-          {series.isCloudOnly && (
-            <span className={styles.cloudOnlyTag}>
-              <IconCloud size={12} />
-              <span>Trên Cloud</span>
-            </span>
-          )}
-        </div>
+        <h3 className={styles.cardTitle} title={series.title}>
+          {series.title}
+        </h3>
         <div className={styles.cardMeta}>
-          <span className={styles.cardVolumes}>
-            {series.volumeCount} tập {!series.isCloudOnly && `(${series.totalPages || 0} trang)`}
+          <span>
+            {series.volumeCount} tập
+            {!series.isCloudOnly && series.totalBytes ? ` · ${formatMb(series.totalBytes)} MB` : ''}
           </span>
-          {!series.isCloudOnly && (
-            <span className={styles.cardSize}>
-              {formatMb(series.totalBytes || 0)} MB
-            </span>
-          )}
         </div>
       </div>
     </div>

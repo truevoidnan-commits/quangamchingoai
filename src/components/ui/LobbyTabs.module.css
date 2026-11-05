@@ -1,0 +1,54 @@
+.tabSwitcherWrap {
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 2;
+}
+
+.tabSwitcher {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(14, 20, 32, 0.75);
+  border: 1px solid rgba(255, 204, 0, 0.18);
+  border-radius: 30px;
+  padding: 4px;
+  gap: 4px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.tabItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 18px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-radius: 24px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.tabItem:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tabItemActive {
+  background: rgba(255, 204, 0, 0.12);
+  border: 1px solid rgba(255, 204, 0, 0.45);
+  color: var(--accent-gold) !important;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.2);
+  text-shadow: var(--glow-gold-sm);
+  cursor: default;
+}

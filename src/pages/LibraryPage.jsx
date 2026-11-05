@@ -20,6 +20,7 @@ import { addToLibrary } from '../lib/storage';
 import { useCultivation } from '../hooks/useCultivation';
 import { runMigrationV2 } from '../lib/migration';
 const NovelExportModal = lazy(() => import('../components/novel/NovelExportModal'));
+import LobbyTabs from '../components/ui/LobbyTabs';
 import styles from './LibraryPage.module.css';
 
 export default function LibraryPage() {
@@ -268,18 +269,7 @@ export default function LibraryPage() {
       </section>
 
       {/* ===== TAB SWITCHER ===== */}
-      {!isVaultMode && (
-        <div className={styles.tabSwitcherWrap}>
-          <div className={styles.tabSwitcher}>
-            <div className={`${styles.tabItem} ${styles.tabItemActive}`}>
-              📖 Truyện Chữ
-            </div>
-            <Link to="/comics" className={styles.tabItem} id="tab-comics">
-              🖼️ Truyện Tranh
-            </Link>
-          </div>
-        </div>
-      )}
+      {!isVaultMode && <LobbyTabs activeTab="novels" />}
 
       {/* ===== VAULT TOP BAR (If in Vault Mode) ===== */}
       {isVaultMode && (

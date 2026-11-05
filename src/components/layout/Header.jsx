@@ -6,7 +6,7 @@ import styles from './Header.module.css';
 
 export default function Header() {
   const location = useLocation();
-  const isHome = location.pathname === '/';
+  const isLobby = location.pathname === '/' || location.pathname === '/comics';
   const { displayName, cultivation } = useCultivationContext();
   const [syncStatus, setSyncStatusState] = useState(() => getSyncStatus());
 
@@ -74,7 +74,7 @@ export default function Header() {
 
   return (
     <>
-      <header className={`${styles.header} ${!isHome ? styles.compact : ''}`}>
+      <header className={`${styles.header} ${!isLobby ? styles.compact : ''}`}>
         <div className={styles.inner}>
           <Link to="/" className={styles.logo} aria-label="Thiên Cơ Lâu - Trang chủ">
             <span className={styles.logoIcon}>✦</span>
@@ -120,7 +120,7 @@ export default function Header() {
               <span className={styles.badgeText}>{displayName}</span>
             </Link>
 
-            {!isHome && (
+            {!isLobby && (
               <nav className={styles.nav}>
                 <Link
                   to="/"
