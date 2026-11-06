@@ -233,14 +233,6 @@ export default function CultivationWorkspace() {
 
       {/* 2. CENTER COLUMN: Celestial Array Visualizer (100% Tối Giản & Tràn Viền Tuyệt Đối) */}
       <div className={`cultivation-col-center ${mobileTab === 'visualizer' ? 'mobile-show' : ''}`}>
-        {/* Nút Quay Lại Thư Viện Nổi Siêu Nhỏ Gọn (Ẩn trên mobile khi tab trận đồ dùng thanh công cụ mới) */}
-        <button
-          className="floating-back-library-btn"
-          onClick={handleSmartBack}
-          title="Quay lại Thư Viện"
-        >
-          <span className="floating-back-arrow">←</span>
-        </button>
 
         {/* Dynamic Canvas Container (100% Chiều Cao Sạch Sẽ) */}
         <div 

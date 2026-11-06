@@ -5923,7 +5923,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 style={{
                   position: 'absolute',
                   top: 14,
-                  left: 56,
+                  left: 16,
                   zIndex: 50,
                   width: 34,
                   height: 34,

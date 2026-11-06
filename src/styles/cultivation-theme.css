@@ -244,51 +244,6 @@
   overflow-y: auto;
 }
 
-/* Nút nổi trở về Thư Viện nhanh ở góc trên bên trái sảnh điện (Icon tròn siêu gọn) */
-.floating-back-library-btn {
-  position: absolute;
-  top: 14px;
-  left: 16px;
-  z-index: 30;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(16, 25, 39, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(6, 182, 212, 0.4);
-  color: var(--accent-cyan);
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 10px rgba(6, 182, 212, 0.15);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  user-select: none;
-  padding: 0;
-}
-
-.floating-back-library-btn:hover {
-  background: rgba(6, 182, 212, 0.22);
-  border-color: #06b6d4;
-  color: #38bdf8;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 16px rgba(6, 182, 212, 0.5);
-  transform: scale(1.08);
-}
-
-.floating-back-arrow {
-  font-size: 16px;
-  font-weight: 900;
-  line-height: 1;
-  transform: translateX(-1px);
-}
-
-@media (max-width: 1024px) {
-  .floating-back-library-btn {
-    display: none !important;
-  }
-}
-
 /* KHỐI THÔNG TIN TIÊN ĐẠO THỐNG NHẤT (UNIFIED CELESTIAL HUD) */
 .celestial-hud-bar {
   display: flex;
