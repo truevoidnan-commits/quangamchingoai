@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getSeries,
@@ -370,6 +370,40 @@ export default function ComicSeriesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'unread' | 'reading' | 'cloud' | 'local'
+
+  // Sticky toolbar detection
+  const [isToolbarSticky, setIsToolbarSticky] = useState(false);
+  const toolbarSentinelRef = useRef(null);
+
+  useEffect(() => {
+    const checkSticky = () => {
+      if (!toolbarSentinelRef.current) return;
+      const rect = toolbarSentinelRef.current.getBoundingClientRect();
+      const headerHeight = window.innerWidth <= 640 ? 54 : 64;
+      setIsToolbarSticky(rect.top <= headerHeight);
+    };
+
+    window.addEventListener('scroll', checkSticky, { passive: true });
+    window.addEventListener('resize', checkSticky, { passive: true });
+    checkSticky();
+
+    let observer;
+    if (toolbarSentinelRef.current && typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          setIsToolbarSticky(!entry.isIntersecting);
+        },
+        { threshold: 0, rootMargin: '-64px 0px 0px 0px' }
+      );
+      observer.observe(toolbarSentinelRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', checkSticky);
+      window.removeEventListener('resize', checkSticky);
+      if (observer) observer.disconnect();
+    };
+  }, [series, volumes.length]);
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -1057,10 +1091,11 @@ export default function ComicSeriesPage() {
         {/* ========================================== */}
         {/* STICKY TOOLBAR & FILTER CHIPS              */}
         {/* ========================================== */}
-        <div className={styles.stickyToolbar}>
+        <div ref={toolbarSentinelRef} className={styles.toolbarSentinel} aria-hidden="true" />
+        <div className={`${styles.stickyToolbar} ${isToolbarSticky ? styles.isSticky : ''}`}>
           {/* Top row: Count header + Search input + Sort toggle */}
           <div className={styles.toolbarRow1}>
-            <span className={styles.volumesCountText}>
+            <span className={styles.volumesCountBadge}>
               {volumes.length.toLocaleString('vi-VN')} tập
             </span>
 
