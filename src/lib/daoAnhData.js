@@ -1,14 +1,14 @@
 export const DAO_ANH_ELEMENT_TYPES = {
-  ALL: { id: 'all', name: 'Tất Cả', icon: '🌌' },
-  HON_DON: { id: 'hon_don', name: 'Hỗn Độn & Khởi Nguyên', icon: '💥' },
-  MA_DAO: { id: 'ma_dao', name: 'Ma Đạo & Hắc Ám', icon: '🌑' },
-  LOI_DINH: { id: 'loi_dinh', name: 'Lôi Đình & Kiếp Phạt', icon: '⚡' },
-  LUAN_HOI: { id: 'luan_hoi', name: 'Luân Hồi & Túc Mệnh', icon: '☯️' },
-  THAI_DUONG: { id: 'thai_duong', name: 'Thái Dương & Chân Hỏa', icon: '☀️' },
-  THOI_KHONG: { id: 'thoi_khong', name: 'Thời Không & Tinh Thần', icon: '⏳' },
-  TAO_HOA: { id: 'tao_hoa', name: 'Tạo Hóa & Sinh Mệnh', icon: '🌿' },
-  KIEM_DAO: { id: 'kiem_dao', name: 'Kiếm Đạo & Sát Phạt', icon: '⚔️' },
-  THAN_THE: { id: 'than_the', name: 'Thần Thể & Vô Địch', icon: '👑' },
+  ALL: { id: 'all', name: 'Tất Cả', icon: 'orb', iconKey: 'orb' },
+  HON_DON: { id: 'hon_don', name: 'Hỗn Độn & Khởi Nguyên', icon: 'sparkle', iconKey: 'sparkle' },
+  MA_DAO: { id: 'ma_dao', name: 'Ma Đạo & Hắc Ám', icon: 'moon', iconKey: 'moon' },
+  LOI_DINH: { id: 'loi_dinh', name: 'Lôi Đình & Kiếp Phạt', icon: 'bolt', iconKey: 'bolt' },
+  LUAN_HOI: { id: 'luan_hoi', name: 'Luân Hồi & Túc Mệnh', icon: 'yin-yang', iconKey: 'yin-yang' },
+  THAI_DUONG: { id: 'thai_duong', name: 'Thái Dương & Chân Hỏa', icon: 'sun', iconKey: 'sun' },
+  THOI_KHONG: { id: 'thoi_khong', name: 'Thời Không & Tinh Thần', icon: 'hourglass', iconKey: 'hourglass' },
+  TAO_HOA: { id: 'tao_hoa', name: 'Tạo Hóa & Sinh Mệnh', icon: 'mist', iconKey: 'mist' },
+  KIEM_DAO: { id: 'kiem_dao', name: 'Kiếm Đạo & Sát Phạt', icon: 'sword', iconKey: 'sword' },
+  THAN_THE: { id: 'than_the', name: 'Thần Thể & Vô Địch', icon: 'crown', iconKey: 'crown' },
 };
 
 export const TINH_TRUNG_LAO_NGUYET_POEM = 'Tỉnh trung lao nguyệt, hạo nguyệt chiếu chư thiên.';

@@ -1,3 +1,4 @@
+import Icon from '../ui/Icon';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   getAllSeries,
@@ -245,7 +246,7 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
                           {coverUrl ? (
                             <img src={coverUrl} alt={s.title} className={styles.seriesCoverImg} />
                           ) : (
-                            <span style={{ fontSize: 24, opacity: 0.5 }}>📖</span>
+                            <Icon name="book" size={24} style={{ opacity: 0.5 }} />
                           )}
                         </div>
                         <h4 className={styles.seriesTitle}>{s.title}</h4>

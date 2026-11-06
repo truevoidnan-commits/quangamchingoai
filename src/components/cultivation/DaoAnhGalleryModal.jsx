@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { DAO_ANH_LIST, DAO_ANH_ELEMENT_TYPES } from '../../lib/daoAnhData';
 import DaoAnhAvatarRenderer from './DaoAnhAvatarRenderer';
@@ -118,7 +119,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
         <div className={styles.modalHeader}>
           <div className={styles.headerLeft}>
             <div className={styles.headerIconWrap}>
-              <span className={styles.headerIcon}>📜</span>
+              <span className={styles.headerIcon}><Icon name="scroll" size={24} /></span>
             </div>
             <div className={styles.headerTitles}>
               <div className={styles.headerMainRow}>
@@ -134,13 +135,13 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
           <div className={styles.headerRight}>
             <div className={styles.headerStats}>
               <span className={styles.statPill} title="Tổng số Pháp Tướng Thần Phẩm">
-                ⚡ <strong>{DAO_ANH_LIST.length}</strong> Đạo Anh
+                <strong>{DAO_ANH_LIST.length}</strong> Đạo Anh
               </span>
               <span className={styles.statPill} title="Kết tinh từ Mệnh Đăng">
-                🏮 <strong>{lampTotal}</strong> Mệnh Đăng
+                <strong>{lampTotal}</strong> Mệnh Đăng
               </span>
               <span className={styles.statPill} title="Kết tinh từ Vật Trấn Áp">
-                🏛️ <strong>{artifactTotal}</strong> Trấn Áp
+                <strong>{artifactTotal}</strong> Trấn Áp
               </span>
             </div>
             <button className={styles.closeBtn} onClick={onClose} title="Đóng (ESC)">
@@ -158,19 +159,19 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
               className={`${styles.sourceTabBtn} ${sourceFilter === 'all' ? styles.activeSource : ''}`}
               onClick={() => setSourceFilter('all')}
             >
-              <span>🌌 Toàn Bộ ({DAO_ANH_LIST.length})</span>
+              <span><Icon name="orb" size={14} /> Toàn Bộ ({DAO_ANH_LIST.length})</span>
             </button>
             <button
               className={`${styles.sourceTabBtn} ${sourceFilter === 'lamp' ? styles.activeSource : ''}`}
               onClick={() => setSourceFilter('lamp')}
             >
-              <span>🏮 Mệnh Đăng ({lampTotal})</span>
+              <span><Icon name="lantern" size={14} /> Mệnh Đăng ({lampTotal})</span>
             </button>
             <button
               className={`${styles.sourceTabBtn} ${sourceFilter === 'artifact' ? styles.activeSource : ''}`}
               onClick={() => setSourceFilter('artifact')}
             >
-              <span>🏛️ Vật Trấn Áp ({artifactTotal})</span>
+              <span><Icon name="shield" size={14} /> Vật Trấn Áp ({artifactTotal})</span>
             </button>
           </div>
 
@@ -182,20 +183,20 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                 onClick={() => setViewMode('grid')}
                 title="Dạng Thẻ Tiên Điển"
               >
-                🎴 Thẻ Bài
+                <Icon name="image" size={14} /> Thẻ Bài
               </button>
               <button
                 className={`${styles.viewModeBtn} ${viewMode === 'list' ? styles.activeViewMode : ''}`}
                 onClick={() => setViewMode('list')}
                 title="Dạng Quyển Trục Thu Gọn"
               >
-                📜 Danh Mục
+                <Icon name="list" size={14} /> Danh Mục
               </button>
             </div>
 
             {/* Search Input */}
             <div className={styles.searchBox}>
-              <span className={styles.searchIcon}>🔍</span>
+              <span className={styles.searchIcon}><Icon name="search" size={14} /></span>
               <input
                 type="text"
                 placeholder="Tìm tên Đạo Anh, khẩu quyết, thần thông..."
@@ -329,14 +330,14 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                       <h4 className={styles.listName}>{da.name}</h4>
                       <span className={styles.listTier}>THẦN PHẨM</span>
                       <span className={styles.listSource}>
-                        {da.sourceType === 'lamp' ? '🏮 Mệnh Đăng' : '🏛️ Trấn Áp'}
+                        {da.sourceType === 'lamp' ? 'Mệnh Đăng' : 'Trấn Áp'}
                       </span>
                     </div>
                     <div className={styles.listSubTitle}>{da.title} · <em>"{da.poem}"</em></div>
                   </div>
 
                   <div className={styles.listSkillCol}>
-                    <div className={styles.listSkillName}>⚡ {da.skillName}</div>
+                    <div className={styles.listSkillName}><Icon name="bolt" size={12} /> {da.skillName}</div>
                     <div className={styles.listSkillDesc}>{da.skillDesc}</div>
                   </div>
 
@@ -353,7 +354,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
           {/* Empty State */}
           {filteredList.length === 0 && (
             <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}>🔮</div>
+              <div className={styles.emptyIcon}><Icon name="orb" size={32} /></div>
               <h3>Không tìm thấy Đạo Anh phù hợp</h3>
               <p>Thử điều chỉnh bộ lọc Mệnh Đăng / Trấn Áp hoặc từ khóa tìm kiếm</p>
               <button
@@ -441,7 +442,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
 
                     {/* Evolution Form Title */}
                     <div className={styles.tribulationFormBadge}>
-                      <span className={styles.formTag}>👑 CỰC HẠN THẦN THÂN:</span>
+                      <span className={styles.formTag}>CỰC HẠN THẦN THÂN:</span>
                       <span className={styles.formValue}>{selectedDaoAnh.tribulationForm}</span>
                     </div>
                   </div>
@@ -449,7 +450,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                   {/* Signature Skill Box */}
                   <div className={styles.spotlightSectionSkill}>
                     <div className={styles.sectionSkillHeader}>
-                      <span className={styles.sectionSkillIcon}>⚡</span>
+                      <span className={styles.sectionSkillIcon}><Icon name="bolt" size={14} /></span>
                       <span className={styles.sectionSkillTitle}>THẦN THÔNG:</span>
                       <span className={styles.skillCoreName}>{selectedDaoAnh.skillName}</span>
                     </div>
@@ -459,7 +460,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                   {/* Lore Description */}
                   <div className={styles.spotlightSectionLore}>
                     <div className={styles.sectionLoreHeader}>
-                      <span>📜 CHÂN THÂN & KHỞI NGUYÊN</span>
+                      <span><Icon name="scroll" size={14} /> CHÂN THÂN & KHỞI NGUYÊN</span>
                     </div>
                     <p className={styles.loreDescText}>{selectedDaoAnh.desc}</p>
                   </div>
@@ -469,7 +470,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
               {/* Bottom Quick Navigation Between Items */}
               <div className={styles.spotlightNavFooter}>
                 <button className={styles.spotlightNavBtn} onClick={handlePrev}>
-                  <span>◀ Đạo Anh Trước</span>
+                  <span>Đạo Anh Trước</span>
                   <span className={styles.navKeyHint}>[←]</span>
                 </button>
 
@@ -483,7 +484,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
 
                 <button className={styles.spotlightNavBtn} onClick={handleNext}>
                   <span className={styles.navKeyHint}>[→]</span>
-                  <span>Đạo Anh Kế Tiếp ▶</span>
+                  <span>Đạo Anh Kế Tiếp</span>
                 </button>
               </div>
             </div>

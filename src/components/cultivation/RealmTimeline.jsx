@@ -55,7 +55,7 @@ export default function RealmTimeline() {
           CỰC CẢNH 121
         </h3>
         <p style={{ color: has121st ? 'var(--color-cuc-canh, #ff3fd5)' : 'var(--text-muted)' }}>
-          {has121st ? '✦ Thiên Đỉnh Thành Tựu' : (opened >= 120 ? '⚡ Sẵn Sàng Xung Kích' : '🔒 Phong Ấn')}
+          {has121st ? 'Thiên Đỉnh Thành Tựu' : (opened >= 120 ? 'Sẵn Sàng Xung Kích' : 'Phong Ấn')}
         </p>
       </div>
 
@@ -103,7 +103,7 @@ export default function RealmTimeline() {
         <p style={{ color: activeView === 'linh_tang' || currentRealm === 'linh_tang' ? '#38bdf8' : 'var(--text-muted)', fontSize: 11 }}>
           {currentRealm === 'linh_tang' 
             ? `✦ ${(cultivation?.linhTangs || []).filter(t => t.isGateOpen).length}/5 Tàng Môn` 
-            : '🔒 Bí Tàng Nhục Thân'}
+            : 'Bí Tàng Nhục Thân'}
         </p>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import Icon from './components/ui/Icon';
 import React, { useEffect, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/layout/Header';
@@ -75,7 +76,7 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div style={{ padding: 40, background: '#0d1624', color: '#ff6b6b', fontFamily: 'monospace', zIndex: 9999, position: 'relative' }}>
-          <h2>🚨 Đã có lỗi xảy ra khi tải giao diện:</h2>
+          <h2>Đã có lỗi xảy ra khi tải giao diện:</h2>
           <pre style={{ background: '#1c0f0f', padding: 20, borderRadius: 8, overflowX: 'auto', color: '#ffd1d1' }}>
             {this.state.error?.toString()}
           </pre>
@@ -84,7 +85,7 @@ class ErrorBoundary extends React.Component {
               onClick={() => window.location.reload()}
               style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
             >
-              🔄 Tải lại trang
+              <Icon name="refresh" size={14} /> Tải lại trang
             </button>
             <button 
               onClick={() => { localStorage.clear(); window.location.reload(); }}

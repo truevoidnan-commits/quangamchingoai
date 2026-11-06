@@ -85,7 +85,7 @@ function ChapterItem({ chapter, isActive, isExtra, onSelect }) {
         </span>
       )}
       {isExtra && <span className="badge badge-extra" style={{ flexShrink: 0, marginLeft: 6 }}>Ngoại truyện</span>}
-      {isActive && <span className={styles.activeIndicator}>▶</span>}
+      {isActive && <span className={styles.activeIndicator} aria-hidden="true">•</span>}
     </button>
   );
 }

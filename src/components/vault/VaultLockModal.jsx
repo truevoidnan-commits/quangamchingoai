@@ -1,3 +1,4 @@
+import Icon from '../ui/Icon';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   hasVaultPassword,
@@ -129,7 +130,7 @@ export default function VaultLockModal({
 
         <div className={styles.header}>
           <div className={styles.iconCircle}>
-            {isSetupMode ? '🗝️' : mode === 'change' ? '⚙️' : '🔒'}
+            <Icon name={isSetupMode ? 'key' : mode === 'change' ? 'settings' : 'lock'} size={28} />
           </div>
 
           <h3 className={styles.title}>
@@ -193,7 +194,7 @@ export default function VaultLockModal({
                 onClick={() => setShowPassword(!showPassword)}
                 title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
+                <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />
               </button>
             </div>
           </div>
@@ -235,7 +236,7 @@ export default function VaultLockModal({
                   className={styles.hintBtn}
                   onClick={() => setShowHintText(!showHintText)}
                 >
-                  {showHintText ? 'Ẩn gợi ý mật khẩu' : '💡 Xem gợi ý mật khẩu'}
+                  {showHintText ? 'Ẩn gợi ý mật khẩu' : <><Icon name="lightbulb" size={14} /> Xem gợi ý mật khẩu</>}
                 </button>
               </div>
             )
@@ -243,20 +244,20 @@ export default function VaultLockModal({
 
           {showHintText && existingHint && (
             <div className={styles.hintText}>
-              💡 <strong>Gợi ý:</strong> {existingHint}
+              <Icon name="lightbulb" size={14} /> <strong>Gợi ý:</strong> {existingHint}
             </div>
           )}
 
           {error && (
             <div className={styles.errorMsg}>
-              <span>⚠️</span>
+              <Icon name="alert-triangle" size={14} />
               <span>{error}</span>
             </div>
           )}
 
           <div className={styles.actions}>
             <button type="submit" className={styles.submitBtn}>
-              {isSetupMode ? '✨ Tạo Mật Khẩu & Xác Nhận' : mode === 'change' ? '💾 Lưu Mật Khẩu Mới' : '🔓 Mở Khóa Mật Thất'}
+              {isSetupMode ? 'Tạo Mật Khẩu & Xác Nhận' : mode === 'change' ? 'Lưu Mật Khẩu Mới' : 'Mở Khóa Mật Thất'}
             </button>
             <button type="button" className={styles.cancelBtn} onClick={onClose}>
               Hủy

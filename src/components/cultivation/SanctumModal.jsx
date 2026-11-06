@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 import React, { useState } from 'react';
 import { useCultivationContext } from '../../context/CultivationContext';
 import { LIFE_LAMPS, SUPPRESSING_ARTIFACTS, getPalaceNameFromArtifact } from '../../lib/cultivation';
@@ -57,7 +58,7 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
   const handleQuickRefineAllBag = () => {
     if (totalBagItemsCount === 0) return;
     const gainDesc = isNguyenAnhStage ? `+${totalBagItemsCount * 50} Lực Thiên Mệnh` : `+${(totalBagItemsCount * 3000).toLocaleString()} Tu Vi`;
-    if (!window.confirm(`⚡ Luyện hóa nhanh ${totalBagItemsCount} món trong túi nhận ${gainDesc}?`)) return;
+    if (!window.confirm(`Luyện hóa nhanh ${totalBagItemsCount} món trong túi nhận ${gainDesc}?`)) return;
     try {
       sellMultipleItems({ lampIds: inventoryLamps, artifactIds: unanchoredArtifacts });
     } catch (e) {
@@ -115,7 +116,7 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
               fontSize: 20,
               boxShadow: '0 0 16px rgba(239, 68, 68, 0.3)'
             }}>
-              🏛️
+              
             </div>
             <div>
               <h2 style={{
@@ -151,7 +152,7 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
                   boxShadow: '0 0 12px rgba(239, 68, 68, 0.4)'
                 }}
               >
-                ⚡ Luyện Hóa Nhanh ({totalBagItemsCount})
+                <Icon name="bolt" size={14} /> Luyện Hóa Nhanh ({totalBagItemsCount})
               </button>
             )}
 
@@ -208,7 +209,7 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
               boxShadow: activeTab === 'lamps' ? '0 0 16px rgba(239, 68, 68, 0.25)' : 'none',
             }}
           >
-            <span>🏮 MỆNH ĐĂNG THẦN PHẨM (18)</span>
+            <span><Icon name="lantern" size={14} /> MỆNH ĐĂNG THẦN PHẨM (18)</span>
             <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: 'rgba(0,0,0,0.5)', color: '#fff' }}>
               {absorbedLamps.length}/18 Đã khảm
             </span>
@@ -236,7 +237,7 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
               boxShadow: activeTab === 'artifacts' ? '0 0 16px rgba(56, 189, 248, 0.25)' : 'none',
             }}
           >
-            <span>🛡️ VẬT TRẤN ÁP THẦN PHẨM (24)</span>
+            <span><Icon name="shield" size={14} /> VẬT TRẤN ÁP THẦN PHẨM (24)</span>
             <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: 'rgba(0,0,0,0.5)', color: '#fff' }}>
               {anchoredIds.length}/24 Đã khảm
             </span>
@@ -372,7 +373,7 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {
                           e.target.style.display = 'none';
-                          e.target.parentNode.innerHTML = `<div style="font-size: 40px;">${lamp.icon || '🏮'}</div>`;
+                          e.target.parentNode.innerHTML = `<div style="font-size: 14px; opacity: 0.7;">[Thần Đăng]</div>`;
                         }}
                       />
                     </div>
@@ -429,7 +430,7 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
                               cursor: 'pointer'
                             }}
                           >
-                            🔥 Đổi (Đốt {isNguyenAnhStage ? '200 TM' : '10k'})
+                            <Icon name="flame" size={12} /> Đổi (Đốt {isNguyenAnhStage ? '200 TM' : '10k'})
                           </button>
                         )}
                       </div>
@@ -571,7 +572,7 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {
                           e.target.style.display = 'none';
-                          e.target.parentNode.innerHTML = `<div style="font-size: 40px;">${art.icon || '🏛️'}</div>`;
+                          e.target.parentNode.innerHTML = `<div style="font-size: 14px; opacity: 0.7;">[Thần Vật]</div>`;
                         }}
                       />
                     </div>
@@ -580,7 +581,7 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
                     <div style={{ width: '100%', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                       <div>
                         <div style={{ color: '#e0f2fe', fontWeight: 900, fontSize: 14, marginBottom: 2 }}>{art.name}</div>
-                        <div style={{ fontSize: 10.5, color: '#38bdf8', fontWeight: 700 }}>🏛️ [{palaceName}]</div>
+                        <div style={{ fontSize: 10.5, color: '#38bdf8', fontWeight: 700 }}>[{palaceName}]</div>
                         <p style={{ fontSize: 11, color: '#cbd5e1', lineHeight: 1.35, margin: '4px 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                           {art.desc}
                         </p>
@@ -633,7 +634,7 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
                               cursor: 'pointer'
                             }}
                           >
-                            🔥 Đổi (Đốt {isNguyenAnhStage ? '200 TM' : '10k'})
+                            <Icon name="flame" size={12} /> Đổi (Đốt {isNguyenAnhStage ? '200 TM' : '10k'})
                           </button>
                         )}
                       </div>

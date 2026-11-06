@@ -1,3 +1,4 @@
+import Icon from '../components/ui/Icon';
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { getNovel, getChapters, getChapter } from '../lib/db';
@@ -745,7 +746,7 @@ export default function ReaderPage() {
       await saveChapter(restoredChapter);
       setChapter(restoredChapter);
       setEditorToast({
-        message: '↩ Đã hoàn tác lại nội dung trước đó!',
+        message: 'Đã hoàn tác lại nội dung trước đó!',
         onUndo: null,
       });
     } catch (err) {
@@ -918,8 +919,8 @@ export default function ReaderPage() {
 
         const isDeleted = !newText || newText.trim() === '';
         const message = isDeleted
-          ? `🗑️ Đã xóa ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`
-          : `✨ Đã thay thế ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`;
+          ? `Đã xóa ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`
+          : `Đã thay thế ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`;
 
         setEditorToast({ message });
       } catch (err) {
@@ -1008,8 +1009,8 @@ export default function ReaderPage() {
 
       const isDeleted = !newText || newText.trim() === '';
       const message = isDeleted
-        ? (scope === 'all' ? '🗑️ Đã xóa toàn bộ các đoạn trùng khớp trong chương!' : '🗑️ Đã xóa đoạn chữ thành công!')
-        : (scope === 'all' ? '✨ Đã thay thế toàn bộ các vị trí trong chương!' : '✨ Đã lưu thay đổi vào chương thành công!');
+        ? (scope === 'all' ? 'Đã xóa toàn bộ các đoạn trùng khớp trong chương!' : 'Đã xóa đoạn chữ thành công!')
+        : (scope === 'all' ? 'Đã thay thế toàn bộ các vị trí trong chương!' : 'Đã lưu thay đổi vào chương thành công!');
 
       setEditorToast({
         message,
@@ -1193,7 +1194,7 @@ export default function ReaderPage() {
       {/* Floating search badge if navigating from search */}
       {searchKeyword && (
         <div className={styles.highlightBadgeBar}>
-          <span>🔍 Khớp từ khoá: "<strong>{searchKeyword}</strong>"</span>
+          <span><Icon name="search" size={13} /> Khớp từ khoá: "<strong>{searchKeyword}</strong>"</span>
           <button className={styles.clearHighlightBtn} onClick={clearHighlight} title="Tắt highlight">
             ✕ Tắt
           </button>
@@ -1247,7 +1248,7 @@ export default function ReaderPage() {
                   navigate('/cultivation');
                 }}
               >
-                🏮 Xem Trong Bảng Tu Vi
+                <Icon name="lantern" size={14} /> Xem Trong Bảng Tu Vi
               </button>
               <button className="btn-ghost" onClick={() => setDroppedLamp(null)}>
                 Đóng
@@ -1515,7 +1516,7 @@ export default function ReaderPage() {
             }
           }
           setEditorToast({
-            message: `✨ Đã thay thế ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`,
+            message: `Đã thay thế ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`,
           });
         }}
       />
@@ -1530,7 +1531,7 @@ export default function ReaderPage() {
               className={selectionStyles.undoBtn}
               onClick={editorToast.onUndo}
             >
-              ↩ Hoàn tác
+              Hoàn tác
             </button>
           )}
           <button

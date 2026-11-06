@@ -1,3 +1,4 @@
+import Icon from './Icon';
 ﻿import { useState, useRef, useEffect, useCallback } from 'react';
 import styles from './ImageCropperModal.module.css';
 
@@ -141,7 +142,7 @@ export default function ImageCropperModal({ imageSrc, onCrop, onClose }) {
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.titleWrap}>
-            <span className={styles.icon}>✂️</span>
+            <Icon name="scissors" size={18} className={styles.icon} />
             <h3 className={styles.title}>Căn chỉnh bìa truyện (Tỷ lệ 3:4)</h3>
           </div>
           <button className={styles.closeBtn} onClick={onClose} aria-label="Đóng">
@@ -159,7 +160,7 @@ export default function ImageCropperModal({ imageSrc, onCrop, onClose }) {
           onPointerCancel={handlePointerUp}
           onWheel={handleWheel}
         >
-          <div className={styles.hint}>🖐️ Kéo ảnh hoặc lăn chuột để phóng to/thu nhỏ</div>
+          <div className={styles.hint}>Kéo ảnh hoặc lăn chuột để phóng to/thu nhỏ</div>
 
           {/* Render draggable image */}
           {imgElement && (
@@ -190,7 +191,7 @@ export default function ImageCropperModal({ imageSrc, onCrop, onClose }) {
         <div className={styles.controls}>
           {/* Zoom Slider */}
           <div className={styles.sliderRow}>
-            <span className={styles.sliderLabel}>🔍 Thu phóng</span>
+            <span className={styles.sliderLabel}>Thu phóng</span>
             <input
               type="range"
               min={minScale}
@@ -207,7 +208,7 @@ export default function ImageCropperModal({ imageSrc, onCrop, onClose }) {
           <div className={styles.btnRow}>
             <div className={styles.toolBtns}>
               <button className={styles.toolBtn} onClick={handleRotate} title="Xoay ảnh 90 độ">
-                🔄 Xoay
+                <Icon name="refresh" size={14} /> Xoay
               </button>
               <button className={styles.toolBtn} onClick={handleReset} title="Đặt lại vị trí giữa">
                 ⤢ Giữa

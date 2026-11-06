@@ -431,7 +431,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       parallelDeviceDetected = true;
     }
 
-    // 2. Kiểm tra nếu lần đầu đồng bộ cả 2 bên có dữ liệu -> KHÔNG tự chạy, bật cờ 🔔
+    // 2. Kiểm tra nếu lần đầu đồng bộ cả 2 bên có dữ liệu -> KHÔNG tự chạy, bật cờ attention
     const firstSyncCheck = checkFirstSyncCondition({
       cloudNovels: cloudNovels || [],
       cloudCultivation,
@@ -597,7 +597,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
     const isOwnCultDevice = Boolean(cloudCultivation?.device_id && cloudCultivation.device_id === getDeviceId());
 
     if (isCloudRevChanged && isLocalRevChanged) {
-      // Cả hai cùng sửa tu vi -> XUNG ĐỘT, KHÔNG ghi đè, bật cờ 🔔
+      // Cả hai cùng sửa tu vi -> XUNG ĐỘT, KHÔNG ghi đè, bật cờ attention
       hasAttention = true;
       attentionReason = 'cultivation_conflict';
       logSyncEvent({ level: 'warn', src: syncSource, evt: 'cultivation_conflict' });

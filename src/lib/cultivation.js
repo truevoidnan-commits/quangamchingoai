@@ -210,7 +210,7 @@ export const LIFE_LAMPS = [
     name: 'Nguyên Thủy Thiên Ma Đăng',
     shortName: 'Thiên Ma Đăng',
     tier: 'than_pham',
-    icon: '🌑',
+    icon: 'moon', iconKey: 'moon',
     color: '#ef4444',
     desc: 'Ma diễm nguyên thủy ngập tràn càn khôn của Nguyên Thủy Thiên Ma thượng cổ, luyện hóa vạn tà thành chân nguyên.',
     poem: 'Nguyên thủy thiên ma, thống ngự vạn ma.',
@@ -220,7 +220,7 @@ export const LIFE_LAMPS = [
     name: 'Hỗn Độn Sơ Khai Đăng',
     shortName: 'Hỗn Độn Đăng',
     tier: 'than_pham',
-    icon: '💥',
+    icon: 'sparkle', iconKey: 'sparkle',
     color: '#ef4444',
     desc: 'Ngọn lửa nguyên thủy sinh ra khi thiên địa còn là một mảnh hỗn độn trước vạn đạo.',
     poem: 'Hỗn độn vị phân, nhất điểm linh quang.',
@@ -230,7 +230,7 @@ export const LIFE_LAMPS = [
     name: 'Hồng Mông Bất Diệt Đăng',
     shortName: 'Hồng Mông Đăng',
     tier: 'than_pham',
-    icon: '🔥',
+    icon: 'flame', iconKey: 'flame',
     color: '#ef4444',
     desc: 'Được nuôi dưỡng bởi hồng mông tử khí nguyên thủy, bất tử bất diệt, đồng thọ cùng đạo.',
     poem: 'Hồng mông tử khí, vĩnh hằng bất hủ.',
@@ -240,7 +240,7 @@ export const LIFE_LAMPS = [
     name: 'Cửu Chuyển Luân Hồi Đăng',
     shortName: 'Luân Hồi Đăng',
     tier: 'than_pham',
-    icon: '☯️',
+    icon: 'yin-yang', iconKey: 'yin-yang',
     color: '#ef4444',
     desc: 'Bảo vật chí cao chưởng quản sinh tử luân hồi lục đạo, nghịch chuyển càn khôn nhân quả.',
     poem: 'Cửu chuyển luân hồi, nghịch chuyển sinh tử.',
@@ -250,7 +250,7 @@ export const LIFE_LAMPS = [
     name: 'Chung Yên Tịch Diệt Đăng',
     shortName: 'Chung Yên Đăng',
     tier: 'than_pham',
-    icon: '🕳️',
+    icon: 'orb', iconKey: 'orb',
     color: '#ef4444',
     desc: 'Ngọn đèn đại diện cho thời khắc Chung Yên ngày tàn của chư thiên vũ trụ, thiêu đốt vạn đạo quy về tịch diệt hư vô.',
     poem: 'Kỷ nguyên chung yên vạn đạo vẫn, tịch diệt hư vô quy nhất đăng.',
@@ -260,7 +260,7 @@ export const LIFE_LAMPS = [
     name: 'Sáng Thế Bản Nguyên Đăng',
     shortName: 'Sáng Thế Đăng',
     tier: 'than_pham',
-    icon: '🌌',
+    icon: 'sparkle', iconKey: 'sparkle',
     color: '#ef4444',
     desc: 'Ngọn đèn chứa đựng sức mạnh bản nguyên sáng thế tạo lập vũ trụ vạn vật.',
     poem: 'Sáng thế bản nguyên, diễn hóa vạn linh.',
@@ -270,7 +270,7 @@ export const LIFE_LAMPS = [
     name: 'Vận Mệnh Hư Vô Đăng',
     shortName: 'Hư Vô Đăng',
     tier: 'than_pham',
-    icon: '🔮',
+    icon: 'orb', iconKey: 'orb',
     color: '#ef4444',
     desc: 'Chứa đựng sức mạnh hư vô của vận mệnh thái cổ, nhìn thấu hư thực sinh tử của vạn giới.',
     poem: 'Vận mệnh hư vô, chư thiên quy tịch.',
@@ -280,7 +280,7 @@ export const LIFE_LAMPS = [
     name: 'Túc Mệnh Nhân Quả Đăng',
     shortName: 'Nhân Quả Đăng',
     tier: 'than_pham',
-    icon: '📜',
+    icon: 'scroll', iconKey: 'scroll',
     color: '#ef4444',
     desc: 'Nắm giữ sợi dây nhân quả và túc mệnh của ức vạn sinh linh trong thiên địa.',
     poem: 'Túc mệnh nhân quả, thiên đạo luân hồi.',
@@ -290,7 +290,7 @@ export const LIFE_LAMPS = [
     name: 'Thái Cổ Thần Long Đăng',
     shortName: 'Thần Long Đăng',
     tier: 'than_pham',
-    icon: '🐉',
+    icon: 'dragon', iconKey: 'dragon',
     color: '#ef4444',
     desc: 'Long hồn nguyên thủy của tổ long thái cổ ngưng tụ, tiếng gầm làm rung chuyển chư thiên vạn giới.',
     poem: 'Tổ long rít gào, uy chấn bát hoang.',
@@ -300,7 +300,7 @@ export const LIFE_LAMPS = [
     name: 'Khởi Nguyên Thời Không Đăng',
     shortName: 'Khởi Nguyên Đăng',
     tier: 'than_pham',
-    icon: '⏳',
+    icon: 'hourglass', iconKey: 'hourglass',
     color: '#ef4444',
     desc: 'Nắm giữ điểm khởi nguyên của dòng sông thời gian và không gian vũ trụ.',
     poem: 'Khởi nguyên thời không, ngạo thị tuế nguyệt.',
@@ -310,7 +310,7 @@ export const LIFE_LAMPS = [
     name: 'Tinh Hà Dịch Đạo Đăng',
     shortName: 'Dịch Đạo Đăng',
     tier: 'than_pham',
-    icon: '♟️',
+    icon: 'crown', iconKey: 'crown',
     color: '#ef4444',
     desc: 'Lấy dải Ngân Hà làm bàn cờ, tinh tú làm quân cờ. Thắp lên Dịch Hỏa Thái Cực diễn hóa chu thiên tinh đẩu vây khốn vạn giới càn khôn.',
     poem: 'Tinh hà vi dịch chu thiên động, hắc bạch càn khôn nhất chước định.',
@@ -320,7 +320,7 @@ export const LIFE_LAMPS = [
     name: 'Tối Cao Thiên Mệnh Đăng',
     shortName: 'Thiên Mệnh Đăng',
     tier: 'than_pham',
-    icon: '👑',
+    icon: 'crown', iconKey: 'crown',
     color: '#ef4444',
     desc: 'Được sinh ra từ chính bản nguyên thiên mệnh của vũ trụ, quyết định vận mệnh của ức vạn sinh linh.',
     poem: 'Thiên mệnh sở quy, vạn kiếp bất hủ.',
@@ -330,7 +330,7 @@ export const LIFE_LAMPS = [
     name: 'Hoàng Tuyền Bỉ Ngạn Đăng',
     shortName: 'Bỉ Ngạn Đăng',
     tier: 'than_pham',
-    icon: '🌺',
+    icon: 'lantern', iconKey: 'lantern',
     color: '#ef4444',
     desc: 'Ngọn đèn thắp sáng bờ Vong Xuyên u minh, hoa bỉ ngạn nở rộ dẫn lối u hồn, trấn định sinh tử vạn kiếp bất diệt.',
     poem: 'Hoàng tuyền bỉ ngạn, hoa khai vô lệ.',
@@ -340,7 +340,7 @@ export const LIFE_LAMPS = [
     name: 'Thiên Đạo Chí Tôn Đăng',
     shortName: 'Chí Tôn Đăng',
     tier: 'than_pham',
-    icon: '👑',
+    icon: 'crown', iconKey: 'crown',
     color: '#ef4444',
     desc: 'Ngọn đèn đại diện cho ý chí tối cao của Thiên Đạo, ban cho tu sĩ hoàng uy tuyệt đối trấn áp quần hùng.',
     poem: 'Thiên đạo chí tôn, vạn linh thần phục.',
@@ -350,7 +350,7 @@ export const LIFE_LAMPS = [
     name: 'Nguyên Giới Hỗn Cổ Đăng',
     shortName: 'Hỗn Cổ Đăng',
     tier: 'than_pham',
-    icon: '🌌',
+    icon: 'sparkle', iconKey: 'sparkle',
     color: '#ef4444',
     desc: 'Bản nguyên từ cõi Nguyên Giới thời hỗn cổ sơ khai, mở rộng đan hải và dung nạp thiên địa nguyên khí vô tận.',
     poem: 'Hỗn cổ nguyên giới, vạn kiếp bất diệt.',
@@ -360,7 +360,7 @@ export const LIFE_LAMPS = [
     name: 'Cấm Kỵ Cực Đạo Đăng',
     shortName: 'Cực Đạo Đăng',
     tier: 'than_pham',
-    icon: '⚡',
+    icon: 'bolt', iconKey: 'bolt',
     color: '#ef4444',
     desc: 'Lực lượng cực đạo phá vỡ mọi cấm kỵ thiên quy, bộc phát uy lực chiến đấu gấp mười lần trong sát na.',
     poem: 'Cực đạo cấm kỵ, duy ngã độc tôn.',
@@ -370,7 +370,7 @@ export const LIFE_LAMPS = [
     name: 'Đạo Tâm Chủng Ma Đăng',
     shortName: 'Chủng Ma Đăng',
     tier: 'than_pham',
-    icon: '☯️',
+    icon: 'yin-yang', iconKey: 'yin-yang',
     color: '#ef4444',
     desc: 'Đan xen giữa tiên đạo chí thuần và ma đạo chí cực, nuôi dưỡng ma chủng trong tâm để đoạt thiên tạo hóa.',
     poem: 'Đạo tâm chủng ma, siêu việt luân hồi.',
@@ -380,7 +380,7 @@ export const LIFE_LAMPS = [
     name: 'Tàn Tiên Phệ Thần Đăng',
     shortName: 'Tàn Tiên Đăng',
     tier: 'than_pham',
-    icon: '🪔',
+    icon: 'lantern', iconKey: 'lantern',
     color: '#ef4444',
     desc: 'Cổ đăng vỡ nát từ thời thượng cổ tàn tiên, chuyên thôn phệ thần niệm địch nhân nghịch thiên.',
     poem: 'Tàn tiên vẫn lạc, phệ thần đoạt phách.',
@@ -394,30 +394,30 @@ export const TINH_TRUNG_ARTIFACT_POEM = 'Tỉnh trung lao nguyệt, hạo nguy�
 export const TINH_TRUNG_ARTIFACT_DESC = 'Dị tượng vô thượng tỉnh trung lao nguyệt, vớt vầng trăng sáng từ đáy giếng sâu, ánh trăng chiếu rọi thế gian xua tan mọi ma chướng cõi phàm.';
 
 export const SUPPRESSING_ARTIFACTS = [
-  { id: 'tao_hoa_ngoc_diep', name: 'Tạo Hóa Ngọc Điệp', shortName: 'Ngọc Điệp', tier: 'than_pham', type: 'Đạo Tổ Di Vật', icon: '🪞', color: '#ef4444', desc: 'Mảnh vỡ ngọc điệp của Đạo Tổ ghi chép 3000 đại đạo, mở ra con đường tu tiên siêu việt cảnh giới.', poem: 'Tạo hóa ngọc điệp, thông hiểu vạn đạo.' },
-  { id: 'kim_o_luyen_van_linh', name: 'Kim Ô Luyện Vạn Linh', shortName: 'Kim Ô Luyện Linh', tier: 'than_pham', type: 'Thái Dương Thần Công', icon: '☀️', color: '#ef4444', desc: 'Tuyệt kỹ chân hỏa Kim Ô thượng cổ, luyện hóa vạn linh khí tức trời đất thành thuần dương chi khí bảo hộ thiên cung.', poem: 'Kim ô xuất thế, vạn linh quy phục.' },
-  { id: 'nguyen_thuy_thai_so_ma_kinh', name: 'Nguyên Thủy Thái Sơ Ma Kinh', shortName: 'Thái Sơ Ma Kinh', tier: 'than_pham', type: 'Nguyên Thủy Ma Điển', icon: '📖', color: '#ef4444', desc: 'Cổ kinh ma đạo sinh ra từ thuở sơ khai trước khi có trời đất, ngưng tụ ma uy cái thế trấn áp bát hoang.', poem: 'Thái sơ vô cực, duy ngã độc tôn.' },
-  { id: 'dao_menh_thien_ma_cong', name: 'Đạo Mệnh Thiên Ma Công', shortName: 'Thiên Ma Công', tier: 'than_pham', type: 'Đoạt Mệnh Thần Công', icon: '🌑', color: '#ef4444', desc: 'Công pháp cướp đoạt số mệnh càn khôn của Thiên Ma vực ngoại, chuyển hóa sinh tử nghịch chuyển càn khôn.', poem: 'Đạo mệnh thiên ma, nghịch thiên cải mệnh.' },
-  { id: 'ngu_hanh_dai_dong_thien', name: 'Ngũ Hành Đại Động Thiên', shortName: 'Đại Động Thiên', tier: 'than_pham', type: 'Ngũ Hành Bản Nguyên', icon: '🌀', color: '#ef4444', desc: 'Không gian động thiên dung hợp Kim Mộc Thủy Hỏa Thổ viên mãn tuyệt đối, tạo nên thế giới độc lập vững chắc.', poem: 'Ngũ hành tương sinh, động thiên bất hoại.' },
-  { id: 'mac_sat_tien_phach', name: 'Mặc Sát Tiên Phách', shortName: 'Mặc Sát Phách', tier: 'than_pham', type: 'Tuyệt Thế Sát Phách', icon: '⚔️', color: '#ef4444', desc: 'Hồn phách ngưng kết từ hắc ám sát khí thượng cổ của tiên nhân, chém tan mọi tà niệm ma chướng trong đan điện.', poem: 'Mặc sát nhất kiếm, tiên phách vô song.' },
-  { id: 'huyen_hoang_diet_the_bien', name: 'Huyền Hoàng Diệt Thế Biến', shortName: 'Diệt Thế Biến', tier: 'than_pham', type: 'Huyền Hoàng Tuyệt Kỹ', icon: '🌍', color: '#ef4444', desc: 'Khí Huyền Hoàng hủy thiên diệt địa dung hợp vào thân thể, mang sức mạnh nghiền nát tinh cầu.', poem: 'Huyền hoàng biến ảo, diệt thế trùng sinh.' },
-  { id: 'am_duong_hon_don_nguyen_can', name: 'Âm Dương Hỗn Độn Nguyên Căn', shortName: 'Hỗn Độn Nguyên Căn', tier: 'than_pham', type: 'Tiên Thiên Đạo Căn', icon: '☯️', color: '#ef4444', desc: 'Gốc rễ đạo căn sinh ra từ khí hỗn độn âm dương sơ khai, cung cấp linh nguyên bất tận cho thiên cung.', poem: 'Âm dương hỗn độn, đạo căn vĩnh hằng.' },
-  { id: 'de_kiem', name: 'Đế Kiếm', shortName: 'Đế Kiếm', tier: 'than_pham', type: 'Chí Tôn Đế Binh', icon: '🗡️', color: '#ef4444', desc: 'Thanh kiếm chí tôn của Chấp Kiếm Đại Đế, trên thân khắc họa Nhật Nguyệt Sơn Hà cùng thệ ước nhân tộc, Bạch Kim Thần Long quấn quanh chém tan dị tộc và trấn áp Thần Linh tàn diện.', poem: 'Đế kiếm xuất vỏ, chư thiên thần phục.' },
-  { id: 'tam_sinh_luan_hoi_an', name: 'Tam Sinh Luân Hồi Ấn', shortName: 'Tam Sinh Ấn', tier: 'than_pham', type: 'Luân Hồi Chí Bảo', icon: '🔱', color: '#ef4444', desc: 'Con dấu luân hồi kết tinh từ nhân quả ba đời tiền kiếp - hiện thế - tương lai, trấn định linh hồn tuyệt đối.', poem: 'Tam sinh ấn tích, định đoạn tiền trần.' },
-  { id: 'tran_nguc_minh_vuong_the', name: 'Trấn Ngục Minh Vương Thể', shortName: 'Minh Vương Thể', tier: 'than_pham', type: 'Chí Tôn Thể Thuật', icon: '🥋', color: '#ef4444', desc: 'Thể chất thần thoại trấn áp vạn ngục u minh, thể phách kiên cố bất hoại trước lôi kiếp tam tai.', poem: 'Minh vương trấn ngục, vạn ma phủ phục.' },
-  { id: 'thai_so_than_vuong_the', name: 'Thái Sơ Thần Vương Thể', shortName: 'Thần Vương Thể', tier: 'than_pham', type: 'Thần Vương Đạo Thể', icon: '👑', color: '#ef4444', desc: 'Thần thể tối thượng của Thần Vương thời Thái Sơ, mỗi bước đi chấn động mười phương tinh không.', poem: 'Thái sơ thần vương, ngạo thị chư thiên.' },
-  { id: 'tien_thien_thanh_the_dao_thai', name: 'Tiên Thiên Thánh Thể Đạo Thai', shortName: 'Thánh Thể Đạo Thai', tier: 'than_pham', type: 'Vô Địch Thể Chất', icon: '✨', color: '#ef4444', desc: 'Sự kết hợp hoàn mỹ giữa Hoang Cổ Thánh Thể và Tiên Thiên Đạo Thai, thể chất vô địch vạn cổ xưng tôn.', poem: 'Thánh thể đạo thai, vạn cổ vô song.' },
-  { id: 'hon_don_diet_the_loi_tri', name: 'Hỗn Độn Diệt Thế Lôi Trì', shortName: 'Diệt Thế Lôi Trì', tier: 'than_pham', type: 'Hỗn Độn Thần Khí', icon: '⚡', color: '#ef4444', desc: 'Bể sấm sét diệt thế sinh ra từ hỗn độn, tôi luyện thiên cung đạt tới cảnh giới kim cương bất hoại.', poem: 'Hỗn độn lôi trì, thối luyện thần khu.' },
-  { id: 'thao_tu_kiem_quyet', name: 'Thảo Tự Kiếm Quyết', shortName: 'Thảo Tự Kiếm', tier: 'than_pham', type: 'Thái Cổ Cửu Bí Kiếm Quyết', icon: '⚔️', color: '#ef4444', desc: 'Một ngọn cỏ chém rách nhật nguyệt tinh thần, kiếm ý chí cao tuyệt thế có thể bổ đôi chư thiên vũ trụ.', poem: 'Nhất thảo trảm tinh thần, kiếm ý phá cửu thiên.' },
-  { id: 'tha_hoa_tu_tai_dai_phap', name: 'Tha Hóa Tự Tại Đại Pháp', shortName: 'Tha Hóa Tự Tại', tier: 'than_pham', type: 'Vô Thượng Tiên Công', icon: '📜', color: '#ef4444', desc: 'Đại pháp cái thế biến hóa vạn cổ thời không, hóa ra vô số phân thân chân thân bảo vệ đạo quả.', poem: 'Tha hóa tự tại, tha hóa vạn cổ.' },
-  { id: 'tieu_tuc_menh_thuat', name: 'Tiểu Túc Mệnh Thuật', shortName: 'Túc Mệnh Thuật', tier: 'than_pham', type: 'Nghịch Thiên Bí Pháp', icon: '⛓️', color: '#ef4444', desc: 'Bí thuật tối cao thiêu đốt thọ nguyên để triệu hoán lực lượng túc mệnh vĩ đại, cắt đứt mọi gông cùm.', poem: 'Túc mệnh sở hướng, vạn pháp quy phục.' },
-  { id: 'con_bang_tien_phap', name: 'Côn Bằng Tiên Pháp', shortName: 'Côn Bằng Pháp', tier: 'than_pham', type: 'Thập Hung Tuyệt Kỹ', icon: '🦅', color: '#ef4444', desc: 'Tiên pháp của Thái Cổ Thập Hung Côn Bằng, chưởng khống cực hạn âm dương và tốc độ vô địch thiên hạ.', poem: 'Côn bằng giương cánh, xé toạc cửu thiên.' },
-  { id: 'trung_dong', name: 'Trùng Đồng', shortName: 'Trùng Đồng', tier: 'than_pham', type: 'Thái Cổ Thần Mâu', icon: '👁️', color: '#ef4444', desc: 'Thần nhãn song đồng thái cổ khai thiên tích địa, nhìn thấu bản nguyên đại đạo và diễn sinh thế giới thần quang.', poem: 'Trùng đồng khai thiên, khai tịch thế giới.' },
-  { id: 'cuu_kiep_loi_nguc_kiem_phap', name: 'Cửu Kiếp Lôi Ngục Kiếm Pháp', shortName: 'Lôi Ngục Kiếm Pháp', tier: 'than_pham', type: 'Sát Phạt Kiếm Quyết', icon: '⚔️', color: '#ef4444', desc: 'Kiếm pháp triệu hoán chín tầng ngục lôi đình, trảm diệt sinh cơ và phong tỏa hoàn toàn kẻ địch.', poem: 'Cửu kiếp lôi ngục, kiếm trảm thần ma.' },
-  { id: 'hong_tran_ngung_vong_anh_hao_nguyet', name: 'Tỉnh Trung Lao Nguyệt', shortName: 'Tỉnh Trung Nguyệt', tier: 'than_pham', type: 'Vô Thượng Dị Tượng', icon: '🌕', color: '#ef4444', desc: 'Dị tượng vô thượng tỉnh trung lao nguyệt, vớt vầng trăng sáng từ đáy giếng sâu, ánh trăng chiếu rọi thế gian xua tan mọi ma chướng cõi phàm.', poem: 'Tỉnh trung lao nguyệt, hạo nguyệt chiếu chư thiên.' },
-  { id: 'tam_thu_dao', name: 'Tam Thu Đao', shortName: 'Tam Thu Đao', tier: 'than_pham', type: 'Tuế Nguyệt Thần Binh', icon: '🗡️', color: '#ef4444', desc: 'Chiến đao ngưng tụ đao ý ba mùa thu của trời đất, một đao xuất vạn diệp lạc, chặt đứt thọ nguyên và ngưng đọng thời không.', poem: 'Nhất đao xuất vạn diệp lạc, tam thu tận định càn khôn.' },
-  { id: 'thuong_thuong_hac_huyet', name: 'Thượng Thương Hắc Huyết', shortName: 'Hắc Huyết', tier: 'than_pham', type: 'Hắc Ám Đầu Nguồn', icon: '🩸', color: '#ef4444', desc: 'Một giọt máu rơi ra từ thượng thương, đầu nguồn hắc ám.', poem: 'Thượng thương hắc huyết, vạn giới trầm luân.' },
-  { id: 'diet_the_loi_viem_dong', name: 'Diệt Thế Lôi Viêm Đồng', shortName: 'Lôi Viêm Đồng', tier: 'than_pham', type: 'Thần Thông Cực Hạn Nhãn Đồng', icon: '👁️', color: '#ef4444', desc: 'Đồng tử thần thoại ngưng tụ lôi đình và ngọn lửa diệt thế, một ánh nhìn thiêu rụi hư không và cấm chế.', poem: 'Lôi viêm đồng tử, chiếu rọi chư thiên.' },
+  { id: 'tao_hoa_ngoc_diep', name: 'Tạo Hóa Ngọc Điệp', shortName: 'Ngọc Điệp', tier: 'than_pham', type: 'Đạo Tổ Di Vật', icon: 'mirror', iconKey: 'mirror', color: '#ef4444', desc: 'Mảnh vỡ ngọc điệp của Đạo Tổ ghi chép 3000 đại đạo, mở ra con đường tu tiên siêu việt cảnh giới.', poem: 'Tạo hóa ngọc điệp, thông hiểu vạn đạo.' },
+  { id: 'kim_o_luyen_van_linh', name: 'Kim Ô Luyện Vạn Linh', shortName: 'Kim Ô Luyện Linh', tier: 'than_pham', type: 'Thái Dương Thần Công', icon: 'sun', iconKey: 'sun', color: '#ef4444', desc: 'Tuyệt kỹ chân hỏa Kim Ô thượng cổ, luyện hóa vạn linh khí tức trời đất thành thuần dương chi khí bảo hộ thiên cung.', poem: 'Kim ô xuất thế, vạn linh quy phục.' },
+  { id: 'nguyen_thuy_thai_so_ma_kinh', name: 'Nguyên Thủy Thái Sơ Ma Kinh', shortName: 'Thái Sơ Ma Kinh', tier: 'than_pham', type: 'Nguyên Thủy Ma Điển', icon: 'book', iconKey: 'book', color: '#ef4444', desc: 'Cổ kinh ma đạo sinh ra từ thuở sơ khai trước khi có trời đất, ngưng tụ ma uy cái thế trấn áp bát hoang.', poem: 'Thái sơ vô cực, duy ngã độc tôn.' },
+  { id: 'dao_menh_thien_ma_cong', name: 'Đạo Mệnh Thiên Ma Công', shortName: 'Thiên Ma Công', tier: 'than_pham', type: 'Đoạt Mệnh Thần Công', icon: 'moon', iconKey: 'moon', color: '#ef4444', desc: 'Công pháp cướp đoạt số mệnh càn khôn của Thiên Ma vực ngoại, chuyển hóa sinh tử nghịch chuyển càn khôn.', poem: 'Đạo mệnh thiên ma, nghịch thiên cải mệnh.' },
+  { id: 'ngu_hanh_dai_dong_thien', name: 'Ngũ Hành Đại Động Thiên', shortName: 'Đại Động Thiên', tier: 'than_pham', type: 'Ngũ Hành Bản Nguyên', icon: 'orb', iconKey: 'orb', color: '#ef4444', desc: 'Không gian động thiên dung hợp Kim Mộc Thủy Hỏa Thổ viên mãn tuyệt đối, tạo nên thế giới độc lập vững chắc.', poem: 'Ngũ hành tương sinh, động thiên bất hoại.' },
+  { id: 'mac_sat_tien_phach', name: 'Mặc Sát Tiên Phách', shortName: 'Mặc Sát Phách', tier: 'than_pham', type: 'Tuyệt Thế Sát Phách', icon: 'sword', iconKey: 'sword', color: '#ef4444', desc: 'Hồn phách ngưng kết từ hắc ám sát khí thượng cổ của tiên nhân, chém tan mọi tà niệm ma chướng trong đan điện.', poem: 'Mặc sát nhất kiếm, tiên phách vô song.' },
+  { id: 'huyen_hoang_diet_the_bien', name: 'Huyền Hoàng Diệt Thế Biến', shortName: 'Diệt Thế Biến', tier: 'than_pham', type: 'Huyền Hoàng Tuyệt Kỹ', icon: 'orb', iconKey: 'orb', color: '#ef4444', desc: 'Khí Huyền Hoàng hủy thiên diệt địa dung hợp vào thân thể, mang sức mạnh nghiền nát tinh cầu.', poem: 'Huyền hoàng biến ảo, diệt thế trùng sinh.' },
+  { id: 'am_duong_hon_don_nguyen_can', name: 'Âm Dương Hỗn Độn Nguyên Căn', shortName: 'Hỗn Độn Nguyên Căn', tier: 'than_pham', type: 'Tiên Thiên Đạo Căn', icon: 'yin-yang', iconKey: 'yin-yang', color: '#ef4444', desc: 'Gốc rễ đạo căn sinh ra từ khí hỗn độn âm dương sơ khai, cung cấp linh nguyên bất tận cho thiên cung.', poem: 'Âm dương hỗn độn, đạo căn vĩnh hằng.' },
+  { id: 'de_kiem', name: 'Đế Kiếm', shortName: 'Đế Kiếm', tier: 'than_pham', type: 'Chí Tôn Đế Binh', icon: 'sword', iconKey: 'sword', color: '#ef4444', desc: 'Thanh kiếm chí tôn của Chấp Kiếm Đại Đế, trên thân khắc họa Nhật Nguyệt Sơn Hà cùng thệ ước nhân tộc, Bạch Kim Thần Long quấn quanh chém tan dị tộc và trấn áp Thần Linh tàn diện.', poem: 'Đế kiếm xuất vỏ, chư thiên thần phục.' },
+  { id: 'tam_sinh_luan_hoi_an', name: 'Tam Sinh Luân Hồi Ấn', shortName: 'Tam Sinh Ấn', tier: 'than_pham', type: 'Luân Hồi Chí Bảo', icon: 'sword', iconKey: 'sword', color: '#ef4444', desc: 'Con dấu luân hồi kết tinh từ nhân quả ba đời tiền kiếp - hiện thế - tương lai, trấn định linh hồn tuyệt đối.', poem: 'Tam sinh ấn tích, định đoạn tiền trần.' },
+  { id: 'tran_nguc_minh_vuong_the', name: 'Trấn Ngục Minh Vương Thể', shortName: 'Minh Vương Thể', tier: 'than_pham', type: 'Chí Tôn Thể Thuật', icon: 'shield', iconKey: 'shield', color: '#ef4444', desc: 'Thể chất thần thoại trấn áp vạn ngục u minh, thể phách kiên cố bất hoại trước lôi kiếp tam tai.', poem: 'Minh vương trấn ngục, vạn ma phủ phục.' },
+  { id: 'thai_so_than_vuong_the', name: 'Thái Sơ Thần Vương Thể', shortName: 'Thần Vương Thể', tier: 'than_pham', type: 'Thần Vương Đạo Thể', icon: 'crown', iconKey: 'crown', color: '#ef4444', desc: 'Thần thể tối thượng của Thần Vương thời Thái Sơ, mỗi bước đi chấn động mười phương tinh không.', poem: 'Thái sơ thần vương, ngạo thị chư thiên.' },
+  { id: 'tien_thien_thanh_the_dao_thai', name: 'Tiên Thiên Thánh Thể Đạo Thai', shortName: 'Thánh Thể Đạo Thai', tier: 'than_pham', type: 'Vô Địch Thể Chất', icon: '', color: '#ef4444', desc: 'Sự kết hợp hoàn mỹ giữa Hoang Cổ Thánh Thể và Tiên Thiên Đạo Thai, thể chất vô địch vạn cổ xưng tôn.', poem: 'Thánh thể đạo thai, vạn cổ vô song.' },
+  { id: 'hon_don_diet_the_loi_tri', name: 'Hỗn Độn Diệt Thế Lôi Trì', shortName: 'Diệt Thế Lôi Trì', tier: 'than_pham', type: 'Hỗn Độn Thần Khí', icon: 'bolt', iconKey: 'bolt', color: '#ef4444', desc: 'Bể sấm sét diệt thế sinh ra từ hỗn độn, tôi luyện thiên cung đạt tới cảnh giới kim cương bất hoại.', poem: 'Hỗn độn lôi trì, thối luyện thần khu.' },
+  { id: 'thao_tu_kiem_quyet', name: 'Thảo Tự Kiếm Quyết', shortName: 'Thảo Tự Kiếm', tier: 'than_pham', type: 'Thái Cổ Cửu Bí Kiếm Quyết', icon: 'sword', iconKey: 'sword', color: '#ef4444', desc: 'Một ngọn cỏ chém rách nhật nguyệt tinh thần, kiếm ý chí cao tuyệt thế có thể bổ đôi chư thiên vũ trụ.', poem: 'Nhất thảo trảm tinh thần, kiếm ý phá cửu thiên.' },
+  { id: 'tha_hoa_tu_tai_dai_phap', name: 'Tha Hóa Tự Tại Đại Pháp', shortName: 'Tha Hóa Tự Tại', tier: 'than_pham', type: 'Vô Thượng Tiên Công', icon: 'scroll', iconKey: 'scroll', color: '#ef4444', desc: 'Đại pháp cái thế biến hóa vạn cổ thời không, hóa ra vô số phân thân chân thân bảo vệ đạo quả.', poem: 'Tha hóa tự tại, tha hóa vạn cổ.' },
+  { id: 'tieu_tuc_menh_thuat', name: 'Tiểu Túc Mệnh Thuật', shortName: 'Túc Mệnh Thuật', tier: 'than_pham', type: 'Nghịch Thiên Bí Pháp', icon: 'link', iconKey: 'link', color: '#ef4444', desc: 'Bí thuật tối cao thiêu đốt thọ nguyên để triệu hoán lực lượng túc mệnh vĩ đại, cắt đứt mọi gông cùm.', poem: 'Túc mệnh sở hướng, vạn pháp quy phục.' },
+  { id: 'con_bang_tien_phap', name: 'Côn Bằng Tiên Pháp', shortName: 'Côn Bằng Pháp', tier: 'than_pham', type: 'Thập Hung Tuyệt Kỹ', icon: 'eagle', iconKey: 'eagle', color: '#ef4444', desc: 'Tiên pháp của Thái Cổ Thập Hung Côn Bằng, chưởng khống cực hạn âm dương và tốc độ vô địch thiên hạ.', poem: 'Côn bằng giương cánh, xé toạc cửu thiên.' },
+  { id: 'trung_dong', name: 'Trùng Đồng', shortName: 'Trùng Đồng', tier: 'than_pham', type: 'Thái Cổ Thần Mâu', icon: 'eye', iconKey: 'eye', color: '#ef4444', desc: 'Thần nhãn song đồng thái cổ khai thiên tích địa, nhìn thấu bản nguyên đại đạo và diễn sinh thế giới thần quang.', poem: 'Trùng đồng khai thiên, khai tịch thế giới.' },
+  { id: 'cuu_kiep_loi_nguc_kiem_phap', name: 'Cửu Kiếp Lôi Ngục Kiếm Pháp', shortName: 'Lôi Ngục Kiếm Pháp', tier: 'than_pham', type: 'Sát Phạt Kiếm Quyết', icon: 'sword', iconKey: 'sword', color: '#ef4444', desc: 'Kiếm pháp triệu hoán chín tầng ngục lôi đình, trảm diệt sinh cơ và phong tỏa hoàn toàn kẻ địch.', poem: 'Cửu kiếp lôi ngục, kiếm trảm thần ma.' },
+  { id: 'hong_tran_ngung_vong_anh_hao_nguyet', name: 'Tỉnh Trung Lao Nguyệt', shortName: 'Tỉnh Trung Nguyệt', tier: 'than_pham', type: 'Vô Thượng Dị Tượng', icon: '\u{1F315}', iconKey: 'moon', color: '#ef4444', desc: 'Dị tượng vô thượng tỉnh trung lao nguyệt, vớt vầng trăng sáng từ đáy giếng sâu, ánh trăng chiếu rọi thế gian xua tan mọi ma chướng cõi phàm.', poem: 'Tỉnh trung lao nguyệt, hạo nguyệt chiếu chư thiên.' },
+  { id: 'tam_thu_dao', name: 'Tam Thu Đao', shortName: 'Tam Thu Đao', tier: 'than_pham', type: 'Tuế Nguyệt Thần Binh', icon: 'sword', iconKey: 'sword', color: '#ef4444', desc: 'Chiến đao ngưng tụ đao ý ba mùa thu của trời đất, một đao xuất vạn diệp lạc, chặt đứt thọ nguyên và ngưng đọng thời không.', poem: 'Nhất đao xuất vạn diệp lạc, tam thu tận định càn khôn.' },
+  { id: 'thuong_thuong_hac_huyet', name: 'Thượng Thương Hắc Huyết', shortName: 'Hắc Huyết', tier: 'than_pham', type: 'Hắc Ám Đầu Nguồn', icon: 'drop', iconKey: 'drop', color: '#ef4444', desc: 'Một giọt máu rơi ra từ thượng thương, đầu nguồn hắc ám.', poem: 'Thượng thương hắc huyết, vạn giới trầm luân.' },
+  { id: 'diet_the_loi_viem_dong', name: 'Diệt Thế Lôi Viêm Đồng', shortName: 'Lôi Viêm Đồng', tier: 'than_pham', type: 'Thần Thông Cực Hạn Nhãn Đồng', icon: 'eye', iconKey: 'eye', color: '#ef4444', desc: 'Đồng tử thần thoại ngưng tụ lôi đình và ngọn lửa diệt thế, một ánh nhìn thiêu rụi hư không và cấm chế.', poem: 'Lôi viêm đồng tử, chiếu rọi chư thiên.' },
 ];const DEFAULT_STATE = {
   totalExp: 0,
   expCurrentRealm: 0,
@@ -519,7 +519,7 @@ export function convertToThienMenhIfInAnhRealm(state) {
  * Trả về Icon độc bản và hiệu ứng màu sắc tương ứng cho Đạo Anh dựa trên Mệnh Đăng hoặc Vật Trấn Áp nguồn gốc
  */
 export function getDaoAnhTheme(daoAnh, state) {
-  if (!daoAnh) return { icon: '👑', color: '#ffcc00', glow: 'rgba(255, 204, 0, 0.4)', bg: 'rgba(255, 204, 0, 0.08)' };
+  if (!daoAnh) return { icon: 'crown', iconKey: 'crown', color: '#ffcc00', glow: 'rgba(255, 204, 0, 0.4)', bg: 'rgba(255, 204, 0, 0.08)' };
 
   // Ưu tiên số 1: Trực tiếp từ lampId gắn liền với Đạo Anh
   if (daoAnh.lampId) {
@@ -528,7 +528,7 @@ export function getDaoAnhTheme(daoAnh, state) {
       const tierInfo = LAMP_TIERS[lampObj.tier] || LAMP_TIERS.than_pham;
       const color = tierInfo.color || '#FF2D4D';
       return {
-        icon: lampObj.icon || '🏮',
+        icon: lampObj.icon || 'lantern',
         color: color,
         glow: tierInfo.border || `${color}aa`,
         bg: `${color}18`,
@@ -555,7 +555,7 @@ export function getDaoAnhTheme(daoAnh, state) {
       const tierInfo = LAMP_TIERS[lampObj.tier] || LAMP_TIERS.than_pham;
       const color = tierInfo.color || '#FF2D4D';
       return {
-        icon: lampObj.icon || '🏮',
+        icon: lampObj.icon || 'lantern',
         color: color,
         glow: tierInfo.border || `${color}aa`,
         bg: `${color}18`,
@@ -572,7 +572,7 @@ export function getDaoAnhTheme(daoAnh, state) {
       const tierInfo = LAMP_TIERS[tierKey] || LAMP_TIERS.than_pham;
       const color = artObj.color || tierInfo?.color || '#FF2D4D';
       return {
-        icon: artObj.icon || '🏛️',
+        icon: artObj.icon || 'shield',
         color,
         glow: tierInfo?.border || `${color}aa`,
         bg: tierInfo?.bg || `${color}18`,
@@ -584,7 +584,7 @@ export function getDaoAnhTheme(daoAnh, state) {
   }
 
   return {
-    icon: '🏛️',
+    icon: 'shield', iconKey: 'shield',
     color: '#38bdf8',
     glow: 'rgba(56, 189, 248, 0.4)',
     bg: 'rgba(56, 189, 248, 0.08)',
@@ -638,7 +638,7 @@ export function migrateLegacyItems(state) {
           shortName: deKiemDef?.shortName || 'Đế Kiếm',
           tier: deKiemDef?.tier || 'than_pham',
           type: deKiemDef?.type || 'Chí Tôn Đế Binh',
-          icon: deKiemDef?.icon || '🗡️',
+          icon: deKiemDef?.icon || 'sword',
           color: deKiemDef?.color || '#ef4444',
           desc: deKiemDef?.desc || art.desc,
           poem: deKiemDef?.poem || art.poem,
@@ -663,7 +663,7 @@ export function migrateLegacyItems(state) {
           name: hoangTuyenDef?.name || 'Hoàng Tuyền Bỉ Ngạn Đăng',
           shortName: hoangTuyenDef?.shortName || 'Bỉ Ngạn Đăng',
           tier: hoangTuyenDef?.tier || 'than_pham',
-          icon: hoangTuyenDef?.icon || '🌺',
+          icon: hoangTuyenDef?.icon || 'lantern',
           color: hoangTuyenDef?.color || '#ef4444',
           desc: hoangTuyenDef?.desc || lamp.desc,
           poem: hoangTuyenDef?.poem || lamp.poem,
@@ -697,7 +697,7 @@ export function migrateLegacyItems(state) {
         anchor.shortName = deKiemDef?.shortName || 'Đế Kiếm';
         anchor.type = deKiemDef?.type || 'Chí Tôn Đế Binh';
         anchor.tier = deKiemDef?.tier || 'than_pham';
-        anchor.icon = deKiemDef?.icon || '🗡️';
+        anchor.icon = deKiemDef?.icon || 'sword';
         anchor.color = deKiemDef?.color || '#ef4444';
         if (anchor.palaceName === 'Lục Đạo Luân Hồi Cung' || !anchor.palaceName) {
           anchor.palaceName = 'Đế Kiếm Cung';
@@ -1501,7 +1501,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
     if (Math.random() < 0.012) {
       state.inventoryThienDaoPhoi = (state.inventoryThienDaoPhoi || 0) + 1;
       state.logs.unshift({
-        text: `🌌 KỲ NGỘ THIÊN ĐẠO! Cảm ngộ đại đạo chư thiên, thu hoạch được 1 [Thiên Đạo Phôi] cất vào túi trữ vật!`,
+        text: ` KỲ NGỘ THIÊN ĐẠO! Cảm ngộ đại đạo chư thiên, thu hoạch được 1 [Thiên Đạo Phôi] cất vào túi trữ vật!`,
         time: Date.now()
       });
     }
@@ -1517,7 +1517,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
           diTienLuuTarget.isNurturingDiTienLuu = false;
           const totalForms = state.linhTangs.filter(t => t.isThanLinhThai).length;
           state.logs.unshift({
-            text: `👑 DỊ TIÊN LƯU ĐẠI THÀNH! [${diTienLuuTarget.name}] dệt xong Hồn Ti, giải phóng THẦN LINH THÁI (Tầng thứ ${totalForms})!`,
+            text: `[DỊ TIÊN LƯU ĐẠI THÀNH] [${diTienLuuTarget.name}] dệt xong Hồn Ti, giải phóng THẦN LINH THÁI (Tầng thứ ${totalForms})!`,
             time: Date.now()
           });
         }
@@ -1537,7 +1537,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
             targetTang.thienDaoName = `${targetTang.originName || 'Bản Nguyên'} Thiên Đạo`;
             targetTang.isGateOpen = true;
             state.logs.unshift({
-              text: `🌟 KHẢI MINH THĂNG TINH! [${targetTang.name}] đã ngưng tụ thành công [${targetTang.thienDaoName}], TÀNG MÔN ẦM ẦM MỞ RA!`,
+              text: `[KHẢI MINH THĂNG TINH] [${targetTang.name}] đã ngưng tụ thành công [${targetTang.thienDaoName}], TÀNG MÔN ẦM ẦM MỞ RA!`,
               time: Date.now()
             });
           }
@@ -1570,7 +1570,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
         droppedLamp = unownedLamps[randomIndex];
         state.inventoryLamps = [...(state.inventoryLamps || []), droppedLamp.id];
         state.logs.unshift({
-          text: `✨ KỲ DUYÊN THẦN VẬT! Ngộ ra Mệnh Đăng [${droppedLamp.name}] (Thần Phẩm) - Đã thêm vào túi trữ vật!`,
+          text: ` KỲ DUYÊN THẦN VẬT! Ngộ ra Mệnh Đăng [${droppedLamp.name}] (Thần Phẩm) - Đã thêm vào túi trữ vật!`,
           time: Date.now(),
         });
         state.pityReadingCycles = 0; // Reset bảo hiểm
@@ -1579,7 +1579,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
         droppedArtifact = unownedArtifacts[randomIdx];
         state.inventoryArtifacts = [...(state.inventoryArtifacts || []), droppedArtifact.id];
         state.logs.unshift({
-          text: `✨ KỲ DUYÊN XUẤT HIỆN! Nhặt được Vật Trấn Áp [${droppedArtifact.name}] (${droppedArtifact.type}) - Đã cất vào túi trữ vật!`,
+          text: ` KỲ DUYÊN XUẤT HIỆN! Nhặt được Vật Trấn Áp [${droppedArtifact.name}] (${droppedArtifact.type}) - Đã cất vào túi trữ vật!`,
           time: Date.now(),
         });
         state.pityReadingCycles = 0; // Reset bảo hiểm
@@ -1592,7 +1592,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
           droppedLamp = unownedLamps[randomIndex];
           state.inventoryLamps = [...(state.inventoryLamps || []), droppedLamp.id];
           state.logs.unshift({
-            text: `🏮 CƠ DUYÊN TẤT THÀNH (BẢO HIỂM)! Trời cao không phụ lòng người, ban tặng [${droppedLamp.name}] (Thần Phẩm) vào túi trữ vật!`,
+            text: ` CƠ DUYÊN TẤT THÀNH (BẢO HIỂM)! Trời cao không phụ lòng người, ban tặng [${droppedLamp.name}] (Thần Phẩm) vào túi trữ vật!`,
             time: Date.now(),
           });
           state.pityReadingCycles = 0;
@@ -1601,7 +1601,7 @@ export function addReadingProgress(novelId, chapterId, wordCount = 2000) {
           droppedArtifact = unownedArtifacts[randomIdx];
           state.inventoryArtifacts = [...(state.inventoryArtifacts || []), droppedArtifact.id];
           state.logs.unshift({
-            text: `🏛️ CƠ DUYÊN TẤT THÀNH (BẢO HIỂM)! Đạo tâm kiên định kết tinh Vật Trấn Áp [${droppedArtifact.name}] vào túi trữ vật!`,
+            text: ` CƠ DUYÊN TẤT THÀNH (BẢO HIỂM)! Đạo tâm kiên định kết tinh Vật Trấn Áp [${droppedArtifact.name}] vào túi trữ vật!`,
             time: Date.now(),
           });
           state.pityReadingCycles = 0;
@@ -1915,7 +1915,7 @@ export function absorbLifeLamp(lampId, targetSlot = null) {
 
   const lampObj = LIFE_LAMPS.find(l => l.id === lampId);
   state.logs.unshift({
-    text: `🏮 Đã khảm nạp Mệnh Đăng [${lampObj?.name || lampId}] vào đài sen vị trí #${slotToUse + 1}!`,
+    text: ` Đã khảm nạp Mệnh Đăng [${lampObj?.name || lampId}] vào đài sen vị trí #${slotToUse + 1}!`,
     time: Date.now()
   });
 
@@ -1944,7 +1944,7 @@ export function absorbLifeLamp(lampId, targetSlot = null) {
         targetDa.tier = lampObj.tier || 'than_pham';
       }
       state.logs.unshift({
-        text: `✨ ĐẠO ANH CHUYỂN HÓA BẢN NGUYÊN! [${oldTitle}] đã lột xác thành [${targetDa.name}] tương ứng theo Mệnh Đăng mới [${lampObj?.name || lampId}] (bảo toàn trọn vẹn ${targetDa.currentKiep || 0} Kiếp & Tu Vi)!`,
+        text: ` ĐẠO ANH CHUYỂN HÓA BẢN NGUYÊN! [${oldTitle}] đã lột xác thành [${targetDa.name}] tương ứng theo Mệnh Đăng mới [${lampObj?.name || lampId}] (bảo toàn trọn vẹn ${targetDa.currentKiep || 0} Kiếp & Tu Vi)!`,
         time: Date.now()
       });
     } else if (state.realm === 'gia_anh' || state.realm === 'nguyen_anh' || state.realm === 'linh_tang') {
@@ -1970,7 +1970,7 @@ export function absorbLifeLamp(lampId, targetSlot = null) {
       };
       state.daoAnhs.push(newDa);
       state.logs.unshift({
-        text: `🌟 KHAI SINH ĐẠO ANH MỚI! Mệnh Đăng [${lampObj?.name || lampId}] đã ngưng tụ thành [${daoAnhTitle}] tọa trấn Thiên Cung!`,
+        text: ` KHAI SINH ĐẠO ANH MỚI! Mệnh Đăng [${lampObj?.name || lampId}] đã ngưng tụ thành [${daoAnhTitle}] tọa trấn Thiên Cung!`,
         time: Date.now()
       });
     }
@@ -2041,7 +2041,7 @@ export function unequipLifeLamp(slotOrLampId) {
 
   const lampObj = LIFE_LAMPS.find(l => l.id === lampId);
   state.logs.unshift({
-    text: `✨ Đã tháo Mệnh Đăng [${lampObj?.name || lampId}] khỏi đài sen, cất lại vào Túi Trữ Vật.`,
+    text: ` Đã tháo Mệnh Đăng [${lampObj?.name || lampId}] khỏi đài sen, cất lại vào Túi Trữ Vật.`,
     time: Date.now()
   });
 
@@ -2126,12 +2126,12 @@ function applyExpBurn(state, deficitExp = 10000) {
         state.ngungKhiPhapExp = 4500;
         state.readyBreakthroughTrucCo = true;
         state.logs.unshift({
-          text: '☠️ ĐẠO CƠ SỤP ĐỔ · NGÃ CẢNH XUỐNG NGƯNG KHÍ KỲ! Thiêu đốt cạn kiệt tu vi khiến toàn bộ 120 Pháp Khiếu đóng kín, thoái hóa về Ngưng Khí Viên Mãn!',
+          text: '[NGÃ CẢNH] ĐẠO CƠ SỤP ĐỔ · NGÃ CẢNH XUỐNG NGƯNG KHÍ KỲ! Thiêu đốt cạn kiệt tu vi khiến toàn bộ 120 Pháp Khiếu đóng kín, thoái hóa về Ngưng Khí Viên Mãn!',
           time: Date.now()
         });
       } else {
         state.logs.unshift({
-          text: `⚠️ THIÊU ĐỐT TU VI · ĐẠO CƠ THOÁI HÓA (NGÃ CẢNH)! Pháp Khiếu thoái lui về ${newOpened}/120 khiếu, Mệnh Hỏa tự thân giảm xuống ${state.selfMenhHoa} Hỏa!`,
+          text: `[CẢNH BÁO] THIÊU ĐỐT TU VI · ĐẠO CƠ THOÁI HÓA (NGÃ CẢNH)! Pháp Khiếu thoái lui về ${newOpened}/120 khiếu, Mệnh Hỏa tự thân giảm xuống ${state.selfMenhHoa} Hỏa!`,
           time: Date.now()
         });
       }
@@ -2154,7 +2154,7 @@ function applyExpBurn(state, deficitExp = 10000) {
         state.readyBreakthroughTrucCo = false;
       }
       state.logs.unshift({
-        text: `⚠️ THIÊU ĐỐT TU VI · KHÍ HẢI THOÁI TẦNG! Ngưng Khí Kỳ tụt xuống Tầng ${state.ngungKhiLevel}/10!`,
+        text: `[CẢNH BÁO] THIÊU ĐỐT TU VI · KHÍ HẢI THOÁI TẦNG! Ngưng Khí Kỳ tụt xuống Tầng ${state.ngungKhiLevel}/10!`,
         time: Date.now()
       });
     } else if (state.realm === 'kim_dan') {
@@ -2184,7 +2184,7 @@ function applyExpBurn(state, deficitExp = 10000) {
           state.selfMenhHoa = Math.floor(state.phapKhieu / 30);
           state.has121st = false;
           state.logs.unshift({
-            text: '☠️ KIM ĐAN VỠ NÁT · NGÃ CẢNH XUỐNG TRÚC CƠ KỲ! Thiêu đốt quá mức khiến toàn bộ Thiên Cung sụp đổ, thoái hóa về Trúc Cơ Kỳ!',
+            text: '[NGÃ CẢNH] KIM ĐAN VỠ NÁT · NGÃ CẢNH XUỐNG TRÚC CƠ KỲ! Thiêu đốt quá mức khiến toàn bộ Thiên Cung sụp đổ, thoái hóa về Trúc Cơ Kỳ!',
             time: Date.now()
           });
         }
@@ -2213,20 +2213,20 @@ export function refineLampForExp(lampId) {
   if (isNguyenAnhStage) {
     state.totalThienMenh = (state.totalThienMenh || 0) + 50;
     state.logs.unshift({
-      text: `✨ Đã luyện hóa Thần Đăng [${lamp.name}] hoàn trả +50 Lực Thiên Mệnh!`,
+      text: `Đã luyện hóa Thần Đăng [${lamp.name}] hoàn trả +50 Lực Thiên Mệnh!`,
       time: Date.now(),
     });
     saveCultivationState(state);
-    return { state, gainedExp: 0, gainedThienMenh: 50, message: `✨ Đã luyện hóa [${lamp.name}], nhận +50 Lực Thiên Mệnh!` };
+    return { state, gainedExp: 0, gainedThienMenh: 50, message: `Đã luyện hóa [${lamp.name}], nhận +50 Lực Thiên Mệnh!` };
   } else {
     state.totalExp = (state.totalExp || 0) + 3000;
     state.expCurrentRealm = (state.expCurrentRealm || 0) + 3000;
     state.logs.unshift({
-      text: `✨ Đã luyện hóa Thần Đăng [${lamp.name}] hoàn trả +3,000 Tu Vi!`,
+      text: `Đã luyện hóa Thần Đăng [${lamp.name}] hoàn trả +3,000 Tu Vi!`,
       time: Date.now(),
     });
     saveCultivationState(state);
-    return { state, gainedExp: 3000, gainedThienMenh: 0, message: `✨ Đã luyện hóa [${lamp.name}], nhận +3,000 Tu Vi!` };
+    return { state, gainedExp: 3000, gainedThienMenh: 0, message: `Đã luyện hóa [${lamp.name}], nhận +3,000 Tu Vi!` };
   }
 }
 
@@ -2249,7 +2249,7 @@ export function buyLampWithExp(lampId) {
   state.inventoryLamps = [...(state.inventoryLamps || []), lamp.id];
 
   saveCultivationState(state);
-  return { state, lamp, message: `🔥 Đổi thành công [${lamp.name}]!` };
+  return { state, lamp, message: `Đổi thành công [${lamp.name}]!` };
 }
 
 export const buyLampWithTienTinhAndExp = buyLampWithExp;
@@ -2289,7 +2289,7 @@ export function getPalaceElementTheme(item) {
       color: '#ffcc00',
       glow: 'rgba(255, 204, 0, 0.4)',
       bg: 'rgba(255, 204, 0, 0.08)',
-      icon: '🏛️'
+      icon: 'shield', iconKey: 'shield'
     };
   }
 
@@ -2299,7 +2299,7 @@ export function getPalaceElementTheme(item) {
   const color = item.color || tierInfo?.color || '#ffcc00';
   const glow = tierInfo?.border || `${color}66`;
   const bg = tierInfo?.bg || `${color}15`;
-  const icon = item.icon || '🏛️';
+  const icon = item.icon || 'shield';
 
   return {
     name: tierInfo?.name || 'Thần Quang',
@@ -2548,7 +2548,7 @@ export function anchorPalaceWithArtifact(palaceIndex, artifactId) {
       state.currentThienCungExp = flushExp;
       state.storedExp -= flushExp;
       state.logs.unshift({
-        text: `🌊 UẨN TÍCH PHÁ CẢNH XẢ RA! +${flushExp.toLocaleString()} Tu Vi uẩn tích đã rót vào Thiên Cung #${state.realizedThienCung + 1} (${flushExp}/${nextTargetExp} EXP)!`,
+        text: ` UẨN TÍCH PHÁ CẢNH XẢ RA! +${flushExp.toLocaleString()} Tu Vi uẩn tích đã rót vào Thiên Cung #${state.realizedThienCung + 1} (${flushExp}/${nextTargetExp} EXP)!`,
         time: Date.now(),
       });
     } else {
@@ -2557,14 +2557,14 @@ export function anchorPalaceWithArtifact(palaceIndex, artifactId) {
       state.currentThienCungExp = state.daoAnhExp;
       state.storedExp -= flushExp;
       state.logs.unshift({
-        text: `🌊 UẨN TÍCH THAI NGHÉN ĐẠO ANH! +${flushExp.toLocaleString()} Tu Vi uẩn tích đã rót vào Thai Nghén Đạo Anh!`,
+        text: ` UẨN TÍCH THAI NGHÉN ĐẠO ANH! +${flushExp.toLocaleString()} Tu Vi uẩn tích đã rót vào Thai Nghén Đạo Anh!`,
         time: Date.now(),
       });
     }
   }
 
   state.logs.unshift({
-    text: `👑 TRẤN CUNG THÀNH CÔNG! Đã dùng [${artObj.name}] trấn áp thành công, khởi sinh [${palaceName}] (100% Cung Thật, +1 Cung chiến lực)!`,
+    text: ` TRẤN CUNG THÀNH CÔNG! Đã dùng [${artObj.name}] trấn áp thành công, khởi sinh [${palaceName}] (100% Cung Thật, +1 Cung chiến lực)!`,
     time: Date.now(),
   });
 
@@ -2572,7 +2572,7 @@ export function anchorPalaceWithArtifact(palaceIndex, artifactId) {
   return {
     state,
     artifact: artObj,
-    message: `👑 Trấn Cung Thành Công! Đã dùng [${artObj.name}] hoàn tất 100% Hóa Thực [${palaceName}]!`,
+    message: `Trấn Cung Thành Công! Đã dùng [${artObj.name}] hoàn tất 100% Hóa Thực [${palaceName}]!`,
   };
 }
 
@@ -2600,7 +2600,7 @@ export function refineArtifactForExp(artifactId) {
   if (isNguyenAnhStage) {
     state.totalThienMenh = (state.totalThienMenh || 0) + gainedTM;
     state.logs.unshift({
-      text: `✨ Đã luyện hóa Bảo Vật [${art.name}] hoàn trả +${gainedTM} Lực Thiên Mệnh!`,
+      text: `Đã luyện hóa Bảo Vật [${art.name}] hoàn trả +${gainedTM} Lực Thiên Mệnh!`,
       time: Date.now(),
     });
     saveCultivationState(state);
@@ -2608,13 +2608,13 @@ export function refineArtifactForExp(artifactId) {
       state,
       gainedThienMenh: gainedTM,
       gainedExp: 0,
-      message: `✨ Đã luyện hóa [${art.name}], nhận +${gainedTM} Lực Thiên Mệnh!`,
+      message: `Đã luyện hóa [${art.name}], nhận +${gainedTM} Lực Thiên Mệnh!`,
     };
   } else {
     state.totalExp = (state.totalExp || 0) + gainedExp;
     state.expCurrentRealm = (state.expCurrentRealm || 0) + gainedExp;
     state.logs.unshift({
-      text: `✨ Đã luyện hóa Bảo Vật [${art.name}] hoàn trả +${gainedExp.toLocaleString()} Tu Vi!`,
+      text: `Đã luyện hóa Bảo Vật [${art.name}] hoàn trả +${gainedExp.toLocaleString()} Tu Vi!`,
       time: Date.now(),
     });
     saveCultivationState(state);
@@ -2622,7 +2622,7 @@ export function refineArtifactForExp(artifactId) {
       state,
       gainedExp,
       gainedThienMenh: 0,
-      message: `✨ Đã luyện hóa [${art.name}], nhận +${gainedExp.toLocaleString()} Tu Vi!`,
+      message: `Đã luyện hóa [${art.name}], nhận +${gainedExp.toLocaleString()} Tu Vi!`,
     };
   }
 }
@@ -2643,7 +2643,7 @@ export function buyArtifactWithExp(artifactId) {
   state.inventoryArtifacts = [...(state.inventoryArtifacts || []), art.id];
 
   saveCultivationState(state);
-  return { state, artifact: art, message: `🔥 Đổi thành công [${art.name}]!` };
+  return { state, artifact: art, message: `Đổi thành công [${art.name}]!` };
 }
 
 export const sellArtifactForTienTinh = refineArtifactForExp;
@@ -2710,13 +2710,13 @@ export function refineMultipleItemsForExp({ lampIds = [], artifactIds = [] }) {
   if (isNguyenAnhStage) {
     state.totalThienMenh = (state.totalThienMenh || 0) + totalGainedTM;
     state.logs.unshift({
-      text: `✨ Luyện Hóa Hàng Loạt: Đã phân giải ${totalCount} Thần Vật, nhận +${totalGainedTM} Lực Thiên Mệnh!`,
+      text: ` Luyện Hóa Hàng Loạt: Đã phân giải ${totalCount} Thần Vật, nhận +${totalGainedTM} Lực Thiên Mệnh!`,
       time: Date.now(),
     });
   } else {
     state.totalExp = (state.totalExp || 0) + totalGainedExp;
     state.logs.unshift({
-      text: `✨ Luyện Hóa Hàng Loạt: Đã phân giải ${totalCount} Thần Vật, nhận +${totalGainedExp.toLocaleString()} Tu Vi!`,
+      text: ` Luyện Hóa Hàng Loạt: Đã phân giải ${totalCount} Thần Vật, nhận +${totalGainedExp.toLocaleString()} Tu Vi!`,
       time: Date.now(),
     });
   }
@@ -2812,14 +2812,14 @@ export function activateKimDanTrialV2() {
   state.isKimDanTrialV2 = true;
 
   state.logs = [{
-    text: '📜 KÍCH HOẠT THẺ TRẢI NGHIỆM KIM ĐAN! Đã thiết lập Trúc Cơ 4 Mệnh Hỏa, 120 Pháp Khiếu (121 thất bại), 4 Mệnh Đăng ngẫu nhiên. Hãy tự đột phá lên Kim Đan!',
+    text: ' KÍCH HOẠT THẺ TRẢI NGHIỆM KIM ĐAN! Đã thiết lập Trúc Cơ 4 Mệnh Hỏa, 120 Pháp Khiếu (121 thất bại), 4 Mệnh Đăng ngẫu nhiên. Hãy tự đột phá lên Kim Đan!',
     time: Date.now(),
   }];
 
   saveCultivationState(state);
   return {
     state,
-    message: '✨ Thẻ Trải Nghiệm Kim Đan đã kích hoạt! Đã thiết lập Trúc Cơ 4 Hỏa + 4 Mệnh Đăng random. Thẻ đã tiêu biến vĩnh viễn. Hãy tự Đột Phá Kim Đan!',
+    message: 'Thẻ Trải Nghiệm Kim Đan đã kích hoạt! Đã thiết lập Trúc Cơ 4 Hỏa + 4 Mệnh Đăng random. Thẻ đã tiêu biến vĩnh viễn. Hãy tự Đột Phá Kim Đan!',
     randomLamps,
     randomArts,
   };
@@ -2886,14 +2886,14 @@ export function endKimDanTrialV2() {
   state.hasUsedKimDanTrialV2 = true;
 
   state.logs.unshift({
-    text: '🚪 ĐÃ KẾT THÚC CHẾ ĐỘ THỬ NGHIỆM KIM ĐAN! Đã khôi phục cảnh giới tu vi ban đầu.',
+    text: '[KẾT THÚC] ĐÃ KẾT THÚC CHẾ ĐỘ THỬ NGHIỆM KIM ĐAN! Đã khôi phục cảnh giới tu vi ban đầu.',
     time: Date.now(),
   });
 
   saveCultivationState(state);
   return {
     state,
-    message: '🚪 Đã kết thúc chế độ Thử Nghiệm Kim Đan và khôi phục tu vi ban đầu!',
+    message: 'Đã kết thúc chế độ Thử Nghiệm Kim Đan và khôi phục tu vi ban đầu!',
   };
 }
 
@@ -2925,14 +2925,14 @@ export function thangCungKimDan() {
   state.currentThienCungExp = targetExp;
 
   state.logs.unshift({
-    text: `⬆️ THĂNG CUNG! Đã đẩy Cung Tự Thân ${nextSelfPalaceNum} lên 99.99% linh lực (${targetExp} Tu Vi). Hãy khảm nạm Vật Trấn Áp để hoàn tất 100% Cung Thật!`,
+    text: `[THĂNG CUNG] THĂNG CUNG! Đã đẩy Cung Tự Thân ${nextSelfPalaceNum} lên 99.99% linh lực (${targetExp} Tu Vi). Hãy khảm nạm Vật Trấn Áp để hoàn tất 100% Cung Thật!`,
     time: Date.now(),
   });
 
   saveCultivationState(state);
   return {
     state,
-    message: `⬆️ Thăng Cung thành công! Cung ${nextSelfPalaceNum} đạt 99.99% — cần Khảm Nạm Vật Trấn Áp để hoàn tất!`,
+    message: `Thăng Cung thành công! Cung ${nextSelfPalaceNum} đạt 99.99% — cần Khảm Nạm Vật Trấn Áp để hoàn tất!`,
   };
 }
 
@@ -2972,7 +2972,7 @@ export function breakthroughToTrucCo() {
   if (isSongTu) {
     state.hasSongTuBonus = true;
     state.logs.unshift({
-      text: '👑 THỂ PHÁP SONG TU ĐẠI THÀNH! Đột phá Trúc Cơ với nền tảng Vô Thượng Cực Cảnh! Kích hoạt hiệu ứng "Thể Pháp Song Tuyệt": Giảm 15% Tu Vi tiêu hao khi mở 120 Pháp Khiếu và +20% Tốc độ tu luyện vĩnh viễn!',
+      text: ' THỂ PHÁP SONG TU ĐẠI THÀNH! Đột phá Trúc Cơ với nền tảng Vô Thượng Cực Cảnh! Kích hoạt hiệu ứng "Thể Pháp Song Tuyệt": Giảm 15% Tu Vi tiêu hao khi mở 120 Pháp Khiếu và +20% Tốc độ tu luyện vĩnh viễn!',
       time: Date.now(),
     });
   } else {
@@ -3006,12 +3006,12 @@ export function unlockNextPhapKhieu() {
   if (newSelfHoa > (state.selfMenhHoa || 0)) {
     state.selfMenhHoa = newSelfHoa;
     state.logs.unshift({
-      text: `🔥 THẮP SÁNG ${newSelfHoa} HỎA TỰ THÂN! Pháp khiếu đã khai mở ${next}/120 khiếu (+1 Hỏa chiến lực)!`,
+      text: ` THẮP SÁNG ${newSelfHoa} HỎA TỰ THÂN! Pháp khiếu đã khai mở ${next}/120 khiếu (+1 Hỏa chiến lực)!`,
       time: Date.now()
     });
   } else {
     state.logs.unshift({
-      text: `⚡ Khai mở thành công Pháp Khiếu #${next}!`,
+      text: ` Khai mở thành công Pháp Khiếu #${next}!`,
       time: Date.now()
     });
   }
@@ -3035,7 +3035,7 @@ export function attemptUnlock121st() {
     state.phapKhieu = 121;
     state.selfMenhHoa = 5;
     state.attemptExp121 = EXP_FOR_121_ATTEMPT;
-    const msg = '⚡ TÁI KHAI PHÁP KHIẾU 121 THÀNH CÔNG!\n\n"Căn cơ Cực Cảnh Sinh Tử tái sinh, Pháp Khiếu 121 bừng sáng, Hỗn Độn Thanh Liên thức tỉnh (+1 Hỏa Tự Thân)!"';
+    const msg = ' TÁI KHAI PHÁP KHIẾU 121 THÀNH CÔNG!\n\n"Căn cơ Cực Cảnh Sinh Tử tái sinh, Pháp Khiếu 121 bừng sáng, Hỗn Độn Thanh Liên thức tỉnh (+1 Hỏa Tự Thân)!"';
     state.logs.unshift({ text: msg, time: Date.now() });
     saveCultivationState(state);
     return { state, isSuccess: true, message: msg };
@@ -3061,7 +3061,7 @@ export function attemptUnlock121st() {
     state.failed121st = false;
     state.phapKhieu = 121;
     state.selfMenhHoa = 5;
-    const successMsg = '⚡ NGHỊCH THIÊN KHAI KHIẾU · CỰC CẢNH SINH TỬ!\n\n"Tìm đường sống trong cõi chết, đắc đạo giữa lằn ranh sinh tử. Đập nát gông cùm thiên đạo, ngộ ra Pháp Khiếu thứ 121 cấm kỵ vạn cổ!"\n\n✦ Đan Điền hóa sinh 36 Phẩm Hỗn Độn Thanh Liên.\n✦ Ngưng tụ Mệnh Hỏa tự thân thứ 5 (+1 Hỏa Chiến Lực, đạt Ngũ Hỏa Cực Cảnh)!';
+    const successMsg = '[NGHỊCH THIÊN KHAI KHIẾU] · CỰC CẢNH SINH TỬ!\n\n"Tìm đường sống trong cõi chết, đắc đạo giữa lằn ranh sinh tử. Đập nát gông cùm thiên đạo, ngộ ra Pháp Khiếu thứ 121 cấm kỵ vạn cổ!"\n\n✦ Đan Điền hóa sinh 36 Phẩm Hỗn Độn Thanh Liên.\n✦ Ngưng tụ Mệnh Hỏa tự thân thứ 5 (+1 Hỏa Chiến Lực, đạt Ngũ Hỏa Cực Cảnh)!';
     state.logs.unshift({
       text: successMsg,
       time: Date.now(),
@@ -3070,7 +3070,7 @@ export function attemptUnlock121st() {
     return { state, isSuccess: true, message: successMsg };
   } else {
     state.failed121st = true; // Thất bại: Đóng vĩnh viễn
-    const failMsg = '⚠️ CỰC CẢNH SINH TỬ · THẤT BẠI!\n\n"Lằn ranh sinh tử mỏng manh như sợi tóc. Pháp khiếu 121 tan biến trong hư vô, căn cơ đóng kín, vĩnh viễn không thể khai mở Khiếu 121 nữa!"';
+    const failMsg = '[CỰC CẢNH SINH TỬ] · THẤT BẠI!\n\n"Lằn ranh sinh tử mỏng manh như sợi tóc. Pháp khiếu 121 tan biến trong hư vô, căn cơ đóng kín, vĩnh viễn không thể khai mở Khiếu 121 nữa!"';
     state.logs.unshift({
       text: failMsg,
       time: Date.now(),
@@ -3113,7 +3113,7 @@ export function breakthroughToKimDan() {
     state.currentThienCungExp = flushExp;
     state.storedExp -= flushExp;
     state.logs.unshift({
-      text: `🌊 UẨN TÍCH PHÁ CẢNH XẢ RA! +${flushExp.toLocaleString()} Tu Vi uẩn tích từ Trúc Cơ đã rót vào Thiên Cung Đệ Nhất (${flushExp}/${targetPalaceExp} EXP)!`,
+      text: ` UẨN TÍCH PHÁ CẢNH XẢ RA! +${flushExp.toLocaleString()} Tu Vi uẩn tích từ Trúc Cơ đã rót vào Thiên Cung Đệ Nhất (${flushExp}/${targetPalaceExp} EXP)!`,
       time: Date.now(),
     });
   }
@@ -3170,7 +3170,7 @@ export function injectExpToThaiNghen(palaceIndex, expAmount = 10000) {
   state.daoAnhProgress[palaceIndex] = currentProgress + addExp;
 
   state.logs.unshift({
-    text: `✨ THAI NGHÉN ĐẠO ANH! Đã tích lũy +${addExp.toLocaleString()} Tu Vi linh lực vào Thiên Cung ${palaceIndex + 1} (${state.daoAnhProgress[palaceIndex].toLocaleString()}/${EXP_PER_DAO_ANH.toLocaleString()} Tu Vi).`,
+    text: ` THAI NGHÉN ĐẠO ANH! Đã tích lũy +${addExp.toLocaleString()} Tu Vi linh lực vào Thiên Cung ${palaceIndex + 1} (${state.daoAnhProgress[palaceIndex].toLocaleString()}/${EXP_PER_DAO_ANH.toLocaleString()} Tu Vi).`,
     time: Date.now(),
   });
 
@@ -3330,7 +3330,7 @@ export function manifestDaoAnh(palaceIndex) {
   convertToThienMenhIfInAnhRealm(state);
 
   state.logs.unshift({
-    text: `👑 KHAI SINH ĐẠO ANH THÀNH CÔNG! Đồng loạt ${state.daoAnhs.length} Tôn Đạo Anh Thần Thể giáng thế tương ứng ${totalRealized} Thiên Cung Thật! Chính thức bước vào cảnh giới Giả Anh.`,
+    text: ` KHAI SINH ĐẠO ANH THÀNH CÔNG! Đồng loạt ${state.daoAnhs.length} Tôn Đạo Anh Thần Thể giáng thế tương ứng ${totalRealized} Thiên Cung Thật! Chính thức bước vào cảnh giới Giả Anh.`,
     time: Date.now(),
   });
 
@@ -3413,7 +3413,7 @@ export function swapDaoAnhPositions(idOrIndex1, idOrIndex2) {
   state.daoAnhs[idx2] = temp;
 
   state.logs.unshift({
-    text: `🔄 HOÁN ĐỔI TRẬN VỊ! Đã chuyển đổi vị trí giữa ${name1} và ${name2} trong Đạo Anh Thần Trận.`,
+    text: `[HOÁN ĐỔI TRẬN VỊ] Đã chuyển đổi vị trí giữa ${name1} và ${name2} trong Đạo Anh Thần Trận.`,
     time: Date.now(),
   });
 
@@ -3469,7 +3469,7 @@ export function chooseSwitchDaoAnhAfter80(daoAnhId) {
           newTarget.currentThienMenh = newTarget.currentExp;
           state.storedExp -= flush;
           state.logs.unshift({
-            text: `🌊 UẨN TÍCH TIẾP TỤC XẢ RA! +${flush.toLocaleString()} Tu Vi uẩn tích đã rót vào Đạo Anh [${formatDaoAnhTitle(newTarget.name)}] (${newTarget.currentExp}/${maxExp} EXP)!`,
+            text: `[UẨN TÍCH XẢ RA] +${flush.toLocaleString()} Tu Vi uẩn tích đã rót vào Đạo Anh [${formatDaoAnhTitle(newTarget.name)}] (${newTarget.currentExp}/${maxExp} EXP)!`,
             time: Date.now()
           });
 
@@ -3520,7 +3520,7 @@ export function chooseContinueDaoAnhTo100(daoAnhId) {
           da.currentThienMenh = da.currentExp;
           state.storedExp -= flush;
           state.logs.unshift({
-            text: `🌊 UẨN TÍCH TIẾP TỤC XẢ RA! +${flush.toLocaleString()} Tu Vi uẩn tích đã rót vào Đạo Anh [${formatDaoAnhTitle(da.name)}] (${da.currentExp}/${maxExp} EXP)!`,
+            text: `[UẨN TÍCH XẢ RA] +${flush.toLocaleString()} Tu Vi uẩn tích đã rót vào Đạo Anh [${formatDaoAnhTitle(da.name)}] (${da.currentExp}/${maxExp} EXP)!`,
             time: Date.now()
           });
 
@@ -3605,7 +3605,7 @@ export function attemptTribulationSingle(daoAnhId) {
       state.currentTargetDaoAnhId = da.id;
 
       state.logs.unshift({
-        text: `🌊 UẨN TÍCH THĂNG KIẾP XẢ RA! +${flush.toLocaleString()} Tu Vi uẩn tích đã rót vào Đạo Anh [${formatDaoAnhTitle(da.name)}] (${da.currentExp}/${da.maxExp} EXP)!`,
+        text: `[UẨN TÍCH XẢ RA] +${flush.toLocaleString()} Tu Vi uẩn tích đã rót vào Đạo Anh [${formatDaoAnhTitle(da.name)}] (${da.currentExp}/${da.maxExp} EXP)!`,
         time: Date.now()
       });
 
@@ -3631,7 +3631,7 @@ export function attemptTribulationSingle(daoAnhId) {
     state.totalThienMenh = (state.totalThienMenh || 0) + earnedTM;
 
     const tierInfo = LAMP_TIERS[getDaoAnhTierKey(da, state)] || LAMP_TIERS.than_pham;
-    message = `⚡ ĐỘ KIẾP THÀNH CÔNG! ${formatDaoAnhTitle(da.name)} [${tierInfo.name}] đã vượt qua [${tribulationName}], thăng hoa lên Kiếp thứ ${da.currentKiep} (+1 Anh chiến lực) và thu hoạch +${earnedTM.toLocaleString()} Thiên Mệnh!`;
+    message = `[ĐỘ KIẾP THÀNH CÔNG] ${formatDaoAnhTitle(da.name)} [${tierInfo.name}] đã vượt qua [${tribulationName}], thăng hoa lên Kiếp thứ ${da.currentKiep} (+1 Anh chiến lực) và thu hoạch +${earnedTM.toLocaleString()} Thiên Mệnh!`;
     state.logs.unshift({ text: message, time: Date.now() });
 
     if (state.daoAnhs.some(d => d.currentKiep >= 1)) {
@@ -3643,11 +3643,11 @@ export function attemptTribulationSingle(daoAnhId) {
     if (da.fromLamp) {
       da.currentExp = Math.round(da.maxExp * 0.5);
       da.currentThienMenh = da.currentExp;
-      message = `⚡ ĐỘ KIẾP THẤT BẠI! Nhờ có Chân Hỏa Mệnh Đăng bảo vệ, ${da.name} không bị thương hại nặng, chỉ lui về 50% Linh Lực!`;
+      message = `[ĐỘ KIẾP THẤT BẠI] Nhờ có Chân Hỏa Mệnh Đăng bảo vệ, ${da.name} không bị thương hại nặng, chỉ lui về 50% Linh Lực!`;
     } else {
       da.currentExp = 0;
       da.currentThienMenh = 0;
-      message = `⚡ ĐỘ KIẾP THẤT BẠI! Thiên lôi đánh tan linh lực, ${da.name} bị tiêu hao toàn bộ Linh Lực tích lũy!`;
+      message = `[ĐỘ KIẾP THẤT BẠI] Thiên lôi đánh tan linh lực, ${da.name} bị tiêu hao toàn bộ Linh Lực tích lũy!`;
     }
     state.logs.unshift({ text: message, time: Date.now() });
   }
@@ -3737,7 +3737,7 @@ export function attemptTribulationAll() {
       state.currentTargetDaoAnhId = targetDa.id;
 
       state.logs.unshift({
-        text: `🌊 UẨN TÍCH THĂNG KIẾP XẢ RA! +${flush.toLocaleString()} Tu Vi uẩn tích đã rót vào Đạo Anh [${formatDaoAnhTitle(targetDa.name)}] (${targetDa.currentExp}/${maxExp} EXP)!`,
+        text: `[UẨN TÍCH XẢ RA] +${flush.toLocaleString()} Tu Vi uẩn tích đã rót vào Đạo Anh [${formatDaoAnhTitle(targetDa.name)}] (${targetDa.currentExp}/${maxExp} EXP)!`,
         time: Date.now()
       });
 
@@ -3758,7 +3758,7 @@ export function attemptTribulationAll() {
       }
     }
 
-    resultMsg = `⚡ VẠN KIẾP TỀ THĂNG ĐẠI THÀNH CÔNG! Đồng loạt ${activeDaoAnhs.length} Đạo Anh thăng hoa lên Kiếp thứ ${firstKiep + 1}! Kích hoạt cộng hưởng nhận +${totalEarnedTM.toLocaleString()} Thiên Mệnh (Gồm +${bonusTM.toLocaleString()} TM Bonus +50%)!`;
+    resultMsg = `[VẠN KIẾP TỀ THĂNG THÀNH CÔNG] Đồng loạt ${activeDaoAnhs.length} Đạo Anh thăng hoa lên Kiếp thứ ${firstKiep + 1}! Kích hoạt cộng hưởng nhận +${totalEarnedTM.toLocaleString()} Thiên Mệnh (Gồm +${bonusTM.toLocaleString()} TM Bonus +50%)!`;
     state.logs.unshift({ text: resultMsg, time: Date.now() });
   } else {
     // Thất bại
@@ -3773,7 +3773,7 @@ export function attemptTribulationAll() {
     });
 
     const failedNames = rollResults.filter(r => !r.passed).map(r => formatDaoAnhTitle(r.da.name)).join(', ');
-    resultMsg = `⚡ VẠN KIẾP TỀ THĂNG THẤT BẠI! Do [${failedNames}] bị thiên lôi đánh lui, toàn bộ ${activeDaoAnhs.length} Đạo Anh đều không thể lên kiếp!`;
+    resultMsg = `[VẠN KIẾP TỀ THĂNG THẤT BẠI] Do [${failedNames}] bị thiên lôi đánh lui, toàn bộ ${activeDaoAnhs.length} Đạo Anh đều không thể lên kiếp!`;
     state.logs.unshift({ text: resultMsg, time: Date.now() });
   }
 
@@ -3811,7 +3811,7 @@ export function fillAllDaoAnhExp() {
     state.promptAllDaoAnhFullDismissed = true;
     state.prompt80DaoAnh = null;
 
-    const msg = `⚡ NGUYÊN ANH ĐẠI VIÊN MÃN! Toàn bộ Đạo Anh đã đạt Kiếp 5 Đại Viên Mãn. +${expBonus.toLocaleString()} Tu Vi đã chuyển dồn vào Uẩn Tích Bình Cảnh. Đạo hữu đã có thể Đột Phá Linh Tàng!`;
+    const msg = `[NGUYÊN ANH ĐẠI VIÊN MÃN] Toàn bộ Đạo Anh đã đạt Kiếp 5 Đại Viên Mãn. +${expBonus.toLocaleString()} Tu Vi đã chuyển dồn vào Uẩn Tích Bình Cảnh. Đạo hữu đã có thể Đột Phá Linh Tàng!`;
     state.logs.unshift({ text: msg, time: Date.now() });
 
     saveCultivationState(state);
@@ -3832,7 +3832,7 @@ export function fillAllDaoAnhExp() {
   state.promptAllDaoAnhFullDismissed = false;
   state.prompt80DaoAnh = null;
 
-  const msg = `⚡ ĐẠI TRẬN BỒI DƯỠNG! Đã nạp đầy 100% Linh Lực cho ${filledCount} Đạo Anh! Sẵn sàng nghênh tiếp Lôi Kiếp!`;
+  const msg = `[ĐẠI TRẬN BỒI DƯỠNG] Đã nạp đầy 100% Linh Lực cho ${filledCount} Đạo Anh! Sẵn sàng nghênh tiếp Lôi Kiếp!`;
   state.logs.unshift({ text: msg, time: Date.now() });
 
   saveCultivationState(state);
@@ -4044,8 +4044,8 @@ export function breakthroughToLinhTang(selectedDaoAnhIds) {
 
   const daoAnhNamesList = chosenDaoAnhs.filter(Boolean).map(da => da.name || da.palaceName).join(', ');
   const msg = hasEasterEggThienDao
-    ? `🌌 ĐỘT PHÁ LINH TÀNG KỲ ĐẠI THÀNH! Đạo hữu đã chọn 5 Tôn Đạo Anh [${daoAnhNamesList}] làm nguyên liệu chính đúc nên 5 Tòa Bí Tàng. Nhờ có [${firstProminentDa?.name}], Tòa 1 tự mang Phôi Thiên Đạo, TÀNG MÔN ẦM ẦM MỞ RA!`
-    : `🌌 ĐỘT PHÁ LINH TÀNG KỲ THÀNH CÔNG! Đạo hữu đã chọn 5 Tôn Đạo Anh [${daoAnhNamesList}] làm nguyên liệu chính đúc nên 5 Tòa Bí Tàng. Bắt đầu hành trình Dưỡng Đạo Khải Minh!`;
+    ? `[ĐỘT PHÁ LINH TÀNG ĐẠI THÀNH] Đạo hữu đã chọn 5 Tôn Đạo Anh [${daoAnhNamesList}] làm nguyên liệu chính đúc nên 5 Tòa Bí Tàng. Nhờ có [${firstProminentDa?.name}], Tòa 1 tự mang Phôi Thiên Đạo, TÀNG MÔN ẦM ẦM MỞ RA!`
+    : `[ĐỘT PHÁ LINH TÀNG THÀNH CÔNG] Đạo hữu đã chọn 5 Tôn Đạo Anh [${daoAnhNamesList}] làm nguyên liệu chính đúc nên 5 Tòa Bí Tàng. Bắt đầu hành trình Dưỡng Đạo Khải Minh!`;
 
   state.logs.unshift({ text: msg, time: Date.now() });
 
@@ -4057,7 +4057,7 @@ export function breakthroughToLinhTang(selectedDaoAnhIds) {
       subtitle: hasEasterEggThienDao 
         ? `5 Đạo Anh tự chọn đúc thành 5 Bí Tàng. Tòa 1 tự mang Thiên Đạo mở tung!`
         : `5 Đạo Anh tự chọn đúc thành 5 Tòa Bí Tàng Thức Hải!`,
-      icon: '🏛️',
+      icon: 'shield', iconKey: 'shield',
       badge: '✦ 5 ĐẠI BÍ TÀNG NHỤC THÂN ✦',
       theme: 'cyan',
       cpStr: getCombatPowerDisplay(state)
@@ -4117,7 +4117,7 @@ export function assignDaoAnhToLinhTang(tangIndex, daoAnhId) {
       }
 
       state.logs.unshift({
-        text: `🏛️ Hoán đổi nguyên liệu Đạo Anh giữa Tòa ${tangIndex} và Tòa ${existingTang.id}!`,
+        text: `[Linh Tàng] Hoán đổi nguyên liệu Đạo Anh giữa Tòa ${tangIndex} và Tòa ${existingTang.id}!`,
         time: Date.now()
       });
       saveCultivationState(state);
@@ -4140,7 +4140,7 @@ export function assignDaoAnhToLinhTang(tangIndex, daoAnhId) {
   tang.thienDaoName = `${originName} Thiên Đạo`;
 
   state.logs.unshift({
-    text: `🏛️ Đã chọn Đạo Anh [${da.name}] làm nguyên liệu chính cho [${tang.name}] (Tòa Thứ ${tangIndex})!`,
+    text: `[Linh Tàng] Đã chọn Đạo Anh [${da.name}] làm nguyên liệu chính cho [${tang.name}] (Tòa Thứ ${tangIndex})!`,
     time: Date.now()
   });
 
@@ -4184,7 +4184,7 @@ export function initNextLinhTang(tangIndex, artifactOrName) {
 
   state.targetLinhTangIndex = tangIndex;
   state.logs.unshift({
-    text: `🏛️ Khai mở phôi [${targetTang.name}] (Tòa thứ ${tangIndex})! Bắt đầu Dưỡng Đạo tích lũy Thiên Đạo.`,
+    text: `[Linh Tàng] Khai mở phôi [${targetTang.name}] (Tòa thứ ${tangIndex})! Bắt đầu Dưỡng Đạo tích lũy Thiên Đạo.`,
     time: Date.now()
   });
 
@@ -4220,7 +4220,7 @@ export function feedExpToLinhTang(tangIndex, expAmount) {
     tang.isGateOpen = true;
     state.targetLinhTangIndex = Math.min(5, tangIndex + 1);
     state.logs.unshift({
-      text: `🌟 KHẢI MINH THĂNG TINH! [${tang.name}] đã ngưng tụ thành công [${tang.thienDaoName}], TÀNG MÔN ẦM ẦM MỞ RA!`,
+      text: `[KHẢI MINH THĂNG TINH] [${tang.name}] đã ngưng tụ thành công [${tang.thienDaoName}], TÀNG MÔN ẦM ẦM MỞ RA!`,
       time: Date.now()
     });
   }
@@ -4268,7 +4268,7 @@ export function dropDaoAnhKiep(daoAnhId) {
   daoAnhs[targetIdx].currentThienMenh = newMaxExp;
 
   state.logs.unshift({
-    text: `⬇️ ĐÁNH RƠI KIẾP! [${daoAnhs[targetIdx].name}] đã tự phế tu vi, lui về Kiếp ${minKiep + 1} với thanh tiến độ đầy 100% để chuẩn bị Vạn Kiếp Tề Thăng cùng các Đạo Anh khác!`,
+    text: `[ĐÁNH RƠI KIẾP] [${daoAnhs[targetIdx].name}] đã tự phế tu vi, lui về Kiếp ${minKiep + 1} với thanh tiến độ đầy 100% để chuẩn bị Vạn Kiếp Tề Thăng cùng các Đạo Anh khác!`,
     time: Date.now()
   });
 
@@ -4303,7 +4303,7 @@ export function attachThienDaoFromInventory(tangIndex) {
   state.targetLinhTangIndex = Math.min(5, tangIndex + 1);
 
   state.logs.unshift({
-    text: `🌟 DUNG NHẬP THIÊN ĐẠO PHÔI! [${tang.name}] lập tức viên mãn, TÀNG MÔN ẦM ẦM MỞ RA!`,
+    text: `[DUNG NHẬP THIÊN ĐẠO] [${tang.name}] lập tức viên mãn, TÀNG MÔN ẦM ẦM MỞ RA!`,
     time: Date.now()
   });
 
@@ -4331,7 +4331,7 @@ export function convertBiTangToThanTang(tangIndex) {
   if (!tang.name.includes('Thần Tàng')) tang.name += ' Thần Tàng';
 
   state.logs.unshift({
-    text: `🩸 THẦN HUYẾT NHỤC BỒI DƯỠNG! Đã tiêu hao ${THIEN_MENH_PER_THAN_TANG.toLocaleString()} Thiên Mệnh chuyển hóa [${tang.name}] thành THẦN TÀNG vĩnh viễn! Toàn bộ bảo vật đã đồng hóa thành Thần Khí!`,
+    text: `[THẦN HUYẾT NHỤC BỒI DƯỠNG] Đã tiêu hao ${THIEN_MENH_PER_THAN_TANG.toLocaleString()} Thiên Mệnh chuyển hóa [${tang.name}] thành THẦN TÀNG vĩnh viễn! Toàn bộ bảo vật đã đồng hóa thành Thần Khí!`,
     time: Date.now()
   });
 
@@ -4355,8 +4355,8 @@ export function toggleDiTienLuu(tangIndex, isNurturing) {
   tang.isNurturingDiTienLuu = isNurturing !== undefined ? isNurturing : !tang.isNurturingDiTienLuu;
   state.logs.unshift({
     text: tang.isNurturingDiTienLuu
-      ? `🔮 Đã kích hoạt Dị Tiên Lưu cho [${tang.name}]! Tu Vi đọc sách sẽ tích lũy dệt Hồn Ti.`
-      : `🔮 Đã tạm dừng Dị Tiên Lưu cho [${tang.name}].`,
+      ? `[Dị Tiên Lưu] Đã kích hoạt cho [${tang.name}]! Tu Vi đọc sách sẽ tích lũy dệt Hồn Ti.`
+      : `[Dị Tiên Lưu] Đã tạm dừng cho [${tang.name}].`,
     time: Date.now()
   });
 
@@ -4379,7 +4379,7 @@ export function feedDiTienLuuExp(tangIndex, expAmount) {
     tang.isNurturingDiTienLuu = false;
     const totalForms = state.linhTangs.filter(t => t.isThanLinhThai).length;
     state.logs.unshift({
-      text: `👑 DỊ TIÊN LƯU ĐẠI THÀNH! [${tang.name}] dệt xong Hồn Ti, giải phóng THẦN LINH THÁI (Tầng thứ ${totalForms})!`,
+      text: `[DỊ TIÊN LƯU ĐẠI THÀNH] [${tang.name}] dệt xong Hồn Ti, giải phóng THẦN LINH THÁI (Tầng thứ ${totalForms})!`,
       time: Date.now()
     });
   }
@@ -4413,7 +4413,7 @@ export function assignLampHuyenLo(tangIndex, lampId) {
 
   const lampObj = LIFE_LAMPS.find(l => l.id === lampId);
   state.logs.unshift({
-    text: `🔥 HỎA LÒ THIÊU ĐỐT! Đã ghép [${lampObj?.name || 'Mệnh Đăng'}] vào [${targetTang?.name || `Tòa ${tangIndex}`}], tăng +20% tốc độ ngưng tụ Thiên Đạo!`,
+    text: `[HỎA LÒ THIÊU ĐỐT] Đã ghép [${lampObj?.name || 'Mệnh Đăng'}] vào [${targetTang?.name || `Tòa ${tangIndex}`}], tăng +20% tốc độ ngưng tụ Thiên Đạo!`,
     time: Date.now()
   });
 
@@ -4506,7 +4506,7 @@ export function resetCultivationState() {
     inventoryThienDaoPhoi: 0,
     targetLinhTangIndex: 1,
     logs: [
-      { text: '💀 Đã tản đi toàn bộ tu vi, tán sạch 72 Mệnh Đăng và Vật Trấn Áp, hóa phàm trùng tu đạo lộ lại từ đầu.', time: Date.now() },
+      { text: '[Hóa Phàm] Đã tản đi toàn bộ tu vi, tán sạch 72 Mệnh Đăng và Vật Trấn Áp, hóa phàm trùng tu đạo lộ lại từ đầu.', time: Date.now() },
     ],
   };
   saveCultivationState(freshState);

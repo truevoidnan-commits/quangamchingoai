@@ -1,3 +1,4 @@
+import Icon from '../ui/Icon';
 import { useState, useEffect } from 'react';
 import { getSyncStatus } from '../../lib/sync/autoSync.js';
 import { Link, useLocation } from 'react-router-dom';
@@ -59,7 +60,7 @@ export default function Header() {
   const getSyncBadge = () => {
     if (syncStatus.state === 'syncing') {
       return {
-        icon: '🔄',
+        iconName: 'sync',
         text: 'Đang sync',
         shortText: 'Sync',
         statusClass: styles.syncState_syncing,
@@ -67,7 +68,7 @@ export default function Header() {
     }
     if (syncStatus.state === 'offline') {
       return {
-        icon: '📴',
+        iconName: 'cloud-off',
         text: 'Offline',
         shortText: 'Offline',
         statusClass: styles.syncState_offline,
@@ -75,7 +76,7 @@ export default function Header() {
     }
     if (syncStatus.state === 'attention') {
       return {
-        icon: '🔔',
+        iconName: 'bell',
         text: 'Cần xử lý',
         shortText: 'Chú ý',
         statusClass: styles.syncState_attention,
@@ -83,7 +84,7 @@ export default function Header() {
     }
     if (syncStatus.state === 'error') {
       return {
-        icon: '⚠️',
+        iconName: 'cloud-alert',
         text: 'Lỗi sync',
         shortText: 'Lỗi',
         statusClass: styles.syncState_error,
@@ -94,14 +95,14 @@ export default function Header() {
       const hh = String(d.getHours()).padStart(2, '0');
       const mm = String(d.getMinutes()).padStart(2, '0');
       return {
-        icon: '☁️',
+        iconName: 'cloud-check',
         text: `Sync ${hh}:${mm}`,
         shortText: `${hh}:${mm}`,
         statusClass: styles.syncState_synced,
       };
     }
     return {
-      icon: '☁️',
+      iconName: 'cloud',
       text: 'Đồng bộ',
       shortText: '',
       statusClass: styles.syncState_idle,
@@ -115,7 +116,7 @@ export default function Header() {
       <header className={`${styles.header} ${!isLobby ? styles.compact : ''}`}>
         <div className={styles.inner}>
           <Link to={homeLink} className={`${styles.logo} ${logoStyleClass}`} aria-label={`${headerTitle} - Trang chủ`}>
-            <span className={styles.logoIcon}>✦</span>
+            <Icon name="star" size={13} className={styles.logoIcon} />
             <span className={styles.logoText}>{headerTitle}</span>
           </Link>
 
@@ -127,7 +128,7 @@ export default function Header() {
               title={syncStatus.message || `Đồng Bộ Cloud (${syncBadge.text})`}
               aria-label={syncStatus.message || `Đồng Bộ Cloud (${syncBadge.text})`}
             >
-              <span className={styles.syncIcon}>{syncBadge.icon}</span>
+              <span className={styles.syncIcon}><Icon name={syncBadge.iconName} size={14} /></span>
               <span className={styles.syncTextFull}>{syncBadge.text}</span>
               {syncBadge.shortText ? (
                 <span className={styles.syncTextShort}>{syncBadge.shortText}</span>
@@ -138,7 +139,7 @@ export default function Header() {
                   aria-label="Thiết bị khác vừa cập nhật tu vi"
                   className={styles.syncParallelIcon}
                 >
-                  📱
+                  <Icon name="phone" size={12} />
                 </span>
               )}
             </Link>
@@ -151,9 +152,10 @@ export default function Header() {
               aria-label="Bảng Tu Vi"
             >
               <span className={styles.badgeIcon}>
-                {cultivation.realm === 'ngung_khi' && '💭'}
-                {cultivation.realm === 'truc_co' && '🔥'}
-                {cultivation.realm === 'kim_dan' && '🪐'}
+                <Icon
+                  name={cultivation.realm === 'ngung_khi' ? 'realm-ngung-khi' : cultivation.realm === 'truc_co' ? 'realm-truc-co' : 'realm-kim-dan'}
+                  size={14}
+                />
               </span>
               <span className={styles.badgeText}>{displayName}</span>
             </Link>

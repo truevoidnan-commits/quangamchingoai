@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 import React, { useState, useEffect } from 'react';
 import { useCultivationContext } from '../../context/CultivationContext';
 import { 
@@ -229,7 +230,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
   // 3. TẢN TU VI (RESET)
   const handleTanTuVi = () => {
     const isConfirmed = window.confirm(
-      '☠️ TẢN ĐI TOÀN BỘ TU VI (HÓA PHÀM TRÙNG TU):\n\n' +
+      '[HÓA PHÀM] TẢN ĐI TOÀN BỘ TU VI (HÓA PHÀM TRÙNG TU):\n\n' +
       '• Toàn bộ Pháp Khiếu, Mệnh Đăng, Thiên Cung và Đạo Cơ sẽ bị XÓA SẠCH!\n' +
       '• Đạo hữu sẽ quay trở lại làm Phàm Nhân ở tầng Ngưng Khí sơ khai để tu luyện lại từ đầu.\n\n' +
       'Đạo hữu có chắc chắn muốn Tản Tu Vi không?'
@@ -265,7 +266,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 13, color: '#38bdf8' }}>⚔️</span>
+            <Icon name="sword" size={13} style={{ color: "#38bdf8" }} />
             <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
               CHIẾN LỰC
             </span>
@@ -363,7 +364,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   boxShadow: ngungKhiPanelTab === 'the' ? '0 0 12px rgba(239, 68, 68, 0.6)' : 'none'
                 }}
               >
-                ⚔️ Hải Sơn Quyết
+                Hải Sơn Quyết
               </button>
 
               <button
@@ -383,7 +384,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   boxShadow: ngungKhiPanelTab === 'phap' ? '0 0 12px rgba(6, 182, 212, 0.6)' : 'none'
                 }}
               >
-                🌊 Hóa Hải Kinh
+                Hóa Hải Kinh
               </button>
             </div>
 
@@ -406,7 +407,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                 alignItems: 'center',
                 gap: 4
               }}>
-                {activePath === 'the' ? '⚔️ Hải Sơn Quyết' : '🌊 Hóa Hải Kinh'}
+                {activePath === 'the' ? 'Hải Sơn Quyết' : 'Hóa Hải Kinh'}
               </span>
             </div>
 
@@ -426,7 +427,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 12.5, fontWeight: 800, color: '#f87171' }}>
-                      ⚔️ HẢI SƠN QUYẾT (LUYỆN THỂ)
+                      HẢI SƠN QUYẾT (LUYỆN THỂ)
                     </span>
                     <span style={{
                       fontSize: 10,
@@ -437,7 +438,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                       border: `1px solid ${isTheMax ? '#fbbf24' : '#ef4444'}`,
                       color: isTheMax ? '#fde047' : '#f87171'
                     }}>
-                      {isTheMax ? '👑 10 TẦNG VIÊN MÃN' : `TẦNG ${theLvl}/10`}
+                      {isTheMax ? '10 TẦNG VIÊN MÃN' : `TẦNG ${theLvl}/10`}
                     </span>
                   </div>
 
@@ -482,7 +483,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     </div>
                     {hasTiger && (
                       <div style={{ fontSize: 9.5, color: '#fca5a5', marginTop: 4, fontWeight: 700 }}>
-                        🔥 Dị tượng đã mở: <strong>Huyết Hổ Hóa Hình (Khí Huyết Hóa Ảnh)</strong>
+                        Dị tượng đã mở: <strong>Huyết Hổ Hóa Hình (Khí Huyết Hóa Ảnh)</strong>
                       </div>
                     )}
                   </div>
@@ -499,7 +500,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   gap: 5
                 }}>
                   <div style={{ fontSize: 10.5, fontWeight: 800, color: '#cbd5e1', marginBottom: 2 }}>
-                    📜 LỘ TRÌNH HẢI SƠN QUYẾT (1 HỔ → 1 BẠT)
+                    LỘ TRÌNH HẢI SƠN QUYẾT (1 HỔ ĐẾN 1 BẠT)
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
                     {HAI_SON_QUYET_LAYERS.map(layer => {
@@ -524,13 +525,13 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                             </span>
                             <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                               <div style={{ fontSize: 9.5, fontWeight: isCurrent || isReached ? 700 : 500, color: isReached ? '#a7f3d0' : isCurrent ? '#fca5a5' : '#64748b' }}>
-                                {layer.name} {layer.hasPhantom ? '🐯' : ''}
+                                {layer.name} {layer.hasPhantom ? '(Hổ Ảnh)' : ''}
                               </div>
                               <div style={{ fontSize: 8, color: '#94a3b8' }}>{layer.target} EXP</div>
                             </div>
                           </div>
                           <span style={{ fontSize: 9, fontWeight: 700 }}>
-                            {isReached ? <span style={{ color: '#34d399' }}>✓</span> : isCurrent ? <span style={{ color: '#ef4444' }}>⚡</span> : <span style={{ color: '#475569' }}>🔒</span>}
+                            {isReached ? <Icon name="check" size={12} style={{ color: '#34d399' }} /> : isCurrent ? <Icon name="bolt" size={12} style={{ color: '#ef4444' }} /> : <Icon name="lock" size={12} style={{ color: '#475569' }} />}
                           </span>
                         </div>
                       );
@@ -556,7 +557,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 12.5, fontWeight: 800, color: '#38bdf8' }}>
-                      🌊 HÓA HẢI KINH (PHÁP TU)
+                      HÓA HẢI KINH (PHÁP TU)
                     </span>
                     <span style={{
                       fontSize: 10,
@@ -567,7 +568,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                       border: `1px solid ${isPhapMax ? '#fbbf24' : '#06b6d4'}`,
                       color: isPhapMax ? '#fde047' : '#38bdf8'
                     }}>
-                      {isPhapMax ? '👑 10 TẦNG VIÊN MÃN' : `TẦNG ${phapLvl}/10`}
+                      {isPhapMax ? '10 TẦNG VIÊN MÃN' : `TẦNG ${phapLvl}/10`}
                     </span>
                   </div>
 
@@ -612,7 +613,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     </div>
                     {hasWhale && (
                       <div style={{ fontSize: 9.5, color: '#7dd3fc', marginTop: 4, fontWeight: 700 }}>
-                        🌊 Dị tượng đã mở: <strong>Cấm Hải Long Kình (Linh Hải Hóa Kình)</strong>
+                        Dị tượng đã mở: <strong>Cấm Hải Long Kình (Linh Hải Hóa Kình)</strong>
                       </div>
                     )}
                   </div>
@@ -629,7 +630,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   gap: 5
                 }}>
                   <div style={{ fontSize: 10.5, fontWeight: 800, color: '#cbd5e1', marginBottom: 2 }}>
-                    📜 LỘ TRÌNH HÓA HẢI KINH (1 LÃNG → 1 CẤM HẢI)
+                    LỘ TRÌNH HÓA HẢI KINH (1 LÃNG ĐẾN 1 CẤM HẢI)
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
                     {HOA_HAI_KINH_LAYERS.map(layer => {
@@ -654,13 +655,13 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                             </span>
                             <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                               <div style={{ fontSize: 9.5, fontWeight: isCurrent || isReached ? 700 : 500, color: isReached ? '#a7f3d0' : isCurrent ? '#7dd3fc' : '#64748b' }}>
-                                {layer.name} {layer.hasPhantom ? '🐋' : ''}
+                                {layer.name} {layer.hasPhantom ? '(Kình Ảnh)' : ''}
                               </div>
                               <div style={{ fontSize: 8, color: '#94a3b8' }}>{layer.target} EXP</div>
                             </div>
                           </div>
                           <span style={{ fontSize: 9, fontWeight: 700 }}>
-                            {isReached ? <span style={{ color: '#34d399' }}>✓</span> : isCurrent ? <span style={{ color: '#06b6d4' }}>⚡</span> : <span style={{ color: '#475569' }}>🔒</span>}
+                            {isReached ? <Icon name="check" size={12} style={{ color: '#34d399' }} /> : isCurrent ? <Icon name="bolt" size={12} style={{ color: '#06b6d4' }} /> : <Icon name="lock" size={12} style={{ color: '#475569' }} />}
                           </span>
                         </div>
                       );
@@ -703,7 +704,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     textAlign: 'center'
                   }}
                 >
-                  {isBothMax ? '👑 ĐỘT PHÁ TRÚC CƠ (THỂ PHÁP SONG TU VIÊN MÃN)' : `⚡ ĐỘT PHÁ TRÚC CƠ (${isTheMax ? 'HẢI SƠN QUYẾT' : 'HÓA HẢI KINH'} VIÊN MÃN)`}
+                  {isBothMax ? 'ĐỘT PHÁ TRÚC CƠ (THỂ PHÁP SONG TU VIÊN MÃN)' : `ĐỘT PHÁ TRÚC CƠ (${isTheMax ? 'HẢI SƠN QUYẾT' : 'HÓA HẢI KINH'} VIÊN MÃN)`}
                 </button>
 
                 {isBothMax ? (
@@ -717,7 +718,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     lineHeight: 1.4,
                     textAlign: 'center'
                   }}>
-                    👑 <strong>Thể Pháp Song Tuyệt</strong>: Giảm 15% Tu Vi mở 120 Pháp Khiếu + Tăng 20% Tốc độ tu luyện vĩnh viễn!
+                    <strong>Thể Pháp Song Tuyệt</strong>: Giảm 15% Tu Vi mở 120 Pháp Khiếu + Tăng 20% Tốc độ tu luyện vĩnh viễn!
                   </div>
                 ) : (
                   <div style={{
@@ -730,7 +731,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     lineHeight: 1.4,
                     textAlign: 'center'
                   }}>
-                    💡 <em>Gợi ý: Đạo hữu có thể tu luyện nốt nhánh còn lại lên 10 tầng để nhận đại đặc quyền <strong>Thể Pháp Song Tuyệt</strong> trước khi Trúc Cơ!</em>
+                    <em>Gợi ý: Đạo hữu có thể tu luyện nốt nhánh còn lại lên 10 tầng để nhận đại đặc quyền <strong>Thể Pháp Song Tuyệt</strong> trước khi Trúc Cơ!</em>
                   </div>
                 )}
               </div>
@@ -745,7 +746,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                 fontSize: 10.5,
                 lineHeight: 1.4
               }}>
-                🔒 Cần tích lũy đủ <strong>4,500 EXP (10 Tầng Viên Mãn)</strong> ở Hải Sơn Quyết hoặc Hóa Hải Kinh để mở khóa Đột Phá Trúc Cơ!
+                Cần tích lũy đủ <strong>4,500 EXP (10 Tầng Viên Mãn)</strong> ở Hải Sơn Quyết hoặc Hóa Hải Kinh để mở khóa Đột Phá Trúc Cơ!
               </div>
             )}
           </div>
@@ -780,12 +781,12 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
               <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255, 255, 255, 0.05)' }}>
                 <div style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 700, letterSpacing: 0.5 }}>NGŨ HÀNH</div>
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: '#f0f6fc', marginTop: 2 }}>
-                  {currentDisplayNode.element === 'Kim' ? '⚡ Canh Kim' :
-                   currentDisplayNode.element === 'Mộc' ? '🌿 Ất Mộc' :
-                   currentDisplayNode.element === 'Thủy' ? '🌊 Quý Thủy' :
-                   currentDisplayNode.element === 'Hỏa' ? '🔥 Bính Hỏa' :
-                   currentDisplayNode.element === 'Thổ' ? '⛰️ Mậu Thổ' :
-                   currentDisplayNode.element || '✨ Đạo Cơ'}
+                  {currentDisplayNode.element === 'Kim' ? 'Canh Kim' :
+                   currentDisplayNode.element === 'Mộc' ? 'Ất Mộc' :
+                   currentDisplayNode.element === 'Thủy' ? 'Quý Thủy' :
+                   currentDisplayNode.element === 'Hỏa' ? 'Bính Hỏa' :
+                   currentDisplayNode.element === 'Thổ' ? 'Mậu Thổ' :
+                   currentDisplayNode.element || 'Đạo Cơ'}
                 </div>
               </div>
               <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255, 255, 255, 0.05)' }}>
@@ -845,7 +846,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   letterSpacing: 0.5
                 }}
               >
-                <span>⚡</span>
+                <span><Icon name="bolt" size={14} /></span>
                 <span>{canUnlockNext ? `XUNG KÍCH KHAI MỞ KHIẾU #${nextIndex}` : `CHƯA ĐỦ TU VI ĐỂ XUNG KÍCH KHIẾU #${nextIndex}`}</span>
               </button>
             ) : (
@@ -882,7 +883,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     gap: 6
                   }}
                 >
-                  <span>⚡</span>
+                  <span><Icon name="bolt" size={14} /></span>
                   <span>{cultivation?.hasEverUnlocked121 ? 'TÁI KHAI PHÁP KHIẾU 121' : 'XUNG KÍCH CỰC CẢNH SINH TỬ'}</span>
                 </button>
               )
@@ -918,7 +919,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                 transition: 'all 0.2s ease'
               }}
             >
-              <span>✨</span>
+              <span><Icon name="sparkle" size={14} /></span>
               <span>ĐỘT PHÁ KIM ĐAN CẢNH</span>
             </button>
           )}
@@ -943,7 +944,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>🏮</span>
+              <span><Icon name="lantern" size={14} /></span>
               <span>TẾ ĐÀN MỆNH ĐĂNG</span>
             </span>
             <span style={{ fontSize: 11, color: 'var(--color-kim)', fontWeight: 800 }}>
@@ -979,7 +980,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>{isTuTuong ? '🐉' : '🌌'}</span>
+              <span><Icon name={isTuTuong ? "dragon" : "planet"} size={16} /></span>
               <span>CHẾ ĐỘ: {isTuTuong ? 'TỨ TƯỢNG THẦN THÚ' : 'LỤC ĐẠI TINH TỌA'}</span>
             </span>
             <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.12)', color: '#fff' }}>
@@ -999,7 +1000,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', letterSpacing: 0.8, textTransform: 'uppercase' }}>
-                {isTuTuong ? '🌌 TỨ TƯỢNG THẦN THÚ (120 KHIẾU)' : '🌌 LỤC ĐẠI TINH TỌA (120 KHIẾU)'}
+                {isTuTuong ? 'TỨ TƯỢNG THẦN THÚ (120 KHIẾU)' : 'LỤC ĐẠI TINH TỌA (120 KHIẾU)'}
               </span>
               <span style={{ fontSize: 11.5, color: 'var(--color-kim)', fontWeight: 800 }}>
                 {openedCount}/120
@@ -1101,7 +1102,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
               {/* Tiêu đề & Tiến trình */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 16 }}>🏛️</span>
+                  <Icon name="shield" size={16} />
                   <span style={{
                     fontFamily: 'var(--font-serif)',
                     color: '#fef08a',
@@ -1139,7 +1140,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
                   <span style={{ color: '#94a3b8' }}>Trận Đồ Thập Tam Cung:</span>
                   <span style={{ color: '#38bdf8', fontWeight: 700 }}>
-                    {totalRealizedAll === maxThienCung ? '✨ Viên Mãn' : `⚡ Đang tu ${realizedThienCung + 1}/${maxThienCung}`}
+                    {totalRealizedAll === maxThienCung ? 'Viên Mãn' : `Đang tu ${realizedThienCung + 1}/${maxThienCung}`}
                   </span>
                 </div>
                 {/* Dải 13 Tinh Châu */}
@@ -1152,23 +1153,23 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
 
                     let bg = 'rgba(100, 116, 139, 0.2)';
                     let border = '1px solid rgba(100, 116, 139, 0.4)';
-                    let icon = '🔒';
+                    let icon = 'lock';
                     let glow = 'none';
 
                     if (isRealizedSelf) {
                       bg = 'linear-gradient(135deg, #f59e0b, #d97706)';
                       border = '1px solid #fde047';
-                      icon = '👑';
+                      icon = 'crown';
                       glow = '0 0 6px rgba(251, 191, 36, 0.8)';
                     } else if (isLamp) {
                       bg = 'linear-gradient(135deg, #f97316, #dc2626)';
                       border = '1px solid #fdba74';
-                      icon = '🪔';
+                      icon = 'lantern';
                       glow = '0 0 6px rgba(249, 115, 22, 0.8)';
                     } else if (isActive) {
                       bg = isBottleneck ? 'linear-gradient(135deg, #f97316, #eab308)' : 'linear-gradient(135deg, #0284c7, #38bdf8)';
                       border = isBottleneck ? '1.5px solid #fef08a' : '1.5px solid #7dd3fc';
-                      icon = isBottleneck ? '⚠️' : '⚡';
+                      icon = isBottleneck ? 'alert-triangle' : 'bolt';
                       glow = isBottleneck ? '0 0 10px #f97316' : '0 0 10px #38bdf8';
                     }
 
@@ -1207,7 +1208,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                 borderTop: '1px solid rgba(255, 255, 255, 0.06)'
               }}>
                 <span style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>⚔️</span> Lực Chiến Kim Đan:
+                  <span><Icon name="sword" size={14} /></span> Lực Chiến Kim Đan:
                 </span>
                 <strong style={{ color: 'var(--color-kim)', fontSize: 13, textShadow: '0 0 8px rgba(251, 191, 36, 0.4)' }}>
                   {calculatedCombatPower}
@@ -1257,7 +1258,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                       justifyContent: 'center',
                       fontSize: 14
                     }}>
-                      {isBottleneck ? '👑' : '⚡'}
+                      {isBottleneck ? <Icon name="crown" size={14} /> : <Icon name="bolt" size={14} />}
                     </div>
                     <div>
                       <strong style={{
@@ -1284,7 +1285,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     border: '1px solid ' + (isBottleneck ? '#f97316' : 'rgba(56, 189, 248, 0.4)'),
                     boxShadow: isBottleneck ? '0 0 8px rgba(249, 115, 22, 0.5)' : 'none'
                   }}>
-                    {isBottleneck ? '⚠️ 99.99% NÚT THẮT' : '⚡ ĐANG TỤ KHÍ'}
+                    {isBottleneck ? '99.99% NÚT THẮT' : 'ĐANG TỤ KHÍ'}
                   </span>
                 </div>
 
@@ -1336,7 +1337,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                       border: '1px solid rgba(249, 115, 22, 0.4)',
                       lineHeight: 1.5
                     }}>
-                      👑 <strong>ĐÃ ĐẠT 99.99% LINH LỰC!</strong> Nhấp nút bên dưới để chọn một Bảo Vật trong Túi Trữ Vật khảm nạm vào Cung, hoàn tất 100% Cung Thật!
+                      <strong>ĐÃ ĐẠT 99.99% LINH LỰC!</strong> Nhấp nút bên dưới để chọn một Bảo Vật trong Túi Trữ Vật khảm nạm vào Cung, hoàn tất 100% Cung Thật!
                     </div>
 
                     <button
@@ -1363,7 +1364,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                         gap: 6
                       }}
                     >
-                      👑 KHẢM NẠM BẢO VẬT (HÓA CUNG THẬT)
+                      KHẢM NẠM BẢO VẬT (HÓA CUNG THẬT)
                     </button>
                   </div>
                 ) : (
@@ -1378,7 +1379,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     fontSize: 11,
                     color: '#94a3b8'
                   }}>
-                    <span>📖 Đọc truyện tích lũy tu vi để nạp linh lực</span>
+                    <span>Đọc truyện tích lũy tu vi để nạp linh lực</span>
                     <button
                       onClick={() => navigate('/library')}
                       style={{
@@ -1414,7 +1415,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 15 }}>👑</span>
+                    <Icon name="crown" size={15} />
                     <span style={{ fontFamily: 'var(--font-serif)', color: '#f5d0fe', fontWeight: 800, fontSize: 12.5, letterSpacing: 0.5 }}>
                       THAI NGHÉN ĐẠO ANH
                     </span>
@@ -1454,7 +1455,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   borderRadius: 8,
                   border: '1px solid rgba(217, 70, 239, 0.2)'
                 }}>
-                  ✨ Toàn bộ <strong>13 Chân Cung Thần Phẩm</strong> đã viên mãn khai mở. Khi tích lũy đủ 10.000 Tu Vi, đạo hữu có thể Hóa Sinh Đạo Anh để đột phá Nguyên Anh Kỳ!
+                  Toàn bộ <strong>13 Chân Cung Thần Phẩm</strong> đã viên mãn khai mở. Khi tích lũy đủ 10.000 Tu Vi, đạo hữu có thể Hóa Sinh Đạo Anh để đột phá Nguyên Anh Kỳ!
                 </div>
 
                 {(cultivation?.daoAnhExp || cultivation?.currentThienCungExp || 0) >= 10000 ? (
@@ -1484,7 +1485,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                       boxShadow: '0 0 20px rgba(236, 72, 153, 0.6)'
                     }}
                   >
-                    ⚡ HÓA SINH ĐẠO ANH
+                    <Icon name="bolt" size={14} /> HÓA SINH ĐẠO ANH
                   </button>
                 ) : (
                   <button
@@ -1503,7 +1504,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                       cursor: 'pointer'
                     }}
                   >
-                    🔮 Tụ Khí Thai Nghén (+1.000 EXP)
+                    <Icon name="orb" size={14} /> Tụ Khí Thai Nghén (+1.000 EXP)
                   </button>
                 )}
               </div>
@@ -1530,7 +1531,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 24 }}>👑</span>
+                    <Icon name="crown" size={24} />
                     <div>
                       <div style={{ fontSize: 10, letterSpacing: 1.5, color: '#38bdf8', fontWeight: 800, textTransform: 'uppercase' }}>
                         CẢNH GIỚI ĐỈNH PHONG
@@ -1597,7 +1598,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   }}
                   title="Dung hợp toàn bộ 13 Đạo Anh đúc nên Tòa Bí Tàng Đệ Nhất!"
                 >
-                  <span style={{ fontSize: 18 }}>🏛️</span>
+                  <Icon name="shield" size={18} />
                   <span>ĐỘT PHÁ LINH TÀNG</span>
                 </button>
 
@@ -1626,7 +1627,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     gap: 6
                   }}
                 >
-                  <span>⚡ NẠP LINH LỰC VÀO UẨN TÍCH</span>
+                  <span><Icon name="bolt" size={14} /> NẠP LINH LỰC VÀO UẨN TÍCH</span>
                 </button>
 
                 {/* 3. Đạo Anh Đồ Lục */}
@@ -1651,7 +1652,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   }}
                   title="Mở Đạo Anh Đồ Lục"
                 >
-                  <span>✨ ĐẠO ANH ĐỒ LỤC</span>
+                  <span><Icon name="scroll" size={14} /> ĐẠO ANH ĐỒ LỤC</span>
                 </button>
               </div>
             </div>
@@ -1686,7 +1687,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
             <div className="status-card" style={{ padding: '14px 16px', borderRadius: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 18 }}>⚡</span>
+                  <Icon name="bolt" size={18} />
                   <div>
                     <div style={{ fontSize: 10, letterSpacing: 1, color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase' }}>
                       ĐẠO ANH ĐANG NẠP
@@ -1754,7 +1755,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     marginBottom: 12
                   }}
                 >
-                  <span>⬇️ ĐÁNH RƠI VỀ KIẾP {minKiep + 1}</span>
+                  <span><Icon name="arrow-down" size={14} /> ĐÁNH RƠI VỀ KIẾP {minKiep + 1}</span>
                 </button>
               )}
 
@@ -1809,7 +1810,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   gap: 6
                 }}
               >
-                <span>⚡ NẠP ĐẦY LINH LỰC</span>
+                <span><Icon name="bolt" size={14} /> NẠP ĐẦY LINH LỰC</span>
               </button>
 
               {/* 2. Vạn Kiếp Tề Thăng */}
@@ -1851,7 +1852,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   gap: 6
                 }}
               >
-                <span>⛈️ VẠN KIẾP TỀ THĂNG</span>
+                <span><Icon name="crown" size={14} /> VẠN KIẾP TỀ THĂNG</span>
               </button>
 
               {/* 3. Đạo Anh Đồ Lục */}
@@ -1876,7 +1877,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                 }}
                 title="Mở Đạo Anh Đồ Lục"
               >
-                <span>✨ ĐẠO ANH ĐỒ LỤC</span>
+                <span><Icon name="scroll" size={14} /> ĐẠO ANH ĐỒ LỤC</span>
               </button>
             </div>
           </div>
@@ -1907,7 +1908,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 13.5, fontWeight: 900, color: '#38bdf8' }}>
-                  🏛️ LINH TÀNG KỲ
+                  LINH TÀNG KỲ
                 </span>
                 <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(56, 189, 248, 0.15)', color: '#7dd3fc', fontWeight: 800 }}>
                   {openGatesCount}/5 Tàng Môn
@@ -1962,7 +1963,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   gap: 6
                 }}
               >
-                <span>🔮</span>
+                <span><Icon name="orb" size={14} /></span>
                 <span>Tùy Chỉnh 5 Đạo Anh Bí Tàng</span>
               </button>
             </div>
@@ -1994,7 +1995,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
           }}
           title="Xóa sạch tu vi, quay về phàm nhân để tu luyện lại từ đầu"
         >
-          <span>☠️ TẢN TU VI</span>
+          <span><Icon name="skull" size={14} /> TẢN TU VI</span>
         </button>
       </div>
 

@@ -1,3 +1,4 @@
+import Icon from '../components/ui/Icon';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient.js';
@@ -273,7 +274,7 @@ export default function SyncPage() {
   return (
     <div className={styles.page}>
       <div className={styles.headerTitle}>
-        <span className={styles.cloudIcon}>☁️</span>
+        <span className={styles.cloudIcon}><Icon name="cloud" size={32} /></span>
         <div>
           <h1 className={styles.title}>Đồng Bộ Cloud</h1>
           <div className={styles.subtitle}>Lưu trữ và đồng bộ truyện, tu vi, tiến độ đọc giữa các thiết bị</div>
@@ -281,14 +282,14 @@ export default function SyncPage() {
       </div>
 
       <div className={styles.alertInfo}>
-        📱 <strong>Mẹo đồng bộ:</strong> Vui lòng giữ màn hình sáng và ở yên trang này trong suốt quá trình đồng bộ.
+        <Icon name="phone" size={14} /> <strong>Mẹo đồng bộ:</strong> Vui lòng giữ màn hình sáng và ở yên trang này trong suốt quá trình đồng bộ.
         Quá trình xử lý từng truyện một để tối ưu hóa bộ nhớ cho thiết bị di động.
       </div>
 
       {needsReload && (
         <div className={styles.alertWarning} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            ⚡ <strong>Tu vi đã được cập nhật từ Cloud!</strong> Đang tự động làm mới trang sau giây lát...
+            <Icon name="bolt" size={14} /> <strong>Tu vi đã được cập nhật từ Cloud!</strong> Đang tự động làm mới trang sau giây lát...
           </div>
           <button
             className={styles.btnOutline}
@@ -304,7 +305,7 @@ export default function SyncPage() {
       {backupOverdue && (
         <div className={styles.alertWarning} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
           <div style={{ flex: 1, minWidth: 240 }}>
-            💡 <strong>Nhắc nhở sao lưu:</strong> Bạn chưa sao lưu dữ liệu máy gần đây (hoặc đã quá 14 ngày). Hãy tạo bản sao lưu tập tin để phòng ngừa sự cố đám mây.
+            <Icon name="lightbulb" size={14} /> <strong>Nhắc nhở sao lưu:</strong> Bạn chưa sao lưu dữ liệu máy gần đây (hoặc đã quá 14 ngày). Hãy tạo bản sao lưu tập tin để phòng ngừa sự cố đám mây.
           </div>
           <Link
             to="/backup"
@@ -320,7 +321,7 @@ export default function SyncPage() {
       <div className={styles.card} style={{ border: '1px solid rgba(234, 179, 8, 0.35)', background: 'rgba(15, 23, 42, 0.85)' }}>
         <div className={styles.cardHeader}>
           <h2 className={styles.cardTitle}>
-            <span>💾</span>
+            <span><Icon name="save" size={16} /></span>
             <span>Sao Lưu & Khôi Phục (Tập Tin Cục Bộ)</span>
           </h2>
           <Link
@@ -339,7 +340,7 @@ export default function SyncPage() {
       {isSupabasePausedSuspected() && (
         <div className={styles.alertWarning} style={{ marginBottom: '16px', background: 'rgba(234, 179, 8, 0.12)', border: '1px solid rgba(234, 179, 8, 0.4)' }}>
           <div style={{ fontWeight: 600, color: '#facc15', marginBottom: '4px' }}>
-            ⚠️ Không kết nối được Supabase
+            <Icon name="alert-triangle" size={14} /> Không kết nối được Supabase
           </div>
           <div style={{ fontSize: '0.88rem', color: '#cbd5e1', lineHeight: 1.5 }}>
             Nếu bạn không dùng khoảng 7 ngày, dự án gói miễn phí có thể đã bị tạm dừng: vào <strong>supabase.com/dashboard</strong>, chọn dự án, bấm <strong>Restore project</strong>.
@@ -415,19 +416,19 @@ export default function SyncPage() {
 
           {!isProd && (
             <div className={styles.alertWarning} style={{ marginBottom: '16px' }}>
-              ⚠️ Môi trường test: tự động đồng bộ bị tắt để không ghi đè dữ liệu thật.
+              <Icon name="alert-triangle" size={14} /> Môi trường test: tự động đồng bộ bị tắt để không ghi đè dữ liệu thật.
             </div>
           )}
 
           {syncStatus.parallelDeviceDetected && (
             <div className={styles.alertInfo} style={{ marginBottom: '16px', fontSize: '0.85rem' }}>
-              📱 Thiết bị khác vừa cập nhật tu vi trong 2 phút gần đây.
+              <Icon name="phone" size={14} /> Thiết bị khác vừa cập nhật tu vi trong 2 phút gần đây.
             </div>
           )}
 
           {syncStatus.state === 'attention' && (
             <div className={styles.alertWarning} style={{ marginBottom: '16px', fontSize: '0.85rem' }}>
-              🔔 {syncStatus.message || 'Cần bạn kiểm tra hoặc xử lý xung đột bên dưới.'}
+              <Icon name="bell" size={14} /> {syncStatus.message || 'Cần bạn kiểm tra hoặc xử lý xung đột bên dưới.'}
             </div>
           )}
 
@@ -481,8 +482,8 @@ export default function SyncPage() {
                   }`,
                 }}>
                   {realtimeStatus === 'active' ? '● Đang hoạt động'
-                    : realtimeStatus === 'connecting' ? '⏳ Đang kết nối...'
-                    : realtimeStatus === 'paused' ? '⚠️ Tạm dừng (quay về kiểm tra 3 phút)'
+                    : realtimeStatus === 'connecting' ? 'Đang kết nối...'
+                    : realtimeStatus === 'paused' ? 'Tạm dừng (quay về kiểm tra 3 phút)'
                     : '○ Tắt'}
                 </span>
               </div>
@@ -513,8 +514,8 @@ export default function SyncPage() {
             onClick={() => startSyncProcess()}
           >
             {isSyncing
-              ? ((novelConflictData || cultivationConflictData) ? '⏳ Đang chờ bạn chọn ở hộp thoại...' : '⏳ Đang đồng bộ dữ liệu...')
-              : '☁️ Đồng Bộ Ngay'}
+              ? ((novelConflictData || cultivationConflictData) ? 'Đang chờ bạn chọn ở hộp thoại...' : 'Đang đồng bộ dữ liệu...')
+              : <><Icon name="sync" size={16} /> Đồng Bộ Ngay</>}
           </button>
 
           {/* Progress bar */}
@@ -531,7 +532,7 @@ export default function SyncPage() {
                 />
               </div>
               <div className={styles.progressMessage}>
-                <span>⚙️</span> {(novelConflictData || cultivationConflictData) ? 'Đang chờ bạn chọn ở hộp thoại...' : syncProgress.message}
+                <span><Icon name="settings" size={14} /></span> {(novelConflictData || cultivationConflictData) ? 'Đang chờ bạn chọn ở hộp thoại...' : syncProgress.message}
               </div>
             </div>
           )}
@@ -547,7 +548,7 @@ export default function SyncPage() {
           {syncResult && (
             <div style={{ marginTop: '20px' }}>
               <div className={styles.cardTitle} style={{ fontSize: '1rem', color: syncResult.success ? '#38bdf8' : '#f87171' }}>
-                {syncResult.success ? '🎉 Kết quả đồng bộ:' : '⚠️ Đồng bộ chưa hoàn tất (có lỗi xảy ra):'}
+                {syncResult.success ? <><Icon name="check-circle" size={18} /> Kết quả đồng bộ:</> : <><Icon name="alert-triangle" size={18} /> Đồng bộ chưa hoàn tất (có lỗi xảy ra):</>}
               </div>
               <div className={styles.resultGrid}>
                 <div className={styles.resultStat}>
@@ -589,7 +590,7 @@ export default function SyncPage() {
               {syncResult.duplicateSkipped?.length > 0 && (
                 <div className={styles.alertWarning} style={{ marginTop: '16px' }}>
                   <div style={{ fontWeight: 600, marginBottom: '6px' }}>
-                    ⚠️ Nghi trùng truyện: đã bỏ qua, không đẩy lên
+                    <Icon name="alert-triangle" size={14} /> Nghi trùng truyện: đã bỏ qua, không đẩy lên
                   </div>
                   <div style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '10px', lineHeight: '1.4' }}>
                     Các truyện sau trên máy này có tiêu đề chuẩn hóa trùng với truyện đã có trên Cloud nhưng khác ID. Hệ thống đã giữ lại và không đẩy lên Cloud để tránh nhân đôi. Bạn có thể xóa bản trên máy này nếu muốn:
@@ -608,7 +609,7 @@ export default function SyncPage() {
                             style={{ padding: '3px 8px', fontSize: '0.75rem', borderRadius: '4px' }}
                             onClick={() => handleDeleteDuplicateLocal(dup.localId, dup.title)}
                           >
-                            🗑️ Xóa bản trên máy này
+                            <Icon name="trash" size={14} /> Xóa bản trên máy này
                           </button>
                         )}
                       </li>
@@ -619,7 +620,7 @@ export default function SyncPage() {
 
               {syncResult.localOnlySkipped > 0 && (
                 <div className={styles.alertInfo} style={{ marginTop: '12px', fontSize: '0.85rem' }}>
-                  ℹ️ {syncResult.localOnlySkipped} truyện chỉ có trên máy này, chưa đẩy (chế độ "Lấy Cloud làm gốc" giữ nguyên truyện trên máy; bạn có thể đẩy lên ở lần đồng bộ thường sau đó).
+                  <Icon name="info" size={14} /> {syncResult.localOnlySkipped} truyện chỉ có trên máy này, chưa đẩy (chế độ "Lấy Cloud làm gốc" giữ nguyên truyện trên máy; bạn có thể đẩy lên ở lần đồng bộ thường sau đó).
                 </div>
               )}
             </div>
@@ -638,7 +639,7 @@ export default function SyncPage() {
                 </div>
                 {daysAgo !== null && daysAgo > 5 && (
                   <div style={{ fontSize: '0.82rem', color: '#facc15', marginTop: '6px', fontStyle: 'italic' }}>
-                    💡 Nhắc nhẹ: Bạn nên mở ứng dụng và đồng bộ định kỳ để dự án Supabase không bị tự động tạm dừng.
+                    <Icon name="lightbulb" size={14} /> Nhắc nhẹ: Bạn nên mở ứng dụng và đồng bộ định kỳ để dự án Supabase không bị tự động tạm dừng.
                   </div>
                 )}
               </div>
@@ -655,7 +656,7 @@ export default function SyncPage() {
                 if (next) setSyncLogs(getSyncLogs());
               }}
             >
-              <span>📋 Nhật ký đồng bộ ({syncLogs.length})</span>
+              <span><Icon name="clipboard" size={14} /> Nhật ký đồng bộ ({syncLogs.length})</span>
               <span>{isLogOpen ? '▲ Thu gọn' : '▼ Mở rộng'}</span>
             </div>
             {isLogOpen && (
@@ -672,7 +673,7 @@ export default function SyncPage() {
                       }
                     }}
                   >
-                    {copyLogSuccess ? '✓ Đã sao chép' : '📋 Sao chép nhật ký'}
+                    {copyLogSuccess ? <><Icon name="check" size={14} /> Đã sao chép</> : <><Icon name="copy" size={14} /> Sao chép nhật ký</>}
                   </button>
                   <button
                     className={styles.btnLogAction}
@@ -684,7 +685,7 @@ export default function SyncPage() {
                       }
                     }}
                   >
-                    🗑️ Xóa nhật ký
+                    <Icon name="trash" size={14} /> Xóa nhật ký
                   </button>
                 </div>
                 <div className={styles.logContainer}>
@@ -722,20 +723,20 @@ export default function SyncPage() {
       {firstSyncData && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalContent}>
-            <h3 className={styles.modalTitle}>⚠️ Xác Nhận Lần Đầu Đồng Bộ</h3>
+            <h3 className={styles.modalTitle}><Icon name="alert-triangle" size={18} /> Xác Nhận Lần Đầu Đồng Bộ</h3>
             <p style={{ color: '#cbd5e1', fontSize: '0.9rem', lineHeight: '1.5' }}>
               Hệ thống phát hiện cả <strong>Máy này</strong> và <strong>Cloud</strong> đều đang có dữ liệu tu tiên và danh mục truyện. Vui lòng chọn phương án thiết lập gốc:
             </p>
 
             {firstSyncData.isLocalAhead && (
               <div className={styles.alertDanger}>
-                🚨 <strong>Cảnh báo quan trọng:</strong> Máy này đang tiến xa hơn Cloud (Tu vi hoặc số chương đã đọc cao hơn). Nếu chọn "Lấy cloud làm gốc", tiến độ hiện tại sẽ bị ghi đè (hệ thống sẽ tự động sao lưu bản cũ).
+                <Icon name="alert-triangle" size={16} /> <strong>Cảnh báo quan trọng:</strong> Máy này đang tiến xa hơn Cloud (Tu vi hoặc số chương đã đọc cao hơn). Nếu chọn "Lấy cloud làm gốc", tiến độ hiện tại sẽ bị ghi đè (hệ thống sẽ tự động sao lưu bản cũ).
               </div>
             )}
 
             {firstSyncData.duplicatePairs?.length > 0 && (
               <div className={styles.alertWarning}>
-                ⚠️ <strong>Phát hiện truyện cùng tiêu đề khác ID:</strong>
+                <Icon name="alert-triangle" size={16} /> <strong>Phát hiện truyện cùng tiêu đề khác ID:</strong>
                 <ul style={{ margin: '8px 0 0 16px', padding: 0, fontSize: '0.85rem' }}>
                   {firstSyncData.duplicatePairs.map((p, idx) => (
                     <li key={idx}>"{p.title}" (Máy: {p.localId} vs Cloud: {p.cloudId})</li>
@@ -799,7 +800,7 @@ export default function SyncPage() {
                   startSyncProcess('cloud_master');
                 }}
               >
-                📥 Lấy Cloud làm gốc (Khuyên dùng cho máy phụ)
+                <Icon name="cloud-download" size={16} /> Lấy Cloud làm gốc (Khuyên dùng cho máy phụ)
               </button>
 
               <button
@@ -808,7 +809,7 @@ export default function SyncPage() {
                   setShowConfirmLocalMaster(true);
                 }}
               >
-                📤 Đẩy máy này làm gốc (Ghi đè Cloud)
+                <Icon name="cloud-upload" size={16} /> Đẩy máy này làm gốc (Ghi đè Cloud)
               </button>
             </div>
           </div>
@@ -820,7 +821,7 @@ export default function SyncPage() {
         <div className={styles.modalBackdrop}>
           <div className={styles.modalContent} style={{ maxWidth: '480px' }}>
             <h3 className={styles.modalTitle} style={{ color: '#ef4444' }}>
-              🚨 CẢNH BÁO XÁC NHẬN GHI ĐÈ CLOUD
+              <Icon name="alert-triangle" size={16} /> CẢNH BÁO XÁC NHẬN GHI ĐÈ CLOUD
             </h3>
             <p style={{ color: '#fca5a5', fontSize: '0.9rem', lineHeight: '1.6' }}>
               Bạn đang chọn <strong>"Đẩy máy này làm gốc"</strong>.
@@ -855,7 +856,7 @@ export default function SyncPage() {
       {novelConflictData && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalContent}>
-            <h3 className={styles.modalTitle}>⚔️ Xung Đột Nội Dung Truyện</h3>
+            <h3 className={styles.modalTitle}><Icon name="sword" size={18} /> Xung Đột Nội Dung Truyện</h3>
             <p style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>
               Truyện <strong>"{novelConflictData.title}"</strong> đã được chỉnh sửa ở cả hai bên kể từ lần đồng bộ trước:
             </p>
@@ -895,7 +896,7 @@ export default function SyncPage() {
       {cultivationConflictData && (
         <div className={styles.modalBackdrop}>
           <div className={styles.modalContent}>
-            <h3 className={styles.modalTitle}>⚡ Xung Đột Tu Vi (Hồ Sơ Thật)</h3>
+            <h3 className={styles.modalTitle}><Icon name="bolt" size={18} /> Xung Đột Tu Vi (Hồ Sơ Thật)</h3>
             <p style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>
               Cả hai bên đều đã tăng cảnh giới hoặc tu vi kể từ lần đồng bộ trước:
             </p>

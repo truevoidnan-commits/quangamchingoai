@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './LinhTangVisualizer.module.css';
@@ -171,7 +172,7 @@ export default function DaoAnhToLinhTangModal({
         <div className={styles.modalHeader} style={{ marginBottom: 4 }}>
           <div>
             <h3 className={`${styles.modalTitle} ${styles.assignModalTitle}`}>
-              <span>🏛️</span>
+              <span><Icon name="shield" size={14} /></span>
               <span>TUYỂN CHỌN 5 ĐẠO ANH HÓA 5 BÍ TÀNG</span>
             </h3>
             <p style={{ margin: '6px 0 0 0', fontSize: 13, color: '#94a3b8' }}>
@@ -206,7 +207,7 @@ export default function DaoAnhToLinhTangModal({
                   cursor: 'pointer'
                 }}
               >
-                ⚡ Gợi Ý Top 5 Mạnh Nhất
+                <Icon name="bolt" size={14} /> Gợi Ý Top 5 Mạnh Nhất
               </button>
               <button 
                 onClick={handleClearAll}
@@ -284,7 +285,7 @@ export default function DaoAnhToLinhTangModal({
                           <img src={artUrl} alt={da.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
                           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-                            ⚡
+                            
                           </div>
                         )}
                       </div>
@@ -408,7 +409,7 @@ export default function DaoAnhToLinhTangModal({
                       <img src={artUrl} alt={da.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-                        ⚡
+                        
                       </div>
                     )}
                   </div>
@@ -455,7 +456,7 @@ export default function DaoAnhToLinhTangModal({
                         alignItems: 'center',
                         gap: 4
                       }}>
-                        <span>🏛️ Đã gán vào TÒA {ROMAN_NUMERALS[assignedSlotIndex]}</span>
+                        <span><Icon name="shield" size={14} /> Đã gán vào TÒA {ROMAN_NUMERALS[assignedSlotIndex]}</span>
                         {isLocked && <span style={{ color: '#4ade80' }}>(Đã mở cổng)</span>}
                       </div>
                     )}
@@ -525,8 +526,8 @@ export default function DaoAnhToLinhTangModal({
             }}
           >
             {mode === 'reassign' 
-              ? `🏛️ XÁC NHẬN THIẾT LẬP 5 BÍ TÀNG (${selectedCount}/5)`
-              : `⚡ XÁC NHẬN ĐỘT PHÁ LINH TÀNG (${selectedCount}/5)`}
+              ? `XÁC NHẬN THIẾT LẬP 5 BÍ TÀNG (${selectedCount}/5)`
+              : `XÁC NHẬN ĐỘT PHÁ LINH TÀNG (${selectedCount}/5)`}
           </button>
         </div>
       </div>

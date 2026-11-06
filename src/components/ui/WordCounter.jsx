@@ -1,3 +1,4 @@
+import Icon from './Icon';
 import { useWordCount } from '../../hooks/useWordCount';
 import styles from './WordCounter.module.css';
 
@@ -38,7 +39,7 @@ export default function WordCounter({ value, onChange }) {
           onClick={handleCopy}
           title="Copy toàn bộ nội dung"
         >
-          📋 Copy tất cả
+          <Icon name="copy" size={14} /> Copy tất cả
         </button>
         <button
           type="button"
@@ -46,7 +47,7 @@ export default function WordCounter({ value, onChange }) {
           onClick={handleClear}
           title="Xóa toàn bộ nội dung"
         >
-          🗑 Xóa tất cả
+          <Icon name="trash" size={14} /> Xóa tất cả
         </button>
       </div>
     </div>

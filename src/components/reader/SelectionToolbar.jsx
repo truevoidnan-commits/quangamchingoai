@@ -1,3 +1,4 @@
+import Icon from '../ui/Icon';
 import React, { useState } from 'react';
 import { getPreciseSelectionSetting, setPreciseSelectionSetting } from '../../lib/selectionUtils';
 import styles from './SelectionEditor.module.css';
@@ -99,7 +100,7 @@ export default function SelectionToolbar({
             }}
             title="Sửa hoặc thay thế đoạn chữ này"
           >
-            ✏️ Sửa / Thay thế
+            <Icon name="edit" size={14} /> Sửa / Thay thế
           </button>
 
           <button
@@ -111,7 +112,7 @@ export default function SelectionToolbar({
             }}
             title="Xóa hẳn đoạn chữ này khỏi chương"
           >
-            🗑️ Xóa hẳn
+            <Icon name="trash" size={14} /> Xóa hẳn
           </button>
 
           {matchCount > 1 && (
@@ -124,7 +125,7 @@ export default function SelectionToolbar({
               }}
               title={`Tìm thấy ${matchCount} lần xuất hiện trong chương này`}
             >
-              🔁 Đổi tất cả ({matchCount})
+              <Icon name="replace" size={14} /> Đổi tất cả ({matchCount})
             </button>
           )}
 
@@ -133,7 +134,7 @@ export default function SelectionToolbar({
             onClick={handleCopy}
             title="Sao chép vào khay nhớ tạm"
           >
-            {copied ? '✓ Đã chép' : '📋 Sao chép'}
+            {copied ? <><Icon name="check" size={14} /> Đã chép</> : <><Icon name="copy" size={14} /> Sao chép</>}
           </button>
 
           <button
@@ -147,7 +148,7 @@ export default function SelectionToolbar({
                 : 'Bật chọn chính xác từng ký tự (không tự mở rộng ra cả từ)'
             }
           >
-            🎯 Chính xác
+            <Icon name="star" size={13} /> Chính xác
           </button>
 
           <div className={styles.toolbarDivider} />

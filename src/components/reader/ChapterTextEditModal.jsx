@@ -1,3 +1,4 @@
+import Icon from '../ui/Icon';
 import React, { useState, useEffect, useRef } from 'react';
 import { countMatchesInNovel } from '../../lib/db';
 import { toTitleCaseVi } from '../../lib/textFixer';
@@ -136,7 +137,7 @@ export default function ChapterTextEditModal({
         {/* Header */}
         <div className={styles.modalHeader}>
           <div className={styles.modalTitleWrap}>
-            <span className={styles.modalIcon}>✏️</span>
+            <Icon name="edit" size={18} className={styles.modalIcon} />
             <h3 className={styles.modalTitle}>Chỉnh Sửa Văn Bản Chương</h3>
           </div>
           <button className={styles.closeBtn} onClick={onClose} title="Đóng (Esc)">
@@ -180,7 +181,7 @@ export default function ChapterTextEditModal({
                   onClick={handleReset}
                   title="Khôi phục nguyên bản"
                 >
-                  🔄 Đặt lại
+                  <Icon name="refresh" size={14} /> Đặt lại
                 </button>
                 <button
                   type="button"
@@ -304,7 +305,7 @@ export default function ChapterTextEditModal({
               onClick={handleDelete}
               title={scope === 'novel' ? 'Xóa cụm từ này khỏi toàn bộ các chương trong truyện' : 'Xóa hẳn đoạn này'}
             >
-              🗑️ {scope === 'novel' ? 'Xóa khỏi TOÀN BỘ TRUYỆN' : (scope === 'all' ? 'Xóa toàn bộ trong chương' : 'Xóa hẳn đoạn này')}
+              <Icon name="trash" size={14} /> {scope === 'novel' ? 'Xóa khỏi TOÀN BỘ TRUYỆN' : (scope === 'all' ? 'Xóa toàn bộ trong chương' : 'Xóa hẳn đoạn này')}
             </button>
           </div>
 
@@ -322,7 +323,7 @@ export default function ChapterTextEditModal({
               onClick={handleSave}
               title="Lưu thay đổi (Ctrl + Enter)"
             >
-              💾 {newText === ''
+              <Icon name="save" size={14} /> {newText === ''
                 ? (scope === 'novel' ? 'Xác nhận Xóa toàn bộ truyện' : (scope === 'all' ? 'Xác nhận Xóa toàn chương' : 'Lưu (Xóa rỗng)'))
                 : (scope === 'novel' ? 'Thay thế TOÀN BỘ TRUYỆN' : (scope === 'all' ? 'Thay thế toàn chương' : 'Lưu Thay Đổi'))
               }

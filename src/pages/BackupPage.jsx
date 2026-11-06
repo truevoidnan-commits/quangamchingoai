@@ -1,3 +1,4 @@
+import Icon from '../components/ui/Icon';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -279,13 +280,13 @@ export default function BackupPage() {
           ← Về Đồng Bộ Cloud
         </Link>
         <Link to="/" className={styles.backLink}>
-          📖 Về Thư Viện
+          <Icon name="book" size={16} /> Về Thư Viện
         </Link>
       </div>
 
       {/* Header */}
       <div className={styles.headerTitle}>
-        <span className={styles.headerIcon}>💾</span>
+        <span className={styles.headerIcon}><Icon name="save" size={24} /></span>
         <div>
           <h1 className={styles.title}>Sao Lưu & Khôi Phục</h1>
           <div className={styles.subtitle}>
@@ -297,10 +298,10 @@ export default function BackupPage() {
       {/* Last backup info bar */}
       <div className={styles.lastBackupBar}>
         <div>
-          🕒 <strong>Sao lưu gần nhất:</strong> {formatTimestamp(lastBackupAt)}
+          <Icon name="hourglass" size={14} /> <strong>Sao lưu gần nhất:</strong> {formatTimestamp(lastBackupAt)}
         </div>
         {isBackupOverdue(14) && (
-          <span className={styles.overdueBadge}>⚠️ Đã quá 14 ngày</span>
+          <span className={styles.overdueBadge}>Đã quá 14 ngày</span>
         )}
       </div>
 
@@ -310,13 +311,13 @@ export default function BackupPage() {
           className={`${styles.tabBtn} ${activeTab === 'export' ? styles.tabBtnActive : ''}`}
           onClick={() => setActiveTab('export')}
         >
-          📥 Sao Lưu (Xuất File)
+          <Icon name="download" size={16} /> Sao Lưu (Xuất File)
         </button>
         <button
           className={`${styles.tabBtn} ${activeTab === 'import' ? styles.tabBtnActive : ''}`}
           onClick={() => setActiveTab('import')}
         >
-          📤 Khôi Phục (Nhập File)
+          <Icon name="upload" size={16} /> Khôi Phục (Nhập File)
         </button>
       </div>
 
@@ -325,7 +326,7 @@ export default function BackupPage() {
       {/* ========================================================= */}
       {activeTab === 'export' && (
         <div className={styles.card}>
-          <h2 className={styles.cardTitle}>📦 Chọn Dữ Liệu Cần Xuất</h2>
+          <h2 className={styles.cardTitle}>Chọn Dữ Liệu Cần Xuất</h2>
           <div className={styles.sectionNote}>
             Dữ liệu sẽ được gói gọn vào một file nén <strong>.tclbackup.json.gz</strong> duy nhất, có mã kiểm tra SHA-256 chống hư hỏng file.
           </div>
@@ -342,7 +343,7 @@ export default function BackupPage() {
             />
             <div className={styles.partInfo}>
               <div className={styles.partTitle}>
-                📚 Truyện Trong Thư Viện ({availableNovels.length} truyện)
+                Truyện Trong Thư Viện ({availableNovels.length} truyện)
               </div>
               <div className={styles.partDesc}>
                 Bao gồm tên, tác giả, mô tả, ảnh bìa và danh sách chương.
@@ -364,7 +365,7 @@ export default function BackupPage() {
               </label>
               {!includeContent && (
                 <div style={{ fontSize: '0.8rem', color: '#38bdf8', marginBottom: 10 }}>
-                  💡 Chế độ "Chỉ danh sách + tiến độ" giúp file siêu nhẹ (~vài chục KB). Khi khôi phục bạn có thể đồng bộ lại nội dung từ Cloud.
+                  Chế độ "Chỉ danh sách + tiến độ" giúp file siêu nhẹ (~vài chục KB). Khi khôi phục bạn có thể đồng bộ lại nội dung từ Cloud.
                 </div>
               )}
 
@@ -407,7 +408,7 @@ export default function BackupPage() {
                         <span>{novel.title}</span>
                       </label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {novel.isHidden && <span className={styles.badgeHidden}>🔒 Mật Thất</span>}
+                        {novel.isHidden && <span className={styles.badgeHidden}>Mật Thất</span>}
                         <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>{novel.chapterCount || 0}c</span>
                       </div>
                     </div>
@@ -427,7 +428,7 @@ export default function BackupPage() {
             />
             <div className={styles.partInfo}>
               <div className={styles.partTitle}>
-                🔖 Tiến Độ Đọc
+                Tiến Độ Đọc
               </div>
               <div className={styles.partDesc}>
                 Vị trí cuộn trang, đoạn văn và chương đang đọc dở của từng truyện.
@@ -451,7 +452,7 @@ export default function BackupPage() {
             />
             <div className={styles.partInfo}>
               <div className={styles.partTitle}>
-                ⚡ Tu Vi & Thời Gian Ngộ Đạo Đang Chờ
+                Tu Vi & Thời Gian Ngộ Đạo Đang Chờ
                 {isSandbox && <span className={styles.overdueBadge}>Chỉ dành cho Hồ sơ Thật</span>}
               </div>
               <div className={styles.partDesc}>
@@ -471,7 +472,7 @@ export default function BackupPage() {
             />
             <div className={styles.partInfo}>
               <div className={styles.partTitle}>
-                ⚙️ Cài Đặt Đọc
+                Cài Đặt Đọc
               </div>
               <div className={styles.partDesc}>
                 Cỡ chữ, kiểu font, giãn dòng, khoảng cách đoạn và giao diện nền sáng/tối.
@@ -489,7 +490,7 @@ export default function BackupPage() {
             />
             <div className={styles.partInfo}>
               <div className={styles.partTitle}>
-                🔒 Tàng Kinh Mật Thất
+                Tàng Kinh Mật Thất
               </div>
               <div className={styles.partDesc}>
                 Mã băm mật khẩu, gợi ý mật khẩu và trạng thái bảo vệ mật thất.
@@ -501,7 +502,7 @@ export default function BackupPage() {
           {hasSelectedHiddenNovels && (
             <div className={styles.alertWarning}>
               <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                ⚠️ Cảnh báo bảo mật truyện ẩn:
+                Cảnh báo bảo mật truyện ẩn:
               </div>
               <div>
                 Bạn đã chọn sao lưu truyện thuộc <strong>Tàng Kinh Mật Thất</strong>. Lưu ý rằng file sao lưu này <strong>KHÔNG ĐƯỢC MÃ HÓA</strong>; bất kỳ ai có file này đều có thể mở và đọc được các truyện ẩn.
@@ -533,7 +534,7 @@ export default function BackupPage() {
 
           {estimatedSize.rawBytes > 150 * 1024 * 1024 && (
             <div className={styles.alertWarning} style={{ marginTop: 12 }}>
-              ⚠️ <strong>Cảnh báo dung lượng lớn:</strong> Dung lượng thô ước tính vượt quá 150MB ({formatBytes(estimatedSize.rawBytes)}). Trình duyệt có thể gặp hiện tượng quá tải bộ nhớ (tràn RAM) khi tạo file. Khuyên bạn nên chia nhỏ sao lưu theo từng nhóm truyện hoặc bỏ tùy chọn "Kèm toàn bộ nội dung văn bản của các chương".
+              <Icon name="alert-triangle" size={16} /> <strong>Cảnh báo dung lượng lớn:</strong> Dung lượng thô ước tính vượt quá 150MB ({formatBytes(estimatedSize.rawBytes)}). Trình duyệt có thể gặp hiện tượng quá tải bộ nhớ (tràn RAM) khi tạo file. Khuyên bạn nên chia nhỏ sao lưu theo từng nhóm truyện hoặc bỏ tùy chọn "Kèm toàn bộ nội dung văn bản của các chương".
             </div>
           )}
 
@@ -570,7 +571,7 @@ export default function BackupPage() {
                 style={{ width: 'auto', padding: '8px 16px', fontSize: '0.88rem' }}
                 onClick={() => downloadOrShareBackupFile(exportSuccess.blob, exportSuccess.filename)}
               >
-                📥 Tải xuống / Chia sẻ lại file này
+                <Icon name="download" size={16} /> Tải xuống / Chia sẻ lại file này
               </button>
             </div>
           )}
@@ -583,7 +584,7 @@ export default function BackupPage() {
               onClick={handleStartExport}
               disabled={isExporting || (hasSelectedHiddenNovels && !confirmHiddenExport)}
             >
-              {isExporting ? '⏳ Đang tạo file sao lưu...' : '💾 Bắt Đầu Xuất File Sao Lưu'}
+              {isExporting ? 'Đang tạo file sao lưu...' : <><Icon name="save" size={16} /> Bắt Đầu Xuất File Sao Lưu</>}
             </button>
           </div>
         </div>
@@ -597,7 +598,7 @@ export default function BackupPage() {
           {/* Step 1: Select file if no preview */}
           {!previewData && (
             <div className={styles.card}>
-              <h2 className={styles.cardTitle}>📂 Chọn File Sao Lưu Cần Khôi Phục</h2>
+              <h2 className={styles.cardTitle}>Chọn File Sao Lưu Cần Khôi Phục</h2>
               <div className={styles.sectionNote}>
                 Hỗ trợ cả định dạng file nén <code>.tclbackup.json.gz</code> và file JSON thường <code>.tclbackup.json</code>.
               </div>
@@ -608,7 +609,7 @@ export default function BackupPage() {
                 className={styles.dropzone}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <div className={styles.dropzoneIcon}>📁</div>
+                <div className={styles.dropzoneIcon}><Icon name="folder" size={48} /></div>
                 <div className={styles.dropzoneText}>
                   {isReadingFile ? 'Đang đọc và kiểm tra tính toàn vẹn của file...' : 'Nhấn vào đây để chọn file sao lưu'}
                 </div>
@@ -631,7 +632,7 @@ export default function BackupPage() {
           {previewData && !restoreReport && (
             <div className={styles.card}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <h2 className={styles.cardTitle} style={{ margin: 0 }}>🔍 Xem Trước Dữ Liệu File Sao Lưu</h2>
+                <h2 className={styles.cardTitle} style={{ margin: 0 }}>Xem Trước Dữ Liệu File Sao Lưu</h2>
                 <button
                   type="button"
                   className={styles.btnSecondary}
@@ -650,10 +651,10 @@ export default function BackupPage() {
               {/* File Info Bar */}
               <div className={styles.alertInfo}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
-                  <div>📅 <strong>Ngày xuất:</strong> {new Date(previewData.exportedAt).toLocaleString('vi-VN')}</div>
-                  <div>🏷️ <strong>Hồ sơ gốc:</strong> {previewData.profile === 'real' ? 'Hồ Sơ Thật' : 'Hồ Sơ Sandbox'}</div>
-                  <div>📚 <strong>Tổng truyện:</strong> {previewData.totalNovelsInBackup}</div>
-                  <div>📖 <strong>Tổng chương:</strong> {previewData.totalChaptersInBackup}</div>
+                  <div><strong>Ngày xuất:</strong> {new Date(previewData.exportedAt).toLocaleString('vi-VN')}</div>
+                  <div><strong>Hồ sơ gốc:</strong> {previewData.profile === 'real' ? 'Hồ Sơ Thật' : 'Hồ Sơ Sandbox'}</div>
+                  <div><strong>Tổng truyện:</strong> {previewData.totalNovelsInBackup}</div>
+                  <div><strong>Tổng chương:</strong> {previewData.totalChaptersInBackup}</div>
                 </div>
               </div>
 
@@ -711,7 +712,7 @@ export default function BackupPage() {
                 return (
                   <div className={styles.alertDanger} style={{ marginTop: 16 }}>
                     <div style={{ fontWeight: 700, marginBottom: 6, fontSize: '0.95rem' }}>
-                      ⚠️ Cảnh báo chế độ Thay Thế Toàn Bộ:
+                      Cảnh báo chế độ Thay Thế Toàn Bộ:
                     </div>
                     <div style={{ fontSize: '0.88rem', marginBottom: 12, lineHeight: 1.5 }}>
                       Chế độ này sẽ thay thế các mục đã chọn trên máy bằng dữ liệu từ file sao lưu. Hệ thống sẽ tự động lưu ảnh chụp tu vi an toàn trước khi thay thế.
@@ -726,7 +727,7 @@ export default function BackupPage() {
                         onChange={(e) => setAutoBackupBeforeReplace(e.target.checked)}
                       />
                       <span>
-                        🛡️ <strong>Tải bản sao lưu dữ liệu hiện tại về máy trước khi thay thế</strong> (Khuyên dùng để phòng ngừa rủi ro mất dữ liệu).
+                        <Icon name="shield" size={16} /> <strong>Tải bản sao lưu dữ liệu hiện tại về máy trước khi thay thế</strong> (Khuyên dùng để phòng ngừa rủi ro mất dữ liệu).
                       </span>
                     </label>
 
@@ -739,7 +740,7 @@ export default function BackupPage() {
                         onChange={(e) => setDeleteUnlistedNovels(e.target.checked)}
                       />
                       <span>
-                        🗑️ <strong>Cũng xóa các truyện trên máy không có trong file</strong> (Mặc định: KHÔNG xóa).
+                        <Icon name="trash" size={16} /> <strong>Cũng xóa các truyện trên máy không có trong file</strong> (Mặc định: KHÔNG xóa).
                       </span>
                     </label>
 
@@ -747,7 +748,7 @@ export default function BackupPage() {
                     {deleteUnlistedNovels && (
                       <div style={{ marginTop: 10, padding: 12, background: 'rgba(0, 0, 0, 0.4)', borderRadius: 8, border: '1px solid rgba(239, 68, 68, 0.4)' }}>
                         <div style={{ fontWeight: 700, color: '#f87171', marginBottom: 6 }}>
-                          🚨 Danh sách truyện trên máy sẽ bị XÓA ({novelsToDelete.length} truyện):
+                          <Icon name="alert-triangle" size={16} /> Danh sách truyện trên máy sẽ bị XÓA ({novelsToDelete.length} truyện):
                         </div>
                         {novelsToDelete.length > 0 ? (
                           <ul style={{ margin: '0 0 8px 0', paddingLeft: 20, maxHeight: 160, overflowY: 'auto' }}>
@@ -763,7 +764,7 @@ export default function BackupPage() {
                           </div>
                         )}
                         <div style={{ fontSize: '0.82rem', color: '#f87171', lineHeight: 1.4 }}>
-                          ⚠️ <strong>Lưu ý:</strong> Việc xóa các truyện này sẽ được ghi nhận bia mộ (tombstone) và tự động đồng bộ xóa lên Cloud cũng như các thiết bị khác ở lần đồng bộ tiếp theo.
+                          <Icon name="alert-triangle" size={16} /> <strong>Lưu ý:</strong> Việc xóa các truyện này sẽ được ghi nhận bia mộ (tombstone) và tự động đồng bộ xóa lên Cloud cũng như các thiết bị khác ở lần đồng bộ tiếp theo.
                         </div>
                       </div>
                     )}
@@ -799,7 +800,7 @@ export default function BackupPage() {
                       checked={selectedRestoreParts.novels}
                       onChange={(e) => setSelectedRestoreParts(p => ({ ...p, novels: e.target.checked }))}
                     />
-                    <span>📚 Truyện Trong Thư Viện ({previewData.novels.length})</span>
+                    <span>Truyện Trong Thư Viện ({previewData.novels.length})</span>
                   </label>
 
                   {selectedRestoreParts.novels && previewData.novels.length > 0 && (
@@ -835,7 +836,7 @@ export default function BackupPage() {
                                 <td>
                                   <div style={{ fontWeight: 600 }}>{novel.title}</div>
                                   <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                                    {novel.author || 'Khuyết danh'} {novel.isHidden && '· 🔒 Ẩn'}
+                                    {novel.author || 'Khuyết danh'} {novel.isHidden && '· Ẩn'}
                                   </div>
                                 </td>
                                 <td>
@@ -873,7 +874,7 @@ export default function BackupPage() {
                       </table>
                       {restoreMode === 'merge' && (
                         <div style={{ fontSize: '0.8rem', color: '#38bdf8', marginTop: 8 }}>
-                          💡 <strong>Ghi chú chế độ Gộp:</strong> Nếu truyện đã có trên máy, chỉ ghi đè khi bản trong file mới hơn. Nếu trên máy có các chương mà file sao lưu không có, các chương đó vẫn được giữ lại nguyên vẹn.
+                          <Icon name="lightbulb" size={16} /> <strong>Ghi chú chế độ Gộp:</strong> Nếu truyện đã có trên máy, chỉ ghi đè khi bản trong file mới hơn. Nếu trên máy có các chương mà file sao lưu không có, các chương đó vẫn được giữ lại nguyên vẹn.
                         </div>
                       )}
                     </div>
@@ -889,7 +890,7 @@ export default function BackupPage() {
                       checked={selectedRestoreParts.progress}
                       onChange={(e) => setSelectedRestoreParts(p => ({ ...p, progress: e.target.checked }))}
                     />
-                    <span>🔖 Tiến Độ Đọc (Vị trí cuộn trang & chương đang đọc)</span>
+                    <span>Tiến Độ Đọc (Vị trí cuộn trang & chương đang đọc)</span>
                   </label>
                 </div>
 
@@ -904,12 +905,12 @@ export default function BackupPage() {
                         disabled={previewData.cultivation.isSandboxBlocked}
                         onChange={(e) => setSelectedRestoreParts(p => ({ ...p, cultivation: e.target.checked }))}
                       />
-                      <span>⚡ Tu Vi & Hồ Sơ Tu Luyện</span>
+                      <span>Tu Vi & Hồ Sơ Tu Luyện</span>
                     </label>
 
                     {previewData.cultivation.isSandboxBlocked ? (
                       <div className={styles.alertWarning} style={{ margin: '8px 0 0 0' }}>
-                        🚫 Hồ sơ Thử Nghiệm (Sandbox) không thể khôi phục tu vi. Hãy chuyển sang Hồ sơ Thật nếu muốn khôi phục.
+                        Hồ sơ Thử Nghiệm (Sandbox) không thể khôi phục tu vi. Hãy chuyển sang Hồ sơ Thật nếu muốn khôi phục.
                       </div>
                     ) : (
                       <>
@@ -979,7 +980,7 @@ export default function BackupPage() {
                         checked={selectedRestoreParts.settings}
                         onChange={(e) => setSelectedRestoreParts(p => ({ ...p, settings: e.target.checked }))}
                       />
-                      <span>⚙️ Cài Đặt Đọc (Font, cỡ chữ, giao diện nền) {previewData.settings.isDifferent && '(Khác với máy)'}</span>
+                      <span>Cài Đặt Đọc (Font, cỡ chữ, giao diện nền) {previewData.settings.isDifferent && '(Khác với máy)'}</span>
                     </label>
                   </div>
                 )}
@@ -994,7 +995,7 @@ export default function BackupPage() {
                         checked={selectedRestoreParts.vault}
                         onChange={(e) => setSelectedRestoreParts(p => ({ ...p, vault: e.target.checked }))}
                       />
-                      <span>🔒 Mật Khẩu Tàng Kinh Mật Thất {previewData.vault.isDifferent && '(Khác với máy)'}</span>
+                      <span>Mật Khẩu Tàng Kinh Mật Thất {previewData.vault.isDifferent && '(Khác với máy)'}</span>
                     </label>
                   </div>
                 )}
@@ -1031,8 +1032,8 @@ export default function BackupPage() {
                   }
                 >
                   {isRestoring
-                    ? '⏳ Đang khôi phục...'
-                    : (restoreMode === 'replace' ? '⚠️ Xác Nhận Thay Thế Toàn Bộ' : '🚀 Bắt Đầu Khôi Phục (Gộp)')
+                    ? 'Đang khôi phục...'
+                    : (restoreMode === 'replace' ? 'Xác Nhận Thay Thế Toàn Bộ' : 'Bắt Đầu Khôi Phục (Gộp)')
                   }
                 </button>
               </div>
@@ -1043,7 +1044,7 @@ export default function BackupPage() {
           {restoreReport && (
             <div className={styles.card}>
               <h2 className={styles.cardTitle} style={{ color: '#34d399' }}>
-                🎉 Khôi Phục Dữ Liệu Hoàn Tất!
+                Khôi Phục Dữ Liệu Hoàn Tất!
               </h2>
 
               <div className={styles.resultGrid}>
@@ -1072,12 +1073,12 @@ export default function BackupPage() {
               </div>
 
               <div style={{ fontSize: '0.88rem', color: '#cbd5e1', lineHeight: 1.6, marginTop: 12 }}>
-                {restoreReport.cultivationRestored && <div>⚡ <strong>Tu vi:</strong> Đã khôi phục thành công.</div>}
-                {restoreReport.settingsRestored && <div>⚙️ <strong>Cài đặt đọc:</strong> Đã cập nhật.</div>}
-                {restoreReport.vaultRestored && <div>🔒 <strong>Mật thất:</strong> Đã cập nhật mật khẩu.</div>}
+                {restoreReport.cultivationRestored && <div><strong>Tu vi:</strong> Đã khôi phục thành công.</div>}
+                {restoreReport.settingsRestored && <div><strong>Cài đặt đọc:</strong> Đã cập nhật.</div>}
+                {restoreReport.vaultRestored && <div><strong>Mật thất:</strong> Đã cập nhật mật khẩu.</div>}
                 {restoreReport.skippedInvalidKeys > 0 && (
                   <div style={{ color: '#fbbf24' }}>
-                    🛡️ Đã bỏ qua {restoreReport.skippedInvalidKeys} khóa không hợp lệ ngoài allowlist.
+                    Đã bỏ qua {restoreReport.skippedInvalidKeys} khóa không hợp lệ ngoài allowlist.
                   </div>
                 )}
               </div>
@@ -1094,7 +1095,7 @@ export default function BackupPage() {
               )}
 
               <div className={styles.alertInfo} style={{ marginTop: 20 }}>
-                💡 <strong>Đồng bộ Cloud:</strong> Toàn bộ truyện và tiến độ đọc vừa khôi phục đã được cấp nhãn thời gian mới nhất (causal timestamp) và sẽ tự động được đẩy lên Cloud ở lần đồng bộ tiếp theo.
+                <Icon name="lightbulb" size={16} /> <strong>Đồng bộ Cloud:</strong> Toàn bộ truyện và tiến độ đọc vừa khôi phục đã được cấp nhãn thời gian mới nhất (causal timestamp) và sẽ tự động được đẩy lên Cloud ở lần đồng bộ tiếp theo.
               </div>
 
               <div style={{ display: 'flex', gap: 12, marginTop: 24, flexWrap: 'wrap' }}>
@@ -1104,7 +1105,7 @@ export default function BackupPage() {
                   style={{ flex: 1 }}
                   onClick={() => navigate('/')}
                 >
-                  📖 Về Thư Viện Đọc Truyện
+                  <Icon name="book" size={16} /> Về Thư Viện Đọc Truyện
                 </button>
                 <button
                   type="button"
@@ -1112,7 +1113,7 @@ export default function BackupPage() {
                   style={{ flex: 1 }}
                   onClick={() => navigate('/sync')}
                 >
-                  ☁️ Mở Trang Đồng Bộ Cloud
+                  <Icon name="cloud" size={16} /> Mở Trang Đồng Bộ Cloud
                 </button>
               </div>
             </div>

@@ -94,7 +94,7 @@ export function preloadCoreArtifactIcons() {
  * @returns {{ type: 'img'|'svg'|'emoji', src?: string, tier: string, color: string }}
  */
 export function getArtifactIconConfig(item) {
-  if (!item) return { type: 'emoji', emoji: '🌫️', tier: 'ha_pham', color: '#94a3b8' };
+  if (!item) return { type: 'emoji', emoji: '', iconKey: 'mist', tier: 'ha_pham', color: '#94a3b8' };
 
   const tier = item.tier || 'ha_pham';
   const color = item.color || TIER_COLORS[tier] || '#94a3b8';

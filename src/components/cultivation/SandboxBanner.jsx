@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 import React, { useState, useEffect, Suspense } from 'react';
 import { getActiveProfile, setActiveProfile } from '../../lib/cultivation';
 import { lazyWithRetry } from '../../lib/lazyWithRetry';
@@ -40,7 +41,7 @@ export default function SandboxBanner() {
     <>
       <aside className={styles.banner} aria-label="Cảnh báo Hồ Sơ Thử Nghiệm">
         <div className={styles.leftInfo}>
-          <span className={styles.icon}>⚠️</span>
+          <span className={styles.icon}><Icon name="alert-triangle" size={16} /></span>
           <span className={styles.tag}>SANDBOX</span>
           <span className={styles.text}>
             ĐANG Ở HỒ SƠ THỬ NGHIỆM – không ảnh hưởng tu vi thật
@@ -54,7 +55,7 @@ export default function SandboxBanner() {
             onClick={() => setIsAdminModalOpen(true)}
             title="Mở Bảng Điều Khiển Admin (chỉ có trong Sandbox)"
           >
-            <span>⚡</span>
+            <span><Icon name="bolt" size={14} /></span>
             <span>Bảng Admin</span>
           </button>
 
@@ -64,7 +65,7 @@ export default function SandboxBanner() {
             onClick={handleSwitchToReal}
             title="Quay lại Hồ Sơ Thật"
           >
-            <span>↩</span>
+            <span><Icon name="arrow-left" size={14} /></span>
             <span>Quay về Hồ Sơ Thật</span>
           </button>
         </div>

@@ -1,3 +1,4 @@
+import Icon from '../components/ui/Icon';
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { nanoid } from '../lib/nanoid';
@@ -172,7 +173,7 @@ export default function AddNovelPage() {
       <div className={styles.header}>
         <button className="btn-ghost" onClick={() => navigate(-1)}>← Quay lại</button>
         <h1 className={styles.pageTitle}>
-          {isVaultParam ? 'Thêm truyện vào Mật Thất 🔒' : 'Thêm truyện mới'}
+          {isVaultParam ? 'Thêm truyện vào Mật Thất' : 'Thêm truyện mới'}
         </h1>
       </div>
 
@@ -213,14 +214,14 @@ export default function AddNovelPage() {
               className={`${styles.coverTab} ${coverTab === 'upload' ? styles.coverTabActive : ''}`}
               onClick={() => setCoverTab('upload')}
             >
-              📁 Upload từ máy
+              <Icon name="upload" size={14} /> Upload từ máy
             </button>
             <button
               type="button"
               className={`${styles.coverTab} ${coverTab === 'url' ? styles.coverTabActive : ''}`}
               onClick={() => setCoverTab('url')}
             >
-              🔗 Nhập URL
+              <Icon name="link" size={14} /> Nhập URL
             </button>
           </div>
 
@@ -253,7 +254,7 @@ export default function AddNovelPage() {
                       style={{ fontSize: 12, padding: '4px 10px' }}
                       onClick={() => fileRef.current?.click()}
                     >
-                      🔄 Đổi ảnh khác
+                      <Icon name="refresh" size={14} /> Đổi ảnh khác
                     </button>
                     <button
                       type="button"
@@ -264,13 +265,13 @@ export default function AddNovelPage() {
                         setCropModalOpen(true);
                       }}
                     >
-                      ✂️ Căn chỉnh lại
+                      <Icon name="scissors" size={14} /> Căn chỉnh lại
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className={styles.dropPlaceholder}>
-                  <span>🖼️</span>
+                  <Icon name="image" size={32} />
                   <span>Nhấn hoặc kéo thả ảnh vào đây</span>
                   <span className={styles.dropHint}>Tự động mở bộ căn chỉnh khung chuẩn 3:4</span>
                 </div>
@@ -289,7 +290,7 @@ export default function AddNovelPage() {
                 id="cover-url-input"
               />
               <button type="button" className="btn-ghost" onClick={handleCoverUrl}>
-                ✂️ Cắt & Căn chỉnh
+                <Icon name="scissors" size={14} /> Cắt & Căn chỉnh
               </button>
               {coverPreview && coverTab === 'url' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -303,7 +304,7 @@ export default function AddNovelPage() {
                       setCropModalOpen(true);
                     }}
                   >
-                    ✂️ Chỉnh lại
+                    <Icon name="scissors" size={14} /> Chỉnh lại
                   </button>
                 </div>
               )}
@@ -316,7 +317,7 @@ export default function AddNovelPage() {
           <label className={styles.label}>Upload file truyện (.txt / .epub)</label>
           <div className={styles.fileUploadRow}>
             <label className={`btn-ghost ${styles.fileLabel}`} htmlFor="novel-file-input">
-              📂 Chọn file...
+              <Icon name="folder" size={14} /> Chọn file...
             </label>
             <input
               id="novel-file-input"
@@ -325,18 +326,18 @@ export default function AddNovelPage() {
               onChange={handleFileUpload}
               style={{ display: 'none' }}
             />
-            {parsing && <span className={styles.parseStatus}>⏳ Đang phân tích...</span>}
+            {parsing && <span className={styles.parseStatus}>Đang phân tích...</span>}
           </div>
 
           {parseError && (
-            <div className={styles.parseError}>⚠️ {parseError}</div>
+            <div className={styles.parseError}><Icon name="alert-triangle" size={14} /> {parseError}</div>
           )}
 
           {parsedChapters.length > 0 && (
             <div className={styles.parseResult}>
               <div className={styles.parseResultHeader}>
                 <span className={styles.parseSuccess}>
-                  ✅ Đã tách được <strong>{parsedChapters.length}</strong> chương
+                  <Icon name="check-circle" size={16} /> Đã tách được <strong>{parsedChapters.length}</strong> chương
                   {parsedChapters.filter(c => c.isExtra).length > 0 && (
                     <span className="badge badge-extra" style={{ marginLeft: 8 }}>
                       {parsedChapters.filter(c => c.isExtra).length} ngoại truyện
@@ -349,7 +350,7 @@ export default function AddNovelPage() {
               {sequenceAnalysis.anomalies.length > 0 ? (
                 <div className={styles.anomalyWarningBox}>
                   <div className={styles.anomalyHeader}>
-                    <span className={styles.anomalyIcon}>⚠️</span>
+                    <span className={styles.anomalyIcon}><Icon name="alert-triangle" size={14} /></span>
                     <strong>PHÁT HIỆN {sequenceAnalysis.anomalies.length} VỊ TRÍ NHẢY SỐ CHƯƠNG BẤT THƯỜNG:</strong>
                   </div>
                   <p className={styles.anomalyDesc}>
@@ -375,7 +376,7 @@ export default function AddNovelPage() {
                 </div>
               ) : (
                 <div className={styles.perfectSequenceBox}>
-                  <span>✨ <strong>Thứ tự số chương liền mạch 100%</strong>: Các chương tăng tiến liên tục (+1) không có nhảy số hay thiếu chương.</span>
+                  <span><Icon name="check-circle" size={16} /> <strong>Thứ tự số chương liền mạch 100%</strong>: Các chương tăng tiến liên tục (+1) không có nhảy số hay thiếu chương.</span>
                 </div>
               )}
 
@@ -408,7 +409,7 @@ export default function AddNovelPage() {
             disabled={saving || !title.trim()}
             id="btn-save-novel"
           >
-            {saving ? '⏳ Đang lưu...' : '💾 Lưu truyện'}
+            {saving ? 'Đang lưu...' : <><Icon name="save" size={16} /> Lưu truyện</>}
           </button>
         </div>
       </div>

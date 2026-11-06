@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useCultivationContext } from '../../context/CultivationContext';
@@ -297,7 +298,7 @@ export default function LinhTangVisualizer() {
           onClick={() => setIsReassignModalOpen(true)}
           title="Tự tay chọn hoặc hoán đổi 5 Đạo Anh làm nguyên liệu cho 5 Bí Tàng"
         >
-          <span>🔮</span>
+          <span><Icon name="orb" size={14} /></span>
           <span>Tùy Chỉnh 5 Đạo Anh Bí Tàng</span>
         </button>
       </div>
@@ -324,7 +325,7 @@ export default function LinhTangVisualizer() {
               >
                 <span className={styles.mobileGateTabRoman}>{['TÒA I', 'TÒA II', 'TÒA III', 'TÒA IV', 'TÒA V'][idx]}</span>
                 <span style={{ fontSize: 9, color: isSlotOpen ? '#4ade80' : '#64748b' }}>
-                  {isSlotOpen ? '● Mở' : '🔒 Khóa'}
+                  {isSlotOpen ? 'Mở' : 'Khóa'}
                 </span>
               </button>
             );
@@ -554,7 +555,7 @@ export default function LinhTangVisualizer() {
             <div className={styles.modalHeader}>
               <div>
                 <h3 className={styles.modalTitle}>
-                  🏛️ Khai Mở Cự Tọa Thứ {['Nhất', 'Nhị', 'Tam', 'Tứ', 'Ngũ'][initSlotIndex - 1]} · Định Phôi Thế Giới
+                  Khai Mở Cự Tọa Thứ {['Nhất', 'Nhị', 'Tam', 'Tứ', 'Ngũ'][initSlotIndex - 1]} · Định Phôi Thế Giới
                 </h3>
                 <p style={{ margin: '4px 0 0 0', fontSize: 13, color: '#94a3b8' }}>
                   Chọn một bảo vật thần cấp viễn cổ để đúc thành phôi thai linh tàng:
@@ -629,7 +630,7 @@ export default function LinhTangVisualizer() {
                             className={styles.altarChangeDaBtn}
                             title="Đổi sang Đạo Anh khác trong Thức Hải"
                           >
-                            🔄 Đổi Đạo Anh Khác
+                            <Icon name="refresh" size={14} /> Đổi Đạo Anh Khác
                           </button>
                         )}
                       </div>
@@ -645,7 +646,7 @@ export default function LinhTangVisualizer() {
                         </span>
                       ) : (
                         <span className={`${styles.typePill} ${styles.typePillLocked}`}>
-                          🔒 ĐANG PHONG CẤM
+                          <Icon name="lock" size={14} /> ĐANG PHONG CẤM
                         </span>
                       )}
                       {selectedTang.isThanLinhThai && (
@@ -663,7 +664,7 @@ export default function LinhTangVisualizer() {
               {/* PHẦN 1: THIÊN ĐẠO & DƯỠNG ĐẠO */}
               <div className={`${styles.altarSection} ${isThanTang ? styles.altarSectionThanTang : ''}`}>
                 <div className={`${styles.altarSectionTitle} ${isThanTang ? styles.altarSectionTitleGold : ''}`}>
-                  <span>🌟 Thiên Đạo Trấn Tạng & Khai Mở Tàng Môn</span>
+                  <span><Icon name="star" size={14} /> Thiên Đạo Trấn Tạng & Khai Mở Tàng Môn</span>
                 </div>
 
                 {isGateOpen ? (
@@ -695,7 +696,7 @@ export default function LinhTangVisualizer() {
                           fontSize: 12.5,
                           fontWeight: 700,
                         }}>
-                          🔒 TÒA NÀY ĐANG ĐỢI KHẢI MINH: Cần dưỡng hoàn tất mở cổng [<strong>{cleanName(prevTang?.name)}</strong>] (Tòa Thứ {selectedTang.id - 1}) trước khi bồi dưỡng Tòa này!
+                          TÒA NÀY ĐANG ĐỢI KHẢI MINH: Cần dưỡng hoàn tất mở cổng [<strong>{cleanName(prevTang?.name)}</strong>] (Tòa Thứ {selectedTang.id - 1}) trước khi bồi dưỡng Tòa này!
                         </div>
                       );
                     }
@@ -741,7 +742,7 @@ export default function LinhTangVisualizer() {
                               }
                             }}
                           >
-                            ⚡ Nạp Đầy Thiên Đạo
+                            <Icon name="bolt" size={14} /> Nạp Đầy Thiên Đạo
                           </button>
 
                           {thienDaoPhoiCount > 0 && (
@@ -755,7 +756,7 @@ export default function LinhTangVisualizer() {
                                 }
                               }}
                             >
-                              🌌 Khảm Nạp 1 Thiên Đạo Phôi (Mở Cổng Tức Thì)
+                              <Icon name="sparkle" size={14} /> Khảm Nạp 1 Thiên Đạo Phôi (Mở Cổng Tức Thì)
                             </button>
                           )}
                         </div>
@@ -768,7 +769,7 @@ export default function LinhTangVisualizer() {
               {/* PHẦN 2: HỎA LÒ MỆNH ĐĂNG (KHÔNG CÓ DÒNG +20%) */}
               <div className={`${styles.altarSection} ${isThanTang ? styles.altarSectionThanTang : ''}`}>
                 <div className={`${styles.altarSectionTitle} ${isThanTang ? styles.altarSectionTitleGold : ''}`}>
-                  <span>🔥 Hỏa Lò Mệnh Đăng · Luyện Tàng Dưỡng Đạo</span>
+                  <span><Icon name="flame" size={14} /> Hỏa Lò Mệnh Đăng · Luyện Tàng Dưỡng Đạo</span>
                 </div>
 
                 {assignedHuyenLo[selectedTang.id] ? (
@@ -823,7 +824,7 @@ export default function LinhTangVisualizer() {
                               onClick={() => assignLampHuyenLo(selectedTang.id, lId)}
                             >
                               <img src={lampThumb} alt={lamp?.name} className={styles.lampPickerThumb} />
-                              <span>🔥 Ghép {lamp?.shortName || lamp?.name}</span>
+                              <span><Icon name="flame" size={14} /> Ghép {lamp?.shortName || lamp?.name}</span>
                             </button>
                           );
                         })}
@@ -837,7 +838,7 @@ export default function LinhTangVisualizer() {
               {!isThanTang && (
                 <div className={styles.altarSection}>
                   <div className={`${styles.altarSectionTitle} ${styles.altarSectionTitleGold}`}>
-                    <span>🩸 Bồi Dưỡng Thần Huyết Nhục · Chuyển Hóa Thần Tàng</span>
+                    <span><Icon name="drop" size={14} /> Bồi Dưỡng Thần Huyết Nhục · Chuyển Hóa Thần Tàng</span>
                   </div>
                   
                   <div className={styles.convertCard}>
@@ -863,8 +864,8 @@ export default function LinhTangVisualizer() {
                       style={{ whiteSpace: 'nowrap' }}
                     >
                       {(totalThienMenh || 0) >= THIEN_MENH_PER_THAN_TANG 
-                        ? `🩸 Nạp Thần Huyết Nhục (-${THIEN_MENH_PER_THAN_TANG.toLocaleString()} TM)` 
-                        : `🔒 Chưa Đủ Thiên Mệnh`}
+                        ? `Nạp Thần Huyết Nhục (-${THIEN_MENH_PER_THAN_TANG.toLocaleString()} TM)` 
+                        : 'Chưa Đủ Thiên Mệnh'}
                     </button>
                   </div>
                 </div>
@@ -874,7 +875,7 @@ export default function LinhTangVisualizer() {
               {isThanTang && (
                 <div className={`${styles.altarSection} ${styles.altarSectionThanTang}`}>
                   <div className={`${styles.altarSectionTitle} ${styles.altarSectionTitleGold}`}>
-                    <span>🔮 Dị Tiên Lưu · Dệt Hồn Ti Thần Linh Thái</span>
+                    <span><Icon name="orb" size={14} /> Dị Tiên Lưu · Dệt Hồn Ti Thần Linh Thái</span>
                   </div>
 
                   {selectedTang.isThanLinhThai ? (
@@ -901,14 +902,14 @@ export default function LinhTangVisualizer() {
                           className={selectedTang.isNurturingDiTienLuu ? styles.dangerBtn : styles.primaryBtn}
                           onClick={() => toggleDiTienLuu(selectedTang.id)}
                         >
-                          {selectedTang.isNurturingDiTienLuu ? '⏸ Tạm Dừng Dị Tiên Lưu' : '▶ Bật Tích Lũy Dị Tiên Lưu'}
+                          {selectedTang.isNurturingDiTienLuu ? 'Tạm Dừng Dị Tiên Lưu' : 'Bật Tích Lũy Dị Tiên Lưu'}
                         </button>
 
                         <button 
                           className={styles.goldBtn}
                           onClick={() => feedDiTienLuuExp(selectedTang.id, EXP_PER_DI_TIEN_LUU)}
                         >
-                          ⚡ Hoàn Tất Thần Linh Thái Ngay
+                          <Icon name="bolt" size={14} /> Hoàn Tất Thần Linh Thái Ngay
                         </button>
                       </div>
 
