@@ -1,6 +1,7 @@
-import Icon from '../components/ui/Icon';
+import Icon, { GlyphIcon } from '../components/ui/Icon';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { PageShell, Card, Button } from '../components/ui/FormKit';
 import { supabase } from '../lib/supabaseClient.js';
 import { performSync, checkFirstSyncCondition } from '../lib/sync/syncEngine.js';
 import { getSyncLedger } from '../lib/sync/syncLedger.js';
@@ -272,18 +273,46 @@ export default function SyncPage() {
   };
 
   return (
-    <div className={styles.page}>
-      <div className={styles.headerTitle}>
-        <span className={styles.cloudIcon}><Icon name="cloud" size={32} /></span>
+    <PageShell backdrop="text">
+      {/* Page Header */}
+      <div className={styles.headerWrap}>
+        <div className={styles.headerLeft}>
+          <Link to="/" className={styles.btnOutline} style={{ marginRight: 6 }}>
+            <Icon name="arrow-left" size={14} /> Quay lại
+          </Link>
+          <div className={styles.cloudIconCircle}>
+            <GlyphIcon value="cloud" size={26} />
+          </div>
+          <div className={styles.titleArea}>
+            <h1 className={styles.title}>Đồng Bộ Cloud</h1>
+            <p className={styles.subtitle}>Lưu trữ và đồng bộ truyện, tu vi, tiến độ đọc giữa các thiết bị</p>
+          </div>
+        </div>
         <div>
-          <h1 className={styles.title}>Đồng Bộ Cloud</h1>
-          <div className={styles.subtitle}>Lưu trữ và đồng bộ truyện, tu vi, tiến độ đọc giữa các thiết bị</div>
+          {isSyncing ? (
+            <span className={styles.statusPillSyncing}>
+              <span className={styles.spinnerIcon} /> Đang đồng bộ...
+            </span>
+          ) : session?.user ? (
+            <span className={styles.statusPillLoggedIn}>
+              <GlyphIcon value="check-circle" size={13} /> Đã đăng nhập
+            </span>
+          ) : (
+            <span className={styles.statusPillLoggedOut}>Chưa đăng nhập</span>
+          )}
         </div>
       </div>
 
-      <div className={styles.alertInfo}>
-        <Icon name="phone" size={14} /> <strong>Mẹo đồng bộ:</strong> Vui lòng giữ màn hình sáng và ở yên trang này trong suốt quá trình đồng bộ.
-        Quá trình xử lý từng truyện một để tối ưu hóa bộ nhớ cho thiết bị di động.
+      {/* Mẹo đồng bộ */}
+      <div className={styles.tipCard}>
+        <div className={styles.tipIconCircle}>
+          <GlyphIcon value="lightbulb" size={18} />
+        </div>
+        <div className={styles.tipContent}>
+          <span className={styles.tipTitle}>Mẹo đồng bộ tối ưu:</span>
+          Vui lòng giữ màn hình sáng và ở yên trang này trong suốt quá trình đồng bộ.
+          Hệ thống xử lý tuần tự từng tác phẩm để tối ưu hóa bộ nhớ cho thiết bị di động.
+        </div>
       </div>
 
       {needsReload && (
@@ -318,24 +347,20 @@ export default function SyncPage() {
       )}
 
       {/* Backup & Restore Navigation Card */}
-      <div className={styles.card} style={{ border: '1px solid rgba(234, 179, 8, 0.35)', background: 'rgba(15, 23, 42, 0.85)' }}>
-        <div className={styles.cardHeader}>
-          <h2 className={styles.cardTitle}>
-            <span><Icon name="save" size={16} /></span>
-            <span>Sao Lưu & Khôi Phục (Tập Tin Cục Bộ)</span>
-          </h2>
-          <Link
-            to="/backup"
-            className={styles.btnOutline}
-            style={{ borderColor: '#eab308', color: '#facc15', textDecoration: 'none', fontSize: '0.88rem' }}
-          >
+      <Card
+        icon="save"
+        title="Sao Lưu & Khôi Phục (Tập Tin Cục Bộ)"
+        subtitle="Hoạt động độc lập hoàn toàn với Cloud, không phụ thuộc vào Internet"
+        actions={
+          <Link to="/backup" className={styles.btnOutline}>
             Mở Trang Sao Lưu →
           </Link>
-        </div>
-        <div style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.5 }}>
-          Xuất và nhập toàn bộ truyện, tiến độ đọc và tu vi thành một file nén duy nhất (<code>.tclbackup.json.gz</code>) trên máy của bạn. Hoạt động độc lập hoàn toàn với Cloud, không phụ thuộc vào Internet, an toàn khi đổi máy hoặc phòng sự cố.
-        </div>
-      </div>
+        }
+      >
+        <p style={{ color: '#cbd5e1', fontSize: '0.9rem', lineHeight: 1.5, margin: 0 }}>
+          Xuất và nhập toàn bộ truyện, tiến độ đọc và tu vi thành một file nén duy nhất (<code>.tclbackup.json.gz</code>) trên máy của bạn. An toàn khi đổi máy hoặc phòng sự cố đám mây.
+        </p>
+      </Card>
 
       {isSupabasePausedSuspected() && (
         <div className={styles.alertWarning} style={{ marginBottom: '16px', background: 'rgba(234, 179, 8, 0.12)', border: '1px solid rgba(234, 179, 8, 0.4)' }}>
@@ -349,27 +374,33 @@ export default function SyncPage() {
       )}
 
       {/* Account Section */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <h2 className={styles.cardTitle}>Tài Khoản Cloud</h2>
-        </div>
-
+      <Card
+        icon="user"
+        title="Tài Khoản Cloud"
+        subtitle="Xác thực danh tính bảo mật qua Row Level Security (RLS)"
+      >
         {loadingAuth ? (
           <p style={{ color: '#94a3b8' }}>Đang kiểm tra phiên đăng nhập...</p>
         ) : session?.user ? (
           <div>
-            <div className={styles.userBadge}>
-              <div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Đã đăng nhập:</div>
-                <div className={styles.userEmail}>{session.user.email}</div>
+            <div className={styles.userAccountRow}>
+              <div className={styles.userProfileLeft}>
+                <div className={styles.userAvatar}>
+                  {(session.user.email || 'U').charAt(0).toUpperCase()}
+                </div>
+                <div className={styles.userEmailWrap}>
+                  <div className={styles.userEmail}>{session.user.email}</div>
+                  <div className={styles.userBadgeRow}>
+                    <span className={styles.loggedInBadge}>Đã đăng nhập</span>
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>Bảo mật đám mây</span>
+                  </div>
+                </div>
               </div>
-              <button className={styles.btnOutline} onClick={handleLogout}>
-                Đăng xuất
+              <button className={styles.btnDanger} onClick={handleLogout}>
+                <GlyphIcon value="logout" size={13} />
+                <span>Đăng xuất</span>
               </button>
             </div>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
-              Dữ liệu của bạn được phân vùng bảo mật với Row Level Security (RLS) trên Supabase.
-            </p>
           </div>
         ) : (
           <form onSubmit={handleLogin}>
@@ -398,14 +429,15 @@ export default function SyncPage() {
             </div>
             <button
               type="submit"
-              className={styles.btnSync}
+              className={styles.btnPrimary}
+              style={{ width: '100%', marginTop: 6 }}
               disabled={authSubmitting}
             >
               {authSubmitting ? 'Đang xác thực...' : 'Đăng Nhập Cloud'}
             </button>
           </form>
         )}
-      </div>
+      </Card>
 
       {/* Sync Action Section */}
       {session?.user && (
@@ -952,6 +984,6 @@ export default function SyncPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

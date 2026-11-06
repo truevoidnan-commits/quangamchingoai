@@ -1,9 +1,30 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Icon, { GlyphIcon } from '../components/ui/Icon';
 import { searchChapters, searchAllNovels } from '../lib/db';
 import { getLibrary } from '../lib/storage';
-import TextBackdrop from '../components/layout/TextBackdrop';
+import {
+  PageShell,
+  PageHeader,
+  Card,
+  TextInput,
+  Button,
+} from '../components/ui/FormKit';
 import styles from './SearchPage.module.css';
+
+function highlightMatch(text, query) {
+  if (!query || !query.trim() || !text) return text;
+  const q = query.trim();
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase() ? (
+      <mark key={i} className={styles.highlight}>{part}</mark>
+    ) : (
+      part
+    )
+  );
+}
 
 export default function SearchPage() {
   const navigate = useNavigate();
@@ -18,11 +39,10 @@ export default function SearchPage() {
     setSearching(true);
     try {
       if (selectedNovelId) {
-        const chResults = await searchChapters(selectedNovelId, query);
+        const chResults = await searchChapters(selectedNovelId, query.trim());
         setResults({ type: 'chapters', data: chResults, novelId: selectedNovelId });
       } else {
-        const novelResults = await searchAllNovels(query);
-        // Also search chapters in all novels (limited)
+        const novelResults = await searchAllNovels(query.trim());
         setResults({ type: 'novels', data: novelResults });
       }
     } finally {
@@ -35,106 +55,168 @@ export default function SearchPage() {
   };
 
   return (
-    <div className={styles.page}>
-      <TextBackdrop />
-      <div className={styles.header}>
-        <button className="btn-ghost" onClick={() => navigate(-1)}>← Quay lại</button>
-        <h1 className={styles.title}>Tìm kiếm</h1>
-      </div>
+    <PageShell backdrop="text">
+      <PageHeader
+        backLabel="Quay lại"
+        title="Tìm Kiếm"
+        subtitle="Tra cứu danh mục truyện và trích đoạn chương"
+      />
 
-      <div className={styles.searchBox}>
-        <select
-          value={selectedNovelId}
-          onChange={e => setSelectedNovelId(e.target.value)}
-          className={styles.select}
-          aria-label="Chọn truyện để tìm kiếm"
-        >
-          <option value="">Tất cả truyện</option>
-          {library.map(n => (
-            <option key={n.id} value={n.id}>{n.title}</option>
-          ))}
-        </select>
-        <div className={styles.inputRow}>
-          <input
-            type="search"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Nhập từ khóa tìm kiếm..."
-            className={styles.input}
-            id="search-page-input"
-            autoFocus
-          />
-          <button
-            className="btn-primary"
-            onClick={handleSearch}
-            disabled={searching || !query.trim()}
-            id="btn-search"
-          >
-            {searching ? 'Đang tìm...' : 'Tìm'}
-          </button>
+      {/* SEARCH BOX CARD */}
+      <Card
+        icon="search"
+        title="Bộ Lọc & Từ Khóa"
+        subtitle="Tìm kiếm theo tiêu đề tác phẩm hoặc quét sâu vào nội dung từng chương"
+      >
+        <div className={styles.searchCard}>
+          <div className={styles.scopeSelectWrap}>
+            <select
+              value={selectedNovelId}
+              onChange={(e) => setSelectedNovelId(e.target.value)}
+              className={styles.scopeSelect}
+              aria-label="Chọn truyện để tìm kiếm"
+            >
+              <option value="">Toàn bộ thư viện (Tất cả truyện)</option>
+              {library.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.inputRow}>
+            <div>
+              <TextInput
+                id="search-page-input"
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Nhập tên truyện, tác giả, hoặc từ khóa trong chương..."
+                prefixIcon="search"
+                autoFocus
+              />
+            </div>
+            <Button
+              id="btn-search"
+              variant="primary"
+              icon="search"
+              loading={searching}
+              disabled={searching || !query.trim()}
+              onClick={handleSearch}
+            >
+              {searching ? 'Đang tìm...' : 'Tìm'}
+            </Button>
+          </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Results */}
-      {results && (
-        <div className={styles.results}>
-          {results.type === 'novels' && (
-            <>
-              <h2 className={styles.resultTitle}>
-                {results.data.length} kết quả cho "<em>{query}</em>"
-              </h2>
-              {results.data.length === 0 && (
-                <p className={styles.noResult}>Không tìm thấy truyện nào.</p>
-              )}
-              {results.data.map(novel => (
-                <div
-                  key={novel.id}
-                  className={styles.novelResult}
-                  onClick={() => navigate(`/novel/${novel.id}`)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  {(novel.coverThumb || novel.coverUrl) ? (
-                    <img src={novel.coverThumb || novel.coverUrl} alt={novel.title} className={styles.thumb} />
-                  ) : (
-                    <div className={styles.thumbDefault}>{novel.title.charAt(0)}</div>
-                  )}
-                  <div className={styles.novelInfo}>
-                    <h3 className={styles.novelTitle}>{novel.title}</h3>
-                    <p className={styles.novelDesc}>{novel.description?.slice(0, 100)}...</p>
+      {/* EMPTY / INITIAL STATE */}
+      {results === null && (
+        <Card>
+          <div className={styles.emptyState}>
+            <div className={styles.emptyIconCircle}>
+              <GlyphIcon value="sparkles" size={26} />
+            </div>
+            <h2 className={styles.emptyTitle}>Sẵn Sàng Tra Cứu Toàn Văn</h2>
+            <p className={styles.emptyDesc}>
+              Nhập từ khóa bất kỳ để quét qua tiêu đề toàn bộ thư viện hoặc lọc riêng từng tác phẩm để tìm kiếm trích đoạn nội dung chương.
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {/* RESULTS DISPLAY */}
+      {results !== null && (
+        <div className={styles.resultsList}>
+          <div className={styles.resultsHeader}>
+            <span>
+              {results.type === 'novels' ? 'Kết quả truyện:' : 'Chương chứa từ khóa:'}{' '}
+              <strong>{results.data.length}</strong> kết quả cho "<strong>{query}</strong>"
+            </span>
+          </div>
+
+          {results.data.length === 0 && (
+            <Card>
+              <div className={styles.emptyState}>
+                <div className={styles.emptyIconCircle}>
+                  <GlyphIcon value="info" size={24} />
+                </div>
+                <h2 className={styles.emptyTitle}>Không Tìm Thấy Kết Quả Phù Hợp</h2>
+                <p className={styles.emptyDesc}>
+                  Hãy thử kiểm tra lại chính tả hoặc tìm với từ khóa ngắn hơn, khái quát hơn.
+                </p>
+              </div>
+            </Card>
+          )}
+
+          {/* NOVELS RESULTS */}
+          {results.type === 'novels' &&
+            results.data.map((novel) => (
+              <div
+                key={novel.id}
+                className={styles.novelItem}
+                onClick={() => navigate(`/novel/${novel.id}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') navigate(`/novel/${novel.id}`);
+                }}
+              >
+                {novel.coverThumb || novel.coverUrl ? (
+                  <img
+                    src={novel.coverThumb || novel.coverUrl}
+                    alt={novel.title}
+                    className={styles.novelThumb}
+                  />
+                ) : (
+                  <div className={styles.novelThumbPlaceholder}>
+                    {novel.title.charAt(0)}
                   </div>
-                </div>
-              ))}
-            </>
-          )}
-
-          {results.type === 'chapters' && (
-            <>
-              <h2 className={styles.resultTitle}>
-                {results.data.length} chương chứa "<em>{query}</em>"
-              </h2>
-              {results.data.length === 0 && (
-                <p className={styles.noResult}>Không tìm thấy nội dung nào.</p>
-              )}
-              {results.data.map(ch => (
-                <div
-                  key={ch.id}
-                  className={styles.chapterResult}
-                  onClick={() => navigate(`/novel/${results.novelId}/read/${ch.id}`)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className={styles.chapterResultTitle}>{ch.title}</div>
-                  {ch.snippet && (
-                    <p className={styles.snippet}>{ch.snippet}</p>
+                )}
+                <div className={styles.novelDetails}>
+                  <h3 className={styles.novelTitle}>
+                    {highlightMatch(novel.title, query)}
+                  </h3>
+                  {novel.description && (
+                    <p className={styles.novelDesc}>
+                      {highlightMatch(novel.description, query)}
+                    </p>
                   )}
                 </div>
-              ))}
-            </>
-          )}
+                <div style={{ color: 'var(--text-muted, #7e9ec0)', flexShrink: 0 }}>
+                  <GlyphIcon value="arrow-right" size={16} />
+                </div>
+              </div>
+            ))}
+
+          {/* CHAPTERS RESULTS */}
+          {results.type === 'chapters' &&
+            results.data.map((ch) => (
+              <div
+                key={ch.id}
+                className={styles.chapterItem}
+                onClick={() => navigate(`/novel/${results.novelId}/read/${ch.id}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') navigate(`/novel/${results.novelId}/read/${ch.id}`);
+                }}
+              >
+                <h3 className={styles.chapterTitle}>
+                  <GlyphIcon value="file-text" size={14} />
+                  <span>{highlightMatch(ch.title, query)}</span>
+                </h3>
+                {ch.snippet && (
+                  <p className={styles.snippet}>
+                    {highlightMatch(ch.snippet, query)}
+                  </p>
+                )}
+              </div>
+            ))}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

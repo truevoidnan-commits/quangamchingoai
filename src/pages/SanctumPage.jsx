@@ -5,6 +5,7 @@ import { LIFE_LAMPS, SUPPRESSING_ARTIFACTS, getPalaceNameFromArtifact, getCombat
 import { getLampImageUrl, getArtifactImageUrl } from '../lib/artifactIcons';
 import { useNavigate } from 'react-router-dom';
 import DaoAnhGalleryModal from '../components/cultivation/DaoAnhGalleryModal';
+import TextBackdrop from '../components/layout/TextBackdrop';
 import styles from './SanctumPage.module.css';
 
 export default function SanctumPage() {
@@ -135,6 +136,7 @@ export default function SanctumPage() {
 
   return (
     <div className={styles.sanctumContainer}>
+      <TextBackdrop />
       {/* TOP BANNER & NAVIGATION */}
       <div className={styles.topBanner}>
         <div className={styles.bannerLeft}>

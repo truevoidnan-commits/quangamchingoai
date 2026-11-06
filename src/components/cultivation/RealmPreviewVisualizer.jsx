@@ -1,4 +1,4 @@
-import Icon, { toIconKey } from '../ui/Icon';
+import Icon, { toIconKey, GlyphIcon } from '../ui/Icon';
 
 import { getAssetUrl } from '../../lib/assetHelper';
 export { getAssetUrl };
@@ -4783,16 +4783,11 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                   <g clipPath={`url(#${clipId})`}>
                                     <circle r={r} fill={cfg.chamberBg} opacity="0.85" />
                                     <circle r={r * 0.72} fill="none" stroke={cfg.border} strokeWidth="0.8" strokeDasharray="3 2" opacity="0.6" />
-                                    <text
-                                      x="0"
-                                      y="1.5"
-                                      textAnchor="middle"
-                                      dominantBaseline="central"
-                                      fontSize={r * 0.92}
-                                      style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.6))' }}
-                                    >
-                                      {itemIcon}
-                                    </text>
+                                    <foreignObject x={-14} y={-14} width={28} height={28} style={{ overflow: 'visible' }}>
+                                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.6))' }}>
+                                        <GlyphIcon value={itemIcon} size={18} />
+                                      </div>
+                                    </foreignObject>
                                   </g>
                                 )}
 

@@ -100,13 +100,13 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
 
   const getCategoryName = (catId) => {
     const cat = Object.values(DAO_ANH_ELEMENT_TYPES).find((c) => c.id === catId);
-    return cat ? `${cat.icon} ${cat.name}` : catId;
+    return cat ? cat.name : catId;
   };
 
   const getShortCategoryName = (catId) => {
     const cat = Object.values(DAO_ANH_ELEMENT_TYPES).find((c) => c.id === catId);
     if (!cat) return catId;
-    return `${cat.icon} ${cat.name.split(' & ')[0]}`;
+    return cat.name.split(' & ')[0];
   };
 
   return (
@@ -231,7 +231,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                 onClick={() => setCategoryFilter(cat.id)}
                 title={cat.name}
               >
-                <span className={styles.catIcon}>{cat.icon}</span>
+                <span className={styles.catIcon}><GlyphIcon value={cat.iconKey || cat.icon} size={15} /></span>
                 <span className={styles.catName}>
                   {cat.id === 'all' ? cat.name : cat.name.split(' & ')[0]}
                 </span>

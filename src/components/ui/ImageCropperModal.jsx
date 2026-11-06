@@ -1,5 +1,6 @@
+import { useState, useRef, useEffect } from 'react';
 import Icon from './Icon';
-﻿import { useState, useRef, useEffect, useCallback } from 'react';
+import { Button } from './FormKit';
 import styles from './ImageCropperModal.module.css';
 
 /**
@@ -131,22 +132,27 @@ export default function ImageCropperModal({ imageSrc, onCrop, onClose }) {
     ctx.restore();
 
     // Export as high quality JPEG
-    const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
     onCrop(croppedDataUrl);
     onClose();
   };
 
   return (
     <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.titleWrap}>
-            <Icon name="scissors" size={18} className={styles.icon} />
-            <h3 className={styles.title}>Căn chỉnh bìa truyện (Tỷ lệ 3:4)</h3>
+            <div className={styles.iconCircle}>
+              <Icon name="scissors" size={17} className={styles.icon} />
+            </div>
+            <div>
+              <h3 className={styles.title}>Căn chỉnh bìa truyện</h3>
+              <p className={styles.subtitle}>Chuẩn tỷ lệ 3:4 cho danh sách và chi tiết</p>
+            </div>
           </div>
           <button className={styles.closeBtn} onClick={onClose} aria-label="Đóng">
-            ✕
+            <Icon name="x" size={18} />
           </button>
         </div>
 
@@ -160,7 +166,9 @@ export default function ImageCropperModal({ imageSrc, onCrop, onClose }) {
           onPointerCancel={handlePointerUp}
           onWheel={handleWheel}
         >
-          <div className={styles.hint}>Kéo ảnh hoặc lăn chuột để phóng to/thu nhỏ</div>
+          <div className={styles.hint}>
+            <span>Kéo ảnh hoặc lăn chuột để căn chỉnh</span>
+          </div>
 
           {/* Render draggable image */}
           {imgElement && (
@@ -191,7 +199,10 @@ export default function ImageCropperModal({ imageSrc, onCrop, onClose }) {
         <div className={styles.controls}>
           {/* Zoom Slider */}
           <div className={styles.sliderRow}>
-            <span className={styles.sliderLabel}>Thu phóng</span>
+            <span className={styles.sliderLabel}>
+              <Icon name="sliders" size={13} />
+              <span>Thu phóng</span>
+            </span>
             <input
               type="range"
               min={minScale}
@@ -207,21 +218,39 @@ export default function ImageCropperModal({ imageSrc, onCrop, onClose }) {
           {/* Quick tool buttons + action buttons */}
           <div className={styles.btnRow}>
             <div className={styles.toolBtns}>
-              <button className={styles.toolBtn} onClick={handleRotate} title="Xoay ảnh 90 độ">
-                <Icon name="refresh" size={14} /> Xoay
-              </button>
-              <button className={styles.toolBtn} onClick={handleReset} title="Đặt lại vị trí giữa">
-                ⤢ Giữa
-              </button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleRotate}
+                icon={<Icon name="refresh" size={14} />}
+                className={styles.subBtn}
+              >
+                Xoay 90°
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleReset}
+                icon={<Icon name="grid" size={14} />}
+                className={styles.subBtn}
+              >
+                Căn giữa
+              </Button>
             </div>
 
             <div className={styles.actions}>
-              <button className={`btn-ghost ${styles.cancelBtn}`} onClick={onClose}>
+              <Button variant="ghost" size="sm" onClick={onClose} className={styles.actionBtn}>
                 Hủy
-              </button>
-              <button className={`btn-primary ${styles.applyBtn}`} onClick={handleApply}>
-                ✓ Áp dụng bìa
-              </button>
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleApply}
+                icon={<Icon name="check" size={15} />}
+                className={styles.applyBtn}
+              >
+                Áp dụng bìa
+              </Button>
             </div>
           </div>
         </div>
