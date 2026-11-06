@@ -25,37 +25,45 @@
 
 .bannerBadge {
   display: inline-block;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.22em;
-  color: #ffcc00;
+  color: #ffd21f;
   background: rgba(255, 204, 0, 0.08);
-  border: 1px solid rgba(255, 204, 0, 0.28);
-  padding: 3px 14px;
+  border: 1px solid rgba(255, 204, 0, 0.35);
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.2);
+  padding: 4px 16px;
   border-radius: var(--radius-full);
   margin-bottom: 12px;
-  text-transform: uppercase;
 }
 
 .appTitle {
   font-family: 'Noto Serif', serif;
-  font-size: clamp(28px, 6.5vw, 46px);
+  font-size: clamp(20px, 5.5vw, 28px);
   font-weight: 800;
-  letter-spacing: 0.14em;
-  color: #ffcc00;
-  text-shadow: 0 0 18px rgba(255, 204, 0, 0.28);
+  letter-spacing: 0.1em;
+  color: #ffd21f;
+  text-shadow: var(--hero-title-glow-library);
   line-height: 1.15;
-  margin: 0 0 10px;
+  margin-bottom: 10px;
+}
+
+@media (min-width: 600px) {
+  .appTitle {
+    font-size: clamp(28px, 6.5vw, 46px);
+    letter-spacing: 0.16em;
+  }
 }
 
 .appSubtitle {
   font-family: 'Noto Serif', serif;
   font-size: 12px;
   font-weight: 600;
-  color: #7dd3fc;
+  color: var(--accent-cyan-bright);
+  text-shadow: 0 0 10px rgba(34, 195, 240, 0.7);
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  margin: 0 0 18px;
+  margin-bottom: 20px;
 }
 
 .neonBar {

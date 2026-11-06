@@ -4,21 +4,60 @@
   z-index: -1;
   pointer-events: none;
   transform: translateZ(0);
-  background:
-    linear-gradient(180deg, rgba(10, 16, 26, 0.68) 0%, rgba(14, 24, 48, 0.84) 45%, rgba(8, 12, 20, 0.96) 100%),
-    radial-gradient(ellipse at 50% 12%, rgba(244, 227, 166, 0.08) 0%, transparent 60%),
-    radial-gradient(circle at 80% 65%, rgba(27, 42, 69, 0.35) 0%, transparent 60%),
-    url('../../assets/images/bg-thu-vien-muc-dem.webp') center top / cover no-repeat,
-    #0a101a;
+  background-color: #0a101a;
+  overflow: hidden;
+}
+
+.imageLayer {
+  position: absolute;
+  inset: 0;
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transition: opacity 300ms ease;
+}
+
+.defaultBg {
+  background-image: url('../../assets/images/bg-thu-vien-muc-dem.webp');
+  background-image: -webkit-image-set(
+    url('../../assets/images/bg-thu-vien-muc-dem.webp') 1x,
+    url('../../assets/images/bg-thu-vien-muc-dem@2x.webp') 2x
+  );
+  background-image: image-set(
+    url('../../assets/images/bg-thu-vien-muc-dem.webp') 1x,
+    url('../../assets/images/bg-thu-vien-muc-dem@2x.webp') 2x
+  );
 }
 
 @media (min-width: 900px) and (orientation: landscape), (min-aspect-ratio: 4/3) {
-  .backdrop {
-    background:
-      radial-gradient(ellipse at center, transparent 40%, rgba(5, 8, 16, 0.75) 100%),
-      linear-gradient(180deg, rgba(10, 16, 26, 0.6) 0%, rgba(14, 24, 48, 0.75) 45%, rgba(8, 12, 20, 0.94) 100%),
-      radial-gradient(ellipse at 50% 15%, rgba(244, 227, 166, 0.08) 0%, transparent 60%),
-      url('../../assets/images/bg-thu-vien-muc-dem-wide.webp') center / cover no-repeat,
-      #0a101a;
+  .defaultBg {
+    background-position: center center;
+    background-image: url('../../assets/images/bg-thu-vien-muc-dem-wide.webp');
+    background-image: -webkit-image-set(
+      url('../../assets/images/bg-thu-vien-muc-dem-wide.webp') 1x,
+      url('../../assets/images/bg-thu-vien-muc-dem-wide@2x.webp') 2x
+    );
+    background-image: image-set(
+      url('../../assets/images/bg-thu-vien-muc-dem-wide.webp') 1x,
+      url('../../assets/images/bg-thu-vien-muc-dem-wide@2x.webp') 2x
+    );
   }
+}
+
+.noiseLayer {
+  position: absolute;
+  inset: 0;
+  background-image: url('../../assets/images/noise-subtle.png');
+  background-repeat: repeat;
+  opacity: 0.04;
+  pointer-events: none;
+}
+
+.overlayLayer {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, transparent 40%, rgba(5, 8, 16, 0.72) 100%),
+    linear-gradient(180deg, rgba(10, 16, 26, 0.58) 0%, rgba(12, 20, 38, 0.76) 50%, rgba(8, 12, 20, 0.94) 100%);
+  pointer-events: none;
 }

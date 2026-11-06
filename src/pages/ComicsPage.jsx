@@ -25,6 +25,7 @@ import {
 } from '../lib/comics/comicSyncQueue.js';
 import { supabase } from '../lib/supabaseClient.js';
 import ComicImportModal from '../components/comics/ComicImportModal.jsx';
+import CustomBackdropModal from '../components/comics/CustomBackdropModal.jsx';
 import Footer from '../components/layout/Footer.jsx';
 import LobbyTabs from '../components/ui/LobbyTabs.jsx';
 import ComicsBackdrop from '../components/comics/ComicsBackdrop.jsx';
@@ -56,6 +57,7 @@ export default function ComicsPage() {
     cloudQuotaBytes: 8 * 1024 * 1024 * 1024,
   });
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isBackdropModalOpen, setIsBackdropModalOpen] = useState(false);
   const [seriesToDelete, setSeriesToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -277,6 +279,20 @@ export default function ComicsPage() {
             />
           </div>
 
+          <button
+            type="button"
+            className={styles.changeBackdropBtn}
+            onClick={() => setIsBackdropModalOpen(true)}
+            title="Chọn ảnh trong truyện làm nền sảnh"
+            aria-label="Đổi ảnh nền sảnh"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+            <span>Đổi nền</span>
+          </button>
           <button
             type="button"
             className={`btn-primary ${styles.importBtn} animate-neon-pulse`}
@@ -575,6 +591,11 @@ export default function ComicsPage() {
       )}
 
       {/* ===== IMPORT MODAL ===== */}
+      <CustomBackdropModal
+        isOpen={isBackdropModalOpen}
+        onClose={() => setIsBackdropModalOpen(false)}
+        onToast={showToast}
+      />
       <ComicImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
