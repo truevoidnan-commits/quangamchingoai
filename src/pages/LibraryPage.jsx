@@ -20,6 +20,7 @@ import { saveNovel, saveChaptersBulk } from '../lib/db';
 import { addToLibrary } from '../lib/storage';
 import { useCultivation } from '../hooks/useCultivation';
 import { runMigrationV2 } from '../lib/migration';
+import { clearPersistedSort } from '../hooks/usePersistedSort';
 import LobbyTabs from '../components/ui/LobbyTabs';
 import {
   IconSearch,
@@ -171,6 +172,7 @@ export default function LibraryPage() {
     if (!deleteConfirm) return;
     await deleteNovelDB(deleteConfirm.id);
     removeFromLibrary(deleteConfirm.id);
+    clearPersistedSort('tcl:chapterSort:' + deleteConfirm.id);
     refreshLibrary();
     setDeleteConfirm(null);
     showToast(`Đã xóa "${deleteConfirm.title}"`);
