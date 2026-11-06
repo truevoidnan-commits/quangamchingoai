@@ -1,16 +1,17 @@
-/* ===== VAULT LOCK MODAL STYLES ===== */
+/* ===== VAULT LOCK MODAL (FROSTED GLASS PURPLE & GOLD) ===== */
+
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(4, 7, 16, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(4, 7, 16, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
-  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes fadeIn {
@@ -21,7 +22,7 @@
 @keyframes popUp {
   from {
     opacity: 0;
-    transform: scale(0.92) translateY(16px);
+    transform: scale(0.96) translateY(12px);
   }
   to {
     opacity: 1;
@@ -29,116 +30,213 @@
   }
 }
 
+@keyframes slideUpSheet {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-8px); }
-  40%, 80% { transform: translateX(8px); }
+  20%, 60% { transform: translateX(-7px); }
+  40%, 80% { transform: translateX(7px); }
 }
 
 .modal {
   width: 100%;
   max-width: 440px;
-  background: linear-gradient(165deg, #0d1222 0%, #080c16 60%, #120d20 100%);
+  background: linear-gradient(180deg, rgba(30, 22, 56, 0.86), rgba(12, 10, 28, 0.94));
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
   border: 1px solid rgba(168, 85, 247, 0.35);
-  box-shadow: 
-    0 0 35px rgba(168, 85, 247, 0.2),
-    0 20px 50px rgba(0, 0, 0, 0.8),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 30px 26px 24px;
+  border-radius: 28px;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.75),
+    0 0 40px rgba(168, 85, 247, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  padding: 30px 26px 26px;
   position: relative;
   overflow: hidden;
-  animation: popUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: popUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .shake {
   animation: shake 0.45s ease-in-out;
 }
 
-/* Background rune glow */
-.runeBg {
+/* Ambient backlight glow behind header */
+.ambientGlow {
   position: absolute;
-  top: -40px;
-  right: -40px;
-  width: 180px;
-  height: 180px;
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.18) 0%, transparent 70%);
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 240px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.28) 0%, rgba(245, 158, 11, 0.08) 50%, transparent 75%);
   pointer-events: none;
+  z-index: 0;
 }
 
-.closeBtn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 6px;
-  line-height: 1;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-}
-
-.closeBtn:hover {
-  color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.12);
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 22px;
-}
-
-.iconCircle {
-  width: 62px;
-  height: 62px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, rgba(168, 85, 247, 0.35), rgba(13, 18, 34, 0.9));
-  border: 1px solid rgba(168, 85, 247, 0.5);
-  box-shadow: 0 0 20px rgba(168, 85, 247, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 26px;
+/* Mobile drag handle */
+.dragHandle {
+  display: none;
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.25);
   margin: 0 auto 14px;
 }
 
+/* 36px Circular Frosted Close Button */
+.closeBtn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-muted, #94a3b8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 2;
+}
+
+.closeBtn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+/* Header Section */
+.header {
+  position: relative;
+  text-align: center;
+  margin-bottom: 22px;
+  z-index: 1;
+}
+
+/* 76px Rotating Conic Circle */
+.iconCircleWrap {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconCircleRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    #a855f7,
+    #f59e0b,
+    #d946ef,
+    #8b5cf6,
+    #a855f7
+  );
+  animation: rotateConic 12s linear infinite;
+  opacity: 0.85;
+  filter: blur(0.5px);
+}
+
+.iconCircleRingSuccess {
+  background: conic-gradient(
+    from 0deg,
+    #22c55e,
+    #eab308,
+    #10b981,
+    #22c55e
+  );
+  animation-duration: 4s;
+}
+
+@keyframes rotateConic {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iconCircleRing {
+    animation: none;
+  }
+}
+
+.iconCircle {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(42, 28, 76, 0.95), rgba(15, 12, 32, 0.98));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f3e8ff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 20px rgba(168, 85, 247, 0.35);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.iconCircleSuccess {
+  color: #4ade80;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 0 28px rgba(34, 197, 94, 0.65);
+}
+
 .title {
-  font-family: var(--font-serif);
-  font-size: 20px;
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 22px;
   font-weight: 700;
-  color: #e9d5ff;
-  text-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
+  background: linear-gradient(180deg, #fff5dc 0%, #ffffff 85%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 16px rgba(168, 85, 247, 0.45);
   margin-bottom: 6px;
 }
 
 .subtitle {
-  font-size: 12.5px;
-  color: var(--text-muted);
+  font-size: 13.5px;
+  color: rgba(226, 232, 240, 0.78);
   line-height: 1.5;
-  padding: 0 10px;
+  padding: 0 8px;
 }
 
 /* Form inputs */
 .form {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  z-index: 1;
 }
 
 .inputGroup {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 
 .label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: #c084fc;
+  color: #d8b4fe;
   letter-spacing: 0.02em;
 }
 
@@ -148,133 +246,282 @@
   align-items: center;
 }
 
+.inputIcon {
+  position: absolute;
+  left: 16px;
+  color: rgba(192, 132, 252, 0.75);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 2;
+}
+
 .input {
   width: 100%;
-  background: rgba(13, 18, 34, 0.8);
-  border: 1px solid rgba(168, 85, 247, 0.3);
-  border-radius: 10px;
-  padding: 12px 42px 12px 14px;
-  font-size: 16px;
+  height: 52px;
+  background: rgba(15, 12, 32, 0.65);
+  border: 1px solid rgba(168, 85, 247, 0.28);
+  border-radius: 16px;
+  padding: 0 48px 0 46px; /* left icon + right eye */
+  font-size: 15px;
   color: #ffffff;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.inputNoRightBtn {
+  padding-right: 16px;
+}
+
+.input::placeholder {
+  color: rgba(148, 163, 184, 0.55);
 }
 
 .input:focus {
   outline: none;
-  border-color: #a855f7;
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
-  background: rgba(18, 24, 46, 0.95);
+  border-color: rgba(216, 180, 254, 0.85);
+  box-shadow:
+    0 0 0 3px rgba(168, 85, 247, 0.32),
+    0 0 16px rgba(168, 85, 247, 0.2);
+  background: rgba(22, 17, 44, 0.85);
 }
 
+/* 36px Circular Eye Button */
 .eyeBtn {
   position: absolute;
-  right: 10px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   background: transparent;
   border: none;
-  color: var(--text-muted);
+  color: rgba(203, 213, 225, 0.7);
   cursor: pointer;
-  font-size: 15px;
-  padding: 6px;
-  transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 2;
 }
 
 .eyeBtn:hover {
-  color: #c084fc;
+  color: #f3e8ff;
+  background: rgba(168, 85, 247, 0.18);
 }
 
-.errorMsg {
-  font-size: 12px;
-  color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.3);
-  padding: 8px 12px;
-  border-radius: 8px;
+/* Password Strength Meter */
+.strengthMeter {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.strengthBars {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.strengthBar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: all 0.25s ease;
+}
+
+.strengthWeak {
+  background: #f87171;
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.4);
+}
+
+.strengthMedium {
+  background: #fbbf24;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+}
+
+.strengthStrong {
+  background: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+}
+
+.strengthLabel {
+  font-size: 11.5px;
+  color: rgba(226, 232, 240, 0.65);
+}
+
+/* Password Match Indicator */
+.matchSuccess {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 12px;
+  color: #4ade80;
+  margin-top: 2px;
 }
 
+.matchMismatch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #fca5a5;
+  margin-top: 2px;
+}
+
+/* Hint Row & Card */
 .hintRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  margin-top: -4px;
+  justify-content: flex-end;
+  margin-top: -6px;
 }
 
 .hintBtn {
   background: transparent;
   border: none;
-  color: #a855f7;
-  font-size: 11.5px;
+  color: #d8b4fe;
+  font-size: 13px;
   cursor: pointer;
-  text-decoration: underline;
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
 
 .hintBtn:hover {
-  color: #c084fc;
+  color: #ffffff;
+  background: rgba(168, 85, 247, 0.16);
 }
 
-.hintText {
-  font-size: 12px;
-  color: #e9d5ff;
-  background: rgba(168, 85, 247, 0.12);
-  border-left: 3px solid #a855f7;
-  padding: 8px 12px;
-  border-radius: 0 8px 8px 0;
+.hintCard {
+  font-size: 13px;
+  color: #f3e8ff;
+  background: rgba(168, 85, 247, 0.14);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 14px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: fadeIn 0.15s ease-out;
+}
+
+.hintCard strong {
+  color: #ffd166;
+}
+
+/* Error Card */
+.errorMsg {
+  font-size: 13px;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  padding: 10px 14px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: fadeIn 0.15s ease-out;
 }
 
 /* Actions */
 .actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: 6px;
 }
 
+/* 52px Primary Pill Button with Inset Highlight */
 .submitBtn {
   width: 100%;
-  background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
   border: 1px solid rgba(216, 180, 254, 0.4);
-  box-shadow: 0 0 16px rgba(147, 51, 234, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 8px 24px rgba(109, 40, 217, 0.45);
   color: #ffffff;
-  padding: 12px;
-  border-radius: 10px;
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
 }
 
-.submitBtn:hover {
-  background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
-  box-shadow: 0 0 24px rgba(168, 85, 247, 0.7);
+.submitBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 10px 28px rgba(124, 58, 237, 0.55);
   transform: translateY(-1px);
 }
 
-.submitBtn:active {
-  transform: scale(0.98);
+.submitBtn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
 }
 
+.submitBtnSuccess {
+  background: linear-gradient(135deg, #22c55e 0%, #15803d 100%) !important;
+  border-color: rgba(134, 239, 172, 0.6) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 8px 24px rgba(34, 197, 94, 0.5) !important;
+}
+
+/* Ghost Cancel Button */
 .cancelBtn {
   width: 100%;
+  height: 44px;
+  border-radius: 14px;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-muted);
-  padding: 10px;
-  border-radius: 10px;
-  font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(226, 232, 240, 0.85);
+  font-size: 13.5px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.cancelBtn:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+.cancelBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+/* Mobile Bottom Sheet Adaptation (<600px) */
+@media (max-width: 600px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    max-width: 100%;
+    border-radius: 28px 28px 0 0;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 16px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+    animation: slideUpSheet 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .dragHandle {
+    display: block;
+  }
+
+  .closeBtn {
+    top: 14px;
+    right: 14px;
+  }
 }

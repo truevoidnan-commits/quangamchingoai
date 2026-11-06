@@ -7,28 +7,6 @@ import { useNavigate } from 'react-router-dom';
 import DaoAnhGalleryModal from '../components/cultivation/DaoAnhGalleryModal';
 import styles from './SanctumPage.module.css';
 
-function SvgLotusLamp({ size = 22 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" style={{ filter: 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.7))', flexShrink: 0 }}>
-      <circle cx="24" cy="5" r="3" stroke="#ef4444" strokeWidth="1.5" fill="none" />
-      <path d="M24 8 V11" stroke="#ef4444" strokeWidth="2" />
-      <path d="M12 14 C16 11 32 11 36 14 L33 17 H15 Z" fill="#ef4444" opacity="0.9" />
-      <path d="M16 17 C13 24 13 30 16 34 H32 C35 30 35 24 32 17 Z" fill="url(#lampGlowGradRed)" stroke="#dc2626" strokeWidth="1.5" />
-      <path d="M24 20 C22 23 21 26 24 29 C27 26 26 23 24 20 Z" fill="#ffffff" filter="drop-shadow(0 0 4px #ff3fd5)" />
-      <path d="M14 34 C12 37 14 41 24 42 C34 41 36 37 34 34 Z" fill="#b91c1c" />
-      <path d="M18 35 C20 39 28 39 30 35" stroke="#ef4444" strokeWidth="1.5" fill="none" />
-      <path d="M24 42 V47 M22 47 H26" stroke="#ef4444" strokeWidth="1.5" />
-      <defs>
-        <radialGradient id="lampGlowGradRed" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#fecaca" stopOpacity="0.9" />
-          <stop offset="60%" stopColor="#ef4444" stopOpacity="0.6" />
-          <stop offset="100%" stopColor="#7f1d1d" stopOpacity="0.2" />
-        </radialGradient>
-      </defs>
-    </svg>
-  );
-}
-
 export default function SanctumPage() {
   const { 
     cultivation, 
@@ -293,7 +271,7 @@ export default function SanctumPage() {
             boxShadow: activeTab === 'lamps' ? '0 0 16px rgba(239, 68, 68, 0.3)' : 'none',
           }}
         >
-          <SvgLotusLamp size={18} />
+          <Icon name="lantern" size={18} />
           <span>MỆNH ĐĂNG THẦN PHẨM (18)</span>
           <span className={styles.tabCountBadge}>
             {absorbedLamps.length}/18 Đã khảm

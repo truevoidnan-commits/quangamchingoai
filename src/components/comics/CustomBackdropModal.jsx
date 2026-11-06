@@ -201,9 +201,7 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
                 onClick={() => setStep((s) => Math.max(1, s - 1))}
                 aria-label="Quay lại bước trước"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M19 12H5M12 19l-7-7 7-7" />
-                </svg>
+                <Icon name="arrow-left" size={18} />
               </button>
             )}
             <div>
@@ -218,10 +216,7 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
           </div>
 
           <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Đóng">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <Icon name="close" size={20} />
           </button>
         </div>
 

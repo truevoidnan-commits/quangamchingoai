@@ -43,90 +43,7 @@ import styles from './ReaderPage.module.css';
 
 
 
-function IconBolt({ size = 18 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </svg>
-  );
-}
 
-function IconMeditation({ size = 16 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="5" r="2.5" />
-      <path d="M12 9v4" />
-      <path d="M6 13l3-2 3 3 3-3 3 2" />
-      <path d="M4 19c2-2 5-3 8-3s6 1 8 3" />
-    </svg>
-  );
-}
-
-function IconArrowLeft({ size = 18 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="19" y1="12" x2="5" y2="12" />
-      <polyline points="12 19 5 12 12 5" />
-    </svg>
-  );
-}
-
-function IconList({ size = 18 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="8" y1="6" x2="21" y2="6" />
-      <line x1="8" y1="12" x2="21" y2="12" />
-      <line x1="8" y1="18" x2="21" y2="18" />
-      <line x1="3" y1="6" x2="3.01" y2="6" />
-      <line x1="3" y1="12" x2="3.01" y2="12" />
-      <line x1="3" y1="18" x2="3.01" y2="18" />
-    </svg>
-  );
-}
-
-function IconReplace({ size = 16 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 4h6v6" />
-      <path d="M4 20h6v-6" />
-      <path d="M20 4l-7 7" />
-      <path d="M4 20l7-7" />
-    </svg>
-  );
-}
-
-function IconPlus({ size = 16 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-
-function IconSettings({ size = 17 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="4" y1="21" x2="4" y2="14" />
-      <line x1="4" y1="10" x2="4" y2="3" />
-      <line x1="12" y1="21" x2="12" y2="12" />
-      <line x1="12" y1="8" x2="12" y2="3" />
-      <line x1="20" y1="21" x2="20" y2="16" />
-      <line x1="20" y1="12" x2="20" y2="3" />
-      <line x1="1" y1="14" x2="7" y2="14" />
-      <line x1="9" y1="8" x2="15" y2="8" />
-      <line x1="17" y1="16" x2="23" y2="16" />
-    </svg>
-  );
-}
-
-function IconZap({ size = 16 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </svg>
-  );
-}
 
 export default function ReaderPage() {
   const { id, novelId, chapterId } = useParams();
@@ -1080,7 +997,7 @@ export default function ReaderPage() {
             title="Quay lại truyện"
             aria-label="Quay lại truyện"
           >
-            <IconArrowLeft size={18} />
+            <Icon name="arrow-left" size={18} />
           </button>
 
           <div className={styles.meditationBadgeWrap}>
@@ -1104,7 +1021,7 @@ export default function ReaderPage() {
                   />
                 </svg>
                 <span className={styles.meditationPillIcon}>
-                  <IconMeditation size={11} />
+                  <Icon name="meditation" size={12} />
                 </span>
               </div>
               <span className={styles.meditationPillText}>
@@ -1136,7 +1053,7 @@ export default function ReaderPage() {
                 aria-label="Xem Bảng Tu Vi"
                 style={{ color: '#ffd21f' }}
               >
-                <IconBolt size={18} />
+                <Icon name="bolt" size={18} />
               </button>
               {unreadDropsCount > 0 && (
                 <span
@@ -1155,7 +1072,7 @@ export default function ReaderPage() {
               title="Tìm & Thay thế toàn bộ truyện"
               aria-label="Tìm & Thay thế toàn bộ truyện"
             >
-              <IconReplace size={18} />
+              <Icon name="replace" size={18} />
             </button>
 
             <button
@@ -1165,7 +1082,7 @@ export default function ReaderPage() {
               title="Thêm chương mới"
               aria-label="Thêm chương"
             >
-              <IconPlus size={18} />
+              <Icon name="plus" size={18} />
             </button>
 
             <button
@@ -1175,7 +1092,7 @@ export default function ReaderPage() {
               title="Tuỳ chỉnh cài đặt đọc"
               aria-label="Cài đặt đọc"
             >
-              <IconSettings size={18} />
+              <Icon name="sliders" size={18} strokeWidth={1.75} />
             </button>
 
             <button
@@ -1185,7 +1102,7 @@ export default function ReaderPage() {
               title="Mục lục chương"
               aria-label="Mục lục chương"
             >
-              <IconList size={18} />
+              <Icon name="list" size={18} />
             </button>
           </div>
         </div>
@@ -1305,7 +1222,7 @@ export default function ReaderPage() {
                 title="Mục lục chương"
                 aria-label="Mục lục chương"
               >
-                <IconList size={18} />
+                <Icon name="list" size={18} />
               </button>
               <button
                 type="button"
@@ -1383,7 +1300,7 @@ export default function ReaderPage() {
             title="Mục lục chương"
             aria-label="Mục lục chương"
           >
-            <IconList size={18} />
+            <Icon name="list" size={18} />
           </button>
           <button
             type="button"
