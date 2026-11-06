@@ -331,70 +331,259 @@
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Realm Timeline in Left Panel */
-.realm-timeline {
+/* =========================================================================
+   REALM TIMELINE / STEPPER (UNIFIED FROSTED GLASS CARDS WITH THIN GOLD BORDER)
+   ========================================================================= */
+
+.realm-stepper-container {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  margin-top: 10px;
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
 }
 
-.timeline-item {
+.realm-stepper-connector {
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  left: 24px;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.5) 0%, rgba(56, 189, 248, 0.4) 100%);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 1px;
+}
+
+.stepper-card {
   position: relative;
-  padding-left: 24px;
-  color: var(--text-muted);
+  z-index: 1;
+  width: 100%;
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(16, 25, 39, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 204, 0, 0.22);
+  color: var(--text-main);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.stepper-card:hover {
+  background: rgba(24, 36, 56, 0.85);
+  transform: translateY(-1px);
+  border-color: rgba(251, 191, 36, 0.45);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.stepper-card:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+/* 3 TRẠNG THÁI CHÍNH: ĐANG ĐỨNG, ĐÃ ĐẠT, CHƯA MỞ */
+.stepper-card.current {
+  border: 1.5px solid #fbbf24;
+  background: linear-gradient(135deg, rgba(30, 42, 65, 0.9) 0%, rgba(18, 26, 42, 0.96) 100%);
+  box-shadow: 0 0 16px rgba(251, 191, 36, 0.25), inset 0 0 12px rgba(251, 191, 36, 0.08);
+}
+
+.stepper-card.completed {
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: linear-gradient(135deg, rgba(16, 26, 42, 0.75) 0%, rgba(10, 16, 28, 0.85) 100%);
+}
+
+.stepper-card.locked {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 16, 26, 0.45);
+  opacity: 0.72;
+}
+
+/* ĐANG XEM (PREVIEWING IN VISUALIZER) */
+.stepper-card.viewing {
+  outline: 2px solid #38bdf8;
+  outline-offset: 1px;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
+}
+
+.stepper-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.stepper-icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
   transition: all 0.2s ease;
 }
 
-.timeline-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 6px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid var(--cult-border);
-  transition: all 0.3s ease;
+.stepper-card.current .stepper-icon-wrap {
+  background: rgba(251, 191, 36, 0.18);
+  border-color: rgba(251, 191, 36, 0.5);
+  color: #fbbf24;
 }
 
-.timeline-item::after {
-  content: '';
-  position: absolute;
-  left: 4.5px;
-  top: 20px;
-  bottom: -16px;
-  width: 1px;
-  background: var(--cult-border);
+.stepper-card.completed .stepper-icon-wrap {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fde047;
 }
 
-.timeline-item:last-child::after {
-  display: none;
+.stepper-title-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.timeline-item.active {
+.stepper-title {
+  font-family: var(--font-serif, serif);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--text-main);
 }
 
-.timeline-item.active::before {
-  background: var(--color-kim);
-  border-color: #fff;
-  box-shadow: 0 0 12px var(--color-kim);
+.stepper-card.current .stepper-title {
+  color: var(--color-kim, #f59e0b);
 }
 
-.timeline-item h3 {
-  margin: 0 0 2px 0;
-  font-size: 13.5px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  font-family: var(--font-serif, serif);
-}
-
-.timeline-item p {
-  margin: 0;
-  font-size: 11.5px;
+.stepper-sub {
+  font-size: 10.5px;
   color: var(--text-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stepper-badge-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.stepper-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.badge-current {
+  background: rgba(251, 191, 36, 0.2);
+  border: 1px solid #fbbf24;
+  color: #fde047;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+}
+
+.badge-completed {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fde047;
+}
+
+.badge-locked {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
+.pulsing-glow-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 6px #fbbf24;
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.cuc-canh-badge-row {
+  display: flex;
+  align-items: center;
+  padding-left: 38px;
+}
+
+.cuc-canh-chip {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cuc-canh-chip.achieved {
+  background: rgba(255, 63, 213, 0.18);
+  border: 1px solid rgba(255, 63, 213, 0.6);
+  color: #ff6fe0;
+  box-shadow: 0 0 10px rgba(255, 63, 213, 0.3);
+}
+
+.cuc-canh-chip.ready {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  color: #38bdf8;
+}
+
+.stepper-progress-wrap {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.stepper-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.stepper-viewing-tag {
+  align-self: flex-end;
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  color: #38bdf8;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  opacity: 0.9;
+  margin-top: -2px;
 }
 
 /* Filter List */
