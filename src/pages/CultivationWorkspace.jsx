@@ -1,6 +1,7 @@
 import Icon, { toIconKey } from '../components/ui/Icon';
 import React, { useState, useEffect } from 'react';
 import { useCultivationContext } from '../context/CultivationContext';
+import { getActiveProfile } from '../lib/cultivation';
 import RealmTimeline from '../components/cultivation/RealmTimeline';
 import SidePanelInfo from '../components/cultivation/SidePanelInfo';
 import RealmPreviewVisualizer from '../components/cultivation/RealmPreviewVisualizer';
@@ -206,29 +207,32 @@ export default function CultivationWorkspace() {
           <span><Icon name="package" size={14} /> XUẤT SAO LƯU TU VI</span>
         </button>
 
-        {/* Quick Tu Linh Tran */}
-        <button
-          onClick={() => gainReadingExp(500)}
-          style={{
-            marginTop: 8,
-            padding: '8px 12px',
-            borderRadius: 8,
-            background: 'rgba(255, 255, 255, 0.04)',
-            border: '1px dashed rgba(255, 204, 0, 0.4)',
-            color: 'var(--color-kim)',
-            fontSize: 11.5,
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            width: '100%'
-          }}
-          title="Kích hoạt Tụ Linh Trận bổ sung nhanh linh khí"
-        >
-          <span><Icon name="bolt" size={14} /> Tụ Linh Trận (+500 EXP)</span>
-        </button>
+        {/* Quick Tu Linh Tran - Chỉ dành cho hồ sơ Thử Nghiệm (Sandbox) */}
+        {getActiveProfile() === 'sandbox' && (
+          <button
+            onClick={() => gainReadingExp(1000)}
+            style={{
+              marginTop: 8,
+              padding: '8px 12px',
+              borderRadius: 8,
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px dashed rgba(255, 204, 0, 0.4)',
+              color: 'var(--color-kim)',
+              fontSize: 11.5,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              width: '100%'
+            }}
+            title="Kích hoạt Tụ Linh Trận bổ sung nhanh linh khí (+1000 EXP - Chỉ dành cho Thử Nghiệm)"
+            id="btn-quick-tu-linh-tran"
+          >
+            <span><Icon name="bolt" size={14} /> Tụ Linh Trận (+1.000 EXP)</span>
+          </button>
+        )}
       </div>
 
       {/* 2. CENTER COLUMN: Celestial Array Visualizer (100% Tối Giản & Tràn Viền Tuyệt Đối) */}

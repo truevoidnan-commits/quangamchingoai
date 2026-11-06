@@ -3,6 +3,7 @@ import styles from './SidePanelInfo.module.css';
 import React, { useState, useEffect } from 'react';
 import { useCultivationContext } from '../../context/CultivationContext';
 import { 
+  getActiveProfile,
   TRUC_CO_KHIEU_THRESHOLDS, 
   NGUNG_KHI_THRESHOLDS,
   HAI_SON_QUYET_LAYERS,
@@ -1454,24 +1455,40 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     <Icon name="bolt" size={14} /> HÓA SINH ĐẠO ANH
                   </button>
                 ) : (
-                  <button
-                    onClick={() => {
-                      if (gainReadingExp) gainReadingExp(1000);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px',
+                  getActiveProfile() === 'sandbox' ? (
+                    <button
+                      onClick={() => {
+                        if (gainReadingExp) gainReadingExp(1000);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: 8,
+                        background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(217, 70, 239, 0.08) 100%)',
+                        border: '1px dashed rgba(217, 70, 239, 0.4)',
+                        color: '#f0abfc',
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                      title="Kích hoạt Tụ Khí thai nghén Đạo Anh (+1000 EXP - Chỉ dành cho Thử Nghiệm)"
+                      id="btn-quick-tu-khi-thai-nghen"
+                    >
+                      <Icon name="orb" size={14} /> Tụ Khí Thai Nghén (+1.000 EXP)
+                    </button>
+                  ) : (
+                    <div style={{
+                      fontSize: 11,
+                      color: '#94a3b8',
+                      textAlign: 'center',
+                      padding: '8px 12px',
+                      background: 'rgba(0, 0, 0, 0.25)',
                       borderRadius: 8,
-                      background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(217, 70, 239, 0.08) 100%)',
-                      border: '1px dashed rgba(217, 70, 239, 0.4)',
-                      color: '#f0abfc',
-                      fontSize: 11.5,
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <Icon name="orb" size={14} /> Tụ Khí Thai Nghén (+1.000 EXP)
-                  </button>
+                      border: '1px solid rgba(255, 255, 255, 0.06)'
+                    }}>
+                      Đọc thêm truyện để tích lũy đủ 10.000 EXP thai nghén Đạo Anh
+                    </div>
+                  )
                 )}
               </div>
             )}
