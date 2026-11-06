@@ -31,6 +31,7 @@ import {
 import { supabase } from '../lib/supabaseClient.js';
 import ComicImportModal from '../components/comics/ComicImportModal.jsx';
 import ComicsBackdrop from '../components/comics/ComicsBackdrop.jsx';
+import Icon from '../components/ui/Icon.jsx';
 import Footer from '../components/layout/Footer.jsx';
 import PopoverMenu from '../components/ui/PopoverMenu.jsx';
 import BottomSheet from '../components/ui/BottomSheet.jsx';
@@ -1130,10 +1131,7 @@ export default function ComicSeriesPage() {
 
             <div className={styles.searchWrap}>
               <span className={styles.searchIcon} aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
+                <Icon name="search" size={15} />
               </span>
               <input
                 type="search"
@@ -1153,12 +1151,7 @@ export default function ComicSeriesPage() {
               title={sortOrder === 'asc' ? 'Đang sắp xếp: Tăng dần (Bấm để giảm dần)' : 'Đang sắp xếp: Giảm dần (Bấm để tăng dần)'}
               aria-label="Đổi chiều sắp xếp"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m3 16 4 4 4-4" />
-                <path d="M7 20V4" />
-                <path d="m21 8-4-4-4 4" />
-                <path d="M17 4v16" />
-              </svg>
+              <Icon name="sort" size={15} />
               <span>{sortOrder === 'asc' ? 'Tập 1→N' : 'Tập N→1'}</span>
             </button>
           </div>

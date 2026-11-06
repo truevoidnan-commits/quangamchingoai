@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check:emoji": "node scripts/check-no-emoji.mjs",
+    "check:icons": "node scripts/check-no-handdrawn-icons.mjs",
     "optimize-images": "node scripts/optimize-images.mjs",
     "compute-daoanh-fit": "node scripts/compute-daoanh-fit.mjs",
     "compute-daoanh-bbox": "node scripts/compute-daoanh-bbox.mjs"

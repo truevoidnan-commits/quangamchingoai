@@ -29,6 +29,7 @@ import CustomBackdropModal from '../components/comics/CustomBackdropModal.jsx';
 import Footer from '../components/layout/Footer.jsx';
 import LobbyTabs from '../components/ui/LobbyTabs.jsx';
 import ComicsBackdrop from '../components/comics/ComicsBackdrop.jsx';
+import Icon from '../components/ui/Icon.jsx';
 import {
   IconCloud,
   IconCloudCheck,
@@ -263,10 +264,7 @@ export default function ComicsPage() {
         <div className={styles.toolbar}>
           <div className={styles.searchWrap}>
             <span className={styles.searchIcon} aria-hidden="true">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
+              <Icon name="search" size={16} />
             </span>
             <input
               type="search"
@@ -286,11 +284,7 @@ export default function ComicsPage() {
             title="Chọn ảnh trong truyện làm nền sảnh"
             aria-label="Đổi ảnh nền sảnh"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <polyline points="21 15 16 10 5 21" />
-            </svg>
+            <Icon name="image" size={15} />
             <span>Đổi nền</span>
           </button>
           <button

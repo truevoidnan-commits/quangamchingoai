@@ -10,6 +10,12 @@ import {
   RefreshCw,
   Zap,
   Search,
+  Replace,
+  ReplaceAll,
+  FileText,
+  Share2,
+  Settings2,
+  Type,
   ArrowLeftRight,
   Plus,
   Menu,
@@ -144,7 +150,15 @@ const ICON_REGISTRY = {
   flash: { type: 'lucide', comp: Zap },
   zap: { type: 'lucide', comp: Zap },
   search: { type: 'lucide', comp: Search },
-  replace: { type: 'lucide', comp: ArrowLeftRight },
+  replace: { type: 'lucide', comp: Replace },
+  'replace-all': { type: 'lucide', comp: ReplaceAll },
+  file: { type: 'lucide', comp: FileText },
+  'file-text': { type: 'lucide', comp: FileText },
+  pen: { type: 'lucide', comp: Pencil },
+  share: { type: 'lucide', comp: Share2 },
+  'share-2': { type: 'lucide', comp: Share2 },
+  'settings-2': { type: 'lucide', comp: Settings2 },
+  type: { type: 'lucide', comp: Type },
   plus: { type: 'lucide', comp: Plus },
   menu: { type: 'lucide', comp: Menu },
   list: { type: 'lucide', comp: List },
@@ -436,6 +450,7 @@ export const IconDevice = (props) => <Icon name="phone" {...props} />;
 export const IconSettings = (props) => <Icon name="settings" {...props} />;
 export const IconAlertTriangle = (props) => <Icon name="alert" {...props} />;
 export const IconAlertCircle = (props) => <Icon name="alert-circle" {...props} />;
+export const IconAlert = (props) => <Icon name="alert-circle" {...props} />;
 export const IconScroll = (props) => <Icon name="scroll" {...props} />;
 export const IconPages = (props) => <Icon name="pages" {...props} />;
 export const IconClock = (props) => <Icon name="clock" {...props} />;
@@ -459,5 +474,13 @@ export const IconPlanet = (props) => <Icon name="planet" {...props} />;
 export const IconRealmNgungKhi = (props) => <Icon name="realm-ngung-khi" {...props} />;
 export const IconRealmTrucCo = (props) => <Icon name="realm-truc-co" {...props} />;
 export const IconRealmKimDan = (props) => <Icon name="realm-kim-dan" {...props} />;
+
+export const IconFile = (props) => <Icon name="file" {...props} />;
+export const IconFileText = (props) => <Icon name="file-text" {...props} />;
+export const IconShare = (props) => <Icon name="share" {...props} />;
+export const IconPen = (props) => <Icon name="pen" {...props} />;
+export const IconMeditation = (props) => <Icon name="meditation" {...props} />;
+export const IconLotus = (props) => <Icon name="lotus" {...props} />;
+export const IconSliders = (props) => <Icon name="sliders" {...props} />;
 
 export { ICON_REGISTRY };
