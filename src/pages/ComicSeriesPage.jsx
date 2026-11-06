@@ -32,6 +32,9 @@ import { supabase } from '../lib/supabaseClient.js';
 import ComicImportModal from '../components/comics/ComicImportModal.jsx';
 import ComicsBackdrop from '../components/comics/ComicsBackdrop.jsx';
 import Footer from '../components/layout/Footer.jsx';
+import PopoverMenu from '../components/ui/PopoverMenu.jsx';
+import BottomSheet from '../components/ui/BottomSheet.jsx';
+import usePersistedSort, { clearPersistedSort } from '../hooks/usePersistedSort.js';
 import {
   IconArrowLeft,
   IconBook,
@@ -344,6 +347,16 @@ export default function ComicSeriesPage() {
 
   // Series Action Dropdown
   const [seriesMenuOpen, setSeriesMenuOpen] = useState(false);
+  const seriesMoreBtnRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 700 : false
+  );
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 700);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
 
   // Edit Volume Order & Title Modal (D2)
   const [volumeToEdit, setVolumeToEdit] = useState(null);
@@ -368,7 +381,7 @@ export default function ComicSeriesPage() {
 
   // Search & Filter & Sort state
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
+  const [sortOrder, setSortOrder] = usePersistedSort(seriesId ? `tcl:volumeSort:${seriesId}` : null, 'tcl:volumeSortDefault');
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'unread' | 'reading' | 'cloud' | 'local'
 
   // Sticky toolbar detection
@@ -790,6 +803,7 @@ export default function ComicSeriesPage() {
     setIsDeleting(true);
     try {
       await deleteSeriesEverywhere(seriesId);
+      clearPersistedSort(`tcl:volumeSort:${seriesId}`);
       showToast(`Đã xóa bộ truyện "${seriesToDelete.title}".`);
       setSeriesToDelete(null);
       navigate('/comics');
@@ -1033,26 +1047,38 @@ export default function ComicSeriesPage() {
                 <div className={styles.seriesMenuWrap} onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
+                    ref={seriesMoreBtnRef}
                     className={styles.seriesMoreBtn}
                     onClick={() => setSeriesMenuOpen((prev) => !prev)}
                     title="Tùy chọn bộ truyện"
                     aria-label="Tùy chọn bộ truyện"
+                    id="btn-series-more-options"
                   >
                     <IconDotsVertical size={18} />
                   </button>
 
-                  {seriesMenuOpen && (
-                    <div className={styles.seriesMenuDropdown}>
+                  {/* Desktop Popover Menu via Portal */}
+                  {!isMobile && (
+                    <PopoverMenu
+                      id="comic-series-more-menu"
+                      isOpen={seriesMenuOpen}
+                      onClose={() => setSeriesMenuOpen(false)}
+                      triggerRef={seriesMoreBtnRef}
+                      ariaLabel="Tùy chọn bộ truyện"
+                    >
                       {isLoggedIn && unsyncedCount > 0 && (
                         <>
                           <button
                             type="button"
-                            className={styles.seriesMenuItem}
+                            role="menuitem"
+                            tabIndex={0}
+                            className={styles.seriesPopoverItem}
                             onClick={() => {
                               setSeriesMenuOpen(false);
                               handleUploadAllUnsynced();
                             }}
                             disabled={isBatchUploading}
+                            id="btn-series-upload-all"
                           >
                             <IconCloudUpload size={16} />
                             <span>
@@ -1061,13 +1087,15 @@ export default function ComicSeriesPage() {
                                 : `Tải lên tất cả (${unsyncedCount} tập)`}
                             </span>
                           </button>
-                          <div className={styles.seriesMenuDivider} />
+                          <div className={styles.seriesPopoverDivider} />
                         </>
                       )}
 
                       <button
                         type="button"
-                        className={`${styles.seriesMenuItem} ${styles.deleteSeriesBtn}`}
+                        role="menuitem"
+                        tabIndex={0}
+                        className={`${styles.seriesPopoverItem} ${styles.seriesPopoverDanger}`}
                         onClick={() => {
                           setSeriesMenuOpen(false);
                           setSeriesToDelete({
@@ -1076,11 +1104,12 @@ export default function ComicSeriesPage() {
                             totalBytes: totalBytes,
                           });
                         }}
+                        id="btn-series-delete"
                       >
                         <IconTrash size={16} />
                         <span>Xóa bộ truyện</span>
                       </button>
-                    </div>
+                    </PopoverMenu>
                   )}
                 </div>
               </div>
@@ -1118,6 +1147,7 @@ export default function ComicSeriesPage() {
 
             <button
               type="button"
+              id='btn-comic-sort-toggle'
               className={styles.sortBtn}
               onClick={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
               title={sortOrder === 'asc' ? 'Đang sắp xếp: Tăng dần (Bấm để giảm dần)' : 'Đang sắp xếp: Giảm dần (Bấm để tăng dần)'}
@@ -1259,6 +1289,69 @@ export default function ComicSeriesPage() {
       </div>
 
       {/* ========================================== */}
+      
+      {/* Mobile Series More Actions Bottom Sheet */}
+      {isMobile && (
+        <BottomSheet isOpen={seriesMenuOpen} onClose={() => setSeriesMenuOpen(false)}>
+          <div className={styles.seriesSheetHeader}>
+            <h3 className={styles.seriesSheetTitle}>Tùy chọn bộ truyện</h3>
+            <button
+              type="button"
+              className={styles.seriesSheetCloseBtn}
+              onClick={() => setSeriesMenuOpen(false)}
+              aria-label="Đóng"
+            >
+              <IconX size={18} />
+            </button>
+          </div>
+          <div className={styles.seriesSheetActions}>
+            {isLoggedIn && unsyncedCount > 0 && (
+              <>
+                <button
+                  type="button"
+                  className={styles.seriesSheetActionRow}
+                  onClick={() => {
+                    setSeriesMenuOpen(false);
+                    handleUploadAllUnsynced();
+                  }}
+                  disabled={isBatchUploading}
+                  id="btn-series-upload-all-mobile"
+                >
+                  <div className={styles.seriesSheetIconWrap}>
+                    <IconCloudUpload size={18} />
+                  </div>
+                  <span className={styles.seriesSheetActionLabel}>
+                    {isBatchUploading
+                      ? (batchNotice || 'Đang đồng bộ...')
+                      : `Tải lên tất cả (${unsyncedCount} tập)`}
+                  </span>
+                </button>
+                <div className={styles.seriesPopoverDivider} />
+              </>
+            )}
+
+            <button
+              type="button"
+              className={`${styles.seriesSheetActionRow} ${styles.seriesSheetDanger}`}
+              onClick={() => {
+                setSeriesMenuOpen(false);
+                setSeriesToDelete({
+                  ...series,
+                  volumeCount: volumes.length,
+                  totalBytes: totalBytes,
+                });
+              }}
+              id="btn-series-delete-mobile"
+            >
+              <div className={`${styles.seriesSheetIconWrap} ${styles.seriesSheetDangerIconWrap}`}>
+                <IconTrash size={18} />
+              </div>
+              <span className={styles.seriesSheetActionLabel}>Xóa bộ truyện</span>
+            </button>
+          </div>
+        </BottomSheet>
+      )}
+
       {/* VOLUME ACTION BOTTOM SHEET (B2)            */}
       {/* ========================================== */}
       {menuVolume && (

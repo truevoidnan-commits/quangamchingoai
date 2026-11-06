@@ -1,3 +1,4 @@
+import usePersistedSort from '../hooks/usePersistedSort';
 import { useState, useEffect, useTransition, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getNovel, getChapters, deleteChapterDB, searchChapters } from '../lib/db';
@@ -53,7 +54,7 @@ export default function NovelDetailPage() {
   const [deleteChapter, setDeleteChapter] = useState(null);
 
   // Sorting: 'asc' | 'desc'
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [sortOrder, setSortOrder] = usePersistedSort(activeNovelId ? `tcl:chapterSort:${activeNovelId}` : null, 'tcl:chapterSortDefault');
 
   // Sticky TOC header detection
   const [isTocSticky, setIsTocSticky] = useState(false);
@@ -528,6 +529,7 @@ export default function NovelDetailPage() {
               {/* Sort button */}
               <button
                 type="button"
+                id='btn-novel-sort-toggle'
                 className={styles.sortBtn}
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
                 title={`Sắp xếp: ${sortOrder === 'asc' ? 'Tăng dần (1 → N)' : 'Giảm dần (N → 1)'}`}

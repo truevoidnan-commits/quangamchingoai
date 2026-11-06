@@ -24,6 +24,7 @@ const SearchPage = lazyWithRetry(() => import('./pages/SearchPage'), 'SearchPage
 const ComicsPage = lazyWithRetry(() => import('./pages/ComicsPage'), 'ComicsPage');
 const ComicSeriesPage = lazyWithRetry(() => import('./pages/ComicSeriesPage'), 'ComicSeriesPage');
 const ComicReaderPage = lazyWithRetry(() => import('./pages/ComicReaderPage'), 'ComicReaderPage');
+const IconsPreviewPage = lazyWithRetry(() => import('./pages/IconsPreviewPage'), 'IconsPreviewPage');
 
 import { preloadCoreArtifactIcons } from './lib/artifactIcons';
 import { startBackgroundPrefetch } from './lib/backgroundPrefetch';
@@ -140,6 +141,7 @@ function MainLayout() {
           <Route path="/comics" element={<Suspense fallback={<RouteLoadingFallback />}><ComicsPage /></Suspense>} />
           <Route path="/comics/:seriesId" element={<Suspense fallback={<RouteLoadingFallback />}><ComicSeriesPage /></Suspense>} />
           <Route path="/comics/:seriesId/read/:volumeId" element={<Suspense fallback={<RouteLoadingFallback />}><ComicReaderPage /></Suspense>} />
+          <Route path="/__icons" element={<Suspense fallback={<RouteLoadingFallback />}><IconsPreviewPage /></Suspense>} />
         </Routes>
       </main>
     </>

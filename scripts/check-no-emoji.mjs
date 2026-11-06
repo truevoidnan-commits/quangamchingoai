@@ -14,6 +14,10 @@ import path from 'path';
 const EMOJI_REGEX = /\p{Extended_Pictographic}/u;
 const ALLOWED_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx', '.css', '.html']);
 
+// Allowlist for valid ancient I-Ching trigram text symbols used in cultivation visualizers (☰☱☲☳☴☵☶☷)
+// These are standard Unicode text symbols (U+2630 through U+2637), not colored OS emojis.
+const ALLOWED_ICHING_TRIGRAMS = new Set(['☰', '☱', '☲', '☳', '☴', '☵', '☶', '☷']);
+
 const findings = [];
 let totalFilesScanned = 0;
 
@@ -28,8 +32,9 @@ function scanDirectory(dirPath) {
       const content = fs.readFileSync(fullPath, 'utf8');
       const lines = content.split('\n');
       lines.forEach((line, index) => {
-        const matches = line.match(new RegExp(EMOJI_REGEX, 'gu'));
-        if (matches) {
+        const rawMatches = line.match(new RegExp(EMOJI_REGEX, 'gu'));
+        const matches = rawMatches ? rawMatches.filter(m => !ALLOWED_ICHING_TRIGRAMS.has(m)) : null;
+        if (matches && matches.length > 0) {
           findings.push({
             file: fullPath.replace(/\\/g, '/'),
             line: index + 1,
