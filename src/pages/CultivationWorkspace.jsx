@@ -115,8 +115,8 @@ export default function CultivationWorkspace() {
           title={!canSwap ? "Chỉ khả dụng ở Trận Đồ Nguyên Anh / Giả Anh" : (isSwapMode ? "Đang bật hoán vị (Bấm để tắt)" : "Hoán đổi vị trí Đạo Anh")}
           aria-label={isSwapMode ? "Tắt hoán đổi" : "Bật hoán đổi"}
         >
-          <span className="mobile-btn-icon" style={{ display: 'inline-block', transform: isSwapActive ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }}>
-            
+          <span className="mobile-btn-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transform: isSwapActive ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }}>
+            <Icon name="arrowLeftRight" size={16} />
           </span>
         </button>
       </div>
