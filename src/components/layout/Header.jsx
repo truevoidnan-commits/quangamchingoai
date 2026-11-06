@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getSyncStatus } from '../../lib/sync/autoSync.js';
 import { Link, useLocation } from 'react-router-dom';
+import { isVaultSessionUnlocked } from '../../lib/storage.js';
 import { useCultivationContext } from '../../context/CultivationContext';
 import styles from './Header.module.css';
 
@@ -18,6 +19,34 @@ export default function Header() {
   const isLobby = location.pathname === '/' || location.pathname === '/comics';
   const { displayName, cultivation } = useCultivationContext();
   const [syncStatus, setSyncStatusState] = useState(() => getSyncStatus());
+
+  const searchParams = new URLSearchParams(location.search);
+  const isVault = (location.pathname === '/' || location.pathname === '/add-novel') && searchParams.get('vault') === '1' && isVaultSessionUnlocked();
+  const isComics = location.pathname.startsWith('/comics');
+
+  let headerTitle = 'THIÊN CƠ LÂU';
+  let logoStyleClass = styles.logoThienCoLau;
+  let homeLink = '/';
+
+  if (isVault) {
+    headerTitle = 'TÀNG KINH MẬT THẤT';
+    logoStyleClass = styles.logoVault;
+    homeLink = '/?vault=1';
+  } else if (isComics) {
+    headerTitle = 'TÀNG KINH HỌA CÁC';
+    logoStyleClass = styles.logoComics;
+    homeLink = '/comics';
+  }
+
+  useEffect(() => {
+    if (isVault) {
+      document.title = 'Tàng Kinh Mật Thất · Thiên Cơ Lâu';
+    } else if (isComics) {
+      document.title = 'Tàng Kinh Họa Các · Thiên Cơ Lâu';
+    } else {
+      document.title = 'Thiên Cơ Lâu · Trình Đọc Truyện';
+    }
+  }, [isVault, isComics]);
 
   useEffect(() => {
     const handleStatus = (e) => {
@@ -85,9 +114,9 @@ export default function Header() {
     <>
       <header className={`${styles.header} ${!isLobby ? styles.compact : ''}`}>
         <div className={styles.inner}>
-          <Link to="/" className={styles.logo} aria-label="Thiên Cơ Lâu - Trang chủ">
+          <Link to={homeLink} className={`${styles.logo} ${logoStyleClass}`} aria-label={`${headerTitle} - Trang chủ`}>
             <span className={styles.logoIcon}>✦</span>
-            <span className={styles.logoText}>THIÊN CƠ LÂU</span>
+            <span className={styles.logoText}>{headerTitle}</span>
           </Link>
 
           <div className={styles.headerRight}>
@@ -147,7 +176,7 @@ export default function Header() {
           </div>
         </div>
         {/* Neon divider line */}
-        <div className={styles.neonLine} />
+        <div className={`${styles.neonLine} ${isComics ? styles.neonLineComics : ''}`} />
       </header>
     </>
   );

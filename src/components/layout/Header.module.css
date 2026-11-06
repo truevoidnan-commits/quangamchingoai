@@ -40,13 +40,58 @@
   font-family: 'Noto Serif', serif;
   font-size: 18px;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  color: #ffcc00;
-  text-shadow: 
-    0 0 3px #ffcc00,
-    0 0 10px rgba(255, 204, 0, 0.75),
-    0 0 20px rgba(255, 180, 0, 0.35);
+  letter-spacing: 0.08em;
+  color: #ffd21f;
   white-space: nowrap;
+  transition: opacity 150ms ease, color 150ms ease, text-shadow 150ms ease;
+}
+
+.logoIcon {
+  transition: opacity 150ms ease, color 150ms ease, text-shadow 150ms ease;
+}
+
+.logoThienCoLau .logoText {
+  color: #ffd21f;
+  text-shadow: 
+    0 0 12px rgba(255, 204, 0, 0.55),
+    0 0 32px rgba(255, 190, 0, 0.35),
+    0 2px 0 rgba(120, 80, 0, 0.6);
+}
+
+.logoThienCoLau .logoIcon {
+  color: #ffd21f;
+  text-shadow: 0 0 10px rgba(255, 204, 0, 0.8);
+}
+
+.logoComics .logoText {
+  color: #ffd21f;
+  text-shadow:
+    0 0 12px rgba(255, 204, 0, 0.55),
+    0 0 28px rgba(190, 170, 255, 0.45),
+    0 0 40px rgba(168, 85, 247, 0.35),
+    0 2px 0 rgba(80, 40, 120, 0.7);
+}
+
+.logoComics .logoIcon {
+  color: #c084fc;
+  text-shadow: 0 0 10px rgba(192, 132, 252, 0.8), 0 0 16px rgba(255, 204, 0, 0.5);
+}
+
+.logoVault .logoText {
+  color: #fbbf24;
+  text-shadow:
+    0 0 12px rgba(251, 191, 36, 0.6),
+    0 0 28px rgba(245, 158, 11, 0.4),
+    0 2px 0 rgba(100, 50, 0, 0.8);
+}
+
+.logoVault .logoIcon {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+}
+
+.neonLineComics {
+  background: linear-gradient(90deg, transparent, rgba(190, 170, 255, 0.4), transparent) !important;
 }
 
 .headerRight {
@@ -247,15 +292,18 @@
   .logo {
     gap: 6px;
   }
-  .logoText {
-    font-size: 14px;
-    letter-spacing: 0.03em;
+  .logo {
+    gap: 6px;
   }
-  /* Ở trang con (không phải trang chủ) trên màn hẹp: hiển thị logo chữ THIÊN CƠ LÂU vừa vặn */
+  .logoText {
+    font-size: 13px;
+    letter-spacing: 0.01em;
+  }
+  /* Ở trang con trên màn hẹp: hiển thị logo vừa vặn không tràn */
   .compact .logoText {
     display: inline;
-    font-size: 13px;
-    letter-spacing: 0.02em;
+    font-size: 12px;
+    letter-spacing: 0;
     white-space: nowrap;
   }
 
