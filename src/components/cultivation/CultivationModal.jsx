@@ -1328,7 +1328,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           setAnchorModalPalace(null);
                         }}
                       >
-                        <span className={styles.anchorItemIcon}>{art.icon}</span>
+                        <span className={styles.anchorItemIcon}><GlyphIcon value={art.iconKey || art.icon} size={20} /></span>
                         <div className={styles.anchorItemMeta}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <strong style={{ color: tierInfo.color }}>{art.name}</strong>

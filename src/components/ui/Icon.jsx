@@ -220,6 +220,7 @@ const ICON_REGISTRY = {
   pill: { type: 'lucide', comp: FlaskConical },
   sparkle: { type: 'lucide', comp: Sparkles },
   sparkles: { type: 'lucide', comp: Sparkles },
+  mist: { type: 'lucide', comp: Sparkles },
   sliders: { type: 'lucide', comp: SlidersHorizontal },
   filter: { type: 'lucide', comp: SlidersHorizontal },
   'more-vertical': { type: 'lucide', comp: MoreVertical },
@@ -369,6 +370,8 @@ export default function Icon({
 export function toIconKey(emojiOrStr) {
   if (!emojiOrStr) return 'star';
   const s = String(emojiOrStr).trim();
+  const lower = s.toLowerCase();
+  if (ICON_REGISTRY[lower]) return lower;
   if (s.includes('\u{1F4AD}')) return 'realm-ngung-khi';
   if (s.includes('\u{1F525}')) return 'realm-truc-co';
   if (s.includes('\u{1FA90}')) return 'realm-kim-dan';
@@ -382,6 +385,7 @@ export function toIconKey(emojiOrStr) {
   if (s.includes('\u{1FA78}')) return 'drop';
   if (s.includes('\u{1FA9E}')) return 'mirror';
   if (s.includes('\u{1F52E}')) return 'orb';
+  if (s.includes('\u{1F315}') || s.includes('\u{1F319}') || s.includes('\u{1F311}')) return 'moon';
   if (s.includes('\u{1F451}')) return 'crown';
   if (s.includes('\u{26A1}')) return 'bolt';
   if (s.includes('\u{1F480}')) return 'skull';
@@ -399,9 +403,57 @@ export function toIconKey(emojiOrStr) {
   return 'star';
 }
 
+/**
+ * GlyphIcon
+ * Takes any value (iconKey, icon name, legacy emoji string, or object)
+ * and ALWAYS renders a valid <Icon ... /> element.
+ * GUARANTEE: NEVER renders raw string text (like "crown", "bolt") to the DOM.
+ */
+export function GlyphIcon({
+  value,
+  size = 16,
+  strokeWidth = 1.75,
+  color,
+  className = '',
+  style = {},
+  defaultName = 'sparkles',
+  ...props
+}) {
+  if (!value) {
+    return (
+      <Icon
+        name={defaultName}
+        size={size}
+        strokeWidth={strokeWidth}
+        color={color}
+        className={className}
+        style={style}
+        {...props}
+      />
+    );
+  }
+  const s = String(value).trim();
+  let key = toIconKey(s);
+  if (!key || !ICON_REGISTRY[key]) {
+    key = defaultName;
+  }
+  return (
+    <Icon
+      name={key}
+      size={size}
+      strokeWidth={strokeWidth}
+      color={color}
+      className={className}
+      style={style}
+      {...props}
+    />
+  );
+}
+
 // -------------------------------------------------------------
 // Named Export Wrappers (for drop-in compatibility across app)
 // -------------------------------------------------------------
+export const IconGlyph = GlyphIcon;
 export const IconSearch = (props) => <Icon name="search" {...props} />;
 export const IconLock = (props) => <Icon name="lock" {...props} />;
 export const IconUnlock = (props) => <Icon name="unlock" {...props} />;

@@ -1,4 +1,5 @@
-import Icon, { toIconKey } from '../ui/Icon';
+import Icon, { toIconKey, GlyphIcon } from '../ui/Icon';
+import styles from './SidePanelInfo.module.css';
 import React, { useState, useEffect } from 'react';
 import { useCultivationContext } from '../../context/CultivationContext';
 import { 
@@ -620,48 +621,59 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                 </div>
 
                 {/* BẢNG 10 TẦNG HÓA HẢI KINH */}
-                <div style={{
-                  padding: '10px 12px',
-                  borderRadius: 12,
-                  background: 'rgba(10, 16, 26, 0.85)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 5
-                }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 800, color: '#cbd5e1', marginBottom: 2 }}>
+                <div className={styles.roadmapCard}>
+                  <div className={styles.roadmapHeader}>
                     LỘ TRÌNH HÓA HẢI KINH (1 LÃNG ĐẾN 1 CẤM HẢI)
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-                    {HOA_HAI_KINH_LAYERS.map(layer => {
+                  <div className={styles.roadmapGrid}>
+                    {HOA_HAI_KINH_LAYERS.map((layer) => {
                       const isReached = phapExp >= layer.target;
                       const isCurrent = !isReached && (layer.level === 1 || phapExp >= NGUNG_KHI_THRESHOLDS[layer.level - 1]);
+                      const cleanName = (layer.name || '').replace(/\s*\([^)]*\)/g, '').trim();
+                      const hasMax = (layer.name || '').includes('Viên Mãn');
                       return (
                         <div
                           key={layer.level}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '4px 6px',
-                            borderRadius: 6,
-                            background: isCurrent ? 'rgba(6, 182, 212, 0.15)' : isReached ? 'rgba(16, 185, 129, 0.08)' : 'rgba(0, 0, 0, 0.25)',
-                            border: `1px solid ${isCurrent ? '#06b6d4' : isReached ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.04)'}`
-                          }}
+                          className={`${styles.roadmapCell} ${
+                            isCurrent
+                              ? styles.cellPhapCurrent
+                              : isReached
+                              ? styles.cellPhapReached
+                              : styles.cellPhapLocked
+                          }`}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
-                            <span style={{ fontSize: 8.5, fontWeight: 800, padding: '1px 3px', borderRadius: 3, background: isReached ? '#10b981' : isCurrent ? '#06b6d4' : '#334155', color: '#fff' }}>
-                              T{layer.level}
-                            </span>
-                            <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                              <div style={{ fontSize: 9.5, fontWeight: isCurrent || isReached ? 700 : 500, color: isReached ? '#a7f3d0' : isCurrent ? '#7dd3fc' : '#64748b' }}>
-                                {layer.name} {layer.hasPhantom ? '(Kình Ảnh)' : ''}
-                              </div>
-                              <div style={{ fontSize: 8, color: '#94a3b8' }}>{layer.target} EXP</div>
+                          <span
+                            className={styles.tierBadge}
+                            style={{
+                              background: isReached ? '#10b981' : isCurrent ? '#06b6d4' : '#334155',
+                            }}
+                          >
+                            T{layer.level}
+                          </span>
+                          <div className={styles.cellContent}>
+                            <div
+                              className={styles.cellTitle}
+                              style={{
+                                color: isReached ? '#a7f3d0' : isCurrent ? '#7dd3fc' : '#64748b',
+                              }}
+                              title={layer.name}
+                            >
+                              {cleanName}
+                            </div>
+                            <div className={styles.cellMetaRow}>
+                              {hasMax && <span className={`${styles.metaChip} ${styles.chipMax}`}>Viên Mãn</span>}
+                              {layer.hasPhantom && <span className={`${styles.metaChip} ${styles.chipWhale}`}>Kình Ảnh</span>}
+                              <span className={styles.cellExp}>{layer.target.toLocaleString()} EXP</span>
                             </div>
                           </div>
-                          <span style={{ fontSize: 9, fontWeight: 700 }}>
-                            {isReached ? <Icon name="check" size={12} style={{ color: '#34d399' }} /> : isCurrent ? <Icon name="bolt" size={12} style={{ color: '#06b6d4' }} /> : <Icon name="lock" size={12} style={{ color: '#475569' }} />}
+                          <span className={styles.cellStatusIcon}>
+                            {isReached ? (
+                              <Icon name="check" size={13} style={{ color: '#34d399' }} />
+                            ) : isCurrent ? (
+                              <Icon name="bolt" size={13} style={{ color: '#06b6d4' }} />
+                            ) : (
+                              <Icon name="lock" size={12} style={{ color: '#475569' }} />
+                            )}
                           </span>
                         </div>
                       );
@@ -673,9 +685,16 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
 
             {/* NÚT ĐỘT PHÁ TRÚC CƠ THÔNG MINH */}
             {canBreakthrough ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-                <button 
-                  className="cult-action-btn gold" 
+              <div className={styles.breakthroughContainer}>
+                <button
+                  type="button"
+                  className={`${styles.breakthroughActionCard} ${
+                    isBothMax
+                      ? styles.breakthroughGold
+                      : isTheMax
+                      ? styles.breakthroughRed
+                      : styles.breakthroughCyan
+                  }`}
                   onClick={() => {
                     try {
                       breakthroughToTrucCo();
@@ -684,69 +703,44 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                       alert(e.message || 'Chưa đủ tu vi đột phá Trúc Cơ!');
                     }
                   }}
-                  style={{
-                    width: '100%',
-                    maxWidth: '100%',
-                    boxSizing: 'border-box',
-                    padding: '10px 8px',
-                    fontSize: 11.5,
-                    fontWeight: 900,
-                    background: isBothMax ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' : (isTheMax ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)'),
-                    color: isBothMax ? '#000000' : '#ffffff',
-                    borderRadius: 8,
-                    border: 'none',
-                    cursor: 'pointer',
-                    boxShadow: isBothMax ? '0 0 22px rgba(251, 191, 36, 0.8)' : (isTheMax ? '0 0 18px rgba(239, 68, 68, 0.7)' : '0 0 18px rgba(56, 189, 248, 0.7)'),
-                    letterSpacing: 0.3,
-                    whiteSpace: 'normal',
-                    wordBreak: 'break-word',
-                    lineHeight: 1.35,
-                    textAlign: 'center'
-                  }}
+                  id="btn-breakthrough-truc-co"
+                  aria-label="Đột phá Trúc Cơ"
                 >
-                  {isBothMax ? 'ĐỘT PHÁ TRÚC CƠ (THỂ PHÁP SONG TU VIÊN MÃN)' : `ĐỘT PHÁ TRÚC CƠ (${isTheMax ? 'HẢI SƠN QUYẾT' : 'HÓA HẢI KINH'} VIÊN MÃN)`}
+                  <div className={styles.breakthroughMainTitle}>
+                    <Icon name="flame" size={18} />
+                    <span>ĐỘT PHÁ TRÚC CƠ</span>
+                  </div>
+                  <div className={styles.breakthroughSubtitleChip}>
+                    {isBothMax
+                      ? 'Thể Pháp Song Tu Viên Mãn'
+                      : isTheMax
+                      ? 'Hải Sơn Quyết Viên Mãn'
+                      : 'Hóa Hải Kinh Viên Mãn'}
+                  </div>
                 </button>
 
                 {isBothMax ? (
-                  <div style={{
-                    padding: '8px 10px',
-                    borderRadius: 6,
-                    background: 'rgba(251, 191, 36, 0.12)',
-                    border: '1px solid rgba(251, 191, 36, 0.3)',
-                    fontSize: 9.5,
-                    color: '#fde047',
-                    lineHeight: 1.4,
-                    textAlign: 'center'
-                  }}>
-                    <strong>Thể Pháp Song Tuyệt</strong>: Giảm 15% Tu Vi mở 120 Pháp Khiếu + Tăng 20% Tốc độ tu luyện vĩnh viễn!
+                  <div className={styles.breakthroughNoteCard}>
+                    <Icon name="sparkles" size={15} style={{ color: '#fef08a', flexShrink: 0, marginTop: 1 }} />
+                    <div>
+                      <strong>Thể Pháp Song Tuyệt</strong>: Giảm 15% Tu Vi mở 120 Pháp Khiếu + Tăng 20% Tốc độ tu luyện vĩnh viễn!
+                    </div>
                   </div>
                 ) : (
-                  <div style={{
-                    padding: '6px 10px',
-                    borderRadius: 6,
-                    background: 'rgba(15, 23, 42, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    fontSize: 9.5,
-                    color: '#94a3b8',
-                    lineHeight: 1.4,
-                    textAlign: 'center'
-                  }}>
-                    <em>Gợi ý: Đạo hữu có thể tu luyện nốt nhánh còn lại lên 10 tầng để nhận đại đặc quyền <strong>Thể Pháp Song Tuyệt</strong> trước khi Trúc Cơ!</em>
+                  <div className={styles.breakthroughNoteCard} style={{ background: 'rgba(15, 23, 42, 0.6)', borderColor: 'rgba(255, 255, 255, 0.08)', color: '#94a3b8' }}>
+                    <Icon name="info" size={15} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 1 }} />
+                    <div>
+                      Gợi ý: Đạo hữu có thể tu luyện nốt nhánh còn lại lên 10 tầng để nhận đại đặc quyền <strong>Thể Pháp Song Tuyệt</strong> trước khi Trúc Cơ!
+                    </div>
                   </div>
                 )}
               </div>
             ) : (
-              <div style={{
-                padding: '10px 12px',
-                borderRadius: 8,
-                background: 'rgba(15, 23, 42, 0.6)',
-                border: '1px dashed rgba(255, 255, 255, 0.12)',
-                textAlign: 'center',
-                color: 'var(--text-muted)',
-                fontSize: 10.5,
-                lineHeight: 1.4
-              }}>
-                Cần tích lũy đủ <strong>4,500 EXP (10 Tầng Viên Mãn)</strong> ở Hải Sơn Quyết hoặc Hóa Hải Kinh để mở khóa Đột Phá Trúc Cơ!
+              <div className={styles.breakthroughLockedCard}>
+                <Icon name="lock" size={14} style={{ color: '#64748b', flexShrink: 0 }} />
+                <span>
+                  Cần tích lũy đủ <strong>4,500 EXP (10 Tầng Viên Mãn)</strong> ở Hải Sơn Quyết hoặc Hóa Hải Kinh để mở khóa Đột Phá Trúc Cơ!
+                </span>
               </div>
             )}
           </div>
@@ -1100,98 +1094,63 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
               }} />
 
               {/* Tiêu đề & Tiến trình */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="shield" size={16} />
-                  <span style={{
-                    fontFamily: 'var(--font-serif)',
-                    color: '#fef08a',
-                    fontWeight: 900,
-                    fontSize: 13.5,
-                    letterSpacing: 0.5,
-                    textShadow: '0 0 10px rgba(251, 191, 36, 0.5)'
-                  }}>
+              <div className={styles.thienCungHeader}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                  <GlyphIcon value="shield" size={16} />
+                  <span className={styles.thienCungTitle} style={{ fontFamily: 'var(--font-serif)' }}>
                     THIÊN CUNG KIM ĐAN
                   </span>
                 </div>
-                <span style={{
-                  fontSize: 11,
-                  padding: '3px 9px',
-                  borderRadius: 10,
-                  fontWeight: 900,
-                  color: '#fde047',
-                  background: 'rgba(251, 191, 36, 0.15)',
-                  border: '1px solid rgba(251, 191, 36, 0.4)'
-                }}>
+                <span className={styles.thienCungBadge}>
                   {totalRealizedAll}/{maxThienCung} Cung Thật
                 </span>
               </div>
 
               {/* 13-TINH CHÂU MA TRẬN (CONSTELLATION PROGRESS RADAR) */}
-              <div style={{
-                background: 'rgba(4, 8, 16, 0.75)',
-                padding: '10px 12px',
-                borderRadius: 10,
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+              <div className={styles.tranDoCard}>
+                <div className={styles.tranDoHeader}>
                   <span style={{ color: '#94a3b8' }}>Trận Đồ Thập Tam Cung:</span>
-                  <span style={{ color: '#38bdf8', fontWeight: 700 }}>
+                  <span className={`${styles.tranDoStatusBadge} ${totalRealizedAll === maxThienCung ? styles.statusVienMan : styles.statusTuLuyen}`}>
                     {totalRealizedAll === maxThienCung ? 'Viên Mãn' : `Đang tu ${realizedThienCung + 1}/${maxThienCung}`}
                   </span>
                 </div>
-                {/* Dải 13 Tinh Châu */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
-                  {Array.from({ length: maxThienCung }).map((_, idx) => {
+
+                {/* Dải 13 Tinh Châu Tròn */}
+                <div className={styles.tranDoGrid}>
+                  {Array.from({ length: 13 }).map((_, idx) => {
                     const isRealizedSelf = idx < realizedThienCung;
                     const isLamp = idx >= selfPalaceCount && (idx - selfPalaceCount) < lampCount;
                     const isActive = idx === realizedThienCung && !isAllPalacesRealized;
                     const isLocked = !isRealizedSelf && !isLamp && !isActive;
 
-                    let bg = 'rgba(100, 116, 139, 0.2)';
-                    let border = '1px solid rgba(100, 116, 139, 0.4)';
+                    let orbClass = styles.palaceLocked;
                     let icon = 'lock';
-                    let glow = 'none';
+                    let tooltip = `Thiên Cung #${idx + 1}: Chưa Khai Mở`;
 
                     if (isRealizedSelf) {
-                      bg = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                      border = '1px solid #fde047';
+                      orbClass = styles.palaceRealizedSelf;
                       icon = 'crown';
-                      glow = '0 0 6px rgba(251, 191, 36, 0.8)';
+                      tooltip = `Thiên Cung #${idx + 1}: Tự Thân Đã Khai Mở`;
                     } else if (isLamp) {
-                      bg = 'linear-gradient(135deg, #f97316, #dc2626)';
-                      border = '1px solid #fdba74';
+                      orbClass = styles.palaceLamp;
                       icon = 'lantern';
-                      glow = '0 0 6px rgba(249, 115, 22, 0.8)';
+                      tooltip = `Thiên Cung #${idx + 1}: Mệnh Đăng Tọa Trấn`;
                     } else if (isActive) {
-                      bg = isBottleneck ? 'linear-gradient(135deg, #f97316, #eab308)' : 'linear-gradient(135deg, #0284c7, #38bdf8)';
-                      border = isBottleneck ? '1.5px solid #fef08a' : '1.5px solid #7dd3fc';
-                      icon = isBottleneck ? 'alert-triangle' : 'bolt';
-                      glow = isBottleneck ? '0 0 10px #f97316' : '0 0 10px #38bdf8';
+                      orbClass = isBottleneck ? styles.palaceBottleneck : styles.palaceActive;
+                      icon = isBottleneck ? 'flame' : 'bolt';
+                      tooltip = isBottleneck
+                        ? `Thiên Cung #${idx + 1}: Đang Nghẽn Cực Hạn (99.99%)`
+                        : `Thiên Cung #${idx + 1}: Đang Ngưng Tụ Linh Lực`;
                     }
 
                     return (
                       <div
                         key={`palace-node-${idx}`}
-                        title={`Thiên Cung #${idx + 1}`}
-                        style={{
-                          flex: 1,
-                          height: 24,
-                          borderRadius: 6,
-                          background: bg,
-                          border: border,
-                          boxShadow: glow,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 10,
-                          transition: 'all 0.3s ease'
-                        }}
+                        className={`${styles.palaceOrb} ${orbClass}`}
+                        title={tooltip}
+                        aria-label={tooltip}
                       >
-                        {icon}
+                        <GlyphIcon value={icon} size={15} />
                       </div>
                     );
                   })}
@@ -1199,18 +1158,14 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
               </div>
 
               {/* Thông số & Lực Chiến */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                fontSize: 12,
-                paddingTop: 2,
-                borderTop: '1px solid rgba(255, 255, 255, 0.06)'
-              }}>
-                <span style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span><Icon name="sword" size={14} /></span> Lực Chiến Kim Đan:
+              <div className={styles.combatPowerRow}>
+                <span className={styles.combatPowerLabel}>
+                  <span className={styles.swordIconWrap}>
+                    <GlyphIcon value="sword" size={13} />
+                  </span>
+                  Lực Chiến Kim Đan:
                 </span>
-                <strong style={{ color: 'var(--color-kim)', fontSize: 13, textShadow: '0 0 8px rgba(251, 191, 36, 0.4)' }}>
+                <strong className={styles.combatPowerValue} style={{ color: 'var(--color-kim)', fontSize: 13, textShadow: '0 0 8px rgba(251, 191, 36, 0.4)' }}>
                   {calculatedCombatPower}
                 </strong>
               </div>

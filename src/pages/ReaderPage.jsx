@@ -1,4 +1,4 @@
-import Icon from '../components/ui/Icon';
+import Icon, { GlyphIcon } from '../components/ui/Icon';
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { getNovel, getChapters, getChapter } from '../lib/db';
@@ -85,6 +85,12 @@ export default function ReaderPage() {
   const [barVisible, setBarVisible] = useState(true);
   const [breakthroughToast, setBreakthroughToast] = useState(null);
   const [droppedLamp, setDroppedLamp] = useState(null);
+
+  useEffect(() => {
+    const handleSimulate = (e) => { if (e.detail) setDroppedLamp(e.detail); };
+    window.addEventListener('tcl_simulate_lamp_drop', handleSimulate);
+    return () => window.removeEventListener('tcl_simulate_lamp_drop', handleSimulate);
+  }, []);
   const scrollRef = useRef(null);
   const lastScrollY = useRef(0);
 
@@ -1129,7 +1135,7 @@ export default function ReaderPage() {
           <div className={styles.lampDropModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.lampDropAura} />
             <span className={styles.lampDropBadge}>✦ THƯỢNG CỔ CƠ DUYÊN ✦</span>
-            <span className={styles.lampDropIcon}>{droppedLamp.icon}</span>
+            <span className={styles.lampDropIcon}><GlyphIcon value={droppedLamp.iconKey || droppedLamp.icon} size={32} /></span>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '4px 0' }}>
               <h3 className={styles.lampDropTitle} style={{ color: droppedLamp.color || '#ffcc00', margin: 0 }}>
                 {droppedLamp.name}
