@@ -877,7 +877,7 @@ export default function ComicSeriesPage() {
   if (loading) {
     return (
       <div className={styles.page}>
-        <ComicsBackdrop />
+        <ComicsBackdrop seriesId={seriesId} />
         <div className={styles.topNav}>
           <div className={styles.backBtnSkeleton} />
         </div>
@@ -925,7 +925,7 @@ export default function ComicSeriesPage() {
 
   return (
     <div className={styles.page}>
-      <ComicsBackdrop />
+      <ComicsBackdrop seriesId={seriesId} />
 
       {/* Top Navigation */}
       <div className={styles.topNav}>

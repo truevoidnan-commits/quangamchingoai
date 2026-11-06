@@ -2,13 +2,23 @@ import React, { useState, useEffect, useRef } from 'react';
 import { loadCustomBackdropUrls } from '../../lib/comics/customBackdrop.js';
 import styles from './ComicsBackdrop.module.css';
 
-export default function ComicsBackdrop() {
+export default function ComicsBackdrop({ seriesId = null }) {
   const [customBackdrop, setCustomBackdrop] = useState(null);
   const activeUrlsRef = useRef([]);
 
   const loadBackdrop = async () => {
+    // If no seriesId is provided (lobby or general views), lobby always uses default backdrop
+    if (!seriesId) {
+      activeUrlsRef.current.forEach((u) => {
+        if (u) URL.revokeObjectURL(u);
+      });
+      activeUrlsRef.current = [];
+      setCustomBackdrop(null);
+      return;
+    }
+
     try {
-      const data = await loadCustomBackdropUrls();
+      const data = await loadCustomBackdropUrls(seriesId);
       // Revoke old object URLs to avoid memory leaks
       activeUrlsRef.current.forEach((u) => {
         if (u) URL.revokeObjectURL(u);
@@ -23,7 +33,7 @@ export default function ComicsBackdrop() {
         setCustomBackdrop(null);
       }
     } catch (e) {
-      console.warn('[ComicsBackdrop] Error loading backdrop:', e);
+      console.warn('[ComicsBackdrop] Error loading backdrop for series:', seriesId, e);
       setCustomBackdrop(null);
     }
   };
@@ -31,8 +41,11 @@ export default function ComicsBackdrop() {
   useEffect(() => {
     loadBackdrop();
 
-    const handleBackdropChanged = () => {
-      loadBackdrop();
+    const handleBackdropChanged = (e) => {
+      // Only reload if this component is attached to a series and the event affects this series (or general reload)
+      if (seriesId && (!e?.detail?.seriesId || e.detail.seriesId === seriesId)) {
+        loadBackdrop();
+      }
     };
 
     window.addEventListener('tcl_custom_backdrop_changed', handleBackdropChanged);
@@ -43,9 +56,9 @@ export default function ComicsBackdrop() {
       });
       activeUrlsRef.current = [];
     };
-  }, []);
+  }, [seriesId]);
 
-  const hasCustom = Boolean(customBackdrop && customBackdrop.settings);
+  const hasCustom = Boolean(seriesId && customBackdrop && customBackdrop.settings);
   // Auto-dim guarantee: minimum 35% dim for text readability
   const dimPercent = hasCustom
     ? Math.min(80, Math.max(35, Number(customBackdrop.settings.dim) || 40))
