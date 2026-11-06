@@ -93,7 +93,6 @@ export default function ComicImportModal({
       if (parsed !== null) {
         order = parsed;
       } else {
-        // D1: Gán tuần tự từ maxExistingOrder + 1 nếu tên file không có số
         order = maxExistingOrder + unnumberedCounter++;
       }
       const title = cleanVolumeTitle(file.name, order);
@@ -138,7 +137,7 @@ export default function ComicImportModal({
     setFileConfigs((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  // Phát hiện các số tập bị trùng nhau (D1)
+  // Phát hiện các số tập bị trùng nhau
   const orderList = fileConfigs.map((c) => Number(c.order)).filter((n) => !isNaN(n));
   const duplicateOrders = [...new Set(orderList.filter((item, index) => orderList.indexOf(item) !== index))];
 
@@ -207,17 +206,21 @@ export default function ComicImportModal({
 
   return (
     <div className={styles.modalOverlay} onClick={!isImporting ? onClose : undefined}>
-      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <div className={styles.sheetHandle} />
         <div className={styles.modalHeader}>
           <div className={styles.titleWrap}>
-            <span className={styles.headerIcon}>
-              <IconBookOpen size={22} />
-            </span>
-            <h2 className={styles.modalTitle}>Nhập Truyện Tranh (PDF)</h2>
+            <div className={styles.headerIconCircle}>
+              <IconBookOpen size={20} />
+            </div>
+            <div>
+              <h2 className={styles.modalTitle}>Nhập Truyện Tranh (PDF)</h2>
+              <p className={styles.modalSubtitle}>Tàng Kinh Họa Các · Chuyển đổi WebP tối ưu</p>
+            </div>
           </div>
           {!isImporting && (
             <button className={styles.closeBtn} onClick={onClose} aria-label="Đóng">
-              <IconX size={20} />
+              <IconX size={18} />
             </button>
           )}
         </div>
@@ -237,18 +240,18 @@ export default function ComicImportModal({
                   style={{ display: 'none' }}
                   onChange={handleFileChange}
                 />
-                <span className={styles.dropIcon}>
-                  <IconFolder size={36} />
-                </span>
-                <p className={styles.dropPrompt}>Nhấn để chọn một hoặc nhiều file PDF tập truyện</p>
-                <p className={styles.dropSub}>Mỗi file ứng với 1 tập (hỗ trợ file nặng 50–100MB+)</p>
+                <div className={styles.dropIconWrap}>
+                  <IconFolder size={32} />
+                </div>
+                <p className={styles.dropPrompt}>Nhấn hoặc thả file PDF tập truyện vào đây</p>
+                <p className={styles.dropSub}>Mỗi file ứng với 1 tập (hỗ trợ tập lớn 50–100MB+)</p>
               </div>
 
-              {/* Editable File List Table (D1) */}
+              {/* Editable File List Table */}
               {fileConfigs.length > 0 && (
                 <div className={styles.fileListSection}>
                   <div className={styles.fileListHeader}>
-                    <span>Danh sách tập đã chọn ({fileConfigs.length} tập · ~{formatMb(fileConfigs.reduce((acc, f) => acc + (f.file?.size || 0), 0))} MB)</span>
+                    <span>Danh sách tập ({fileConfigs.length} tập · ~{formatMb(fileConfigs.reduce((acc, f) => acc + (f.file?.size || 0), 0))} MB)</span>
                   </div>
 
                   {duplicateOrders.length > 0 && (
@@ -333,7 +336,7 @@ export default function ComicImportModal({
                   <input
                     type="text"
                     className={styles.textInput}
-                    placeholder="Ví dụ: One Piece, Naruto, Đấu Phá..."
+                    placeholder="Ví dụ: Tiên Nghịch, Nhất Niệm Vĩnh Hằng..."
                     value={newSeriesTitle}
                     onChange={(e) => setNewSeriesTitle(e.target.value)}
                   />
@@ -396,7 +399,7 @@ export default function ComicImportModal({
             /* Progress view during import */
             <div className={styles.progressContainer}>
               <div className={styles.progressPulseIcon}>
-                <IconRefresh size={40} />
+                <IconRefresh size={36} />
               </div>
               <h3 className={styles.progressTitle}>Đang xử lý truyện tranh...</h3>
 

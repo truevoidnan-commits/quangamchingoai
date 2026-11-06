@@ -1,18 +1,30 @@
-import Icon from '../components/ui/Icon';
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Icon, { GlyphIcon } from '../components/ui/Icon';
 import { getNovel, saveNovel } from '../lib/db';
 import { updateLibraryItem } from '../lib/storage';
 import { resizeCoverImage, makeCoverThumb } from '../lib/chapterParser';
 import Footer from '../components/layout/Footer';
-import TextBackdrop from '../components/layout/TextBackdrop';
 import ImageCropperModal from '../components/ui/ImageCropperModal';
-import styles from './AddNovelPage.module.css'; // Reuse same styles
+import {
+  PageShell,
+  PageHeader,
+  Card,
+  Field,
+  TextInput,
+  TextArea,
+  SegmentedControl,
+  Dropzone,
+  Button,
+  ActionBar,
+} from '../components/ui/FormKit';
+import styles from './AddNovelPage.module.css';
 
 export default function EditNovelPage() {
   const { id, novelId: rawNovelId } = useParams();
   const novelId = rawNovelId || id;
   const navigate = useNavigate();
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
@@ -38,8 +50,7 @@ export default function EditNovelPage() {
     })();
   }, [novelId]);
 
-  const handleCoverFile = async (e) => {
-    const file = e.target.files?.[0];
+  const handleCoverFile = async (file) => {
     if (!file) return;
     try {
       const resized = await resizeCoverImage(file);
@@ -63,8 +74,14 @@ export default function EditNovelPage() {
 
   const handleSave = async () => {
     if (saving) return;
-    if (!title.trim()) { alert('Vui lòng nhập tên truyện.'); return; }
-    if (!novelId) { alert('Không tìm thấy thông tin truyện để sửa.'); return; }
+    if (!title.trim()) {
+      alert('Vui lòng nhập tên truyện.');
+      return;
+    }
+    if (!novelId) {
+      alert('Không tìm thấy thông tin truyện để sửa.');
+      return;
+    }
     setSaving(true);
     try {
       // 1. Tạo thumbnail ảnh bìa trước
@@ -83,7 +100,7 @@ export default function EditNovelPage() {
         id: novelId,
         title: title.trim(),
         description: description.trim(),
-        coverUrl, // Full ảnh chất lượng cao lưu trong IndexedDB
+        coverUrl,
         coverThumb,
       };
       await saveNovel(updated);
@@ -101,98 +118,185 @@ export default function EditNovelPage() {
   };
 
   return (
-    <div className={styles.page}>
-      <TextBackdrop />
-      <div className={styles.header}>
-        <button className="btn-ghost" onClick={() => navigate(-1)}>← Quay lại</button>
-        <h1 className={styles.pageTitle}>Sửa thông tin truyện</h1>
-      </div>
+    <PageShell backdrop="text">
+      <PageHeader
+        backLabel="Quay lại"
+        title="Sửa Thông Tin Truyện"
+        subtitle={title || 'Chỉnh sửa tiêu đề, mô tả và ảnh bìa'}
+      />
 
-      <div className={styles.form}>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="edit-novel-title">Tên truyện *</label>
-          <input id="edit-novel-title" type="text" value={title} onChange={e => setTitle(e.target.value)} className={styles.input} />
-        </div>
+      {/* 1. CARD: THÔNG TIN TRUYỆN */}
+      <Card
+        icon="book"
+        title="Thông Tin Cơ Bản"
+        subtitle="Cập nhật tên truyện và tóm tắt giới thiệu tác phẩm"
+      >
+        <Field label="Tên truyện *" id="edit-novel-title">
+          <TextInput
+            id="edit-novel-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Nhập tên truyện..."
+          />
+        </Field>
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="edit-novel-desc">Giới thiệu</label>
-          <textarea id="edit-novel-desc" value={description} onChange={e => setDescription(e.target.value)} rows={4} className={styles.textarea} />
-        </div>
+        <Field label="Giới thiệu" optional id="edit-novel-desc">
+          <TextArea
+            id="edit-novel-desc"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Tóm tắt nội dung truyện..."
+            rows={4}
+            maxLength={3000}
+          />
+        </Field>
+      </Card>
 
-        <div className={styles.field}>
-          <label className={styles.label}>Ảnh bìa</label>
-          <div className={styles.coverTabs}>
-            <button type="button" className={`${styles.coverTab} ${coverTab === 'upload' ? styles.coverTabActive : ''}`} onClick={() => setCoverTab('upload')}>Upload</button>
-            <button type="button" className={`${styles.coverTab} ${coverTab === 'url' ? styles.coverTabActive : ''}`} onClick={() => setCoverTab('url')}>URL</button>
-          </div>
-
-          {coverTab === 'upload' && (
-            <div className={styles.dropZone} onClick={() => fileRef.current?.click()}>
-              <input ref={fileRef} type="file" accept="image/*" onChange={handleCoverFile} style={{ display: 'none' }} />
-              {coverPreview ? (
-                <div className={styles.previewContainer} onClick={e => e.stopPropagation()}>
-                  <img src={coverPreview} alt="Preview" className={styles.coverPreview} />
-                  <div className={styles.previewActions}>
-                    <button
-                      type="button"
-                      className="btn-ghost"
-                      style={{ fontSize: 12, padding: '4px 10px' }}
-                      onClick={() => fileRef.current?.click()}
-                    >
-                      <Icon name="refresh" size={14} /> Đổi ảnh
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-ghost"
-                      style={{ fontSize: 12, padding: '4px 10px', color: 'var(--accent-cyan)' }}
-                      onClick={() => {
-                        setRawImageForCrop(coverPreview);
-                        setCropModalOpen(true);
-                      }}
-                    >
-                      <Icon name="scissors" size={14} /> Căn chỉnh lại
-                    </button>
-                  </div>
+      {/* 2. CARD: ẢNH BÌA */}
+      <Card
+        icon="image"
+        title="Ảnh Bìa Tác Phẩm"
+        subtitle="Hiển thị theo tỉ lệ chuẩn 3:4"
+        actions={
+          <SegmentedControl
+            options={[
+              { value: 'upload', label: 'Tải từ máy', icon: 'upload' },
+              { value: 'url', label: 'Nhập URL', icon: 'link' },
+            ]}
+            value={coverTab}
+            onChange={setCoverTab}
+          />
+        }
+      >
+        {coverTab === 'upload' && (
+          <div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                if (e.target.files?.[0]) handleCoverFile(e.target.files[0]);
+              }}
+              id="cover-file-input"
+            />
+            {coverPreview ? (
+              <div className={styles.coverPreviewContainer}>
+                <div className={styles.coverFrame34}>
+                  <img src={coverPreview} alt="Preview bìa" className={styles.coverImg} />
                 </div>
-              ) : (
-                <div className={styles.dropPlaceholder}><Icon name="image" size={32} /><span>Nhấn để chọn ảnh bìa</span></div>
-              )}
-            </div>
-          )}
-
-          {coverTab === 'url' && (
-            <div className={styles.urlRow}>
-              <input type="url" value={coverUrlInput} onChange={e => setCoverUrlInput(e.target.value)} placeholder="https://..." className={styles.input} />
-              <button type="button" className="btn-ghost" onClick={handleCoverUrl}><Icon name="scissors" size={14} /> Cắt & Căn chỉnh</button>
-              {coverPreview && coverTab === 'url' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <img src={coverPreview} alt="Preview" className={styles.coverPreviewSmall} onError={() => setCoverPreview('')} />
-                  <button
-                    type="button"
-                    className="btn-ghost"
-                    style={{ fontSize: 11, padding: '2px 8px' }}
+                <div className={styles.coverActions}>
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    icon="refresh"
+                    onClick={() => fileRef.current?.click()}
+                  >
+                    Đổi ảnh khác
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    icon="scissors"
                     onClick={() => {
                       setRawImageForCrop(coverPreview);
                       setCropModalOpen(true);
                     }}
                   >
-                    <Icon name="scissors" size={14} /> Chỉnh lại
-                  </button>
+                    Căn chỉnh lại
+                  </Button>
                 </div>
-              )}
+              </div>
+            ) : (
+              <Dropzone
+                icon="image"
+                title="Kéo thả ảnh bìa vào đây hoặc bấm để chọn"
+                hint="Tự động mở công cụ căn chỉnh chuẩn tỉ lệ 3:4"
+                accept="image/*"
+                onSelectFile={handleCoverFile}
+              />
+            )}
+          </div>
+        )}
+
+        {coverTab === 'url' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <TextInput
+                  id="cover-url-input"
+                  type="url"
+                  value={coverUrlInput}
+                  onChange={(e) => setCoverUrlInput(e.target.value)}
+                  placeholder="https://example.com/cover.jpg"
+                  prefixIcon="link"
+                />
+              </div>
+              <Button
+                variant="secondary"
+                icon="scissors"
+                onClick={handleCoverUrl}
+              >
+                Cắt & Căn chỉnh
+              </Button>
             </div>
-          )}
-        </div>
 
-        {error && <div className={styles.parseError}><Icon name="alert-triangle" size={14} /> {error}</div>}
+            {coverPreview && (
+              <div className={styles.coverPreviewContainer}>
+                <div className={styles.coverFrame34}>
+                  <img
+                    src={coverPreview}
+                    alt="Preview bìa"
+                    className={styles.coverImg}
+                    onError={() => {
+                      setCoverPreview('');
+                      setError('URL ảnh không hợp lệ.');
+                    }}
+                  />
+                </div>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  icon="scissors"
+                  onClick={() => {
+                    setRawImageForCrop(coverPreview);
+                    setCropModalOpen(true);
+                  }}
+                >
+                  Căn chỉnh lại
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
-        <div className={styles.actions}>
-          <button className="btn-ghost" onClick={() => navigate(-1)}>Hủy</button>
-          <button className="btn-gold" onClick={handleSave} disabled={saving || !title.trim()} id="btn-update-novel">
-            {saving ? 'Đang lưu...' : <><Icon name="save" size={16} /> Cập nhật</>}
-          </button>
-        </div>
-      </div>
+        {error && (
+          <div className={styles.parseError}>
+            <Icon name="alert-triangle" size={15} />
+            <span>{error}</span>
+          </div>
+        )}
+      </Card>
+
+      {/* Sticky Bottom Action Bar */}
+      <ActionBar>
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+        >
+          Hủy
+        </Button>
+        <Button
+          variant="primary"
+          icon="save"
+          id="btn-update-novel"
+          loading={saving}
+          disabled={saving || !title.trim()}
+          onClick={handleSave}
+        >
+          {saving ? 'Đang lưu...' : 'Cập nhật'}
+        </Button>
+      </ActionBar>
 
       <Footer />
 
@@ -204,6 +308,6 @@ export default function EditNovelPage() {
           onClose={() => setCropModalOpen(false)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

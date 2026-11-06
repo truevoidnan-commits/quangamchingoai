@@ -13,6 +13,7 @@ import {
 } from '../lib/backup/backupEngine.js';
 import { getLibrary } from '../lib/storage.js';
 import { getActiveProfile } from '../lib/cultivation.js';
+import TextBackdrop from '../components/layout/TextBackdrop';
 import styles from './BackupPage.module.css';
 
 export default function BackupPage() {
@@ -99,7 +100,7 @@ export default function BackupPage() {
     return () => { active = false; };
   }, [exportParts, includeContent, selectAllNovels, selectedNovelIds]);
 
-  // Check if any selected novel is hidden in vault
+  // Check if any selected novel is  in vault
   const hasSelectedHiddenNovels = availableNovels.some(
     n => n.isHidden && (selectAllNovels || selectedNovelIds.has(n.id))
   );
@@ -274,7 +275,8 @@ export default function BackupPage() {
 
   return (
     <div className={styles.page}>
-      {/* Top navigation */}
+      <TextBackdrop />
+      {/* Top navigation */} hidden
       <div className={styles.navBar}>
         <Link to="/sync" className={styles.backLink}>
           ← Về Đồng Bộ Cloud
