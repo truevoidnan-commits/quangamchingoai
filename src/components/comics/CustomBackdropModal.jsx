@@ -1,7 +1,6 @@
-import Icon from '../ui/Icon';
 import React, { useState, useEffect, useRef } from 'react';
+import Icon from '../ui/Icon.jsx';
 import {
-  getAllSeries,
   getVolumes,
   getPage,
 } from '../../lib/comics/comicDb.js';
@@ -14,10 +13,11 @@ import {
 } from '../../lib/comics/customBackdrop.js';
 import styles from './CustomBackdropModal.module.css';
 
-export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
-  const [step, setStep] = useState(1); // 1: Series, 2: Volumes, 3: Pages, 4: Preview
-  const [seriesList, setSeriesList] = useState([]);
-  const [selectedSeries, setSelectedSeries] = useState(null);
+export default function CustomBackdropModal({ isOpen, onClose, series, onToast }) {
+  // Step 1: Chọn tập (Volume) - with shortcut "Dùng bìa truyện này"
+  // Step 2: Chọn trang (Page)
+  // Step 3: Xem trước & Tuỳ chỉnh (Preview, Blur, Dim)
+  const [step, setStep] = useState(1);
   const [volumes, setVolumes] = useState([]);
   const [selectedVolume, setSelectedVolume] = useState(null);
 
@@ -37,15 +37,14 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
     return url;
   };
 
-  // Load series on open
+  // Load volumes and existing backdrop settings when opened
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !series?.id) return;
     setStep(1);
-    setSelectedSeries(null);
     setSelectedVolume(null);
     setSelectedPage(null);
 
-    const curSettings = getCustomBackdropSettings();
+    const curSettings = getCustomBackdropSettings(series.id);
     if (curSettings) {
       setBlur(curSettings.blur || 0);
       setDim(curSettings.dim || 40);
@@ -54,52 +53,39 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
       setDim(40);
     }
 
-    getAllSeries()
-      .then((list) => setSeriesList(list || []))
-      .catch((err) => console.warn('Could not load series:', err));
+    getVolumes(series.id)
+      .then((vols) => setVolumes(vols || []))
+      .catch((err) => console.warn('Could not load volumes for series:', err));
 
     return () => {
       // Clean up object URLs on close
       createdUrlsRef.current.forEach((u) => u && URL.revokeObjectURL(u));
       createdUrlsRef.current = [];
     };
-  }, [isOpen]);
-
-  // Load volumes when series is selected
-  const handleSelectSeries = async (s) => {
-    setSelectedSeries(s);
-    try {
-      const vols = await getVolumes(s.id);
-      setVolumes(vols || []);
-      setStep(2);
-    } catch (e) {
-      console.warn('Could not load volumes:', e);
-    }
-  };
+  }, [isOpen, series?.id]);
 
   // Shortcut: Use Series Cover
   const handleUseCover = () => {
-    if (!selectedSeries?.coverBlob) {
+    if (!series?.coverBlob) {
       if (onToast) onToast('Bộ truyện này chưa có ảnh bìa');
       return;
     }
-    const url = addBlobUrl(selectedSeries.coverBlob);
+    const url = addBlobUrl(series.coverBlob);
     setSelectedPage({
       index: 0,
-      blob: selectedSeries.coverBlob,
+      blob: series.coverBlob,
       blobUrl: url,
       isCover: true,
     });
-    setStep(4);
+    setStep(3);
   };
 
-  // Load pages when volume is selected
+  // Select volume -> step 2 (Pages)
   const handleSelectVolume = async (vol) => {
     setSelectedVolume(vol);
     setPageThumbnails([]);
-    setStep(3);
+    setStep(2);
 
-    // Lazy load first batch of thumbnails
     const total = Math.min(vol.pageCount || 20, 60);
     const thumbs = [];
     for (let i = 0; i < total; i++) {
@@ -107,7 +93,6 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
     }
     setPageThumbnails(thumbs);
 
-    // Fetch page blobs sequentially/batched
     for (let i = 0; i < total; i++) {
       getPage(vol.id, i).then((pageRecord) => {
         if (!pageRecord?.blob) return;
@@ -123,20 +108,32 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
     }
   };
 
-  // Select page to preview
+  // Select page -> step 3 (Preview)
   const handleSelectPage = (pageItem) => {
     if (!pageItem.blob && !pageItem.blobUrl) return;
     setSelectedPage(pageItem);
-    setStep(4);
+    setStep(3);
   };
 
-  // Save selected page as custom backdrop
+  // Back button handler
+  const handleBack = () => {
+    if (step === 3) {
+      if (selectedPage?.isCover) {
+        setStep(1);
+      } else {
+        setStep(2);
+      }
+    } else if (step === 2) {
+      setStep(1);
+    }
+  };
+
+  // Save selected page as custom backdrop for this series
   const handleSaveBackdrop = async () => {
-    if (!selectedPage) return;
+    if (!selectedPage || !series?.id) return;
     setIsProcessing(true);
 
     try {
-      // Create image element to crop from
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.src = selectedPage.blobUrl;
@@ -145,22 +142,22 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
         img.onerror = reject;
       });
 
-      // 1. Crop vertical 1080x1920 (for mobile)
+      // 1. Crop vertical 1080x1920 (mobile)
       const { blob: verticalBlob, brightness: vBrightness } = await cropToBackdropWebp(img, 1080, 1920, 0.5, 0.5);
 
-      // 2. Crop wide 1920x1080 (for desktop)
+      // 2. Crop wide 1920x1080 (desktop)
       const { blob: wideBlob, brightness: wBrightness } = await cropToBackdropWebp(img, 1920, 1080, 0.5, 0.5);
 
-      // Check luminance for auto-dim guarantee: if bright, enforce at least 35% dim
+      // Enforce at least 35% dim if page is bright
       const maxBrightness = Math.max(vBrightness, wBrightness);
       const effectiveDim = maxBrightness > 0.5 ? Math.max(35, dim) : dim;
 
-      // Store blobs in CacheStorage
-      await storeCustomBackdropBlobs({ verticalBlob, wideBlob });
+      // Store blobs in CacheStorage for this series
+      await storeCustomBackdropBlobs(series.id, { verticalBlob, wideBlob });
 
-      // Save metadata in localStorage
-      saveCustomBackdropSettings({
-        comicId: selectedSeries?.id || '',
+      // Save metadata in localStorage under this seriesId
+      saveCustomBackdropSettings(series.id, {
+        comicId: series.id,
         volumeId: selectedVolume?.id || 'cover',
         pageIndex: selectedPage.index,
         blur: Number(blur) || 0,
@@ -169,7 +166,7 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
         offsetY: 0.5,
       });
 
-      if (onToast) onToast('Đã áp dụng hình nền tùy chọn cho Tàng Kinh Họa Các');
+      if (onToast) onToast(`Đã áp dụng hình nền riêng cho «${series.title}»`);
       onClose();
     } catch (e) {
       console.error('Error saving backdrop:', e);
@@ -179,14 +176,17 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
     }
   };
 
-  // Reset to default backdrop
+  // Reset to default backdrop for this series
   const handleResetDefault = async () => {
-    await clearCustomBackdrop();
-    if (onToast) onToast('Đã khôi phục hình nền mặc định');
+    if (!series?.id) return;
+    await clearCustomBackdrop(series.id);
+    if (onToast) onToast(`Đã khôi phục hình nền mặc định cho «${series.title}»`);
     onClose();
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !series) return null;
+
+  const seriesTitle = series.title || 'Bộ truyện';
 
   return (
     <div className={styles.overlay} onClick={onClose} role="dialog" aria-modal="true">
@@ -198,19 +198,18 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
               <button
                 type="button"
                 className={styles.backBtn}
-                onClick={() => setStep((s) => Math.max(1, s - 1))}
+                onClick={handleBack}
                 aria-label="Quay lại bước trước"
               >
                 <Icon name="arrow-left" size={18} />
               </button>
             )}
             <div>
-              <h3 className={styles.headerTitle}>Chọn Ảnh Nền Tàng Kinh</h3>
+              <h3 className={styles.headerTitle}>Nền cho «{seriesTitle}»</h3>
               <div className={styles.headerSub}>
-                {step === 1 && 'Bước 1: Chọn bộ truyện'}
-                {step === 2 && `Bước 2: Chọn tập (${selectedSeries?.title || ''})`}
-                {step === 3 && `Bước 3: Chọn trang (${selectedVolume?.title || ''})`}
-                {step === 4 && 'Bước 4: Xem trước & Tuỳ chỉnh độ mờ, tối'}
+                {step === 1 && `Bước 1: Chọn tập (${volumes.length} tập)`}
+                {step === 2 && `Bước 2: Chọn trang (${selectedVolume?.title || ''})`}
+                {step === 3 && 'Bước 3: Xem trước & Tuỳ chỉnh độ mờ, tối'}
               </div>
             </div>
           </div>
@@ -222,52 +221,21 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
 
         {/* Modal Body */}
         <div className={styles.modalBody}>
-          {/* STEP 1: SERIES SELECTION */}
+          {/* STEP 1: VOLUME SELECTION */}
           {step === 1 && (
             <div>
-              {seriesList.length === 0 ? (
-                <div className={styles.emptyTip}>Chưa có bộ truyện tranh nào trong thư viện.</div>
-              ) : (
-                <div className={styles.seriesGrid}>
-                  {seriesList.map((s) => {
-                    const coverUrl = s.coverBlob ? addBlobUrl(s.coverBlob) : null;
-                    return (
-                      <div
-                        key={s.id}
-                        className={styles.seriesCard}
-                        onClick={() => handleSelectSeries(s)}
-                      >
-                        <div className={styles.seriesCoverWrap}>
-                          {coverUrl ? (
-                            <img src={coverUrl} alt={s.title} className={styles.seriesCoverImg} />
-                          ) : (
-                            <Icon name="book" size={24} style={{ opacity: 0.5 }} />
-                          )}
-                        </div>
-                        <h4 className={styles.seriesTitle}>{s.title}</h4>
-                        <div className={styles.seriesMeta}>{s.volumeCount || 0} tập</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* STEP 2: VOLUME SELECTION */}
-          {step === 2 && (
-            <div>
               <div className={styles.stepTopActions}>
-                <span className={styles.headerSub}>Chọn một tập để duyệt trang:</span>
-                {selectedSeries?.coverBlob && (
+                <span className={styles.headerSub}>Chọn một tập để duyệt trang ảnh:</span>
+                {series?.coverBlob && (
                   <button type="button" className={styles.useCoverBtn} onClick={handleUseCover}>
-                    ✦ Dùng bìa truyện này
+                    <Icon name="image" size={14} />
+                    <span>Dùng ảnh bìa bộ truyện</span>
                   </button>
                 )}
               </div>
 
               {volumes.length === 0 ? (
-                <div className={styles.emptyTip}>Bộ truyện chưa có tập nào.</div>
+                <div className={styles.emptyTip}>Bộ truyện chưa có tập nào. Bạn có thể dùng ảnh bìa làm nền.</div>
               ) : (
                 <div className={styles.volumeList}>
                   {volumes.map((vol) => (
@@ -277,8 +245,8 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
                       onClick={() => handleSelectVolume(vol)}
                     >
                       <div className={styles.volumeItemLeft}>
-                        <span className={styles.volOrderBadge}>Tập {vol.volumeOrder}</span>
-                        <span className={styles.volItemTitle}>{vol.title || `Tập ${vol.volumeOrder}`}</span>
+                        <span className={styles.volOrderBadge}>Tập {vol.volumeOrder || vol.order || 1}</span>
+                        <span className={styles.volItemTitle}>{vol.title || `Tập ${vol.volumeOrder || vol.order || 1}`}</span>
                       </div>
                       <span className={styles.volItemPages}>{vol.pageCount || 0} trang</span>
                     </div>
@@ -288,8 +256,8 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
             </div>
           )}
 
-          {/* STEP 3: PAGE THUMBNAILS GRID */}
-          {step === 3 && (
+          {/* STEP 2: PAGE THUMBNAILS GRID */}
+          {step === 2 && (
             <div>
               <div className={styles.pagesGrid}>
                 {pageThumbnails.map((p) => (
@@ -312,8 +280,8 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
             </div>
           )}
 
-          {/* STEP 4: PREVIEW & SLIDERS */}
-          {step === 4 && selectedPage && (
+          {/* STEP 3: PREVIEW & SLIDERS */}
+          {step === 3 && selectedPage && (
             <div className={styles.previewWrap}>
               {/* Interactive Live Preview Frame */}
               <div className={styles.previewFrame}>
@@ -330,7 +298,7 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
                   style={{ backgroundColor: `rgba(8, 10, 20, ${dim / 100})` }}
                 />
                 <div className={styles.previewOverlay} />
-                <div className={styles.previewMockTitle}>TÀNG KINH HỌA CÁC</div>
+                <div className={styles.previewMockTitle}>{seriesTitle}</div>
               </div>
 
               {/* Sliders */}
@@ -371,7 +339,7 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
               </div>
 
               <div className={styles.noticeText}>
-                * Cài đặt này chỉ áp dụng trên thiết bị hiện tại.
+                * Cài đặt này chỉ áp dụng trên thiết bị hiện tại (không đồng bộ cloud).
               </div>
             </div>
           )}
@@ -386,22 +354,22 @@ export default function CustomBackdropModal({ isOpen, onClose, onToast }) {
               onClick={handleResetDefault}
               title="Đặt lại về nền Tàng Kinh mặc định"
             >
-              Nền mặc định
+              Về nền mặc định
             </button>
           </div>
 
           <div className={styles.footerRight}>
-            {step === 4 && (
+            {step === 3 && (
               <button
                 type="button"
                 className={styles.reselectBtn}
-                onClick={() => setStep(3)}
+                onClick={handleBack}
               >
                 Chọn lại
               </button>
             )}
 
-            {step === 4 && (
+            {step === 3 && (
               <button
                 type="button"
                 className={styles.saveBackdropBtn}
