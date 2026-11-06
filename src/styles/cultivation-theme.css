@@ -238,7 +238,7 @@
   -webkit-backdrop-filter: blur(16px);
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 20px 20px 48px 20px;
   z-index: 10;
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
   overflow-y: auto;
@@ -797,7 +797,7 @@
   }
 
   .cultivation-col-right {
-    padding: 16px 12px 60px 12px !important;
+    padding: 16px 12px 80px 12px !important;
   }
 
   .cultivation-col-left {

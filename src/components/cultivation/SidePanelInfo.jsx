@@ -242,7 +242,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
   };
 
   return (
-    <div className="side-panel-info">
+    <div className={`side-panel-info ${styles.sidePanelRoot}`}>
       
       {/* ========================================================
           KHỐI THÔNG TIN TIÊN ĐẠO THỐNG NHẤT (3 CHỈ SỐ: TU VI - CHIẾN LỰC - TIÊN TINH CĂN GIỮA)
@@ -491,48 +491,59 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                 </div>
 
                 {/* BẢNG 10 TẦNG HẢI SƠN QUYẾT */}
-                <div style={{
-                  padding: '10px 12px',
-                  borderRadius: 12,
-                  background: 'rgba(10, 16, 26, 0.85)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 5
-                }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 800, color: '#cbd5e1', marginBottom: 2 }}>
+                <div className={styles.roadmapCard}>
+                  <div className={styles.roadmapHeader}>
                     LỘ TRÌNH HẢI SƠN QUYẾT (1 HỔ ĐẾN 1 BẠT)
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-                    {HAI_SON_QUYET_LAYERS.map(layer => {
+                  <div className={styles.roadmapGrid}>
+                    {HAI_SON_QUYET_LAYERS.map((layer) => {
                       const isReached = theExp >= layer.target;
                       const isCurrent = !isReached && (layer.level === 1 || theExp >= NGUNG_KHI_THRESHOLDS[layer.level - 1]);
+                      const cleanName = (layer.name || '').replace(/\s*\([^)]*\)/g, '').trim();
+                      const hasMax = (layer.name || '').includes('Viên Mãn');
                       return (
                         <div
                           key={layer.level}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '4px 6px',
-                            borderRadius: 6,
-                            background: isCurrent ? 'rgba(239, 68, 68, 0.15)' : isReached ? 'rgba(16, 185, 129, 0.08)' : 'rgba(0, 0, 0, 0.25)',
-                            border: `1px solid ${isCurrent ? '#ef4444' : isReached ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.04)'}`
-                          }}
+                          className={`${styles.roadmapCell} ${
+                            isCurrent
+                              ? styles.cellTheCurrent
+                              : isReached
+                              ? styles.cellTheReached
+                              : styles.cellTheLocked
+                          }`}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
-                            <span style={{ fontSize: 8.5, fontWeight: 800, padding: '1px 3px', borderRadius: 3, background: isReached ? '#10b981' : isCurrent ? '#ef4444' : '#334155', color: '#fff' }}>
-                              T{layer.level}
-                            </span>
-                            <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                              <div style={{ fontSize: 9.5, fontWeight: isCurrent || isReached ? 700 : 500, color: isReached ? '#a7f3d0' : isCurrent ? '#fca5a5' : '#64748b' }}>
-                                {layer.name} {layer.hasPhantom ? '(Hổ Ảnh)' : ''}
-                              </div>
-                              <div style={{ fontSize: 8, color: '#94a3b8' }}>{layer.target} EXP</div>
+                          <span
+                            className={styles.tierBadge}
+                            style={{
+                              background: isReached ? '#10b981' : isCurrent ? '#ef4444' : '#334155',
+                            }}
+                          >
+                            T{layer.level}
+                          </span>
+                          <div className={styles.cellContent}>
+                            <div
+                              className={styles.cellTitle}
+                              style={{
+                                color: isReached ? '#a7f3d0' : isCurrent ? '#fca5a5' : '#64748b',
+                              }}
+                              title={layer.name}
+                            >
+                              {cleanName}
+                            </div>
+                            <div className={styles.cellMetaRow}>
+                              {hasMax && <span className={`${styles.metaChip} ${styles.chipMax}`}>Đại Viên Mãn</span>}
+                              {layer.hasPhantom && <span className={`${styles.metaChip} ${styles.chipTiger}`}>Hổ Ảnh</span>}
+                              <span className={styles.cellExp}>{layer.target.toLocaleString()} EXP</span>
                             </div>
                           </div>
-                          <span style={{ fontSize: 9, fontWeight: 700 }}>
-                            {isReached ? <Icon name="check" size={12} style={{ color: '#34d399' }} /> : isCurrent ? <Icon name="bolt" size={12} style={{ color: '#ef4444' }} /> : <Icon name="lock" size={12} style={{ color: '#475569' }} />}
+                          <span className={styles.cellStatusIcon}>
+                            {isReached ? (
+                              <Icon name="check" size={13} style={{ color: '#34d399' }} />
+                            ) : isCurrent ? (
+                              <Icon name="bolt" size={13} style={{ color: '#ef4444' }} />
+                            ) : (
+                              <Icon name="lock" size={12} style={{ color: '#475569' }} />
+                            )}
                           </span>
                         </div>
                       );
