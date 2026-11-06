@@ -254,7 +254,7 @@ export function applyRealmPreset(presetId) {
     ...cur,
     logs: [
       {
-        text: `🛠️ [ADMIN SANDBOX] Đã áp dụng preset cảnh giới: ${presetId}`,
+        text: `[ADMIN SANDBOX] Đã áp dụng preset cảnh giới: ${presetId}`,
         time: now,
       },
       ...(cur.logs || []),
@@ -565,7 +565,7 @@ export function adjustSandboxStats(params = {}) {
   }
 
   state.logs.unshift({
-    text: `🛠️ [ADMIN SANDBOX] Đã tinh chỉnh thông số: ${JSON.stringify(params)}`,
+    text: `[ADMIN SANDBOX] Đã tinh chỉnh thông số: ${JSON.stringify(params)}`,
     time: Date.now(),
   });
 
@@ -636,7 +636,7 @@ export function importSandboxJSON(jsonStr) {
   // 4. Bổ sung nhật ký nạp dữ liệu Sandbox
   targetState.logs = [
     {
-      text: `🛠️ [ADMIN SANDBOX] Đã nạp dữ liệu từ file JSON bên ngoài.`,
+      text: `[ADMIN SANDBOX] Đã nạp dữ liệu từ file JSON bên ngoài.`,
       time: Date.now(),
     },
     ...(targetState.logs || []),

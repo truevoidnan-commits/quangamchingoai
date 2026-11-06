@@ -48,12 +48,12 @@
 .bannerBadge {
   display: inline-block;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.22em;
-  color: #ffcc00;
+  color: #ffd21f;
   background: rgba(255, 204, 0, 0.08);
-  border: 1px solid rgba(255, 204, 0, 0.3);
-  box-shadow: 0 0 8px rgba(255, 204, 0, 0.15);
+  border: 1px solid rgba(255, 204, 0, 0.35);
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.2);
   padding: 4px 16px;
   border-radius: var(--radius-full);
   margin-bottom: 12px;
@@ -61,15 +61,11 @@
 
 .appTitle {
   font-family: 'Noto Serif', serif;
-  font-size: clamp(19px, 5.2vw, 28px);
+  font-size: clamp(20px, 5.5vw, 28px);
   font-weight: 800;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
-  color: #ffcc00;
-  text-shadow:
-    0 0 4px #ffcc00,
-    0 0 12px rgba(255, 204, 0, 0.75),
-    0 0 24px rgba(255, 180, 0, 0.4);
+  letter-spacing: 0.1em;
+  color: #ffd21f;
+  text-shadow: var(--hero-title-glow-comics);
   line-height: 1.15;
   margin-bottom: 10px;
 }
@@ -77,8 +73,7 @@
 @media (min-width: 600px) {
   .appTitle {
     font-size: clamp(28px, 6.5vw, 46px);
-    letter-spacing: 0.18em;
-    white-space: normal;
+    letter-spacing: 0.16em;
   }
 }
 
@@ -943,5 +938,40 @@
   to {
     opacity: 1;
     transform: translate(-50%, 0);
+  }
+}
+
+.changeBackdropBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: rgba(26, 20, 48, 0.7);
+  border: 1px solid rgba(190, 170, 255, 0.25);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.changeBackdropBtn:hover {
+  background: rgba(36, 26, 68, 0.9);
+  border-color: rgba(255, 204, 0, 0.6);
+  color: #ffd21f;
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.2);
+}
+
+@media (max-width: 600px) {
+  .changeBackdropBtn {
+    height: 38px;
+    padding: 0 12px;
+    font-size: 12px;
   }
 }

@@ -1,3 +1,4 @@
+import Icon from '../components/ui/Icon';
 import React, { useState } from 'react';
 import { useCultivationContext } from '../context/CultivationContext';
 import { LIFE_LAMPS, SUPPRESSING_ARTIFACTS, getPalaceNameFromArtifact, getCombatPowerDisplay, isAllItemsCollected } from '../lib/cultivation';
@@ -85,7 +86,7 @@ export default function SanctumPage() {
   // Xử lý Luyện Hóa lẻ Mệnh Đăng
   const handleRefineSingleLamp = (lamp) => {
     const rewardDesc = isNguyenAnhStage ? '+50 Thiên Mệnh' : '+3.000 Tu Vi';
-    if (!window.confirm(`⚠️ XÁC NHẬN LUYỆN HÓA THẦN ĐĂNG:\n\n• Thần Đăng: [Thần Phẩm] ${lamp.name}\n• Nhận lại: ${rewardDesc}\n\nĐạo hữu có chắc chắn muốn phân giải luyện hóa Thần Đăng này không?`)) {
+    if (!window.confirm(`[CẢNH BÁO] XÁC NHẬN LUYỆN HÓA THẦN ĐĂNG:\n\n• Thần Đăng: [Thần Phẩm] ${lamp.name}\n• Nhận lại: ${rewardDesc}\n\nĐạo hữu có chắc chắn muốn phân giải luyện hóa Thần Đăng này không?`)) {
       return;
     }
     try {
@@ -98,7 +99,7 @@ export default function SanctumPage() {
   // Xử lý Luyện Hóa lẻ Bảo Vật
   const handleRefineSingleArtifact = (art) => {
     const rewardDesc = isNguyenAnhStage ? '+50 Thiên Mệnh' : '+3.000 Tu Vi';
-    if (!window.confirm(`⚠️ XÁC NHẬN LUYỆN HÓA THẦN VẬT:\n\n• Thần Vật: [Thần Phẩm] ${art.name}\n• Nhận lại: ${rewardDesc}\n\nĐạo hữu có chắc chắn muốn phân giải luyện hóa Thần Vật này không?`)) {
+    if (!window.confirm(`[CẢNH BÁO] XÁC NHẬN LUYỆN HÓA THẦN VẬT:\n\n• Thần Vật: [Thần Phẩm] ${art.name}\n• Nhận lại: ${rewardDesc}\n\nĐạo hữu có chắc chắn muốn phân giải luyện hóa Thần Vật này không?`)) {
       return;
     }
     try {
@@ -116,7 +117,7 @@ export default function SanctumPage() {
       return;
     }
     const gainDesc = isNguyenAnhStage ? `+${totalCount * 50} Lực Thiên Mệnh` : `+${(totalCount * 3000).toLocaleString()} Tu Vi`;
-    if (!window.confirm(`⚡ LUYỆN HÓA TOÀN BỘ ĐỒ THỪA TRONG TÚI:\n\n• Số lượng: ${inventoryLamps.length} Thần Đăng + ${unanchoredArtifacts.length} Thần Vật\n• Hoàn trả: ${gainDesc}\n\nĐạo hữu có muốn luyện hóa ngay toàn bộ?`)) {
+    if (!window.confirm(`[LUYỆN HÓA] LUYỆN HÓA TOÀN BỘ ĐỒ THỪA TRONG TÚI:\n\n• Số lượng: ${inventoryLamps.length} Thần Đăng + ${unanchoredArtifacts.length} Thần Vật\n• Hoàn trả: ${gainDesc}\n\nĐạo hữu có muốn luyện hóa ngay toàn bộ?`)) {
       return;
     }
     try {
@@ -129,7 +130,7 @@ export default function SanctumPage() {
   // Xử lý Đổi Mệnh Đăng bằng cách Đốt Tu Vi / Thiên Mệnh
   const handleBuyLampWithExp = (lamp) => {
     const costDesc = isNguyenAnhStage ? '200 Lực Thiên Mệnh' : '10.000 Tu Vi (kèm nguy cơ ngã cảnh/tụt tầng)';
-    if (!window.confirm(`🔥 NGHỊCH MỆNH HOÁN ĐĂNG (ĐỐT TU VI):\n\n• Thần Đăng: [Thần Phẩm] ${lamp.name}\n• Tiêu hao: Đốt ${costDesc}\n\n⚠️ Đốt tu vi có thể khiến đạo hữu bị ngã cảnh hoặc thoái hóa Thiên Cung/Pháp Khiếu! Có muốn tiếp tục?`)) {
+    if (!window.confirm(`[NGHỊCH MỆNH] HOÁN ĐĂNG (ĐỐT TU VI):\n\n• Thần Đăng: [Thần Phẩm] ${lamp.name}\n• Tiêu hao: Đốt ${costDesc}\n\nCảnh báo: Đốt tu vi có thể khiến đạo hữu bị ngã cảnh hoặc thoái hóa Thiên Cung/Pháp Khiếu! Có muốn tiếp tục?`)) {
       return;
     }
     try {
@@ -142,7 +143,7 @@ export default function SanctumPage() {
   // Xử lý Đổi Bảo Vật bằng cách Đốt Tu Vi / Thiên Mệnh
   const handleBuyArtifactWithExp = (art) => {
     const costDesc = isNguyenAnhStage ? '200 Lực Thiên Mệnh' : '10.000 Tu Vi (kèm nguy cơ ngã cảnh/tụt tầng)';
-    if (!window.confirm(`🔥 NGHỊCH THIÊN HOÁN BẢO (ĐỐT TU VI):\n\n• Thần Vật: [Thần Phẩm] ${art.name}\n• Tiêu hao: Đốt ${costDesc}\n\n⚠️ Đốt tu vi có thể khiến đạo hữu bị ngã cảnh hoặc thoái hóa Thiên Cung/Pháp Khiếu! Có muốn tiếp tục?`)) {
+    if (!window.confirm(`[NGHỊCH THIÊN] HOÁN BẢO (ĐỐT TU VI):\n\n• Thần Vật: [Thần Phẩm] ${art.name}\n• Tiêu hao: Đốt ${costDesc}\n\nCảnh báo: Đốt tu vi có thể khiến đạo hữu bị ngã cảnh hoặc thoái hóa Thiên Cung/Pháp Khiếu! Có muốn tiếp tục?`)) {
       return;
     }
     try {
@@ -164,7 +165,7 @@ export default function SanctumPage() {
           </button>
           <div>
             <h1 className={styles.pageTitle}>
-              🏛️ TÀNG BẢO ĐIỆN · BẢO KHỐ THẦN VẬT
+              TÀNG BẢO ĐIỆN · BẢO KHỐ THẦN VẬT
             </h1>
             <p className={styles.pageSubtitle}>
               18 Thần Phẩm Mệnh Đăng & 24 Thần Phẩm Trấn Cung Bảo Vật độc bản thượng cổ
@@ -191,7 +192,7 @@ export default function SanctumPage() {
               boxShadow: '0 0 12px rgba(245, 158, 11, 0.2)',
             }}
           >
-            📜 Đạo Anh Đồ Lục
+            <Icon name="scroll" size={14} /> Đạo Anh Đồ Lục
           </button>
 
           {totalBagItemsCount > 0 && (
@@ -213,7 +214,7 @@ export default function SanctumPage() {
               }}
               title="Luyện hóa toàn bộ Thần Vật đang nằm trong túi trữ vật"
             >
-              ⚡ Luyện Hóa Nhanh ({totalBagItemsCount})
+              <Icon name="bolt" size={14} /> Luyện Hóa Nhanh ({totalBagItemsCount})
             </button>
           )}
         </div>
@@ -236,7 +237,7 @@ export default function SanctumPage() {
           </div>
           {storedExp > 0 ? (
             <div style={{ fontSize: 11.5, color: '#f59e0b', marginTop: 4, fontWeight: 700 }}>
-              🌊 Uẩn tích bình cảnh: +{storedExp.toLocaleString()} (Tự xả khi phá cảnh)
+              <Icon name="wave" size={14} /> Uẩn tích bình cảnh: +{storedExp.toLocaleString()} (Tự xả khi phá cảnh)
             </div>
           ) : (
             <div className={styles.statCardSub}>
@@ -260,7 +261,7 @@ export default function SanctumPage() {
               ? 'Lên Nguyên Anh ngừng rơi Mệnh Đăng & Vật Trấn Cung' 
               : (isFullItems 
                 ? 'Đã thu thập đầy đủ toàn bộ Thần Vật' 
-                : (pityReadingCycles >= 45 ? '✨ Chu kỳ tiếp theo 100% ra Thần Vật!' : `Còn ${45 - pityReadingCycles} chu kỳ đọc nữa`))}
+                : (pityReadingCycles >= 45 ? 'Chu kỳ tiếp theo 100% ra Thần Vật!' : `Còn ${45 - pityReadingCycles} chu kỳ đọc nữa`))}
           </div>
         </div>
 
@@ -311,7 +312,7 @@ export default function SanctumPage() {
             boxShadow: activeTab === 'artifacts' ? '0 0 16px rgba(56, 189, 248, 0.3)' : 'none',
           }}
         >
-          <span>🛡️ VẬT TRẤN ÁP THẦN PHẨM (24)</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="shield" size={16} /> VẬT TRẤN ÁP THẦN PHẨM (24)</span>
           <span className={styles.tabCountBadge}>
             {anchoredIds.length}/24 Đã khảm
           </span>
@@ -423,7 +424,7 @@ export default function SanctumPage() {
                           boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)',
                         }}
                       >
-                        🔥 ĐÃ HẤP THỤ
+                        <Icon name="flame" size={12} /> ĐÃ HẤP THỤ
                       </span>
                     )}
 
@@ -435,7 +436,7 @@ export default function SanctumPage() {
                           color: '#000',
                         }}
                       >
-                        📦 TRONG TÚI
+                        <Icon name="package" size={12} /> TRONG TÚI
                       </span>
                     )}
 
@@ -471,7 +472,7 @@ export default function SanctumPage() {
                       }}
                       onError={(e) => {
                         e.target.style.display = 'none';
-                        e.target.parentNode.innerHTML = `<div style="font-size: 54px;">${lamp.icon || '🏮'}</div>`;
+                        e.target.parentNode.innerHTML = `<div style="font-size: 16px; opacity: 0.7;">[Thần Đăng]</div>`;
                       }}
                     />
                     <div className={styles.stageOverlayGradient} />
@@ -546,7 +547,7 @@ export default function SanctumPage() {
                             boxShadow: '0 0 10px rgba(239,68,68,0.2)',
                           }}
                         >
-                          🔥 Đổi Đèn (Đốt {isNguyenAnhStage ? '200 TM' : '10k Tu Vi'})
+                          <Icon name="flame" size={14} /> Đổi Đèn (Đốt {isNguyenAnhStage ? '200 TM' : '10k Tu Vi'})
                         </button>
                       )}
                     </div>
@@ -664,7 +665,7 @@ export default function SanctumPage() {
                           boxShadow: '0 0 10px rgba(56, 189, 248, 0.5)',
                         }}
                       >
-                        🏛️ ĐÃ TRẤN CUNG
+                        <Icon name="shield" size={12} /> ĐÃ TRẤN CUNG
                       </span>
                     )}
 
@@ -676,7 +677,7 @@ export default function SanctumPage() {
                           color: '#000',
                         }}
                       >
-                        📦 TRONG TÚI
+                        <Icon name="package" size={12} /> TRONG TÚI
                       </span>
                     )}
 
@@ -712,7 +713,7 @@ export default function SanctumPage() {
                       }}
                       onError={(e) => {
                         e.target.style.display = 'none';
-                        e.target.parentNode.innerHTML = `<div style="font-size: 54px;">${art.icon || '🏛️'}</div>`;
+                        e.target.parentNode.innerHTML = `<div style="font-size: 16px; opacity: 0.7;">[Thần Vật]</div>`;
                       }}
                     />
                     <div className={styles.stageOverlayGradient} />
@@ -731,7 +732,7 @@ export default function SanctumPage() {
                         {art.name}
                       </h3>
                       <div className={styles.cardTypeTag} style={{ color: '#38bdf8' }}>
-                        🏛️ Khởi sinh: [{palaceName}]
+                        Khởi sinh: [{palaceName}]
                       </div>
 
                       <p className={styles.cardDesc}>
@@ -795,7 +796,7 @@ export default function SanctumPage() {
                             boxShadow: '0 0 10px rgba(56,189,248,0.2)',
                           }}
                         >
-                          🔥 Đổi Bảo Vật (Đốt {isNguyenAnhStage ? '200 TM' : '10k Tu Vi'})
+                          <Icon name="flame" size={14} /> Đổi Bảo Vật (Đốt {isNguyenAnhStage ? '200 TM' : '10k Tu Vi'})
                         </button>
                       )}
                     </div>

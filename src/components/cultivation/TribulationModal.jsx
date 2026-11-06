@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 import React, { useState, useEffect } from 'react';
 import styles from './TribulationModal.module.css';
 
@@ -89,7 +90,7 @@ export default function TribulationModal({ activeData, onClose }) {
             <div className={styles.strikingBox}>
               <div className={styles.thunderFlash} />
               <div className={styles.daoAnhAvatarStriking}>
-                <span className={styles.avatarIcon}>⚡</span>
+                <span className={styles.avatarIcon}><Icon name="bolt" size={16} /></span>
                 <div className={styles.auraRing} />
               </div>
               <div className={styles.strikingText}>
@@ -132,7 +133,7 @@ export default function TribulationModal({ activeData, onClose }) {
                 <div className={`${styles.crestPedestal} ${styles.crestPedestalFail}`}>
                   <div className={styles.crestHaloFail} />
                   <div className={styles.crestInner}>
-                    <span style={{ fontSize: 38, filter: 'drop-shadow(0 0 10px rgba(239, 68, 68, 0.8))' }}>⚡</span>
+                    <Icon name="bolt" size={38} style={{ filter: "drop-shadow(0 0 10px rgba(239, 68, 68, 0.8))" }} />
                   </div>
                 </div>
               )}
@@ -176,7 +177,7 @@ export default function TribulationModal({ activeData, onClose }) {
                 <>
                   <div className={styles.rewardCardFail}>
                     <p className={styles.failSummary}>
-                      {activeData.message?.replace(/^⚡\s*ĐỘ KIẾP THẤT BẠI!\s*/i, '').replace(/\s*\([^)]*\)/g, '') || 'Thiên lôi quá mạnh, độ kiếp chưa thành!'}
+                      {activeData.message?.replace(/^(?:\[ĐỘ KIẾP THẤT BẠI\]|\u{26A1}\s*ĐỘ KIẾP THẤT BẠI!)\s*/i, '').replace(/\s*\([^)]*\)/g, '') || 'Thiên lôi quá mạnh, độ kiếp chưa thành!'}
                     </p>
                   </div>
 

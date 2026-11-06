@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 import React, { useState, useEffect } from 'react';
 import { findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhFitScale, getDaoAnhBBox } from '../../lib/daoAnhData';
 import styles from './DaoAnhPromptModal.module.css';
@@ -88,7 +89,7 @@ export function DaoAnh80Modal({
                   />
                 </div>
               ) : (
-                <span style={{ fontSize: 48, filter: `drop-shadow(0 0 14px ${glowColor})` }}>⚡</span>
+                <Icon name="bolt" size={48} style={{ filter: `drop-shadow(0 0 14px ${glowColor})` }} />
               )}
             </div>
           </div>
@@ -137,7 +138,7 @@ export function DaoAnh80Modal({
               className={styles.btnPrimaryGold}
               onClick={onContinue}
             >
-              <span>⚡</span>
+              <span><Icon name="bolt" size={14} /></span>
               <span>Tiếp Tục Nạp Đến 100%</span>
             </button>
 
@@ -145,7 +146,7 @@ export function DaoAnh80Modal({
               className={styles.btnSecondary}
               onClick={onSwitch}
             >
-              <span>🔄</span>
+              <span><Icon name="refresh" size={14} /></span>
               <span>Chuyển Đạo Anh Khác</span>
             </button>
           </div>
@@ -215,7 +216,7 @@ export function DaoAnhFullModal({
                   />
                 </div>
               ) : (
-                <span style={{ fontSize: 48, filter: 'drop-shadow(0 0 14px rgba(240, 171, 252, 0.8))' }}>⛈️</span>
+                <Icon name="sparkle" size={48} style={{ filter: "drop-shadow(0 0 14px rgba(240, 171, 252, 0.8))" }} />
               )}
             </div>
           </div>
@@ -248,7 +249,7 @@ export function DaoAnhFullModal({
               className={styles.btnPrimaryPurple}
               onClick={onGoTribulation}
             >
-              <span>⚡</span>
+              <span><Icon name="bolt" size={14} /></span>
               <span>Đến Độ Kiếp Đài</span>
             </button>
 
@@ -256,7 +257,7 @@ export function DaoAnhFullModal({
               className={styles.btnSecondary}
               onClick={onDismiss}
             >
-              <span>❌</span>
+              <span><Icon name="close" size={14} /></span>
               <span>Hủy</span>
             </button>
           </div>

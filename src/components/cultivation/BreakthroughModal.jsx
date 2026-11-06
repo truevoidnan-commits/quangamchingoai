@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 import { useEffect } from 'react';
 import styles from './BreakthroughModal.module.css';
 
@@ -12,7 +13,7 @@ export default function BreakthroughModal({ data, onClose }) {
 
   if (!data) return null;
 
-  const icon = data.icon || '⚡';
+  const icon = data.iconKey || toIconKey(data.icon);
   const title = data.title || 'ĐỘT PHÁ CẢNH GIỚI!';
   const subtitle = data.subtitle || 'Linh khí cuộn trào, thăng hoa tu vi!';
   const badgeText = data.badge || '✦ CỰC CẢNH THĂNG HOA ✦';
@@ -48,7 +49,7 @@ export default function BreakthroughModal({ data, onClose }) {
           </div>
 
           <div className={`${styles.iconWrap} ${styles[`icon_${theme}`]}`}>
-            <span className={styles.icon}>{icon}</span>
+            <span className={styles.icon}><Icon name={icon} size={48} /></span>
             <div className={styles.iconPulse} />
           </div>
 
@@ -64,7 +65,7 @@ export default function BreakthroughModal({ data, onClose }) {
           )}
 
           <button className={`${styles.actionBtn} ${styles[`btn_${theme}`]}`} onClick={onClose}>
-            ✨ LĨNH HỘI ĐẠO QUẢ
+            LĨNH HỘI ĐẠO QUẢ
           </button>
         </div>
       </div>

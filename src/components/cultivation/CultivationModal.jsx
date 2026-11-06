@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 import { useState } from 'react';
 import BottomSheet from '../ui/BottomSheet';
 import { useCultivation } from '../../hooks/useCultivation';
@@ -100,7 +101,7 @@ export default function CultivationModal({ isOpen, onClose }) {
           setBreakthroughData(customBreakthrough || {
             title: msg.includes('Trúc Cơ') ? 'ĐỘT PHÁ TRÚC CƠ CẢNH!' : msg.includes('Kim Đan') ? 'ĐỘT PHÁ KIM ĐAN CẢNH!' : 'ĐỘT PHÁ CẢNH GIỚI!',
             subtitle: msg,
-            icon: msg.includes('Trúc Cơ') ? '🔥' : msg.includes('Kim Đan') ? '✨' : msg.includes('Nguyện Anh') ? '👑' : '⚡',
+            iconKey: msg.includes('Trúc Cơ') ? 'realm-truc-co' : msg.includes('Kim Đan') ? 'realm-kim-dan' : msg.includes('Nguyện Anh') ? 'crown' : 'bolt',
             cpStr: combatPowerDisplay,
           });
         }
@@ -154,7 +155,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                 }}
                 title="Xuất sao lưu tu vi (Chỉ đọc, an toàn 100%)"
               >
-                <span>📦</span>
+                <span><Icon name="package" size={16} /></span>
                 <span>Sao Lưu Tu Vi</span>
               </button>
             </div>
@@ -247,7 +248,7 @@ export default function CultivationModal({ isOpen, onClose }) {
               className={`${styles.tabBtn} ${activeTab === 'nguyen_anh' ? styles.tabActive : ''}`}
               onClick={() => setActiveTab('nguyen_anh')}
             >
-              ⚡ Độ Kiếp Đài
+              <Icon name="bolt" size={14} /> Độ Kiếp Đài
             </button>
           )}
           <button
@@ -266,7 +267,7 @@ export default function CultivationModal({ isOpen, onClose }) {
 
         {actionMsg && (
           <div className={styles.actionNotice}>
-            ✨ {actionMsg}
+            <Icon name="sparkle" size={14} /> {actionMsg}
           </div>
         )}
 
@@ -341,7 +342,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                       }
                     >
                       <div className={styles.btnContentWrap}>
-                        <span className={styles.btnMainTitle}>🔥 ĐỘT PHÁ TRÚC CƠ</span>
+                        <span className={styles.btnMainTitle}><Icon name="flame" size={16} /> ĐỘT PHÁ TRÚC CƠ</span>
                         <span className={styles.btnSubInfo}>Đạt Ngưng Khí Tầng 10 Đại Viên Mãn</span>
                       </div>
                     </button>
@@ -380,7 +381,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                             {lamp ? (
                               <ArtifactIcon item={lamp} isLamp={true} size={28} />
                             ) : (
-                              '🏮'
+                              'lantern'
                             )}
                           </span>
                           <span className={styles.slotTitleText} style={{ color: tier?.color }}>
@@ -403,7 +404,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           className={styles.slotIconAnimated}
                           style={{ filter: isLit ? 'drop-shadow(0 0 6px #f97316)' : 'none' }}
                         >
-                          {isLit ? '🔥' : '🕯️'}
+                          {isLit ? <Icon name="flame" size={16} /> : <Icon name="lantern" size={16} />}
                         </span>
                         <span className={styles.slotTitleText} style={{ color: isLit ? '#f97316' : 'var(--text-secondary)' }}>
                           Mệnh Hỏa {idx}
@@ -431,7 +432,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                             {lamp5 ? (
                               <ArtifactIcon item={lamp5} isLamp={true} size={28} />
                             ) : (
-                              '🏮'
+                              'lantern'
                             )}
                           </span>
                           <span className={styles.slotTitleText} style={{ color: tier5?.color }}>
@@ -454,7 +455,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           className={styles.slotIconAnimated}
                           style={{ filter: isSecretLit ? 'drop-shadow(0 0 8px #eab308)' : 'none' }}
                         >
-                          {isSecretLit ? '🔥' : isSecretFailed ? '❌' : '🔒'}
+                          {isSecretLit ? <Icon name="flame" size={16} /> : isSecretFailed ? <Icon name="close" size={16} /> : <Icon name="lock" size={16} />}
                         </span>
                         <span className={styles.slotTitleText} style={{ color: isSecretLit ? '#eab308' : 'var(--text-secondary)' }}>
                           Khiếu 121
@@ -499,12 +500,12 @@ export default function CultivationModal({ isOpen, onClose }) {
                   <div className={styles.secret121Box}>
                     {cultivation.failed121st ? (
                       <div className={styles.failed121Notice}>
-                        <strong>⚠️ XUNG KÍCH THẤT BẠI:</strong> Pháp khiếu 121 đã đóng kín vĩnh viễn do nghịch thiên thất bại. Bạn sẽ kết đan dựa trên 4 Mệnh Hỏa tự thân (trần 7 Cung).
+                        <strong>XUNG KÍCH THẤT BẠI:</strong> Pháp khiếu 121 đã đóng kín vĩnh viễn do nghịch thiên thất bại. Bạn sẽ kết đan dựa trên 4 Mệnh Hỏa tự thân (trần 7 Cung).
                       </div>
                     ) : (
                       <>
                         <div className={styles.secret121Header}>
-                          <span>✨ Cơ Duyên Xung Kích Pháp Khiếu 121:</span>
+                          <span>Cơ Duyên Xung Kích Pháp Khiếu 121:</span>
                           <strong>{cultivation.attemptExp121}/{(constants.EXP_FOR_121_ATTEMPT || 800)} Linh Lực</strong>
                         </div>
                         <div className={styles.progressBarBg}>
@@ -524,7 +525,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                             style={{ marginTop: 10 }}
                           >
                             <div className={styles.btnContentWrap}>
-                              <span className={styles.btnMainTitle}>🌟 XUNG KÍCH PHÁP KHIẾU 121</span>
+                              <span className={styles.btnMainTitle}><Icon name="star" size={16} /> XUNG KÍCH PHÁP KHIẾU 121</span>
                               <span className={styles.btnSubInfo}>50% Thành Công · 50% Đóng Kín Vĩnh Viễn</span>
                             </div>
                           </button>
@@ -547,7 +548,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                       }
                     >
                       <div className={styles.btnContentWrap}>
-                        <span className={styles.btnMainTitle}>🏛️ ĐỘT PHÁ KIM ĐAN</span>
+                        <span className={styles.btnMainTitle}><Icon name="shield" size={16} /> ĐỘT PHÁ KIM ĐAN</span>
                         <span className={styles.btnSubInfo}>
                           Trần {(selfHoa + (cultivation.has121st ? 1 : 0)) === 3 ? '6' : (selfHoa + (cultivation.has121st ? 1 : 0)) === 4 ? '7' : '8'} Cung Tự Thân + {absorbedCount} Chân Cung Mệnh Đăng
                         </span>
@@ -557,7 +558,7 @@ export default function CultivationModal({ isOpen, onClose }) {
 
                   {(selfHoa + (cultivation.has121st ? 1 : 0)) < 3 && (
                     <p className={styles.hintText}>
-                      💡 Cần tối thiểu <strong>3 Mệnh Hỏa tự thân</strong> (90 Pháp Khiếu) để mở khóa Đột Phá Kim Đan.
+                      Cần tối thiểu <strong>3 Mệnh Hỏa tự thân</strong> (90 Pháp Khiếu) để mở khóa Đột Phá Kim Đan.
                     </p>
                   )}
                 </div>
@@ -582,9 +583,9 @@ export default function CultivationModal({ isOpen, onClose }) {
                         <div style={{ marginBottom: 12 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
                             <h4 style={{ margin: 0, color: '#ffcc00', fontSize: 13, fontWeight: 700 }}>
-                              ⚡ LỰC THIÊN MỆNH HIỆN CÓ: {(cultivation.totalThienMenh || 0).toLocaleString()} TM
+                              LỰC THIÊN MỆNH HIỆN CÓ: {(cultivation.totalThienMenh || 0).toLocaleString()} TM
                             </h4>
-                            <span style={{ fontSize: 10.5, color: '#38bdf8' }}>📖 Đọc 1 chương: +30 ~ 50 TM</span>
+                            <span style={{ fontSize: 10.5, color: '#38bdf8' }}>Đọc 1 chương: +30 ~ 50 TM</span>
                           </div>
                           <p className={styles.subtext} style={{ margin: 0 }}>
                             Nạp Lực Thiên Mệnh vào từng Đạo Anh để thai nghén rèn luyện chuẩn bị nghênh tiếp Thiên Kiếp trên <strong>Độ Kiếp Đài</strong>!
@@ -594,10 +595,10 @@ export default function CultivationModal({ isOpen, onClose }) {
 
                       {selfRealized >= selfPalacesTotal && (
                         <div className={styles.maxRankBadge}>
-                          ✨ TOÀN BỘ {cultivation.maxThienCung} THIÊN CUNG ĐÃ HÓA THÀNH CUNG THẬT 100%!
+                          TOÀN BỘ {cultivation.maxThienCung} THIÊN CUNG ĐÃ HÓA THÀNH CUNG THẬT 100%!
                           {cultivation.realm === 'kim_dan' && (
                             <p style={{ marginTop: 6, fontSize: 12, color: 'var(--accent-cyan)', fontWeight: 'normal' }}>
-                              👉 Nhấn "👑 Khai Sinh Đạo Anh" trên từng cung ở Tòa Thiên Lâu để ngưng tụ Đạo Anh Thần Thể mở khóa cảnh giới <strong>Nguyên Anh</strong>!
+                              Nhấn "Khai Sinh Đạo Anh" trên từng cung ở Tòa Thiên Lâu để ngưng tụ Đạo Anh Thần Thể mở khóa cảnh giới <strong>Nguyên Anh</strong>!
                             </p>
                           )}
                         </div>
@@ -619,7 +620,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           }}
                           onClick={() => triggerAction(fillAllDaoAnhThienMenh)}
                         >
-                          ⚡ NẠP ĐẦY 100% THIÊN MỆNH
+                          <Icon name="bolt" size={14} /> NẠP ĐẦY 100% THIÊN MỆNH
                         </button>
                       )}
                     </>
@@ -699,7 +700,7 @@ export default function CultivationModal({ isOpen, onClose }) {
               if (filteredLamps.length === 0) {
                 return (
                   <div className={styles.emptyNoticeCard}>
-                    <span>🏮 Chưa sở hữu Mệnh Đăng nào trong danh mục này. Hãy đọc thêm chương để nhặt cơ duyên!</span>
+                    <span>Chưa sở hữu Mệnh Đăng nào trong danh mục này. Hãy đọc thêm chương để nhặt cơ duyên!</span>
                   </div>
                 );
               }
@@ -779,8 +780,8 @@ export default function CultivationModal({ isOpen, onClose }) {
                                 : absorbedCount >= 5
                                 ? 'Đã Đạt 5 Đăng'
                                 : cultivation.realm === 'truc_co'
-                                ? '🏮 Hấp Thụ (+1 Hỏa)'
-                                : '🏮 Hấp Thụ (+1 Cung)'}
+                                ? 'Hấp Thụ (+1 Hỏa)'
+                                : 'Hấp Thụ (+1 Cung)'}
                             </button>
 
                             {/* Nút Luyện Hóa Mệnh Đăng hoàn trả Tu Vi / Thiên Mệnh */}
@@ -796,13 +797,13 @@ export default function CultivationModal({ isOpen, onClose }) {
                               }}
                               onClick={() => {
                                 const rewardDesc = isNguyenAnhStage ? '+50 Thiên Mệnh' : '+3.000 Tu Vi';
-                                if (!confirm(`⚠️ XÁC NHẬN LUYỆN HÓA THẦN ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Nhận lại: ${rewardDesc}\n\nĐạo hữu có chắc chắn muốn phân giải luyện hóa Thần Đăng này?`)) {
+                                if (!confirm(`[CẢNH BÁO] XÁC NHẬN LUYỆN HÓA THẦN ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Nhận lại: ${rewardDesc}\n\nĐạo hữu có chắc chắn muốn phân giải luyện hóa Thần Đăng này?`)) {
                                   return;
                                 }
                                 triggerAction(() => sellLamp(lamp.id), `Đã luyện hóa ${lamp.name}, nhận ${rewardDesc}!`);
                               }}
                             >
-                              ✨ Luyện Hóa ({isNguyenAnhStage ? '+50 TM' : '+3k'})
+                              <Icon name="sparkle" size={14} /> Luyện Hóa ({isNguyenAnhStage ? '+50 TM' : '+3k'})
                             </button>
                           </div>
                         )}
@@ -814,12 +815,12 @@ export default function CultivationModal({ isOpen, onClose }) {
                               className={styles.burnExpBtn}
                               onClick={() => {
                                 const costDesc = isNguyenAnhStage ? '200 Thiên Mệnh' : '10.000 Tu Vi (kèm nguy cơ ngã cảnh/tụt tầng)';
-                                if (confirm(`🔥 NGHỊCH MỆNH HOÁN ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Tiêu hao: Đốt ${costDesc}\n\nĐạo hữu có muốn đổi Mệnh Đăng này vào Túi Trữ Vật?`)) {
+                                if (confirm(`[NGHỊCH MỆNH] HOÁN ĐĂNG:\n\n• Mệnh Đăng: [${tierInfo.name}] ${lamp.name}\n• Tiêu hao: Đốt ${costDesc}\n\nĐạo hữu có muốn đổi Mệnh Đăng này vào Túi Trữ Vật?`)) {
                                   triggerAction(() => burnExpForLamp(lamp.id));
                                 }
                               }}
                             >
-                              🔥 Đổi Đèn (Đốt {isNguyenAnhStage ? '200 TM' : '10.000 Tu Vi'})
+                              <Icon name="flame" size={14} /> Đổi Đèn (Đốt {isNguyenAnhStage ? '200 TM' : '10.000 Tu Vi'})
                             </button>
                           </div>
                         )}
@@ -905,7 +906,7 @@ export default function CultivationModal({ isOpen, onClose }) {
               if (filteredArtifacts.length === 0) {
                 return (
                   <div className={styles.emptyNoticeCard}>
-                    <span>🗝️ Chưa sở hữu Vật Trấn Áp nào trong danh mục này. Hãy đọc thêm chương để nhặt cơ duyên!</span>
+                    <span>Chưa sở hữu Vật Trấn Áp nào trong danh mục này. Hãy đọc thêm chương để nhặt cơ duyên!</span>
                   </div>
                 );
               }
@@ -976,7 +977,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                                     );
                                   }}
                                 >
-                                  👑 Khảm Nạm Ngay
+                                  <Icon name="shield" size={14} /> Khảm Nạm Ngay
                                 </button>
                               )}
 
@@ -993,13 +994,13 @@ export default function CultivationModal({ isOpen, onClose }) {
                                 }}
                                 onClick={() => {
                                   const rewardDesc = isNguyenAnhStage ? '+50 Thiên Mệnh' : '+3.000 Tu Vi';
-                                  if (!confirm(`⚠️ XÁC NHẬN LUYỆN HÓA THẦN VẬT:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name}\n• Nhận lại: ${rewardDesc}\n\nBạn có chắc chắn muốn phân giải luyện hóa vật phẩm này?`)) {
+                                  if (!confirm(`[CẢNH BÁO] XÁC NHẬN LUYỆN HÓA THẦN VẬT:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name}\n• Nhận lại: ${rewardDesc}\n\nBạn có chắc chắn muốn phân giải luyện hóa vật phẩm này?`)) {
                                     return;
                                   }
                                   triggerAction(() => sellArtifact(art.id), `Đã luyện hóa ${art.name}, nhận ${rewardDesc}!`);
                                 }}
                               >
-                                ✨ Luyện Hóa ({isNguyenAnhStage ? '+50 TM' : '+3k'})
+                                <Icon name="sparkle" size={14} /> Luyện Hóa ({isNguyenAnhStage ? '+50 TM' : '+3k'})
                               </button>
                             </>
                           ) : isAnchored ? (
@@ -1012,12 +1013,12 @@ export default function CultivationModal({ isOpen, onClose }) {
                               className={styles.burnExpBtn}
                               onClick={() => {
                                 const costDesc = isNguyenAnhStage ? '200 Thiên Mệnh' : '10.000 Tu Vi (kèm nguy cơ ngã cảnh/tụt tầng)';
-                                if (confirm(`🔥 NGHỊCH THIÊN HOÁN BẢO:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name} (${art.type})\n• Tiêu hao: Đốt ${costDesc}\n\nĐạo hữu có muốn đổi bảo vật này vào Túi Trữ Vật?`)) {
+                                if (confirm(`[NGHỊCH THIÊN] HOÁN BẢO:\n\n• Vật phẩm: [${tierInfo.name}] ${art.name} (${art.type})\n• Tiêu hao: Đốt ${costDesc}\n\nĐạo hữu có muốn đổi bảo vật này vào Túi Trữ Vật?`)) {
                                   triggerAction(() => buyArtifact(art.id));
                                 }
                               }}
                             >
-                              🔥 Đổi Bảo Vật (Đốt {isNguyenAnhStage ? '200 TM' : '10.000 Tu Vi'})
+                              <Icon name="flame" size={14} /> Đổi Bảo Vật (Đốt {isNguyenAnhStage ? '200 TM' : '10.000 Tu Vi'})
                             </button>
                           )}
                         </div>
@@ -1039,7 +1040,7 @@ export default function CultivationModal({ isOpen, onClose }) {
             <div className={styles.tribulationHero}>
               <div className={styles.tribulationHeaderRow}>
                 <div>
-                  <h3 className={styles.cardHeader}>⚡ CỬU THIÊN ĐỘ KIẾP ĐÀI</h3>
+                  <h3 className={styles.cardHeader}><Icon name="bolt" size={18} /> CỬU THIÊN ĐỘ KIẾP ĐÀI</h3>
                   <p className={styles.subtext}>
                     Tích lũy <strong>Linh Lực (Tu Vi)</strong> khi đọc truyện để nuôi dưỡng Đạo Anh. Đạt từ <strong>80% Linh Lực</strong> trở lên để Nghênh Tiếp Thiên Kiếp, độ kiếp thành công sẽ <strong>thu hoạch Lực Thiên Mệnh</strong> tương ứng phẩm cấp Đạo Anh!
                   </p>
@@ -1053,14 +1054,14 @@ export default function CultivationModal({ isOpen, onClose }) {
                   style={{ padding: '10px 14px', fontSize: 12, fontWeight: 800, background: 'linear-gradient(135deg, #0284c7, #38bdf8)' }}
                   onClick={() => triggerAction(fillAllDaoAnhThienMenh)}
                 >
-                  ⚡ NẠP ĐẦY 100% LINH LỰC
+                  <Icon name="bolt" size={14} /> NẠP ĐẦY 100% LINH LỰC
                 </button>
                 <button
                   className={`btn-gold ${styles.massTribulationBtn}`}
                   style={{ padding: '10px 14px', fontSize: 12, fontWeight: 700 }}
                   onClick={handleAllTribulation}
                 >
-                  👑 VẠN KIẾP TỀ THĂNG (+50% TM)
+                  <Icon name="crown" size={14} /> VẠN KIẾP TỀ THĂNG (+50% TM)
                 </button>
                 <button
                   style={{
@@ -1081,7 +1082,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                   onClick={() => setDaoAnhGalleryOpen(true)}
                   title="Mở Đạo Anh Đồ Lục"
                 >
-                  ✨ ĐẠO ANH ĐỒ LỤC (42 THẦN PHẨM)
+                  <Icon name="scroll" size={14} /> ĐẠO ANH ĐỒ LỤC (42 THẦN PHẨM)
                 </button>
               </div>
             </div>
@@ -1128,7 +1129,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           </h4>
                           <span className={styles.daoAnhBadge} style={{ color: daTheme.color }}>
                             [{tierInfo.name}] · {da.element || 'Thần Thể'} · Kiếp {previewKiepMap[da.id] !== undefined ? previewKiepMap[da.id] : da.currentKiep}/5 ({da.currentKiep} Anh)
-                            {daTheme.isLamp && ' · 🏮 Chân Hỏa'}
+                            {daTheme.isLamp && ' · Chân Hỏa'}
                           </span>
                         </div>
                       </div>
@@ -1159,7 +1160,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                                 }));
                               }}
                             >
-                              <span>{isPassed ? '⚡' : '◦'}</span>
+                              <span>{isPassed ? <Icon name="bolt" size={12} /> : "◦"}</span>
                             </div>
                           );
                         })}
@@ -1184,7 +1185,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                           </div>
 
                           <div style={{ fontSize: 11, color: '#fde047', marginTop: 4, fontWeight: 700 }}>
-                            🎁 Thưởng vượt kiếp: +{rewardTM.toLocaleString()} Thiên Mệnh
+                            Thưởng vượt kiếp: +{rewardTM.toLocaleString()} Thiên Mệnh
                           </div>
 
                           {/* Single Clean Action Button for Độ Kiếp */}
@@ -1196,14 +1197,14 @@ export default function CultivationModal({ isOpen, onClose }) {
                               disabled={!isEligible}
                             >
                               {isEligible 
-                                ? `⚡ NGHÊNH TIẾP THIÊN KIẾP (Thành công: ${successChance}% ➔ +${rewardTM.toLocaleString()} TM)` 
-                                : `🔒 CẦN TÍCH LŨY ≥ 80% LINH LỰC ĐỂ ĐỘ KIẾP (Hiện: ${percent}%)`}
+                                ? `NGHÊNH TIẾP THIÊN KIẾP (Thành công: ${successChance}% -> +${rewardTM.toLocaleString()} TM)` 
+                                : `CẦN TÍCH LŨY ≥ 80% LINH LỰC ĐỂ ĐỘ KIẾP (Hiện: ${percent}%)`}
                             </button>
                           </div>
                         </>
                       ) : (
                         <div className={styles.maxDaoAnhNotice} style={{ color: '#ffcc00', fontWeight: 700, textAlign: 'center', padding: '10px 0' }}>
-                          👑 ĐẠO ANH ĐÃ VƯỢT QUA CỬU TRÙNG 5 KIẾP ĐẠI VIÊN MÃN (5 ANH CHIẾN LỰC)!
+                          ĐẠO ANH ĐÃ VƯỢT QUA CỬU TRÙNG 5 KIẾP ĐẠI VIÊN MÃN (5 ANH CHIẾN LỰC)!
                         </div>
                       )}
                     </div>
@@ -1280,7 +1281,7 @@ export default function CultivationModal({ isOpen, onClose }) {
               <div className={styles.anchorModalHeader}>
                 <div>
                   <h3 style={{ margin: 0, color: '#ffcc00', fontSize: 16 }}>
-                    👑 KHẢM NẠM VẬT TRẤN ÁP · THIÊN CUNG TỰ THÂN {anchorModalPalace + 1}
+                    KHẢM NẠM VẬT TRẤN ÁP · THIÊN CUNG TỰ THÂN {anchorModalPalace + 1}
                   </h3>
                   <p style={{ margin: '4px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
                     Chọn một Pháp Khí, Công Pháp hoặc Dị Khí trong Túi Trữ Vật để trấn áp, hoàn tất 100% Cung Thật (+1 Cung chiến lực).
@@ -1305,7 +1306,7 @@ export default function CultivationModal({ isOpen, onClose }) {
                         setActiveTab('artifacts');
                       }}
                     >
-                      👉 Đi Đến Cửa Hàng Trấn Cung Vật
+                      Đi Đến Cửa Hàng Trấn Cung Vật
                     </button>
                   </div>
                 ) : (
@@ -1369,7 +1370,7 @@ export default function CultivationModal({ isOpen, onClose }) {
            ======================================================== */}
         <div className={styles.dangerZoneCard}>
           <div className={styles.dangerZoneHeader}>
-            <span>💀 NGHỊCH THIÊN HÓA PHÀM · TẢN ĐI TU VI</span>
+            <span><Icon name="skull" size={16} /> NGHỊCH THIÊN HÓA PHÀM · TẢN ĐI TU VI</span>
           </div>
           <p className={styles.dangerZoneDesc}>
             Tản đi toàn bộ tu vi hiện có, tán sạch toàn bộ Mệnh Đăng và Vật Trấn Áp đã thu thập và khảm nạm để hóa phàm trùng tu đạo lộ lại từ đầu.
@@ -1379,14 +1380,14 @@ export default function CultivationModal({ isOpen, onClose }) {
             onClick={() => {
               if (
                 confirm(
-                  '⚠️ CẢNH BÁO TẢN ĐI TU VI:\n\nBạn có chắc chắn muốn TẢN ĐI TOÀN BỘ TU VI?\n\n• Toàn bộ cảnh giới, chiến lực, EXP, Tiên Tinh và Thiên Mệnh sẽ về 0 (Phàm Nhân / Ngưng Khí 1 Tầng).\n• Toàn bộ Mệnh Đăng và Vật Trấn Áp trong túi và đã khảm nạm sẽ MẤT HẾT VĨNH VIỄN!\n• Hành động này KHÔNG THỂ HOÀN TÁC!\n\nĐạo hữu có muốn tản công trùng tu lại từ đầu?'
+                  '[CẢNH BÁO] TẢN ĐI TU VI:\n\nBạn có chắc chắn muốn TẢN ĐI TOÀN BỘ TU VI?\n\n• Toàn bộ cảnh giới, chiến lực, EXP, Tiên Tinh và Thiên Mệnh sẽ về 0 (Phàm Nhân / Ngưng Khí 1 Tầng).\n• Toàn bộ Mệnh Đăng và Vật Trấn Áp trong túi và đã khảm nạm sẽ MẤT HẾT VĨNH VIỄN!\n• Hành động này KHÔNG THỂ HOÀN TÁC!\n\nĐạo hữu có muốn tản công trùng tu lại từ đầu?'
                 )
               ) {
                 triggerAction(resetCultivation, 'Đã tản đi toàn bộ tu vi! Hóa phàm trùng tu đạo lộ từ đầu.');
               }
             }}
           >
-            💀 TẢN ĐI TU VI (TRÙNG TU TỪ ĐẦU)
+            TẢN ĐI TU VI (TRÙNG TU TỪ ĐẦU)
           </button>
         </div>
       </div>

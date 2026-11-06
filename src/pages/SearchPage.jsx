@@ -49,7 +49,7 @@ export default function SearchPage() {
           className={styles.select}
           aria-label="Chọn truyện để tìm kiếm"
         >
-          <option value="">🔍 Tất cả truyện</option>
+          <option value="">Tất cả truyện</option>
           {library.map(n => (
             <option key={n.id} value={n.id}>{n.title}</option>
           ))}
@@ -71,7 +71,7 @@ export default function SearchPage() {
             disabled={searching || !query.trim()}
             id="btn-search"
           >
-            {searching ? '⏳' : 'Tìm'}
+            {searching ? 'Đang tìm...' : 'Tìm'}
           </button>
         </div>
       </div>

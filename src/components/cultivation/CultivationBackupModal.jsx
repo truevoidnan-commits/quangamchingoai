@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   getCultivationBackupData,
@@ -66,7 +67,7 @@ export default function CultivationBackupModal({ isOpen, onClose }) {
         <div className={styles.header}>
           <div className={styles.titleArea}>
             <h2 className={styles.title}>
-              <span>📦</span> Xuất Sao Lưu Tu Vi
+              <span><Icon name="package" size={16} /></span> Xuất Sao Lưu Tu Vi
             </h2>
             <div className={styles.subtitle}>
               Chế độ chỉ đọc • Không tác động hay thay đổi tiến trình tu luyện
@@ -80,7 +81,7 @@ export default function CultivationBackupModal({ isOpen, onClose }) {
         {/* Content */}
         <div className={styles.body}>
           <div className={styles.noticeBox}>
-            <span>🛡️</span>
+            <span><Icon name="shield" size={16} /></span>
             <div>
               <strong>An toàn tuyệt đối:</strong> Thao tác này chỉ trích xuất dữ liệu tu vi hiện tại để bạn cất giữ hoặc chuyển đổi thiết bị. Không ghi đè hay xóa bất kỳ chỉ số nào.
             </div>
@@ -90,7 +91,7 @@ export default function CultivationBackupModal({ isOpen, onClose }) {
             <div>
               <span>Hồ sơ: </span>
               <strong style={{ color: isSandbox ? '#fb923c' : '#38bdf8' }}>
-                {isSandbox ? '🧪 Thử Nghiệm (Sandbox)' : '🛡️ Tu Vi Thật (Chính thức)'}
+                {isSandbox ? 'Thử Nghiệm (Sandbox)' : 'Tu Vi Thật (Chính thức)'}
               </strong>
             </div>
             <div>
@@ -113,7 +114,7 @@ export default function CultivationBackupModal({ isOpen, onClose }) {
 
           {copied && (
             <div className={styles.toastSuccess}>
-              <span>✅</span>
+              <span><Icon name="check" size={14} /></span>
               <span>Đã sao chép toàn bộ JSON vào bộ nhớ tạm! Bạn có thể dán vào Ghi Chú.</span>
             </div>
           )}
@@ -125,7 +126,7 @@ export default function CultivationBackupModal({ isOpen, onClose }) {
               onClick={handleCopy}
               title="Sao chép toàn bộ JSON vào bộ nhớ tạm"
             >
-              <span>📋</span>
+              <span><Icon name="copy" size={14} /></span>
               <span>{copied ? 'Đã Sao Chép!' : 'Sao Chép Vào Ghi Chú'}</span>
             </button>
 
@@ -135,13 +136,13 @@ export default function CultivationBackupModal({ isOpen, onClose }) {
               onClick={handleDownload}
               title="Tải file .json về thiết bị"
             >
-              <span>📥</span>
+              <span><Icon name="download" size={14} /></span>
               <span>Tải Tệp (.json)</span>
             </button>
           </div>
 
           <div className={styles.footerNote}>
-            💡 <em>Lưu ý: Trên iOS Safari hoặc Cốc Cốc nếu tính năng tải tệp bị chặn, hãy dùng nút <strong>"Sao Chép Vào Ghi Chú"</strong> để dán và cất giữ an toàn.</em>
+            <em>Lưu ý: Trên iOS Safari hoặc Cốc Cốc nếu tính năng tải tệp bị chặn, hãy dùng nút <strong>"Sao Chép Vào Ghi Chú"</strong> để dán và cất giữ an toàn.</em>
           </div>
         </div>
       </div>

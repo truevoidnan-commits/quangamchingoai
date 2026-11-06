@@ -278,7 +278,7 @@ async function main() {
     await page.waitForTimeout(300);
 
     const alignInfo = await page.evaluate(() => {
-      const logo = document.querySelector('header a[aria-label*="Thiên Cơ Lâu"]');
+      const logo = document.querySelector('header a[class*="logo"]');
       const backBtn = document.querySelector('button[class*="backBtn"]');
       const coverWrap = document.querySelector('[class*="coverWrap"]');
       const descCard = document.querySelector('[class*="descCard"]');

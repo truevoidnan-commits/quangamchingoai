@@ -1,3 +1,4 @@
+import Icon from '../components/ui/Icon';
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { getNovel, getChapters, getChapter } from '../lib/db';
@@ -40,6 +41,26 @@ import {
 import selectionStyles from '../components/reader/SelectionEditor.module.css';
 import styles from './ReaderPage.module.css';
 
+
+
+function IconBolt({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+}
+
+function IconMeditation({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="5" r="2.5" />
+      <path d="M12 9v4" />
+      <path d="M6 13l3-2 3 3 3-3 3 2" />
+      <path d="M4 19c2-2 5-3 8-3s6 1 8 3" />
+    </svg>
+  );
+}
 
 function IconArrowLeft({ size = 18 }) {
   return (
@@ -725,7 +746,7 @@ export default function ReaderPage() {
       await saveChapter(restoredChapter);
       setChapter(restoredChapter);
       setEditorToast({
-        message: '↩ Đã hoàn tác lại nội dung trước đó!',
+        message: 'Đã hoàn tác lại nội dung trước đó!',
         onUndo: null,
       });
     } catch (err) {
@@ -898,8 +919,8 @@ export default function ReaderPage() {
 
         const isDeleted = !newText || newText.trim() === '';
         const message = isDeleted
-          ? `🗑️ Đã xóa ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`
-          : `✨ Đã thay thế ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`;
+          ? `Đã xóa ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`
+          : `Đã thay thế ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`;
 
         setEditorToast({ message });
       } catch (err) {
@@ -988,8 +1009,8 @@ export default function ReaderPage() {
 
       const isDeleted = !newText || newText.trim() === '';
       const message = isDeleted
-        ? (scope === 'all' ? '🗑️ Đã xóa toàn bộ các đoạn trùng khớp trong chương!' : '🗑️ Đã xóa đoạn chữ thành công!')
-        : (scope === 'all' ? '✨ Đã thay thế toàn bộ các vị trí trong chương!' : '✨ Đã lưu thay đổi vào chương thành công!');
+        ? (scope === 'all' ? 'Đã xóa toàn bộ các đoạn trùng khớp trong chương!' : 'Đã xóa đoạn chữ thành công!')
+        : (scope === 'all' ? 'Đã thay thế toàn bộ các vị trí trong chương!' : 'Đã lưu thay đổi vào chương thành công!');
 
       setEditorToast({
         message,
@@ -1047,6 +1068,7 @@ export default function ReaderPage() {
       <div className={`${styles.topBar} ${!barVisible ? styles.topBarHidden : ''}`}>
         <div className={styles.topBarInner}>
           <button
+            type="button"
             className={styles.topBtn}
             onClick={() => {
               saveCurrentPositionImmediate();
@@ -1055,19 +1077,48 @@ export default function ReaderPage() {
               }
               navigate(`/novel/${activeNovelId}`);
             }}
-            aria-label="Quay lại"
+            title="Quay lại truyện"
+            aria-label="Quay lại truyện"
           >
-            ←
+            <IconArrowLeft size={18} />
           </button>
+
           <div className={styles.meditationBadgeWrap}>
-            <span className={styles.meditationBadge} title="Mỗi chu kỳ 60s tĩnh tâm đọc sẽ hấp thu một luồng linh khí tu vi (lặp lại liên tục)">
-              🧘 Ngộ đạo {cycleSeconds}/60s
-            </span>
+            <div
+              className={styles.meditationPill}
+              title="Mỗi chu kỳ 60s tĩnh tâm đọc sẽ hấp thu một luồng linh khí tu vi (lặp lại liên tục)"
+            >
+              <div className={styles.meditationRingWrap}>
+                <svg className={styles.meditationRingSvg} width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle className={styles.meditationRingBg} cx="12" cy="12" r="9" strokeWidth="2.2" fill="none" />
+                  <circle
+                    className={styles.meditationRingFg}
+                    cx="12"
+                    cy="12"
+                    r="9"
+                    strokeWidth="2.2"
+                    fill="none"
+                    strokeDasharray={2 * Math.PI * 9}
+                    strokeDashoffset={2 * Math.PI * 9 * (1 - Math.min(60, cycleSeconds) / 60)}
+                    transform="rotate(-90 12 12)"
+                  />
+                </svg>
+                <span className={styles.meditationPillIcon}>
+                  <IconMeditation size={11} />
+                </span>
+              </div>
+              <span className={styles.meditationPillText}>
+                Ngộ đạo <strong className={styles.meditationSec}>{cycleSeconds}</strong>/60s
+              </span>
+            </div>
           </div>
+
           <div className={styles.topBarSpacer} />
+
           <div className={styles.topBtns}>
             <div className={styles.cultivationBtnWrap}>
               <button
+                type="button"
                 className={styles.topBtn}
                 onMouseEnter={() => prefetchLazyRoutes([() => import('../components/cultivation/CultivationModal')])}
                 onTouchStart={() => prefetchLazyRoutes([() => import('../components/cultivation/CultivationModal')])}
@@ -1081,11 +1132,11 @@ export default function ReaderPage() {
                   clearUnreadDrops();
                   navigate('/cultivation');
                 }}
-                title="Xem Bảng Tu Vi"
-                aria-label="Tu Vi"
-                style={{ color: '#ffcc00' }}
+                title="Bảng Tu Vi & Cơ Duyên"
+                aria-label="Xem Bảng Tu Vi"
+                style={{ color: '#ffd21f' }}
               >
-                ⚡
+                <IconBolt size={18} />
               </button>
               {unreadDropsCount > 0 && (
                 <span
@@ -1096,37 +1147,45 @@ export default function ReaderPage() {
                 </span>
               )}
             </div>
+
             <button
+              type="button"
               className={styles.topBtn}
               onClick={() => setGlobalReplaceOpen(true)}
               title="Tìm & Thay thế toàn bộ truyện"
               aria-label="Tìm & Thay thế toàn bộ truyện"
             >
-              🔁
+              <IconReplace size={18} />
             </button>
+
             <button
+              type="button"
               className={styles.topBtn}
               onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}
-              title="Thêm chương"
+              title="Thêm chương mới"
               aria-label="Thêm chương"
             >
-              +
+              <IconPlus size={18} />
             </button>
+
             <button
+              type="button"
               className={styles.topBtn}
               onClick={() => setSettingsOpen(true)}
-              title="Tuỳ chỉnh"
+              title="Tuỳ chỉnh cài đặt đọc"
               aria-label="Cài đặt đọc"
             >
-              ☰
+              <IconSettings size={18} />
             </button>
+
             <button
+              type="button"
               className={styles.topBtn}
               onClick={() => setTocOpen(true)}
-              title="Mục lục"
-              aria-label="Mục lục"
+              title="Mục lục chương"
+              aria-label="Mục lục chương"
             >
-              📋
+              <IconList size={18} />
             </button>
           </div>
         </div>
@@ -1135,7 +1194,7 @@ export default function ReaderPage() {
       {/* Floating search badge if navigating from search */}
       {searchKeyword && (
         <div className={styles.highlightBadgeBar}>
-          <span>🔍 Khớp từ khoá: "<strong>{searchKeyword}</strong>"</span>
+          <span><Icon name="search" size={13} /> Khớp từ khoá: "<strong>{searchKeyword}</strong>"</span>
           <button className={styles.clearHighlightBtn} onClick={clearHighlight} title="Tắt highlight">
             ✕ Tắt
           </button>
@@ -1189,7 +1248,7 @@ export default function ReaderPage() {
                   navigate('/cultivation');
                 }}
               >
-                🏮 Xem Trong Bảng Tu Vi
+                <Icon name="lantern" size={14} /> Xem Trong Bảng Tu Vi
               </button>
               <button className="btn-ghost" onClick={() => setDroppedLamp(null)}>
                 Đóng
@@ -1221,25 +1280,44 @@ export default function ReaderPage() {
           <>
             <nav className={styles.chapterNavTop}>
               <button
+                type="button"
                 className={styles.navBtn}
-                style={{ color: prevChapter ? theme.accent : `${theme.text}40`, borderColor: prevChapter ? `${theme.accent}50` : `${theme.text}20` }}
+                style={{
+                  color: prevChapter ? theme.accent : `${theme.text}55`,
+                  borderColor: prevChapter ? `${theme.accent}60` : `${theme.text}25`,
+                  backgroundColor: prevChapter ? `${theme.accent}14` : 'transparent',
+                }}
                 onClick={() => goToChapter(prevChapter)}
                 disabled={!prevChapter}
+                aria-label="Chương trước"
               >
                 ← Chương trước
               </button>
               <button
+                type="button"
                 className={styles.tocBtn}
                 onClick={() => setTocOpen(true)}
-                style={{ color: theme.accent, borderColor: `${theme.accent}40` }}
+                style={{
+                  color: theme.accent,
+                  borderColor: `${theme.accent}60`,
+                  backgroundColor: `${theme.accent}14`,
+                }}
+                title="Mục lục chương"
+                aria-label="Mục lục chương"
               >
-                📋
+                <IconList size={18} />
               </button>
               <button
+                type="button"
                 className={styles.navBtn}
-                style={{ color: nextChapter ? theme.accent : `${theme.text}40`, borderColor: nextChapter ? `${theme.accent}50` : `${theme.text}20` }}
+                style={{
+                  color: nextChapter ? theme.accent : `${theme.text}55`,
+                  borderColor: nextChapter ? `${theme.accent}60` : `${theme.text}25`,
+                  backgroundColor: nextChapter ? `${theme.accent}14` : 'transparent',
+                }}
                 onClick={() => goToChapter(nextChapter)}
                 disabled={!nextChapter}
+                aria-label="Chương sau"
               >
                 Chương sau →
               </button>
@@ -1272,41 +1350,52 @@ export default function ReaderPage() {
 
       {/* ===== CHAPTER NAVIGATION ===== */}
       {!isContentLoading && (
-        <nav className={styles.chapterNav} style={{ backgroundColor: `${theme.bg}f0`, borderColor: `${theme.accent}35` }}>
+        <nav
+          className={styles.chapterNav}
+          style={{
+            backgroundColor: `${theme.bg}ee`,
+            borderColor: `${theme.accent}30`,
+          }}
+        >
           <button
+            type="button"
             className={styles.navBtn}
             style={{
-              color: prevChapter ? theme.accent : `${theme.text}60`,
-              borderColor: prevChapter ? `${theme.accent}50` : `${theme.text}25`,
-              backgroundColor: prevChapter ? `${theme.accent}12` : 'transparent'
+              color: prevChapter ? theme.accent : `${theme.text}55`,
+              borderColor: prevChapter ? `${theme.accent}60` : `${theme.text}25`,
+              backgroundColor: prevChapter ? `${theme.accent}14` : 'transparent',
             }}
             onClick={() => goToChapter(prevChapter)}
             disabled={!prevChapter}
+            aria-label="Chương trước"
           >
             ← Chương trước
           </button>
           <button
+            type="button"
             className={styles.tocBtn}
             onClick={() => setTocOpen(true)}
             style={{
               color: theme.accent,
-              borderColor: `${theme.accent}45`,
-              backgroundColor: `${theme.accent}12`
+              borderColor: `${theme.accent}60`,
+              backgroundColor: `${theme.accent}14`,
             }}
-            title="Mục lục"
-            aria-label="Mục lục"
+            title="Mục lục chương"
+            aria-label="Mục lục chương"
           >
             <IconList size={18} />
           </button>
           <button
+            type="button"
             className={styles.navBtn}
             style={{
-              color: nextChapter ? theme.accent : `${theme.text}60`,
-              borderColor: nextChapter ? `${theme.accent}50` : `${theme.text}25`,
-              backgroundColor: nextChapter ? `${theme.accent}12` : 'transparent'
+              color: nextChapter ? theme.accent : `${theme.text}55`,
+              borderColor: nextChapter ? `${theme.accent}60` : `${theme.text}25`,
+              backgroundColor: nextChapter ? `${theme.accent}14` : 'transparent',
             }}
             onClick={() => goToChapter(nextChapter)}
             disabled={!nextChapter}
+            aria-label="Chương sau"
           >
             Chương sau →
           </button>
@@ -1427,7 +1516,7 @@ export default function ReaderPage() {
             }
           }
           setEditorToast({
-            message: `✨ Đã thay thế ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`,
+            message: `Đã thay thế ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`,
           });
         }}
       />
@@ -1442,7 +1531,7 @@ export default function ReaderPage() {
               className={selectionStyles.undoBtn}
               onClick={editorToast.onUndo}
             >
-              ↩ Hoàn tác
+              Hoàn tác
             </button>
           )}
           <button

@@ -4,21 +4,74 @@
   z-index: -1;
   pointer-events: none;
   transform: translateZ(0);
-  background:
-    linear-gradient(180deg, rgba(14, 10, 28, 0.55) 0%, rgba(12, 14, 26, 0.82) 45%, rgba(8, 10, 20, 0.96) 100%),
-    radial-gradient(ellipse at 50% 20%, rgba(192, 132, 252, 0.12), transparent 70%),
-    radial-gradient(circle at 80% 60%, rgba(15, 42, 53, 0.3), transparent 60%),
-    url('../../assets/images/bg-tang-kinh-hoa-cac.webp') center top / cover no-repeat,
-    #0b0a18;
+  background-color: #0b0a18;
+  overflow: hidden;
 }
 
+/* Base image layer */
+.imageLayer {
+  position: absolute;
+  inset: 0;
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transition: opacity 300ms ease, filter 300ms ease;
+  will-change: opacity, filter;
+}
+
+/* Default Tàng Kinh image (mobile / vertical) */
+.defaultBg {
+  background-image: url('../../assets/images/bg-tang-kinh-hoa-cac.webp');
+  background-image: -webkit-image-set(
+    url('../../assets/images/bg-tang-kinh-hoa-cac.webp') 1x,
+    url('../../assets/images/bg-tang-kinh-hoa-cac@2x.webp') 2x
+  );
+  background-image: image-set(
+    url('../../assets/images/bg-tang-kinh-hoa-cac.webp') 1x,
+    url('../../assets/images/bg-tang-kinh-hoa-cac@2x.webp') 2x
+  );
+}
+
+/* Default Tàng Kinh image (landscape / desktop) */
 @media (min-width: 900px) and (orientation: landscape), (min-aspect-ratio: 4/3) {
-  .backdrop {
-    background:
-      radial-gradient(ellipse at center, transparent 40%, rgba(5, 8, 16, 0.75) 100%),
-      linear-gradient(180deg, rgba(14, 10, 28, 0.5) 0%, rgba(12, 14, 26, 0.75) 45%, rgba(8, 10, 20, 0.94) 100%),
-      radial-gradient(ellipse at 50% 20%, rgba(192, 132, 252, 0.12), transparent 70%),
-      url('../../assets/images/bg-tang-kinh-hoa-cac-wide.webp') center / cover no-repeat,
-      #0b0a18;
+  .defaultBg {
+    background-position: center center;
+    background-image: url('../../assets/images/bg-tang-kinh-hoa-cac-wide.webp');
+    background-image: -webkit-image-set(
+      url('../../assets/images/bg-tang-kinh-hoa-cac-wide.webp') 1x,
+      url('../../assets/images/bg-tang-kinh-hoa-cac-wide@2x.webp') 2x
+    );
+    background-image: image-set(
+      url('../../assets/images/bg-tang-kinh-hoa-cac-wide.webp') 1x,
+      url('../../assets/images/bg-tang-kinh-hoa-cac-wide@2x.webp') 2x
+    );
   }
+}
+
+/* Custom backdrop dim layer */
+.dimLayer {
+  position: absolute;
+  inset: 0;
+  transition: background-color 300ms ease;
+  pointer-events: none;
+}
+
+/* Noise overlay layer to eliminate banding */
+.noiseLayer {
+  position: absolute;
+  inset: 0;
+  background-image: url('../../assets/images/noise-subtle.png');
+  background-repeat: repeat;
+  opacity: 0.04;
+  pointer-events: none;
+}
+
+/* Vignette & darken overlay layer */
+.overlayLayer {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, transparent 40%, rgba(5, 8, 16, 0.72) 100%),
+    linear-gradient(180deg, rgba(14, 10, 28, 0.5) 0%, rgba(10, 12, 22, 0.78) 50%, rgba(8, 10, 20, 0.94) 100%);
+  pointer-events: none;
 }

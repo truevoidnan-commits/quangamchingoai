@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 import React, { useState, useEffect } from 'react';
 import { getActiveProfile, getCultivationState } from '../../lib/cultivation';
 import {
@@ -156,7 +157,7 @@ export default function AdminSandboxModal({ isOpen, onClose }) {
 
   const handleCopyFromReal = () => {
     const confirmed = window.confirm(
-      '⚠️ CẢNH BÁO XÁC NHẬN:\n\nThao tác này sẽ SAO CHÉP toàn bộ tiến trình tu luyện từ HỒ SƠ THẬT sang Hồ Sơ Thử Nghiệm và GHI ĐÈ toàn bộ dữ liệu hiện tại của Sandbox.\n\nBạn có muốn tiếp tục không?'
+      '[CẢNH BÁO XÁC NHẬN]:\n\nThao tác này sẽ SAO CHÉP toàn bộ tiến trình tu luyện từ HỒ SƠ THẬT sang Hồ Sơ Thử Nghiệm và GHI ĐÈ toàn bộ dữ liệu hiện tại của Sandbox.\n\nBạn có muốn tiếp tục không?'
     );
     if (!confirmed) return;
 
@@ -170,7 +171,7 @@ export default function AdminSandboxModal({ isOpen, onClose }) {
 
   const handleResetSandbox = () => {
     const confirmed = window.confirm(
-      '⚠️ Xác nhận đặt lại toàn bộ Hồ Sơ Thử Nghiệm về Phàm Nhân ban đầu?'
+      '[Xác nhận] Đặt lại toàn bộ Hồ Sơ Thử Nghiệm về Phàm Nhân ban đầu?'
     );
     if (!confirmed) return;
 
@@ -229,7 +230,7 @@ export default function AdminSandboxModal({ isOpen, onClose }) {
         <div className={styles.header}>
           <div className={styles.titleArea}>
             <h2 className={styles.title}>
-              <span>🛠️</span> BẢNG ĐIỀU KHIỂN ADMIN (SANDBOX)
+              <span><Icon name="settings" size={16} /></span> BẢNG ĐIỀU KHIỂN ADMIN (SANDBOX)
             </h2>
             <div className={styles.subtitle}>
               Chế độ thử nghiệm an toàn • Dữ liệu Tu Vi Thật được cách ly tuyệt đối
@@ -246,19 +247,19 @@ export default function AdminSandboxModal({ isOpen, onClose }) {
             className={`${styles.tabBtn} ${activeTab === 'presets' ? styles.tabBtnActive : ''}`}
             onClick={() => setActiveTab('presets')}
           >
-            🪐 Cảnh Giới Presets ({REALM_PRESETS.length})
+            <Icon name="planet" size={14} /> Cảnh Giới Presets ({REALM_PRESETS.length})
           </button>
           <button
             className={`${styles.tabBtn} ${activeTab === 'stats' ? styles.tabBtnActive : ''}`}
             onClick={() => setActiveTab('stats')}
           >
-            ⚡ Chỉnh Thông Số
+            <Icon name="bolt" size={14} /> Chỉnh Thông Số
           </button>
           <button
             className={`${styles.tabBtn} ${activeTab === 'manage' ? styles.tabBtnActive : ''}`}
             onClick={() => setActiveTab('manage')}
           >
-            💾 Quản Lý & Dữ Liệu
+            <Icon name="save" size={14} /> Quản Lý & Dữ Liệu
           </button>
         </div>
 
@@ -269,7 +270,7 @@ export default function AdminSandboxModal({ isOpen, onClose }) {
               msg.type === 'error' ? styles.msgError : styles.msgSuccess
             }`}
           >
-            <span>{msg.type === 'error' ? '❌' : '✅'}</span>
+            <span>{msg.type === "error" ? <Icon name="close" size={14} /> : <Icon name="check" size={14} />}</span>
             <span>{msg.text}</span>
           </div>
         )}
@@ -422,7 +423,7 @@ export default function AdminSandboxModal({ isOpen, onClose }) {
               {/* Copy Real to Sandbox */}
               <div className={styles.manageCard}>
                 <div className={styles.manageCardTitle}>
-                  <span>📥</span> Sao chép từ Hồ Sơ Thật sang Sandbox
+                  <span><Icon name="download" size={14} /></span> Sao chép từ Hồ Sơ Thật sang Sandbox
                 </div>
                 <p className={styles.manageCardDesc}>
                   Đọc toàn bộ dữ liệu hiện có trong Hồ Sơ Thật và nhân bản vào Sandbox để bạn
@@ -436,7 +437,7 @@ export default function AdminSandboxModal({ isOpen, onClose }) {
               {/* Reset Sandbox */}
               <div className={styles.manageCard}>
                 <div className={styles.manageCardTitle}>
-                  <span>🔄</span> Đặt lại Hồ Sơ Thử Nghiệm
+                  <span><Icon name="refresh" size={14} /></span> Đặt lại Hồ Sơ Thử Nghiệm
                 </div>
                 <p className={styles.manageCardDesc}>
                   Xóa toàn bộ tiến trình trong Sandbox và đưa về trạng thái Phàm Nhân sơ nhập đạo lộ.
@@ -450,7 +451,7 @@ export default function AdminSandboxModal({ isOpen, onClose }) {
               {/* Export / Import JSON */}
               <div className={styles.manageCard}>
                 <div className={styles.manageCardTitle}>
-                  <span>📄</span> Sao lưu & Nạp dữ liệu JSON Sandbox
+                  <span><Icon name="scroll" size={14} /></span> Sao lưu & Nạp dữ liệu JSON Sandbox
                 </div>
                 <p className={styles.manageCardDesc}>
                   Xuất hoặc dán chuỗi JSON trạng thái Sandbox để lưu giữ các tình huống test hoặc khôi phục.
@@ -463,10 +464,10 @@ export default function AdminSandboxModal({ isOpen, onClose }) {
                 />
                 <div className={styles.jsonBtnRow}>
                   <button className={styles.actionBtn} onClick={handleExportJSON}>
-                    📋 Xuất JSON Sandbox
+                    <Icon name="copy" size={14} /> Xuất JSON Sandbox
                   </button>
                   <button className={styles.importBtn} onClick={handleImportJSON}>
-                    📥 Nạp Dữ Liệu Từ JSON
+                    <Icon name="upload" size={14} /> Nạp Dữ Liệu Từ JSON
                   </button>
                 </div>
               </div>

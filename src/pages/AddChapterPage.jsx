@@ -1,3 +1,4 @@
+import Icon from '../components/ui/Icon';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { nanoid } from '../lib/nanoid';
@@ -653,7 +654,7 @@ export default function AddChapterPage() {
                 color: '#fbbf24',
                 lineHeight: 1.6,
               }}>
-                ⚠️ <strong>Phát hiện lệch thứ tự:</strong> Truyện có{' '}
+                <Icon name="alert-triangle" size={16} /> <strong>Phát hiện lệch thứ tự:</strong> Truyện có{' '}
                 <strong>{existingChapters.length}</strong> chương nhưng thứ tự (order) cuối cùng là{' '}
                 <strong>#{nextDefaultOrder - 1}</strong> — lệch{' '}
                 <strong>{nextDefaultOrder - existingChapters.length}</strong> vị trí.
@@ -666,13 +667,13 @@ export default function AddChapterPage() {
             {parsing && (
               <div className={styles.parsingIndicator}>
                 <div className={styles.spinner} />
-                <span>⏳ Đang phân tích và bóc tách các chương... Vui lòng đợi trong giây lát</span>
+                <span><Icon name="hourglass" size={15} /> Đang phân tích và bóc tách các chương... Vui lòng đợi trong giây lát</span>
               </div>
             )}
 
             {/* Parse Error */}
             {parseError && (
-              <div className={styles.parseError}>⚠️ {parseError}</div>
+              <div className={styles.parseError}><Icon name="alert-triangle" size={14} /> {parseError}</div>
             )}
 
             {/* Parsed Result Display */}
@@ -710,7 +711,7 @@ export default function AddChapterPage() {
                 {sequenceAnalysis.anomalies.length > 0 ? (
                   <div className={styles.anomalyWarningBox}>
                     <div className={styles.anomalyHeader}>
-                      <span className={styles.anomalyIcon}>⚠️</span>
+                      <span className={styles.anomalyIcon}><Icon name="alert-triangle" size={14} /></span>
                       <strong>PHÁT HIỆN {sequenceAnalysis.anomalies.length} VỊ TRÍ NHẢY SỐ CHƯƠNG BẤT THƯỜNG:</strong>
                     </div>
                     <p className={styles.anomalyDesc}>

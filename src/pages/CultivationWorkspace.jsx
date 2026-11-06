@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../components/ui/Icon';
 import React, { useState, useEffect } from 'react';
 import { useCultivationContext } from '../context/CultivationContext';
 import RealmTimeline from '../components/cultivation/RealmTimeline';
@@ -82,7 +83,7 @@ export default function CultivationWorkspace() {
           className={`mobile-tab-btn ${mobileTab === 'visualizer' ? 'active' : ''}`}
           onClick={() => setMobileTab('visualizer')}
         >
-          <span className="mobile-tab-icon">🪐</span>
+          <span className="mobile-tab-icon"><Icon name="planet" size={16} /></span>
           <span className="mobile-tab-label">TRẬN ĐỒ</span>
         </button>
         <button
@@ -90,7 +91,7 @@ export default function CultivationWorkspace() {
           className={`mobile-tab-btn ${mobileTab === 'actions' ? 'active' : ''}`}
           onClick={() => setMobileTab('actions')}
         >
-          <span className="mobile-tab-icon">⚡</span>
+          <span className="mobile-tab-icon"><Icon name="bolt" size={16} /></span>
           <span className="mobile-tab-label">THAO TÁC</span>
         </button>
         <button
@@ -98,7 +99,7 @@ export default function CultivationWorkspace() {
           className={`mobile-tab-btn ${mobileTab === 'realm' ? 'active' : ''}`}
           onClick={() => setMobileTab('realm')}
         >
-          <span className="mobile-tab-icon">📜</span>
+          <span className="mobile-tab-icon"><Icon name="scroll" size={16} /></span>
           <span className="mobile-tab-label">CẢNH GIỚI</span>
         </button>
         <button
@@ -114,7 +115,7 @@ export default function CultivationWorkspace() {
           aria-label={isSwapMode ? "Tắt hoán đổi" : "Bật hoán đổi"}
         >
           <span className="mobile-btn-icon" style={{ display: 'inline-block', transform: isSwapActive ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }}>
-            🔄
+            
           </span>
         </button>
       </div>
@@ -178,7 +179,7 @@ export default function CultivationWorkspace() {
           }}
           title="Mở Tàng Bảo Điện (Mệnh Đăng, Bảo Vật Trấn Áp & Túi Đồ)"
         >
-          <span>🏛️ TÀNG BẢO ĐIỆN</span>
+          <span><Icon name="shield" size={14} /> TÀNG BẢO ĐIỆN</span>
         </button>
         {/* Dedicated Xuất Sao Lưu Tu Vi Button */}
         <button
@@ -202,7 +203,7 @@ export default function CultivationWorkspace() {
           }}
           title="Xuất sao lưu tu vi (Chỉ đọc, tải file JSON hoặc sao chép vào Ghi chú)"
         >
-          <span>📦 XUẤT SAO LƯU TU VI</span>
+          <span><Icon name="package" size={14} /> XUẤT SAO LƯU TU VI</span>
         </button>
 
         {/* Quick Tu Linh Tran */}
@@ -226,7 +227,7 @@ export default function CultivationWorkspace() {
           }}
           title="Kích hoạt Tụ Linh Trận bổ sung nhanh linh khí"
         >
-          <span>⚡ Tụ Linh Trận (+500 EXP)</span>
+          <span><Icon name="bolt" size={14} /> Tụ Linh Trận (+500 EXP)</span>
         </button>
       </div>
 

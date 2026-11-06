@@ -10,11 +10,12 @@
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgba(16, 25, 39, 0.92);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(34, 195, 240, 0.18);
-  transition: transform 0.3s ease, opacity 0.3s ease;
+  background: rgba(14, 20, 34, 0.88);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  border-bottom: 1px solid rgba(244, 227, 166, 0.14);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
 }
 
 .topBarHidden {
@@ -27,30 +28,34 @@
   max-width: var(--max-content-width);
   margin: 0 auto;
   padding: 0 16px;
-  height: 50px;
+  height: 52px;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
 .topBtn {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--text-secondary);
-  font-size: 18px;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  display: flex;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
   flex-shrink: 0;
   transition: all var(--transition-fast);
+  box-sizing: border-box;
 }
-.topBtn:hover {
-  background: var(--accent-cyan-dim);
-  color: var(--accent-cyan);
+
+.topBtn:hover,
+.topBtn:active {
+  background: rgba(255, 204, 0, 0.14);
+  border-color: rgba(255, 204, 0, 0.4);
+  color: #ffd21f;
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.2);
 }
 
 .chapterLabel {
@@ -69,24 +74,62 @@
   align-items: center;
 }
 
-.meditationBadge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: var(--radius-full);
-  background: rgba(34, 195, 240, 0.1);
-  border: 1px solid rgba(34, 195, 240, 0.35);
-  color: var(--accent-cyan);
-  white-space: nowrap;
-  letter-spacing: 0.02em;
-  transition: all var(--transition-fast);
+.meditationPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px 0 8px;
+  border-radius: 999px;
+  background: rgba(22, 32, 54, 0.7);
+  border: 1px solid rgba(244, 227, 166, 0.18);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  user-select: none;
 }
 
-.meditationComplete {
-  background: rgba(255, 204, 0, 0.12);
-  border-color: rgba(255, 204, 0, 0.5);
-  color: #ffcc00;
-  box-shadow: 0 0 8px rgba(255, 204, 0, 0.3);
+.meditationRingWrap {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.meditationRingSvg {
+  position: absolute;
+  inset: 0;
+}
+
+.meditationRingBg {
+  stroke: rgba(255, 255, 255, 0.14);
+}
+
+.meditationRingFg {
+  stroke: #ffd21f;
+  transition: stroke-dashoffset 0.3s linear;
+}
+
+.meditationPillIcon {
+  color: #ffd21f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.meditationPillText {
+  white-space: nowrap;
+}
+
+.meditationSec {
+  color: #ffd21f;
+  font-weight: 700;
 }
 
 .topBarSpacer {
@@ -97,55 +140,42 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
 }
 
 .unreadRedDot {
   position: absolute;
-  top: 1px;
-  right: 1px;
-  min-width: 14px;
-  height: 14px;
-  border-radius: 10px;
-  background: #ef4444;
-  color: #ffffff;
-  font-size: 9px;
-  font-weight: 800;
-  line-height: 14px;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
   padding: 0 4px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.9);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
   pointer-events: none;
-  animation: pulseRedDot 1.5s ease-in-out infinite alternate;
   z-index: 2;
+  box-sizing: border-box;
 }
 
 .unreadRedDotDotOnly {
+  min-width: 8px;
   width: 8px;
   height: 8px;
-  min-width: 8px;
   padding: 0;
-  top: 4px;
-  right: 4px;
-  border-radius: 50%;
-}
-
-@keyframes pulseRedDot {
-  0% {
-    transform: scale(0.9);
-    box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
-  }
-  100% {
-    transform: scale(1.2);
-    box-shadow: 0 0 10px rgba(239, 68, 68, 1);
-  }
+  top: -2px;
+  right: -2px;
 }
 
 .topBtns {
   display: flex;
-  gap: 2px;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
 }
 
@@ -397,61 +427,77 @@
 }
 
 /* ===== CHAPTER NAV ===== */
-.chapterNav {
+.chapterNav,
+.chapterNavTop {
   max-width: var(--max-content-width);
   margin: 0 auto;
   width: 100%;
-  padding: 16px 20px 24px;
   display: flex;
   align-items: center;
   gap: 12px;
-  border-top: 1px solid;
+  box-sizing: border-box;
 }
 
 .chapterNavTop {
-  width: 100%;
   padding: 0 0 32px 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+}
+
+.chapterNav {
+  padding: 16px 20px 24px;
+  border-top: 1px solid;
+  border-radius: 0 0 20px 20px;
 }
 
 .navBtn {
   flex: 1;
-  background: transparent;
+  height: 44px;
+  padding: 0 20px;
   border: 1px solid;
-  border-radius: var(--radius-md);
-  padding: 12px 16px;
+  border-radius: 999px;
+  font-family: var(--font-sans);
   font-size: 14px;
-  font-family: var(--font-serif);
+  font-weight: 600;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   transition: all var(--transition-fast);
-  font-weight: 500;
+  box-sizing: border-box;
 }
-.navBtn:hover:not(:disabled) {
-  filter: brightness(1.2);
+
+.navBtn:not(:disabled):hover {
+  filter: brightness(1.18);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
+
 .navBtn:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
-  opacity: 0.4;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .tocBtn {
-  background: transparent;
+  width: 44px;
+  height: 44px;
   border: 1px solid;
-  border-radius: var(--radius-md);
-  padding: 12px;
-  font-size: 16px;
-  cursor: pointer;
-  flex-shrink: 0;
-  width: 46px;
-  height: 46px;
-  display: flex;
+  border-radius: 999px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: filter var(--transition-fast);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+  box-sizing: border-box;
 }
-.tocBtn:hover { filter: brightness(1.2); }
+
+.tocBtn:hover {
+  filter: brightness(1.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
 
 .footerCredit {
   text-align: center;
@@ -469,48 +515,63 @@
     padding: 12px 14px 20px;
   }
   .navBtn {
-    padding: 10px 12px;
+    height: 40px;
+    padding: 0 14px;
     font-size: 13px;
+  }
+  .tocBtn {
+    width: 40px;
+    height: 40px;
   }
 }
 
 @media (max-width: 600px) {
   .topBarInner {
-    padding: 0 8px;
+    padding: 0 10px;
+    gap: 6px;
+    height: 52px;
+  }
+  .topBtn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+  .topBtns {
+    gap: 4px;
+  }
+  .meditationPill {
+    height: 32px;
+    padding: 0 8px 0 6px;
+    gap: 6px;
+    font-size: 11px;
+  }
+  .meditationRingWrap {
+    width: 20px;
+    height: 20px;
+  }
+  .meditationRingSvg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 380px) {
+  .topBarInner {
+    padding: 0 6px;
     gap: 4px;
   }
   .topBtn {
     width: 32px;
     height: 32px;
-    font-size: 15px;
+    border-radius: 8px;
   }
-  .meditationBadgeWrap {
-    min-width: 0;
-    flex-shrink: 1;
-  }
-  .meditationBadge {
-    padding: 2px 6px;
-    font-size: 10.5px;
-    max-width: 110px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-@media (max-width: 370px) {
-  .topBarInner {
-    padding: 0 4px;
+  .topBtns {
     gap: 2px;
   }
-  .topBtn {
-    width: 28px;
-    height: 28px;
-    font-size: 13px;
+  .meditationPillText {
+    display: none;
   }
-  .meditationBadge {
-    max-width: 80px;
-    padding: 2px 4px;
-    font-size: 9.5px;
+  .meditationPill {
+    padding: 0 6px;
   }
 }

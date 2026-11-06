@@ -1,3 +1,4 @@
+import Icon from '../components/ui/Icon';
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getNovel, saveNovel } from '../lib/db';
@@ -121,8 +122,8 @@ export default function EditNovelPage() {
         <div className={styles.field}>
           <label className={styles.label}>Ảnh bìa</label>
           <div className={styles.coverTabs}>
-            <button type="button" className={`${styles.coverTab} ${coverTab === 'upload' ? styles.coverTabActive : ''}`} onClick={() => setCoverTab('upload')}>📁 Upload</button>
-            <button type="button" className={`${styles.coverTab} ${coverTab === 'url' ? styles.coverTabActive : ''}`} onClick={() => setCoverTab('url')}>🔗 URL</button>
+            <button type="button" className={`${styles.coverTab} ${coverTab === 'upload' ? styles.coverTabActive : ''}`} onClick={() => setCoverTab('upload')}>Upload</button>
+            <button type="button" className={`${styles.coverTab} ${coverTab === 'url' ? styles.coverTabActive : ''}`} onClick={() => setCoverTab('url')}>URL</button>
           </div>
 
           {coverTab === 'upload' && (
@@ -138,7 +139,7 @@ export default function EditNovelPage() {
                       style={{ fontSize: 12, padding: '4px 10px' }}
                       onClick={() => fileRef.current?.click()}
                     >
-                      🔄 Đổi ảnh
+                      <Icon name="refresh" size={14} /> Đổi ảnh
                     </button>
                     <button
                       type="button"
@@ -149,12 +150,12 @@ export default function EditNovelPage() {
                         setCropModalOpen(true);
                       }}
                     >
-                      ✂️ Căn chỉnh lại
+                      <Icon name="scissors" size={14} /> Căn chỉnh lại
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className={styles.dropPlaceholder}><span>🖼️</span><span>Nhấn để chọn ảnh bìa</span></div>
+                <div className={styles.dropPlaceholder}><Icon name="image" size={32} /><span>Nhấn để chọn ảnh bìa</span></div>
               )}
             </div>
           )}
@@ -162,7 +163,7 @@ export default function EditNovelPage() {
           {coverTab === 'url' && (
             <div className={styles.urlRow}>
               <input type="url" value={coverUrlInput} onChange={e => setCoverUrlInput(e.target.value)} placeholder="https://..." className={styles.input} />
-              <button type="button" className="btn-ghost" onClick={handleCoverUrl}>✂️ Cắt & Căn chỉnh</button>
+              <button type="button" className="btn-ghost" onClick={handleCoverUrl}><Icon name="scissors" size={14} /> Cắt & Căn chỉnh</button>
               {coverPreview && coverTab === 'url' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <img src={coverPreview} alt="Preview" className={styles.coverPreviewSmall} onError={() => setCoverPreview('')} />
@@ -175,7 +176,7 @@ export default function EditNovelPage() {
                       setCropModalOpen(true);
                     }}
                   >
-                    ✂️ Chỉnh lại
+                    <Icon name="scissors" size={14} /> Chỉnh lại
                   </button>
                 </div>
               )}
@@ -183,12 +184,12 @@ export default function EditNovelPage() {
           )}
         </div>
 
-        {error && <div className={styles.parseError}>⚠️ {error}</div>}
+        {error && <div className={styles.parseError}><Icon name="alert-triangle" size={14} /> {error}</div>}
 
         <div className={styles.actions}>
           <button className="btn-ghost" onClick={() => navigate(-1)}>Hủy</button>
           <button className="btn-gold" onClick={handleSave} disabled={saving || !title.trim()} id="btn-update-novel">
-            {saving ? '⏳ Đang lưu...' : '💾 Cập nhật'}
+            {saving ? 'Đang lưu...' : <><Icon name="save" size={16} /> Cập nhật</>}
           </button>
         </div>
       </div>

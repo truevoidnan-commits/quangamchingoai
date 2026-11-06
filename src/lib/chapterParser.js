@@ -44,7 +44,7 @@ export function analyzeChapterSequence(chapters, existingChapters = []) {
       if (diff !== 1) {
         if (diff > 1) {
           const missingCount = diff - 1;
-          const missingText = diff === 2 ? `Chương ${prevNum + 1}` : `Chương ${prevNum + 1} ➔ Chương ${currentNum - 1}`;
+          const missingText = diff === 2 ? `Chương ${prevNum + 1}` : `Chương ${prevNum + 1} -> Chương ${currentNum - 1}`;
           anomalies.push({
             type: 'jump_forward',
             fromNum: prevNum,
@@ -55,7 +55,7 @@ export function analyzeChapterSequence(chapters, existingChapters = []) {
             index: i + 1,
             missingCount,
             missingText,
-            message: `Chương ${prevNum} ➔ Chương ${currentNum} (Nhảy +${diff} số, nghi vấn thiếu ${missingCount} chương: ${missingText})`,
+            message: `Chương ${prevNum} -> Chương ${currentNum} (Nhảy +${diff} số, nghi vấn thiếu ${missingCount} chương: ${missingText})`,
           });
         } else if (diff === 0) {
           anomalies.push({
@@ -77,7 +77,7 @@ export function analyzeChapterSequence(chapters, existingChapters = []) {
             toTitle: ch.title,
             diff,
             index: i + 1,
-            message: `Lùi số chương bất thường: Chương ${prevNum} ➔ Chương ${currentNum} (giảm ${Math.abs(diff)} số)`,
+            message: `Lùi số chương bất thường: Chương ${prevNum} -> Chương ${currentNum} (giảm ${Math.abs(diff)} số)`,
           });
         }
       }
@@ -87,7 +87,7 @@ export function analyzeChapterSequence(chapters, existingChapters = []) {
     prevTitle = ch.title;
   }
 
-  // ── Bước 2: Kiểm tra ranh giới DB ↔ file mới ──
+  // ── Bước 2: Kiểm tra ranh giới DB <-> file mới ──
   if (existingChapters && existingChapters.length > 0) {
     // Tìm số chương cuối cùng trong DB (bỏ qua ngoại truyện)
     let lastExistingNum = null;
@@ -123,7 +123,7 @@ export function analyzeChapterSequence(chapters, existingChapters = []) {
         const missingCount = diff - 1;
         const missingText = diff === 2
           ? `Chương ${lastExistingNum + 1}`
-          : `Chương ${lastExistingNum + 1} ➔ Chương ${firstNewNum - 1}`;
+          : `Chương ${lastExistingNum + 1} -> Chương ${firstNewNum - 1}`;
         // Chèn vào đầu vì đây là lỗi quan trọng nhất (ranh giới với DB)
         anomalies.unshift({
           type: 'gap_with_existing',
@@ -135,7 +135,7 @@ export function analyzeChapterSequence(chapters, existingChapters = []) {
           index: 0,
           missingCount,
           missingText,
-          message: `⛔ Khoảng trống với truyện đang có: Chương ${lastExistingNum} (cuối DB) ➔ Chương ${firstNewNum} (file mới) — Nhảy +${diff}, nghi vấn thiếu ${missingCount} chương: ${missingText}`,
+          message: `[Cảnh báo] Khoảng trống với truyện đang có: Chương ${lastExistingNum} (cuối DB) -> Chương ${firstNewNum} (file mới) — Nhảy +${diff}, nghi vấn thiếu ${missingCount} chương: ${missingText}`,
         });
       } else if (diff === 0) {
         anomalies.unshift({
@@ -146,7 +146,7 @@ export function analyzeChapterSequence(chapters, existingChapters = []) {
           toTitle: firstNewTitle,
           diff,
           index: 0,
-          message: `⛔ Trùng chương với DB: Chương ${lastExistingNum} đã tồn tại trong truyện — file mới bắt đầu cũng từ Chương ${firstNewNum}`,
+          message: `[Cảnh báo] Trùng chương với DB: Chương ${lastExistingNum} đã tồn tại trong truyện — file mới bắt đầu cũng từ Chương ${firstNewNum}`,
         });
       } else if (diff < 0) {
         anomalies.unshift({
@@ -157,7 +157,7 @@ export function analyzeChapterSequence(chapters, existingChapters = []) {
           toTitle: firstNewTitle,
           diff,
           index: 0,
-          message: `⚠️ File mới bắt đầu từ Chương ${firstNewNum} trong khi truyện đã có đến Chương ${lastExistingNum} — sẽ ghi đè hoặc chèn chéo`,
+          message: `[Cảnh báo] File mới bắt đầu từ Chương ${firstNewNum} trong khi truyện đã có đến Chương ${lastExistingNum} — sẽ ghi đè hoặc chèn chéo`,
         });
       }
       // diff === 1: hoàn toàn liền mạch, không cần cảnh báo

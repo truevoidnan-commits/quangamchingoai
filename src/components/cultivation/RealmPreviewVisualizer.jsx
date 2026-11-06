@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 
 import { getAssetUrl } from '../../lib/assetHelper';
 export { getAssetUrl };
@@ -656,7 +657,7 @@ export function SvgChaosLotusThrone({ cx, cy, isFilled, lampObj, idx = 'chaos', 
               fontSize="36"
               textRendering="geometricPrecision"
             >
-              {lampObj.icon || '🏮'}
+              <Icon name={lampObj.iconKey || toIconKey(lampObj.icon)} size={22} />
             </text>
             <circle cx={cx} cy={cy} r="40" fill="none" stroke="#fde047" strokeWidth="2.4" />
           </g>
@@ -700,7 +701,7 @@ export function LockedChaosSlot() {
           background: 'rgba(255,255,255,0.03)',
         }}
       >
-        <span style={{ fontSize: 26, color: 'rgba(255,255,255,0.35)' }}>🔒</span>
+        <Icon name="lock" size={26} style={{ color: "rgba(255,255,255,0.35)" }} />
       </div>
       <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>Pháp khiếu #121 — chưa khai mở</div>
     </div>
@@ -855,7 +856,7 @@ export function TitanDharmaAvatar({ da, lampId = '', artifactId = '', name = '',
   const has = (...keys) => keys.some(k => full.includes(k) || normKey.includes(k));
 
   /* ============================================================
-     1. 🦅 HỆ PHƯỢNG HOÀNG / CHU TƯỚC / HỎA THẦN (Phượng Đăng, Chu Tước)
+     1. HỆ PHƯỢNG HOÀNG / CHU TƯỚC / HỎA THẦN (Phượng Đăng, Chu Tước)
      ============================================================ */
   if (has('phượng', 'phuong', 'tước', 'tuoc', 'chu tước', 'hỏa phụng')) {
     return (
@@ -889,7 +890,7 @@ export function TitanDharmaAvatar({ da, lampId = '', artifactId = '', name = '',
   }
 
   /* ============================================================
-     2. 😈 HỆ MA TÂM / MA THẦN / TỊCH DIỆT (Ma Tâm Đăng, Hư Vô)
+     2. HỆ MA TÂM / MA THẦN / TỊCH DIỆT (Ma Tâm Đăng, Hư Vô)
      ============================================================ */
   if (has('ma tâm', 'ma tam', 'ma', 'tịch diệt', 'tich diet', 'thôn thiên', 'hư vô')) {
     return (
@@ -924,7 +925,7 @@ export function TitanDharmaAvatar({ da, lampId = '', artifactId = '', name = '',
   }
 
   /* ============================================================
-     3. 🟣 HỆ TỬ VI / HỒNG MÔNG / TỤ KHÍ (Tử Vi Tụ Khí, Hồng Mông)
+     3. HỆ TỬ VI / HỒNG MÔNG / TỤ KHÍ (Tử Vi Tụ Khí, Hồng Mông)
      ============================================================ */
   if (has('từ vi', 'tu vi', 'tử vi', 'tụ khí', 'tu khi', 'hồng mông', 'hong mong', 'lư khí', 'lu khi')) {
     return (
@@ -956,7 +957,7 @@ export function TitanDharmaAvatar({ da, lampId = '', artifactId = '', name = '',
   }
 
   /* ============================================================
-     4. 🎋 HỆ THANH NGỌC BỘI / NGỌC BỘI / BÍCH NGỌC
+     4. HỆ THANH NGỌC BỘI / NGỌC BỘI / BÍCH NGỌC
      ============================================================ */
   if (has('ngọc bội', 'ngoc boi', 'thanh ngọc', 'thanh ngoc', 'ngọc', 'bích ngọc')) {
     return (
@@ -986,7 +987,7 @@ export function TitanDharmaAvatar({ da, lampId = '', artifactId = '', name = '',
   }
 
   /* ============================================================
-     5. 📿 HỆ NHIẾP PHÁCH / SƠ TÂM / CỬU U
+     5. HỆ NHIẾP PHÁCH / SƠ TÂM / CỬU U
      ============================================================ */
   if (has('nhiếp phách', 'nhiep phach', 'sơ tâm', 'so tam', 'phách', 'linh')) {
     return (
@@ -1019,7 +1020,7 @@ export function TitanDharmaAvatar({ da, lampId = '', artifactId = '', name = '',
   }
 
   /* ============================================================
-     6. 🌊 HỆ BÍCH HẢI / TRIỀU TỊCH / CỰ KÌNH
+     6. HỆ BÍCH HẢI / TRIỀU TỊCH / CỰ KÌNH
      ============================================================ */
   if (has('bích hải', 'bich hai', 'triều tịch', 'trieu tich', 'hải', 'thủy')) {
     return (
@@ -1050,7 +1051,7 @@ export function TitanDharmaAvatar({ da, lampId = '', artifactId = '', name = '',
   }
 
   /* ============================================================
-     7. 🪞 HỆ HƯ KHÔNG THIÊN KÍNH / THIÊN KÍNH / KÍNH
+     7. HỆ HƯ KHÔNG THIÊN KÍNH / THIÊN KÍNH / KÍNH
      ============================================================ */
   if (has('thiên kính', 'thien kinh', 'hư không', 'hu khong', 'kính', 'kinh')) {
     return (
@@ -1080,7 +1081,7 @@ export function TitanDharmaAvatar({ da, lampId = '', artifactId = '', name = '',
   }
 
   /* ============================================================
-     8. 🍃 HỆ THANH PHONG LINH / TIÊU DAO / PHONG
+     8. HỆ THANH PHONG LINH / TIÊU DAO / PHONG
      ============================================================ */
   if (has('thanh phong', 'thanh phong linh', 'tiêu dao', 'tieu dao', 'phong')) {
     return (
@@ -1111,7 +1112,7 @@ export function TitanDharmaAvatar({ da, lampId = '', artifactId = '', name = '',
   }
 
   /* ============================================================
-     9. ⚡ HỆ LÔI ĐÌNH / THỐI THỂ / LÔI KIẾP
+     9. HỆ LÔI ĐÌNH / THỐI THỂ / LÔI KIẾP
      ============================================================ */
   if (has('lôi đình', 'loi dinh', 'thối thể', 'thoi the', 'lôi', 'loi', 'sét')) {
     return (
@@ -1142,7 +1143,7 @@ export function TitanDharmaAvatar({ da, lampId = '', artifactId = '', name = '',
   }
 
   /* ============================================================
-     10. ☀️ HỆ THUẦN DƯƠNG / SÁNG THẾ / THÁI DƯƠNG
+     10. HỆ THUẦN DƯƠNG / SÁNG THẾ / THÁI DƯƠNG
      ============================================================ */
   if (has('thuần dương', 'thuan duong', 'sáng thế', 'sang the', 'dương', 'quang')) {
     return (
@@ -1177,7 +1178,7 @@ export function TitanDharmaAvatar({ da, lampId = '', artifactId = '', name = '',
   }
 
   /* ============================================================
-     11. ⏳ HỆ NHẬT QUỸ / THỜI KHÔNG / TUẾ NGUYỆT
+     11. HỆ NHẬT QUỸ / THỜI KHÔNG / TUẾ NGUYỆT
      ============================================================ */
   if (has('nhật quỹ', 'nhat quy', 'thời không', 'thoi khong', 'tuế nguyệt', 'tue nguyet', 'đồng hồ')) {
     return (
@@ -1210,7 +1211,7 @@ export function TitanDharmaAvatar({ da, lampId = '', artifactId = '', name = '',
   }
 
   /* ============================================================
-     12. 🐉 HỆ THẦN LONG / TỔ LONG / LONG
+     12. HỆ THẦN LONG / TỔ LONG / LONG
      ============================================================ */
   if (has('long', 'rồng', 'rong', 'tổ long', 'thần long')) {
     return (
@@ -1243,7 +1244,7 @@ export function TitanDharmaAvatar({ da, lampId = '', artifactId = '', name = '',
   }
 
   /* ============================================================
-     13. 🗡️ HỆ THẦN KIẾM / PHẠT THIÊN KIẾM
+     13. HỆ THẦN KIẾM / PHẠT THIÊN KIẾM
      ============================================================ */
   if (has('kiếm', 'kiem', 'phạt thiên', 'phat thien')) {
     return (
@@ -2001,7 +2002,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 gap: 6
               }}
             >
-              <span className="ngung-khi-btn-text">⚔️ Hải Sơn (Thể)</span>
+              <span className="ngung-khi-btn-text"><Icon name="sword" size={14} /> Hải Sơn (Thể)</span>
               {(cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'the' && (
                 <span style={{
                   fontSize: 9.5,
@@ -2013,7 +2014,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   border: '1px solid #fef08a',
                   animation: 'pulseCore 1.2s ease-in-out infinite alternate'
                 }}>
-                  ⚡ Đang Nạp Tu Vi
+                  Đang Nạp Tu Vi
                 </span>
               )}
             </button>
@@ -2046,7 +2047,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 gap: 6
               }}
             >
-              <span className="ngung-khi-btn-text">🌊 Hóa Hải (Pháp)</span>
+              <span className="ngung-khi-btn-text"><Icon name="wave" size={14} /> Hóa Hải (Pháp)</span>
               {(cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'phap' && (
                 <span style={{
                   fontSize: 9.5,
@@ -2058,7 +2059,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   border: '1px solid #38bdf8',
                   animation: 'pulseCore 1.2s ease-in-out infinite alternate'
                 }}>
-                  ⚡ Đang Nạp Tu Vi
+                  Đang Nạp Tu Vi
                 </span>
               )}
             </button>
@@ -2596,7 +2597,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <g transform="translate(0, 116)">
                     <rect x="-115" y="-14" width="230" height="28" rx="14" fill="rgba(69, 10, 10, 0.95)" stroke="#f59e0b" strokeWidth="1.8" filter="url(#nkGlowGold)" />
                     <text y="5" textAnchor="middle" fontSize="12.5" fontWeight="900" fill="#fef08a" letterSpacing="1">
-                      🐯 {theLvl >= 10 ? '👑 THẦN THÚ HUYẾT HỔ' : '🐯 HUYẾT HỔ HÓA HÌNH'}
+                      {theLvl >= 10 ? 'THẦN THÚ HUYẾT HỔ' : 'HUYẾT HỔ HÓA HÌNH'}
                     </text>
                   </g>
                 </g>
@@ -2642,7 +2643,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <g transform="translate(0, 116)">
                     <rect x="-115" y="-14" width="230" height="28" rx="14" fill="rgba(8, 47, 73, 0.95)" stroke="#06b6d4" strokeWidth="1.8" filter="url(#nkGlowCyan)" />
                     <text y="5" textAnchor="middle" fontSize="12.5" fontWeight="900" fill="#a5f3fc" letterSpacing="1">
-                      🐋 {phapLvl >= 10 ? '👑 THÁI CỔ LONG KÌNH' : '🐋 CẤM HẢI LONG KÌNH'}
+                      {phapLvl >= 10 ? 'THÁI CỔ LONG KÌNH' : 'CẤM HẢI LONG KÌNH'}
                     </text>
                   </g>
                 </g>
@@ -2683,7 +2684,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 fontWeight: 800,
                 color: '#f87171'
               }}>
-                <span style={{ fontSize: isMobile ? 11.5 : 13, whiteSpace: 'nowrap' }}>⚔️ Hải Sơn:</span>
+                <span style={{ fontSize: isMobile ? 11.5 : 13, whiteSpace: 'nowrap' }}>Hải Sơn:</span>
                 <span style={{ color: '#fca5a5', fontWeight: 900, whiteSpace: 'nowrap' }}>Tầng {theLvl}/10</span>
                 <span style={{ fontSize: isMobile ? 10 : 11, color: '#cbd5e1', whiteSpace: 'nowrap' }}>({theExp.toLocaleString()}/4.500)</span>
                 {(cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'the' && (
@@ -2697,7 +2698,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     border: '1px solid rgba(254, 240, 138, 0.5)',
                     whiteSpace: 'nowrap'
                   }}>
-                    ⚡ Đang nạp
+                    Đang nạp
                   </span>
                 )}
                 {theLvl >= 10 && phapLvl >= 10 && (
@@ -2711,7 +2712,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     border: '1px solid rgba(253, 224, 71, 0.5)',
                     whiteSpace: 'nowrap'
                   }}>
-                    👑 Viên Mãn
+                    Viên Mãn
                   </span>
                 )}
               </div>
@@ -2726,7 +2727,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 fontWeight: 800,
                 color: '#38bdf8'
               }}>
-                <span style={{ fontSize: isMobile ? 11.5 : 13, whiteSpace: 'nowrap' }}>🌊 Hóa Hải:</span>
+                <span style={{ fontSize: isMobile ? 11.5 : 13, whiteSpace: 'nowrap' }}>Hóa Hải:</span>
                 <span style={{ color: '#7dd3fc', fontWeight: 900, whiteSpace: 'nowrap' }}>Tầng {phapLvl}/10</span>
                 <span style={{ fontSize: isMobile ? 10 : 11, color: '#cbd5e1', whiteSpace: 'nowrap' }}>({phapExp.toLocaleString()}/4.500)</span>
                 {(cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the') === 'phap' && (
@@ -2740,7 +2741,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     border: '1px solid rgba(186, 230, 253, 0.5)',
                     whiteSpace: 'nowrap'
                   }}>
-                    ⚡ Đang nạp
+                    Đang nạp
                   </span>
                 )}
                 {theLvl >= 10 && phapLvl >= 10 && (
@@ -2754,7 +2755,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     border: '1px solid rgba(253, 224, 71, 0.5)',
                     whiteSpace: 'nowrap'
                   }}>
-                    👑 Viên Mãn
+                    Viên Mãn
                   </span>
                 )}
               </div>
@@ -2796,7 +2797,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             </svg>
           </div>
           
-          {/* TRUNG TÂM PHÙ ĐIÊU THỦY TINH ÂM DƯƠNG LUÂN HỒI (NỀN ĐEN CHỮ TRẮNG ↔ NỀN TRẮNG CHỮ ĐEN CHUYỂN ĐỘNG MƯỢT MÀ) */}
+          {/* TRUNG TÂM PHÙ ĐIÊU THỦY TINH ÂM DƯƠNG LUÂN HỒI (NỀN ĐEN CHỮ TRẮNG <-> NỀN TRẮNG CHỮ ĐEN CHUYỂN ĐỘNG MƯỢT MÀ) */}
           <div style={{
             position: 'absolute',
             top: 6,
@@ -2920,7 +2921,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             className="lotus-altar-tl"
             onClick={() => {
               if (openedCount < 30) {
-                alert(`⚠️ ĐÀI SEN CHƯA THỨC TỈNH!\n\nCần đạt tối thiểu 1 Hỏa tự thân (30 Pháp Khiếu) để thức tỉnh [Tạo Hóa Thanh Liên] và thắp Mệnh Đăng!\n(Hiện tại: ${openedCount}/120 Khiếu)`);
+                alert(`[CẢNH BÁO] ĐÀI SEN CHƯA THỨC TỈNH!\n\nCần đạt tối thiểu 1 Hỏa tự thân (30 Pháp Khiếu) để thức tỉnh [Tạo Hóa Thanh Liên] và thắp Mệnh Đăng!\n(Hiện tại: ${openedCount}/120 Khiếu)`);
                 return;
               }
               setSelectedSlot(0);
@@ -2947,7 +2948,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             className="lotus-altar-tr"
             onClick={() => {
               if (openedCount < 60) {
-                alert(`⚠️ ĐÀI SEN CHƯA THỨC TỈNH!\n\nCần đạt tối thiểu 2 Hỏa tự thân (60 Pháp Khiếu) để thức tỉnh [Diệt Thế Hắc Liên] và thắp Mệnh Đăng thứ 2!\n(Hiện tại: ${openedCount}/120 Khiếu)`);
+                alert(`[CẢNH BÁO] ĐÀI SEN CHƯA THỨC TỈNH!\n\nCần đạt tối thiểu 2 Hỏa tự thân (60 Pháp Khiếu) để thức tỉnh [Diệt Thế Hắc Liên] và thắp Mệnh Đăng thứ 2!\n(Hiện tại: ${openedCount}/120 Khiếu)`);
                 return;
               }
               setSelectedSlot(1);
@@ -2974,7 +2975,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             className="lotus-altar-bl"
             onClick={() => {
               if (openedCount < 90) {
-                alert(`⚠️ ĐÀI SEN CHƯA THỨC TỈNH!\n\nCần đạt tối thiểu 3 Hỏa tự thân (90 Pháp Khiếu) để thức tỉnh [Công Đức Kim Liên] và thắp Mệnh Đăng thứ 3!\n(Hiện tại: ${openedCount}/120 Khiếu)`);
+                alert(`[CẢNH BÁO] ĐÀI SEN CHƯA THỨC TỈNH!\n\nCần đạt tối thiểu 3 Hỏa tự thân (90 Pháp Khiếu) để thức tỉnh [Công Đức Kim Liên] và thắp Mệnh Đăng thứ 3!\n(Hiện tại: ${openedCount}/120 Khiếu)`);
                 return;
               }
               setSelectedSlot(2);
@@ -3001,7 +3002,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
             className="lotus-altar-br"
             onClick={() => {
               if (openedCount < 120) {
-                alert(`⚠️ ĐÀI SEN CHƯA THỨC TỈNH!\n\nCần đạt tối thiểu 4 Hỏa tự thân (120 Pháp Khiếu Viên Mãn) để thức tỉnh [Nghiệp Hỏa Hồng Liên] và thắp Mệnh Đăng thứ 4!\n(Hiện tại: ${openedCount}/120 Khiếu)`);
+                alert(`[CẢNH BÁO] ĐÀI SEN CHƯA THỨC TỈNH!\n\nCần đạt tối thiểu 4 Hỏa tự thân (120 Pháp Khiếu Viên Mãn) để thức tỉnh [Nghiệp Hỏa Hồng Liên] và thắp Mệnh Đăng thứ 4!\n(Hiện tại: ${openedCount}/120 Khiếu)`);
                 return;
               }
               setSelectedSlot(3);
@@ -4573,7 +4574,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     const itemImage = (isLampPalace
                       ? (lobj?.image || LAMP_THAN_PHAM_AI_ICONS[lobj?.id] || (lobj?.tier === 'than_pham' && lobj?.id ? getLampImageUrl(lobj.id, 'thumb') : null))
                       : (artifactObj?.image || THAN_PHAM_AI_ICONS[artifactObj?.id] || (artifactObj?.tier === 'than_pham' && artifactObj?.id ? getArtifactImageUrl(artifactObj.id, 'thumb') : null))) || null;
-                    const itemIcon = itemObj?.icon || (isLampPalace ? '🪔' : (anchor ? '👑' : '✨'));
+                    const itemIcon = itemObj?.iconKey || toIconKey(itemObj?.icon);
 
                     const handleShrineClick = () => {
                       if (selfLocalIdx !== null) {
@@ -5300,7 +5301,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               </svg>
 
-              {/* ⛩️ TOOLTIP THÔNG TIN CHI TIẾT KHI DI CHUỘT / CHẠM VÀO THIÊN CUNG */}
+              {/*  TOOLTIP THÔNG TIN CHI TIẾT KHI DI CHUỘT / CHẠM VÀO THIÊN CUNG */}
               {hoveredPalace && (
                 <div style={{
                   position: 'absolute',
@@ -5327,7 +5328,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   {/* Header Tooltip */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: 6 }}>
                     <span style={{ fontFamily: 'var(--font-serif)', color: 'var(--color-kim)', fontWeight: 900, fontSize: 13.5, letterSpacing: 0.8 }}>
-                      ⛩️ {hoveredPalace.name}
+                       {hoveredPalace.name}
                     </span>
                     <span style={{
                       fontSize: 9.5,
@@ -5348,7 +5349,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   </div>
 
                   <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                    <span>🛡️ Vật Trấn Áp: </span>
+                    <span><Icon name="shield" size={14} /> Vật Trấn Áp: </span>
                     <strong style={{ color: hoveredPalace.isRealized ? '#4ade80' : '#fde047' }}>
                       {hoveredPalace.item}
                     </strong>
@@ -5356,7 +5357,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                   {hoveredPalace.isCurrentActiveSelf && (
                     <div style={{ fontSize: 11, color: hoveredPalace.isBottleneck ? '#f97316' : '#38bdf8', fontWeight: 700 }}>
-                      ⚡ Linh Lực: {hoveredPalace.currentExp?.toLocaleString()} / {hoveredPalace.targetExp?.toLocaleString()} EXP ({hoveredPalace.expPercent}%)
+                      Linh Lực: {hoveredPalace.currentExp?.toLocaleString()} / {hoveredPalace.targetExp?.toLocaleString()} EXP ({hoveredPalace.expPercent}%)
                     </div>
                   )}
 
@@ -5367,7 +5368,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                   {hoveredPalace.isBottleneck && (
                     <div style={{ fontSize: 10.5, color: '#fde047', fontWeight: 800, textAlign: 'center', marginTop: 2, background: 'rgba(234, 88, 12, 0.2)', padding: '3px 6px', borderRadius: 4 }}>
-                      👉 Nhấp vào để mở Khảm Nạm Bảo Vật!
+                      Nhấp vào để mở Khảm Nạm Bảo Vật!
                     </div>
                   )}
                 </div>
@@ -5406,13 +5407,13 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           { id: 'pos_1',  x: 640,  y: 80,  scale: 1.22, nw: 230 },                 // Index 1: ĐỈNH GIỮA (Hàng 1 - Tinh Thần Đạo Anh)
           { id: 'pos_2',  x: 390,  y: 280, scale: 1.22, nw: 220 },                 // Index 2: HÀNG 2 TRONG-TRÁI (Thái Cổ Kim Long - x:390)
           { id: 'pos_3',  x: 150,  y: 480, scale: 1.22, nw: 220 },                 // Index 3: HÀNG 3 CỰC-TRÁI (Hồng Mông Tử Liên - Dãn Ra x:150)
-          { id: 'pos_4',  x: 150,  y: 870, scale: 1.22, nw: 220 },                 // Index 4: GÓC DƯỚI-TRÁI (Hàng 5 - VẠN GIỚI QUY NHẤT) 🌟
-          { id: 'pos_5',  x: 1130, y: 80,  scale: 1.22, nw: 220 },                 // Index 5: GÓC TRÊN-PHẢI (Hàng 1 - NGUYÊN THỦY THIÊN MA) 🌟
+          { id: 'pos_4',  x: 150,  y: 870, scale: 1.22, nw: 220 },                 // Index 4: GÓC DƯỚI-TRÁI (Hàng 5 - VẠN GIỚI QUY NHẤT) 
+          { id: 'pos_5',  x: 1130, y: 80,  scale: 1.22, nw: 220 },                 // Index 5: GÓC TRÊN-PHẢI (Hàng 1 - NGUYÊN THỦY THIÊN MA) 
           { id: 'pos_6',  x: 390,  y: 680, scale: 1.22, nw: 220 },                 // Index 6: HÀNG 4 TRONG-TRÁI (Tử Sắc Ma Thai - x:390)
-          { id: 'pos_7',  x: 1130, y: 870, scale: 1.22, nw: 220 },                 // Index 7: GÓC DƯỚI-PHẢI (Hàng 5 - CẤM KỴ CỰC ĐẠO) 🌟
+          { id: 'pos_7',  x: 1130, y: 870, scale: 1.22, nw: 220 },                 // Index 7: GÓC DƯỚI-PHẢI (Hàng 5 - CẤM KỴ CỰC ĐẠO) 
           { id: 'pos_8',  x: 640,  y: 870, scale: 1.22, nw: 230 },                 // Index 8: ĐÁY GIỮA (Hàng 5 - Cửu Châu Thần Đỉnh)
           { id: 'pos_9',  x: 890,  y: 280, scale: 1.22, nw: 220 },                 // Index 9: HÀNG 2 TRONG-PHẢI (Tạo Hóa Bích Điệp - x:890)
-          { id: 'pos_10', x: 150,  y: 80,  scale: 1.22, nw: 220 },                 // Index 10: GÓC TRÊN-TRÁI (Hàng 1 - KHỞI NGUYÊN THỜI KHÔNG) 🌟
+          { id: 'pos_10', x: 150,  y: 80,  scale: 1.22, nw: 220 },                 // Index 10: GÓC TRÊN-TRÁI (Hàng 1 - KHỞI NGUYÊN THỜI KHÔNG) 
           { id: 'pos_11', x: 890,  y: 680, scale: 1.22, nw: 220 },                 // Index 11: HÀNG 4 TRONG-PHẢI (x:890)
           { id: 'pos_12', x: 1130, y: 480, scale: 1.22, nw: 220 },                 // Index 12: HÀNG 3 CỰC-PHẢI (Dãn Ra x:1130)
         ];
@@ -5589,7 +5590,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
               {/* 2. CHI TIẾT 13 PHÁP TƯỚNG BẢN NGUYÊN ĐỘC BẢN */}
               
-              {/* 🐲 A. TỔ LONG (Thái Cổ Kim Long) */}
+              {/*  A. TỔ LONG (Thái Cổ Kim Long) */}
               {arch.type === 'dragon' && (
                 <g>
                   {/* Tường vân cuộn dưới chân */}
@@ -5621,7 +5622,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               )}
 
-              {/* 🌸 B. HỒNG MÔNG (Hồng Mông Tử Liên) */}
+              {/*  B. HỒNG MÔNG (Hồng Mông Tử Liên) */}
               {arch.type === 'purple_lotus' && (
                 <g>
                   {/* Làn Khói Hồng Mông Tử Khí */}
@@ -5642,7 +5643,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               )}
 
-              {/* ⚔️ C. PHẠT THIÊN (Vô Thượng Kiếm Thần) */}
+              {/*  C. PHẠT THIÊN (Vô Thượng Kiếm Thần) */}
               {arch.type === 'sword' && (
                 <g>
                   {/* Kiếm Trận Hào Quang Phía Sau */}
@@ -5670,7 +5671,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               )}
 
-              {/* 🌙 D. VẬN MỆNH (Tử Nguyệt Thần Đồng) */}
+              {/*  D. VẬN MỆNH (Tử Nguyệt Thần Đồng) */}
               {arch.type === 'destiny_moon' && (
                 <g>
                   {/* Vòng Tinh Văn Tinh Túc */}
@@ -5695,7 +5696,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               )}
 
-              {/* ☯️ E. LUÂN HỒI (Lục Đạo Thái Cực) */}
+              {/*  E. LUÂN HỒI (Lục Đạo Thái Cực) */}
               {arch.type === 'reincarnation' && (
                 <g>
                   {/* Bánh Xe Lục Đạo (6 Căm Khắc Cổ Phù) */}
@@ -5722,7 +5723,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               )}
 
-              {/* 🦅 F. SÁNG THẾ (Sáng Thế Kim Phượng) */}
+              {/*  F. SÁNG THẾ (Sáng Thế Kim Phượng) */}
               {arch.type === 'phoenix' && (
                 <g>
                   {/* Thần Vũ Hào Quang */}
@@ -5749,7 +5750,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               )}
 
-              {/* 🦋 G. TẠO HÓA (Tạo Hóa Bích Điệp) */}
+              {/*  G. TẠO HÓA (Tạo Hóa Bích Điệp) */}
               {arch.type === 'jade_butterfly' && (
                 <g>
                   {/* Cuộn Trúc Thư / Ngọc Điệp Phía Dưới */}
@@ -5771,7 +5772,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               )}
 
-              {/* ⏳ H. THỜI KHÔNG (Tuế Nguyệt Bàn Chu) */}
+              {/*  H. THỜI KHÔNG (Tuế Nguyệt Bàn Chu) */}
               {arch.type === 'space_time' && (
                 <g>
                   {/* Vành Thiên Văn Bàn 3 Chiều */}
@@ -5792,7 +5793,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               )}
 
-              {/* 🦩 I. TIÊU DAO (Tiêu Dao Tiên Hạc) */}
+              {/*  I. TIÊU DAO (Tiêu Dao Tiên Hạc) */}
               {arch.type === 'crane' && (
                 <g>
                   {/* Tường Vân Tầng Tầng */}
@@ -5817,7 +5818,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               )}
 
-              {/* 🌳 J. THẦN MỘC (Khởi Nguyên Thần Mộc) */}
+              {/*  J. THẦN MỘC (Khởi Nguyên Thần Mộc) */}
               {arch.type === 'world_tree' && (
                 <g>
                   {/* Đảo Nổi Thần Mộc & Rễ Cổ Thụ */}
@@ -5835,7 +5836,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               )}
 
-              {/* 🏺 K. CỬU CHÂU ĐỈNH (Cửu Châu Thần Đỉnh) */}
+              {/*  K. CỬU CHÂU ĐỈNH (Cửu Châu Thần Đỉnh) */}
               {arch.type === 'cauldron' && (
                 <g>
                   {/* Chân Đỉnh Tam Túc */}
@@ -5849,7 +5850,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               )}
 
-              {/* 👁️ L. HƯ VÔ ĐỒNG (Hư Vô Chi Đồng) */}
+              {/*  L. HƯ VÔ ĐỒNG (Hư Vô Chi Đồng) */}
               {arch.type === 'void_eye' && (
                 <g>
                   {/* Vầng Xoáy Hắc Động Vực Sâu */}
@@ -5864,7 +5865,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               )}
 
-              {/* 🪢 M. NHÂN QUẢ KẾT (Nhân Quả Chi Kết) */}
+              {/*  M. NHÂN QUẢ KẾT (Nhân Quả Chi Kết) */}
               {arch.type === 'karma_knot' && (
                 <g>
                   {/* Vòng Hồng Trần Luân Hồi Kết Bện */}
@@ -5877,7 +5878,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 </g>
               )}
 
-              {/* 👑 N. CHÍ TÔN THẦN THAI (Mặc định / Tối Thượng Thần Đạo) */}
+              {/*  N. CHÍ TÔN THẦN THAI (Mặc định / Tối Thượng Thần Đạo) */}
               {(!arch.type || arch.type === 'sovereign_deity') && (
                 <g>
                   {/* Tòa Sen 9 Cánh Hoàng Kim */}
@@ -5952,7 +5953,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 }}
               >
                 <span style={{ transform: isSwapMode ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }}>
-                  🔄
+                  
                 </span>
               </button>
             )}
@@ -5978,7 +5979,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 pointerEvents: 'none',
                 animation: 'fadeIn 0.2s ease-out'
               }}>
-                {swapNotice || (swapSelectedIdx !== null ? `👉 Chọn Đạo Anh thứ 2 để đổi vị trí!` : '👉 Nhấp Đạo Anh thứ 1 muốn đổi vị trí')}
+                {swapNotice || (swapSelectedIdx !== null ? `Chọn Đạo Anh thứ 2 để đổi vị trí!` : 'Nhấp Đạo Anh thứ 1 muốn đổi vị trí')}
               </div>
             )}
 
@@ -6007,7 +6008,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 pointerEvents: 'none',
                 animation: 'fadeIn 0.2s ease-out'
               }}>
-                {swapNotice || (swapSelectedIdx !== null ? '👉 Chọn Đạo Anh thứ 2 để đổi vị trí!' : '👉 Nhấp Đạo Anh thứ 1 muốn đổi vị trí')}
+                {swapNotice || (swapSelectedIdx !== null ? 'Chọn Đạo Anh thứ 2 để đổi vị trí!' : 'Nhấp Đạo Anh thứ 1 muốn đổi vị trí')}
               </div>
             )}
 
@@ -6199,7 +6200,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                           const nameA = findDaoAnhDefinition(existingDaoAnhs[swapSelectedIdx], cultivation)?.name || existingDaoAnhs[swapSelectedIdx]?.name || 'Đạo Anh 1';
                           const nameB = daoAnhDef?.name || daoAnh.name || 'Đạo Anh 2';
                           swapDaoAnhPositions(swapSelectedIdx, idx);
-                          setSwapNotice(`✨ Đã đổi vị trí giữa [${nameA}] và [${nameB}]!`);
+                          setSwapNotice(`Đã đổi vị trí giữa [${nameA}] và [${nameB}]!`);
                         } catch (err) {
                           setSwapNotice(err.message || 'Lỗi hoán đổi vị trí.');
                         }
@@ -6262,7 +6263,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                 fontWeight="900"
                                 letterSpacing="0.5"
                               >
-                                ⚡ ĐANG CHỌN
+                                ĐANG CHỌN
                               </text>
                             </g>
                           )}
@@ -6343,7 +6344,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 'Nhị Kiếp · Lục Đạo Huyền Minh',
                 'Tam Kiếp · Bát Hoang Tru Tiên',
                 'Tứ Kiếp · Cửu U Hỗn Độn',
-                '👑 ĐẠI VIÊN MÃN · Vô Thượng Thái Sơ'
+                ' ĐẠI VIÊN MÃN · Vô Thượng Thái Sơ'
               ];
               const kiepTitle = kiepNames[Math.min(5, Math.max(0, curKiep))];
 
@@ -6398,7 +6399,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                           fontSize: 22,
                           boxShadow: '0 0 15px rgba(251, 191, 36, 0.25)'
                         }}>
-                          {isMax ? '👑' : '⚡'}
+                          {isMax ? <Icon name="crown" size={20} /> : <Icon name="bolt" size={20} />}
                         </div>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -6532,7 +6533,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                   boxShadow: '0 0 18px rgba(240, 171, 252, 0.55)'
                                 }}
                               >
-                                ⚡ Tiến Hành Độ Kiếp ({percent}%)
+                                <Icon name="bolt" size={14} /> Tiến Hành Độ Kiếp ({percent}%)
                               </button>
                             ) : (
                               <div style={{ textAlign: 'center', width: '100%', fontSize: 12, color: 'rgba(255,255,255,0.5)', padding: '6px 0' }}>
@@ -6569,7 +6570,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                                 gap: 6,
                               }}
                             >
-                              <span>⬇️ ĐÁNH RƠI VỀ KIẾP {modalMinKiep + 1}</span>
+                              <span><Icon name="arrow-down" size={14} /> ĐÁNH RƠI VỀ KIẾP {modalMinKiep + 1}</span>
                             </button>
                           )}
                         </div>
@@ -6626,7 +6627,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               background: 'rgba(15, 23, 42, 0.9)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 24 }}>👑</span>
+                <span style={{ fontSize: 24 }}></span>
                 <div>
                   <h3 style={{ margin: 0, color: 'var(--color-kim)', fontSize: 16, fontFamily: 'var(--font-serif)', fontWeight: 900 }}>
                     KHẢM NẠM VẬT TRẤN ÁP · THIÊN CUNG TỰ THÂN #{anchorModalPalace + 1}
@@ -6654,7 +6655,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   borderRadius: 12,
                   border: '1px dashed rgba(251, 191, 36, 0.3)'
                 }}>
-                  <span style={{ fontSize: 36, display: 'block', marginBottom: 10 }}>📦</span>
+                  <Icon name="package" size={36} style={{ display: "block", marginBottom: 10 }} />
                   <p style={{ color: '#fde047', fontWeight: 800, fontSize: 14, margin: '0 0 6px' }}>
                     Trong Túi Trữ Vật chưa có Vật Trấn Áp nào!
                   </p>
@@ -6696,7 +6697,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span style={{ fontSize: 26 }}>{art.icon || '👑'}</span>
+                        <span style={{ fontSize: 26 }}>{art.icon || ''}</span>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <strong style={{ color: tierInfo.color || '#fde047', fontSize: 13.5 }}>
@@ -6745,7 +6746,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                           boxShadow: '0 0 10px rgba(251, 191, 36, 0.4)'
                         }}
                       >
-                        👑 Khảm Nạm
+                         Khảm Nạm
                       </button>
                     </div>
                   );
@@ -6801,7 +6802,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               background: 'linear-gradient(90deg, rgba(239, 68, 68, 0.15) 0%, transparent 100%)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 24, filter: 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.6))' }}>🏮</span>
+                <Icon name="lantern" size={24} style={{ filter: "drop-shadow(0 0 8px rgba(239, 68, 68, 0.6))" }} />
                 <div>
                   <h3 style={{
                     margin: 0,
@@ -6884,7 +6885,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   gap: 10
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 16 }}>⚡</span>
+                    <Icon name="bolt" size={16} />
                     <span style={{ fontSize: 12, color: '#fca5a5' }}>
                       Đang khảm tại vị trí này: <strong style={{ color: '#fff' }}>{LIFE_LAMPS.find(l => l.id === absorbedLamps[selectedSlot])?.name || absorbedLamps[selectedSlot]}</strong>
                     </span>
@@ -6925,7 +6926,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 if (ownedList.length === 0) {
                   return (
                     <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                      <div style={{ fontSize: 42, marginBottom: 10 }}>🏮</div>
+                      <Icon name="lantern" size={42} style={{ marginBottom: 10 }} />
                       <div style={{ fontSize: 14.5, fontWeight: 800, color: '#fca5a5', marginBottom: 6 }}>
                         Túi Trữ Vật Chưa Có Mệnh Đăng
                       </div>
@@ -6949,7 +6950,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                           boxShadow: '0 0 16px rgba(239, 68, 68, 0.4)'
                         }}
                       >
-                        🏛️ Mở Tàng Bảo Điện
+                        <Icon name="shield" size={14} /> Mở Tàng Bảo Điện
                       </button>
                     </div>
                   );
@@ -7010,7 +7011,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           onError={(e) => {
                             e.target.style.display = 'none';
-                            e.target.parentNode.innerHTML = `<div style="font-size: 28px; display:flex; align-items:center; justify-content:center; height:100%;">🏮</div>`;
+                            e.target.parentNode.innerHTML = `<div style="font-size: 14px; display:flex; align-items:center; justify-content:center; height:100%; opacity:0.7;">[Mệnh Đăng]</div>`;
                           }}
                         />
                       </div>

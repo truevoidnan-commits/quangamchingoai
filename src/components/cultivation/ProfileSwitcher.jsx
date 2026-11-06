@@ -1,3 +1,4 @@
+import Icon, { toIconKey } from '../ui/Icon';
 import React from 'react';
 import { getActiveProfile, setActiveProfile } from '../../lib/cultivation';
 import styles from './ProfileSwitcher.module.css';
@@ -42,7 +43,7 @@ export default function ProfileSwitcher({ compact = false, className = '' }) {
             : 'Đang ở Hồ Sơ Thật. Bấm để mở Hồ Sơ Thử Nghiệm'
         }
       >
-        <span>{isSandbox ? '🧪' : '🛡️'}</span>
+        <span><Icon name={isSandbox ? "flask" : "shield"} size={14} /></span>
         <span>{isSandbox ? 'Thử Nghiệm' : 'Hồ Sơ Thật'}</span>
       </button>
     );
@@ -61,7 +62,7 @@ export default function ProfileSwitcher({ compact = false, className = '' }) {
             isSandbox ? styles.sandboxText : styles.realText
           }`}
         >
-          <span>{isSandbox ? '🧪' : '🛡️'}</span>
+          <span><Icon name={isSandbox ? "flask" : "shield"} size={14} /></span>
           <span>{isSandbox ? 'Thử Nghiệm (Sandbox)' : 'Tu Vi Thật'}</span>
         </div>
       </div>
