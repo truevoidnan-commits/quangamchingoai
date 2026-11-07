@@ -118,7 +118,7 @@ async function run() {
         const text = document.body.innerText;
         const hasRedundantTitle = text.includes('NGŨ ĐẠI BÍ TÀNG KHAI THIÊN');
         const reassignBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Tùy Chỉnh 5 Đạo Anh'));
-        const container = document.querySelector('[class*="container"]');
+        const container = document.querySelector('[class*="pantheonStage"]')?.parentElement || document.querySelector('[class*="container"]');
         const computedStyle = container ? window.getComputedStyle(container) : null;
         const gates = document.querySelectorAll('[class*="celestialGateEntity"]');
 

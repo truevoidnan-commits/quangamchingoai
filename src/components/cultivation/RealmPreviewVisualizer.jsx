@@ -28,6 +28,7 @@ import styles from './RealmPreviewVisualizer.module.css';
 
 import bgTrucCoGalaxy from '../../assets/images/truc_co_galaxy_bg.jpg';
 import bgNguyenAnhThucHai from '../../assets/images/bg_nguyen_anh_thuc_hai.webp';
+import bgNguyenAnhThucHaiMobile from '../../assets/images/bg_nguyen_anh_thuc_hai_mobile.webp';
 import bgGodCosmicEye from '../../assets/images/bg_god_cosmic_eye.jpg';
 import imgHuyetHoGod from '../../assets/images/huyet_ho_god.webp';
 import imgLongKinhGod from '../../assets/images/long_kinh_god.webp';
@@ -5397,6 +5398,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         const naCanvasHeight = isMobile ? 1140 : 960;
         const naCenterX = isMobile ? 360 : 640;
         const naCenterY = isMobile ? 570 : 480;
+        const currentBgNguyenAnh = isMobile ? bgNguyenAnhThucHaiMobile : bgNguyenAnhThucHai;
 
         const desktop13Positions = [
           { id: 'pos_0',  x: 640,  y: 480, isCenter: true, scale: 1.28, nw: 240 }, // Index 0: TÂM (Bản Mệnh Tối Cao Tọa Trấn Trung Xu)
@@ -6018,7 +6020,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               height: '100%',
               minHeight: '100%',
               flex: 1,
-              background: `#040714 url(${bgNguyenAnhThucHai}) center/cover no-repeat`,
+              background: `#040714 url(${currentBgNguyenAnh}) center/cover no-repeat`,
               border: 'none',
               borderRadius: 0,
               overflow: 'hidden'
@@ -6111,7 +6113,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                 {/* ─── HÌNH NỀN GEN AI CỬU THIÊN TINH HÀ RỰC RỠ ─── */}
                 <image
-                  href={bgNguyenAnhThucHai}
+                  href={currentBgNguyenAnh}
                   x="0"
                   y="0"
                   width={naCanvasWidth}

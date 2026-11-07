@@ -28,6 +28,12 @@
   user-select: none;
 }
 
+@media (max-width: 768px) {
+  .container {
+    background-image: url('../../assets/images/bg_linh_tang_bi_tang_mobile.webp');
+  }
+}
+
 /* =========================================================================
    BACKGROUND COSMIC VOID & DIVINE EYE LAYERS
    ========================================================================= */
@@ -456,6 +462,7 @@
   margin-bottom: 6px;
   text-align: center;
   word-break: break-word;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
 }
 
 .gateMainNameGold {
