@@ -1,44 +1,158 @@
 /**
  * customBackdrop.js
  * 
- * Manages custom user-selected backdrop for Tàng Kinh Họa Các (Comics Lobby).
+ * Manages custom user-selected backdrop per comic series for Tàng Kinh Họa Các.
  * Allows user to pick a comic page, crop to 9:16 (mobile) and 16:9 (desktop),
  * tune blur (0-20px) and dim (0-80%), and store locally via CacheStorage & localStorage.
- * Guarantee minimum 35% dim if page is too bright.
+ * Guarantees minimum 35% dim if page is too bright.
  */
 
 import { encodeCanvasToBlob } from './pdfImport.js';
 
-export const CUSTOM_BACKDROP_KEY = 'tcl_custom_comic_backdrop';
+export const SERIES_BACKDROPS_KEY = 'tcl_comic_series_backdrops';
+export const LEGACY_BACKDROP_KEY = 'tcl_custom_comic_backdrop';
 const CACHE_NAME = 'tcl-custom-backdrop-cache';
-const VERTICAL_URL = 'https://tcl.local/custom-backdrop-vertical.webp';
-const WIDE_URL = 'https://tcl.local/custom-backdrop-wide.webp';
 
-// In-memory / storage fallback if CacheStorage is unavailable
-const memoryFallback = {
-  verticalBlob: null,
-  wideBlob: null,
-};
+const LEGACY_VERTICAL_URL = 'https://tcl.local/custom-backdrop-vertical.webp';
+const LEGACY_WIDE_URL = 'https://tcl.local/custom-backdrop-wide.webp';
+
+export function getBackdropUrl(seriesId, type) {
+  return `https://tcl.local/series-backdrop/${encodeURIComponent(seriesId)}-${type}.webp`;
+}
+
+// In-memory / storage fallback Map: seriesId -> { verticalBlob, wideBlob }
+const memoryFallback = new Map();
+
+function getAllSeriesBackdrops() {
+  try {
+    if (typeof localStorage === 'undefined') return {};
+    const raw = localStorage.getItem(SERIES_BACKDROPS_KEY);
+    return raw ? JSON.parse(raw) || {} : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function setAllSeriesBackdrops(map) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(SERIES_BACKDROPS_KEY, JSON.stringify(map));
+  } catch (e) {
+    console.warn('[CustomBackdrop] Could not save series backdrops map:', e);
+  }
+}
+
+// Internal sync migration to ensure immediate read availability
+function migrateSyncStorage() {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const oldRaw = localStorage.getItem(LEGACY_BACKDROP_KEY);
+    if (!oldRaw) return;
+    const parsed = JSON.parse(oldRaw);
+    const targetSeriesId = parsed?.comicId;
+    if (targetSeriesId) {
+      const map = getAllSeriesBackdrops();
+      if (!map[targetSeriesId]) {
+        map[targetSeriesId] = {
+          ...parsed,
+          comicId: targetSeriesId,
+          updatedAt: parsed.updatedAt || Date.now(),
+        };
+        setAllSeriesBackdrops(map);
+      }
+    }
+  } catch (e) {
+    // Ignore migration parse error
+  }
+}
+
+let migrationPromise = null;
 
 /**
- * Returns current custom backdrop settings from localStorage, or null if none
+ * Migrates legacy single backdrop to per-series backdrop once.
+ * Copies cached blobs from old URLs to series URLs, then removes old key & blobs.
+ */
+export async function migrateLegacyBackdropIfNeeded() {
+  if (typeof localStorage === 'undefined') return;
+  const oldRaw = localStorage.getItem(LEGACY_BACKDROP_KEY);
+  if (!oldRaw) return;
+
+  if (migrationPromise) return migrationPromise;
+
+  migrationPromise = (async () => {
+    try {
+      migrateSyncStorage();
+
+      const raw = localStorage.getItem(LEGACY_BACKDROP_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw);
+      const targetSeriesId = parsed?.comicId;
+
+      if (targetSeriesId) {
+        const hasCaches = typeof caches !== 'undefined';
+        if (hasCaches) {
+          try {
+            const cache = await caches.open(CACHE_NAME);
+            const oldVRes = await cache.match(LEGACY_VERTICAL_URL);
+            if (oldVRes) {
+              const vBlob = await oldVRes.blob();
+              await cache.put(getBackdropUrl(targetSeriesId, 'vertical'), new Response(vBlob, {
+                headers: { 'Content-Type': 'image/webp' },
+              }));
+              await cache.delete(LEGACY_VERTICAL_URL);
+            }
+            const oldWRes = await cache.match(LEGACY_WIDE_URL);
+            if (oldWRes) {
+              const wBlob = await oldWRes.blob();
+              await cache.put(getBackdropUrl(targetSeriesId, 'wide'), new Response(wBlob, {
+                headers: { 'Content-Type': 'image/webp' },
+              }));
+              await cache.delete(LEGACY_WIDE_URL);
+            }
+          } catch (cacheErr) {
+            console.warn('[CustomBackdrop] Migration cache copy warning:', cacheErr);
+          }
+        }
+      }
+
+      localStorage.removeItem(LEGACY_BACKDROP_KEY);
+    } catch (err) {
+      console.warn('[CustomBackdrop] Migration warning:', err);
+    } finally {
+      migrationPromise = null;
+    }
+  })();
+
+  return migrationPromise;
+}
+
+// Quiet startup migration
+if (typeof window !== 'undefined') {
+  migrateLegacyBackdropIfNeeded().catch(() => {});
+}
+
+/**
+ * Returns custom backdrop settings for a given series, or null if none
+ * @param {string} seriesId
  * @returns {{ comicId: string, volumeId: string, pageIndex: number, blur: number, dim: number, offsetX: number, offsetY: number, updatedAt: number } | null}
  */
-export function getCustomBackdropSettings() {
+export function getCustomBackdropSettings(seriesId) {
+  if (!seriesId) return null;
+  migrateSyncStorage();
   try {
-    const raw = localStorage.getItem(CUSTOM_BACKDROP_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return null;
+    const map = getAllSeriesBackdrops();
+    const raw = map[seriesId];
+    if (!raw || typeof raw !== 'object') return null;
     return {
-      comicId: parsed.comicId || '',
-      volumeId: parsed.volumeId || '',
-      pageIndex: typeof parsed.pageIndex === 'number' ? parsed.pageIndex : 0,
-      blur: Math.min(20, Math.max(0, Number(parsed.blur) || 0)),
-      dim: Math.min(80, Math.max(0, Number(parsed.dim) || 40)),
-      offsetX: typeof parsed.offsetX === 'number' ? parsed.offsetX : 0.5,
-      offsetY: typeof parsed.offsetY === 'number' ? parsed.offsetY : 0.5,
-      updatedAt: parsed.updatedAt || Date.now(),
+      comicId: seriesId,
+      volumeId: raw.volumeId || '',
+      pageIndex: typeof raw.pageIndex === 'number' ? raw.pageIndex : 0,
+      blur: Math.min(20, Math.max(0, Number(raw.blur) || 0)),
+      dim: Math.min(80, Math.max(0, Number(raw.dim) || 40)),
+      offsetX: typeof raw.offsetX === 'number' ? raw.offsetX : 0.5,
+      offsetY: typeof raw.offsetY === 'number' ? raw.offsetY : 0.5,
+      updatedAt: raw.updatedAt || Date.now(),
     };
   } catch (e) {
     return null;
@@ -46,16 +160,22 @@ export function getCustomBackdropSettings() {
 }
 
 /**
- * Saves custom backdrop settings to localStorage and dispatches change event
+ * Saves custom backdrop settings for a given series to localStorage and dispatches change event
+ * @param {string} seriesId
+ * @param {object} settings
  */
-export function saveCustomBackdropSettings(settings) {
+export function saveCustomBackdropSettings(seriesId, settings) {
+  if (!seriesId) return;
   try {
-    localStorage.setItem(CUSTOM_BACKDROP_KEY, JSON.stringify({
+    const map = getAllSeriesBackdrops();
+    map[seriesId] = {
       ...settings,
+      comicId: seriesId,
       updatedAt: Date.now(),
-    }));
+    };
+    setAllSeriesBackdrops(map);
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('tcl_custom_backdrop_changed', { detail: settings }));
+      window.dispatchEvent(new CustomEvent('tcl_custom_backdrop_changed', { detail: { seriesId } }));
     }
   } catch (e) {
     console.warn('[CustomBackdrop] Could not save settings:', e);
@@ -63,43 +183,55 @@ export function saveCustomBackdropSettings(settings) {
 }
 
 /**
- * Clears custom backdrop images and settings, returning to default
+ * Clears custom backdrop images and settings for a given series, returning to default
+ * @param {string} seriesId
  */
-export async function clearCustomBackdrop() {
+export async function clearCustomBackdrop(seriesId) {
+  if (!seriesId) return;
   try {
-    localStorage.removeItem(CUSTOM_BACKDROP_KEY);
-    memoryFallback.verticalBlob = null;
-    memoryFallback.wideBlob = null;
-    if (typeof window !== 'undefined' && 'caches' in window) {
-      const cache = await caches.open(CACHE_NAME);
-      await cache.delete(VERTICAL_URL);
-      await cache.delete(WIDE_URL);
+    const map = getAllSeriesBackdrops();
+    delete map[seriesId];
+    setAllSeriesBackdrops(map);
+    memoryFallback.delete(seriesId);
+
+    if (typeof caches !== 'undefined') {
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        await cache.delete(getBackdropUrl(seriesId, 'vertical'));
+        await cache.delete(getBackdropUrl(seriesId, 'wide'));
+      } catch (ce) {
+        console.warn('[CustomBackdrop] Cache deletion error:', ce);
+      }
     }
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('tcl_custom_backdrop_changed', { detail: null }));
+      window.dispatchEvent(new CustomEvent('tcl_custom_backdrop_changed', { detail: { seriesId } }));
     }
   } catch (e) {
-    console.warn('[CustomBackdrop] Could not clear cache:', e);
+    console.warn('[CustomBackdrop] Could not clear backdrop:', e);
   }
 }
 
 /**
- * Stores cropped WebP blobs into CacheStorage
+ * Stores cropped WebP blobs into CacheStorage for a given series
+ * @param {string} seriesId
+ * @param {{ verticalBlob: Blob|null, wideBlob: Blob|null }} blobs
  */
-export async function storeCustomBackdropBlobs({ verticalBlob, wideBlob }) {
-  memoryFallback.verticalBlob = verticalBlob;
-  memoryFallback.wideBlob = wideBlob;
+export async function storeCustomBackdropBlobs(seriesId, { verticalBlob, wideBlob }) {
+  if (!seriesId) return;
+  memoryFallback.set(seriesId, { verticalBlob, wideBlob });
 
-  if (typeof window !== 'undefined' && 'caches' in window) {
+  if (typeof caches !== 'undefined') {
     try {
       const cache = await caches.open(CACHE_NAME);
+      const vUrl = getBackdropUrl(seriesId, 'vertical');
+      const wUrl = getBackdropUrl(seriesId, 'wide');
       if (verticalBlob) {
-        await cache.put(VERTICAL_URL, new Response(verticalBlob, {
+        await cache.put(vUrl, new Response(verticalBlob, {
           headers: { 'Content-Type': 'image/webp' },
         }));
       }
       if (wideBlob) {
-        await cache.put(WIDE_URL, new Response(wideBlob, {
+        await cache.put(wUrl, new Response(wideBlob, {
           headers: { 'Content-Type': 'image/webp' },
         }));
       }
@@ -110,27 +242,34 @@ export async function storeCustomBackdropBlobs({ verticalBlob, wideBlob }) {
 }
 
 /**
- * Loads custom backdrop Blobs and creates object URLs for rendering
+ * Loads custom backdrop Blobs and creates object URLs for rendering a specific series
+ * @param {string} seriesId
  * @returns {Promise<{ verticalUrl: string|null, wideUrl: string|null, settings: object|null }>}
  */
-export async function loadCustomBackdropUrls() {
-  const settings = getCustomBackdropSettings();
+export async function loadCustomBackdropUrls(seriesId) {
+  if (!seriesId) {
+    return { verticalUrl: null, wideUrl: null, settings: null };
+  }
+  const settings = getCustomBackdropSettings(seriesId);
   if (!settings) {
     return { verticalUrl: null, wideUrl: null, settings: null };
   }
 
-  let verticalBlob = memoryFallback.verticalBlob;
-  let wideBlob = memoryFallback.wideBlob;
+  const mem = memoryFallback.get(seriesId);
+  let verticalBlob = mem?.verticalBlob || null;
+  let wideBlob = mem?.wideBlob || null;
 
-  if (typeof window !== 'undefined' && 'caches' in window) {
+  if (typeof caches !== 'undefined') {
     try {
       const cache = await caches.open(CACHE_NAME);
+      const vUrl = getBackdropUrl(seriesId, 'vertical');
+      const wUrl = getBackdropUrl(seriesId, 'wide');
       if (!verticalBlob) {
-        const vRes = await cache.match(VERTICAL_URL);
+        const vRes = await cache.match(vUrl);
         if (vRes) verticalBlob = await vRes.blob();
       }
       if (!wideBlob) {
-        const wRes = await cache.match(WIDE_URL);
+        const wRes = await cache.match(wUrl);
         if (wRes) wideBlob = await wRes.blob();
       }
     } catch (e) {
@@ -143,8 +282,8 @@ export async function loadCustomBackdropUrls() {
     return { verticalUrl: null, wideUrl: null, settings: null };
   }
 
-  const verticalUrl = verticalBlob ? URL.createObjectURL(verticalBlob) : null;
-  const wideUrl = wideBlob ? URL.createObjectURL(wideBlob) : null;
+  const verticalUrl = verticalBlob && typeof URL !== 'undefined' && URL.createObjectURL ? URL.createObjectURL(verticalBlob) : null;
+  const wideUrl = wideBlob && typeof URL !== 'undefined' && URL.createObjectURL ? URL.createObjectURL(wideBlob) : null;
 
   return { verticalUrl, wideUrl, settings };
 }

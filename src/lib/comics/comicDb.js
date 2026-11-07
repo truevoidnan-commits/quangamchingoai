@@ -425,6 +425,12 @@ export async function deleteVolume(volumeId) {
 
 export async function deleteSeries(seriesId) {
   if (!seriesId) return;
+  try {
+    const { clearCustomBackdrop } = await import('./customBackdrop.js');
+    await clearCustomBackdrop(seriesId);
+  } catch (e) {
+    // Non-blocking in headless/test environments
+  }
   const db = await getComicDB();
   
   // 1. Find all volumes for this series

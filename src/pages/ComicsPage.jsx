@@ -25,7 +25,7 @@ import {
 } from '../lib/comics/comicSyncQueue.js';
 import { supabase } from '../lib/supabaseClient.js';
 import ComicImportModal from '../components/comics/ComicImportModal.jsx';
-import CustomBackdropModal from '../components/comics/CustomBackdropModal.jsx';
+
 import Footer from '../components/layout/Footer.jsx';
 import LobbyTabs from '../components/ui/LobbyTabs.jsx';
 import ComicsBackdrop from '../components/comics/ComicsBackdrop.jsx';
@@ -58,7 +58,7 @@ export default function ComicsPage() {
     cloudQuotaBytes: 8 * 1024 * 1024 * 1024,
   });
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [isBackdropModalOpen, setIsBackdropModalOpen] = useState(false);
+
   const [seriesToDelete, setSeriesToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -276,17 +276,6 @@ export default function ComicsPage() {
               aria-label="Tìm bộ truyện"
             />
           </div>
-
-          <button
-            type="button"
-            className={styles.changeBackdropBtn}
-            onClick={() => setIsBackdropModalOpen(true)}
-            title="Chọn ảnh trong truyện làm nền sảnh"
-            aria-label="Đổi ảnh nền sảnh"
-          >
-            <Icon name="image" size={15} />
-            <span>Đổi nền</span>
-          </button>
           <button
             type="button"
             className={`btn-primary ${styles.importBtn} animate-neon-pulse`}
@@ -585,11 +574,6 @@ export default function ComicsPage() {
       )}
 
       {/* ===== IMPORT MODAL ===== */}
-      <CustomBackdropModal
-        isOpen={isBackdropModalOpen}
-        onClose={() => setIsBackdropModalOpen(false)}
-        onToast={showToast}
-      />
       <ComicImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
