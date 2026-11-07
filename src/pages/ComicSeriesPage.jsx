@@ -30,6 +30,8 @@ import {
 } from '../lib/comics/comicSyncQueue.js';
 import { supabase } from '../lib/supabaseClient.js';
 import ComicImportModal from '../components/comics/ComicImportModal.jsx';
+import ComicCoverModal from '../components/comics/ComicCoverModal.jsx';
+import { clearSeriesCover } from '../lib/comics/comicDb.js';
 import ComicsBackdrop from '../components/comics/ComicsBackdrop.jsx';
 import Icon from '../components/ui/Icon.jsx';
 import Footer from '../components/layout/Footer.jsx';
@@ -348,6 +350,33 @@ export default function ComicSeriesPage() {
 
   // Series Action Dropdown
   const [seriesMenuOpen, setSeriesMenuOpen] = useState(false);
+  const [isCoverModalOpen, setIsCoverModalOpen] = useState(false);
+  const hasCustomCover = Boolean(series?.coverBlob);
+
+  const handleCoverChanged = (newBlob) => {
+    if (newBlob) {
+      const url = URL.createObjectURL(newBlob);
+      setCoverUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
+      setSeries((prev) => (prev ? { ...prev, coverBlob: newBlob } : prev));
+    } else {
+      setSeries((prev) => (prev ? { ...prev, coverBlob: null } : prev));
+      if (volumes.length > 0 && volumes[0].coverBlob) {
+        const url = URL.createObjectURL(volumes[0].coverBlob);
+        setCoverUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return url;
+        });
+      } else {
+        setCoverUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return null;
+        });
+      }
+    }
+  };
   const seriesMoreBtnRef = useRef(null);
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 700 : false
@@ -1044,6 +1073,23 @@ export default function ComicSeriesPage() {
                   <span>Nhập thêm tập</span>
                 </button>
 
+                {!isMobile && (
+                  <button
+                    type="button"
+                    className={styles.changeCoverBtn}
+                    onClick={() => setIsCoverModalOpen(true)}
+                    title="Đổi ảnh bìa cho bộ truyện này"
+                    aria-label="Đổi ảnh bìa bộ truyện"
+                    id="btn-series-change-cover"
+                  >
+                    <Icon name="image" size={15} />
+                    <span>Đổi ảnh bìa</span>
+                    {hasCustomCover && (
+                      <span className={styles.coverActiveDot} title="Đang dùng bìa tùy chỉnh" />
+                    )}
+                  </button>
+                )}
+
 
                 {/* Series More ⋯ Menu */}
                 <div className={styles.seriesMenuWrap} onClick={(e) => e.stopPropagation()}>
@@ -1068,6 +1114,43 @@ export default function ComicSeriesPage() {
                       triggerRef={seriesMoreBtnRef}
                       ariaLabel="Tùy chọn bộ truyện"
                     >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        tabIndex={0}
+                        className={styles.seriesPopoverItem}
+                        onClick={() => {
+                          setSeriesMenuOpen(false);
+                          setIsCoverModalOpen(true);
+                        }}
+                        id="btn-series-change-cover-menu"
+                      >
+                        <Icon name="image" size={16} />
+                        <span>Đổi ảnh bìa</span>
+                      </button>
+
+                      {hasCustomCover && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          tabIndex={0}
+                          className={styles.seriesPopoverItem}
+                          onClick={async () => {
+                            setSeriesMenuOpen(false);
+                            try {
+                              await clearSeriesCover(seriesId);
+                              handleCoverChanged(null);
+                              showToast('Đã quay về ảnh bìa tự động.');
+                            } catch (e) {
+                              showToast('Lỗi: ' + e.message);
+                            }
+                          }}
+                          id="btn-series-reset-cover-menu"
+                        >
+                          <Icon name="refresh" size={16} />
+                          <span>Dùng bìa tự động</span>
+                        </button>
+                      )}
 
                       <div className={styles.seriesPopoverDivider} />
                       {isLoggedIn && unsyncedCount > 0 && (
@@ -1301,6 +1384,47 @@ export default function ComicSeriesPage() {
             </button>
           </div>
           <div className={styles.seriesSheetActions}>
+            <button
+              type="button"
+              className={styles.seriesSheetActionRow}
+              onClick={() => {
+                setSeriesMenuOpen(false);
+                setIsCoverModalOpen(true);
+              }}
+              id="btn-series-change-cover-mobile"
+            >
+              <div className={styles.seriesSheetIconWrap}>
+                <Icon name="image" size={18} />
+              </div>
+              <span className={styles.seriesSheetActionLabel}>
+                Đổi ảnh bìa {hasCustomCover ? '(Đang dùng bìa tùy chỉnh)' : ''}
+              </span>
+            </button>
+
+            {hasCustomCover && (
+              <button
+                type="button"
+                className={styles.seriesSheetActionRow}
+                onClick={async () => {
+                  setSeriesMenuOpen(false);
+                  try {
+                    await clearSeriesCover(seriesId);
+                    handleCoverChanged(null);
+                    showToast('Đã quay về ảnh bìa tự động.');
+                  } catch (e) {
+                    showToast('Lỗi: ' + e.message);
+                  }
+                }}
+                id="btn-series-reset-cover-mobile"
+              >
+                <div className={styles.seriesSheetIconWrap}>
+                  <Icon name="refresh" size={18} />
+                </div>
+                <span className={styles.seriesSheetActionLabel}>
+                  Dùng bìa tự động
+                </span>
+              </button>
+            )}
 
             <div className={styles.seriesPopoverDivider} />
             {isLoggedIn && unsyncedCount > 0 && (
@@ -1585,6 +1709,16 @@ export default function ComicSeriesPage() {
         </div>
       )}
 
+
+      {/* Comic Cover Modal */}
+      <ComicCoverModal
+        isOpen={isCoverModalOpen}
+        onClose={() => setIsCoverModalOpen(false)}
+        series={series}
+        hasCustomCover={hasCustomCover}
+        onToast={showToast}
+        onCoverChanged={handleCoverChanged}
+      />
 
       {/* Import Modal */}
       <ComicImportModal
