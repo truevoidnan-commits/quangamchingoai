@@ -1,8 +1,46 @@
-import Icon, { toIconKey, GlyphIcon } from '../ui/Icon';
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import Icon from '../ui/Icon';
 import { DAO_ANH_LIST, DAO_ANH_ELEMENT_TYPES } from '../../lib/daoAnhData';
 import DaoAnhAvatarRenderer from './DaoAnhAvatarRenderer';
 import styles from './DaoAnhGalleryModal.module.css';
+
+// Fixed icon mapping per category ID
+const CATEGORY_ICON = {
+  all: 'orb',
+  hon_don: 'sparkle',
+  ma_dao: 'moon',
+  loi_dinh: 'bolt',
+  luan_hoi: 'yin-yang',
+  thai_duong: 'sun',
+  thoi_khong: 'hourglass',
+  tao_hoa: 'mist',
+  kiem_dao: 'sword',
+  than_the: 'crown',
+};
+
+class DaoAnhErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('[DaoAnhGallery] render failed:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className={this.props.className || styles.cardFallback}>
+          <Icon name="alert-triangle" size={16} />
+          <span>Không hiển thị được Đạo Anh này</span>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function DaoAnhGalleryModal({ isOpen, onClose }) {
   const [sourceFilter, setSourceFilter] = useState('all'); // 'all' | 'lamp' | 'artifact'
@@ -10,8 +48,30 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [selectedDaoAnh, setSelectedDaoAnh] = useState(null);
-  const [previewKiep, setPreviewKiep] = useState(5); // Default to max 5 kiếp for full splendor
+  const [previewKiep, setPreviewKiep] = useState(5);
   const [hoveredCardId, setHoveredCardId] = useState(null);
+
+  const modalRef = useRef(null);
+  const previouslyFocusedElementRef = useRef(null);
+
+  // Focus management
+  useEffect(() => {
+    if (isOpen) {
+      previouslyFocusedElementRef.current = document.activeElement;
+      // Focus modal container or close button
+      const timer = setTimeout(() => {
+        if (modalRef.current) {
+          const closeBtn = modalRef.current.querySelector('button[aria-label="Đóng"]');
+          if (closeBtn) closeBtn.focus();
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    } else {
+      if (previouslyFocusedElementRef.current && previouslyFocusedElementRef.current.focus) {
+        previouslyFocusedElementRef.current.focus();
+      }
+    }
+  }, [isOpen]);
 
   // Filtered List
   const filteredList = useMemo(() => {
@@ -23,10 +83,10 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
       // 3. Search Filter
       if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase().trim();
-        const matchName = da.name.toLowerCase().includes(query);
-        const matchTitle = (da.title || '').toLowerCase().includes(query);
-        const matchSkill = (da.skillName || '').toLowerCase().includes(query);
-        const matchPoem = (da.poem || '').toLowerCase().includes(query);
+        const matchName = da.name ? da.name.toLowerCase().includes(query) : false;
+        const matchTitle = da.title ? da.title.toLowerCase().includes(query) : false;
+        const matchSkill = da.skillName ? da.skillName.toLowerCase().includes(query) : false;
+        const matchPoem = da.poem ? da.poem.toLowerCase().includes(query) : false;
         return matchName || matchTitle || matchSkill || matchPoem;
       }
       return true;
@@ -55,7 +115,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
     }
   }, [currentIndex, filteredList]);
 
-  // Keyboard navigation
+  // Keyboard navigation & Focus trap
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!isOpen) return;
@@ -68,8 +128,10 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
         }
       } else if (selectedDaoAnh) {
         if (e.key === 'ArrowLeft') {
+          e.preventDefault();
           handlePrev();
         } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
           handleNext();
         }
       }
@@ -83,11 +145,11 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
   const lampTotal = DAO_ANH_LIST.filter((d) => d.sourceType === 'lamp').length;
   const artifactTotal = DAO_ANH_LIST.filter((d) => d.sourceType === 'artifact').length;
 
-  // Compute category count within current source filter
+  // Compute category counts within current source filter
   const categoryCounts = Object.values(DAO_ANH_ELEMENT_TYPES).reduce((acc, cat) => {
     if (cat.id === 'all') {
-      acc[cat.id] = sourceFilter === 'all' 
-        ? DAO_ANH_LIST.length 
+      acc[cat.id] = sourceFilter === 'all'
+        ? DAO_ANH_LIST.length
         : DAO_ANH_LIST.filter((d) => d.sourceType === sourceFilter).length;
     } else {
       acc[cat.id] = DAO_ANH_LIST.filter((d) => {
@@ -98,120 +160,144 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
     return acc;
   }, {});
 
-  const getCategoryName = (catId) => {
-    const cat = Object.values(DAO_ANH_ELEMENT_TYPES).find((c) => c.id === catId);
-    return cat ? cat.name : catId;
-  };
-
-  const getShortCategoryName = (catId) => {
-    const cat = Object.values(DAO_ANH_ELEMENT_TYPES).find((c) => c.id === catId);
-    if (!cat) return catId;
-    return cat.name.split(' & ')[0];
+  const getCategoryShortName = (cat) => {
+    if (cat.id === 'all') return cat.name;
+    return (cat.name || '').split(' & ')[0];
   };
 
   return (
-    <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modalContainer} onClick={(e) => e.stopPropagation()}>
-        
+    <div
+      className={styles.modalOverlay}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dao-anh-gallery-title"
+    >
+      <div
+        className={styles.modalContainer}
+        ref={modalRef}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Mobile handle indicator */}
+        <div className={styles.mobileSheetHandle} aria-hidden="true" />
+
         {/* ========================================================
-            1. CELESTIAL HEADER
+            1. HEADER
            ======================================================== */}
         <div className={styles.modalHeader}>
           <div className={styles.headerLeft}>
             <div className={styles.headerIconWrap}>
-              <span className={styles.headerIcon}><Icon name="scroll" size={24} /></span>
+              <Icon name="scroll" size={22} className={styles.headerIcon} />
             </div>
             <div className={styles.headerTitles}>
               <div className={styles.headerMainRow}>
-                <h2>VẠN CỔ ĐẠO ANH ĐỒ LỤC</h2>
+                <h2 id="dao-anh-gallery-title">Đạo Anh Đồ Lục</h2>
                 <span className={styles.headerTomeBadge}>BÁCH THẦN ĐIỂN</span>
               </div>
-              <p>
-                42 Thần Phẩm Pháp Tướng Nguyên Anh · Kết Tinh Từ 18 Thần Đăng & 24 Thần Vật Trấn Áp
-              </p>
+              <div className={styles.headerStatsRow}>
+                <span className={styles.statPill}>
+                  <strong>{DAO_ANH_LIST.length}</strong> Đạo Anh
+                </span>
+                <span className={styles.statPill}>
+                  <strong>{lampTotal}</strong> Mệnh Đăng
+                </span>
+                <span className={styles.statPill}>
+                  <strong>{artifactTotal}</strong> Trấn Áp
+                </span>
+              </div>
             </div>
           </div>
 
           <div className={styles.headerRight}>
-            <div className={styles.headerStats}>
-              <span className={styles.statPill} title="Tổng số Pháp Tướng Thần Phẩm">
-                <strong>{DAO_ANH_LIST.length}</strong> Đạo Anh
-              </span>
-              <span className={styles.statPill} title="Kết tinh từ Mệnh Đăng">
-                <strong>{lampTotal}</strong> Mệnh Đăng
-              </span>
-              <span className={styles.statPill} title="Kết tinh từ Vật Trấn Áp">
-                <strong>{artifactTotal}</strong> Trấn Áp
-              </span>
-            </div>
-            <button className={styles.closeBtn} onClick={onClose} title="Đóng (ESC)">
-              ✕
+            <button
+              className={styles.closeBtn}
+              onClick={onClose}
+              aria-label="Đóng"
+              title="Đóng (ESC)"
+            >
+              <Icon name="x" size={18} />
             </button>
           </div>
         </div>
 
         {/* ========================================================
-            2. CONTROL BAR (SOURCE TABS, VIEW SWITCH & SEARCH)
+            2. CONTROL BAR (SOURCE TABS, SEARCH, VIEW SWITCH)
            ======================================================== */}
         <div className={styles.controlBar}>
-          <div className={styles.sourceTabsGroup}>
+          <div className={styles.sourceTabsGroup} role="tablist" aria-label="Nguồn Đạo Anh">
             <button
+              role="tab"
+              aria-selected={sourceFilter === 'all'}
               className={`${styles.sourceTabBtn} ${sourceFilter === 'all' ? styles.activeSource : ''}`}
               onClick={() => setSourceFilter('all')}
             >
-              <span><Icon name="orb" size={14} /> Toàn Bộ ({DAO_ANH_LIST.length})</span>
+              <Icon name="orb" size={14} />
+              <span>Tất Cả ({DAO_ANH_LIST.length})</span>
             </button>
             <button
+              role="tab"
+              aria-selected={sourceFilter === 'lamp'}
               className={`${styles.sourceTabBtn} ${sourceFilter === 'lamp' ? styles.activeSource : ''}`}
               onClick={() => setSourceFilter('lamp')}
             >
-              <span><Icon name="lantern" size={14} /> Mệnh Đăng ({lampTotal})</span>
+              <Icon name="lantern" size={14} />
+              <span>Mệnh Đăng ({lampTotal})</span>
             </button>
             <button
+              role="tab"
+              aria-selected={sourceFilter === 'artifact'}
               className={`${styles.sourceTabBtn} ${sourceFilter === 'artifact' ? styles.activeSource : ''}`}
               onClick={() => setSourceFilter('artifact')}
             >
-              <span><Icon name="shield" size={14} /> Vật Trấn Áp ({artifactTotal})</span>
+              <Icon name="shield" size={14} />
+              <span>Vật Trấn Áp ({artifactTotal})</span>
             </button>
           </div>
 
           <div className={styles.controlBarRight}>
-            {/* View Mode Switcher */}
-            <div className={styles.viewModeToggle}>
-              <button
-                className={`${styles.viewModeBtn} ${viewMode === 'grid' ? styles.activeViewMode : ''}`}
-                onClick={() => setViewMode('grid')}
-                title="Dạng Thẻ Tiên Điển"
-              >
-                <Icon name="image" size={14} /> Thẻ Bài
-              </button>
-              <button
-                className={`${styles.viewModeBtn} ${viewMode === 'list' ? styles.activeViewMode : ''}`}
-                onClick={() => setViewMode('list')}
-                title="Dạng Quyển Trục Thu Gọn"
-              >
-                <Icon name="list" size={14} /> Danh Mục
-              </button>
-            </div>
-
             {/* Search Input */}
             <div className={styles.searchBox}>
-              <span className={styles.searchIcon}><Icon name="search" size={14} /></span>
+              <Icon name="search" size={14} className={styles.searchIcon} />
               <input
                 type="text"
-                placeholder="Tìm tên Đạo Anh, khẩu quyết, thần thông..."
+                placeholder="Tìm tên, thần thông, hiệu, thơ..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                aria-label="Tìm kiếm Đạo Anh"
               />
               {searchTerm && (
                 <button
+                  type="button"
                   className={styles.searchClearBtn}
                   onClick={() => setSearchTerm('')}
+                  aria-label="Xóa tìm kiếm"
                   title="Xóa tìm kiếm"
                 >
-                  ✕
+                  <Icon name="x" size={12} />
                 </button>
               )}
+            </div>
+
+            {/* View Mode Switcher */}
+            <div className={styles.viewModeToggle} role="group" aria-label="Kiểu hiển thị">
+              <button
+                type="button"
+                className={`${styles.viewModeBtn} ${viewMode === 'grid' ? styles.activeViewMode : ''}`}
+                onClick={() => setViewMode('grid')}
+                aria-label="Hiển thị dạng thẻ"
+                title="Dạng thẻ lưới"
+              >
+                <Icon name="grid" size={14} />
+              </button>
+              <button
+                type="button"
+                className={`${styles.viewModeBtn} ${viewMode === 'list' ? styles.activeViewMode : ''}`}
+                onClick={() => setViewMode('list')}
+                aria-label="Hiển thị dạng danh sách"
+                title="Dạng danh sách thu gọn"
+              >
+                <Icon name="list" size={14} />
+              </button>
             </div>
           </div>
         </div>
@@ -219,22 +305,27 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
         {/* ========================================================
             3. ELEMENT CATEGORY CHIP BAR
            ======================================================== */}
-        <div className={styles.categoryBar}>
+        <div className={styles.categoryBar} role="tablist" aria-label="Danh mục nguyên tố">
           {Object.values(DAO_ANH_ELEMENT_TYPES).map((cat) => {
             const count = categoryCounts[cat.id] || 0;
             if (count === 0 && cat.id !== 'all' && sourceFilter !== 'all') return null;
             const isActive = categoryFilter === cat.id;
+            const iconName = CATEGORY_ICON[cat.id] || 'orb';
+            const shortName = getCategoryShortName(cat);
+
             return (
               <button
                 key={`cat-${cat.id}`}
+                role="tab"
+                aria-selected={isActive}
                 className={`${styles.categoryChip} ${isActive ? styles.activeCategoryChip : ''}`}
                 onClick={() => setCategoryFilter(cat.id)}
                 title={cat.name}
               >
-                <span className={styles.catIcon}><GlyphIcon value={cat.iconKey || cat.icon} size={15} /></span>
-                <span className={styles.catName}>
-                  {cat.id === 'all' ? cat.name : cat.name.split(' & ')[0]}
+                <span className={styles.catIconWrap}>
+                  <Icon name={iconName} size={14} />
                 </span>
+                <span className={styles.catName}>{shortName}</span>
                 <span className={styles.catCount}>({count})</span>
               </button>
             );
@@ -245,119 +336,165 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
             4. MAIN BODY (GRID OR LIST)
            ======================================================== */}
         <div className={styles.modalBody}>
-          
           {/* A. GRID VIEW */}
           {viewMode === 'grid' && (
             <div className={styles.gridContainer}>
               {filteredList.map((da) => {
                 const isHovered = hoveredCardId === da.id;
+                const catInfo = DAO_ANH_ELEMENT_TYPES[da.category?.toUpperCase()] || null;
+                const catShortName = catInfo ? getCategoryShortName(catInfo) : da.category;
+
                 return (
-                  <div
-                    key={da.id}
-                    className={styles.daoAnhCard}
-                    style={{
-                      '--card-p-color': da.primaryColor || '#fbbf24',
-                      '--card-s-color': da.secondaryColor || '#f97316',
-                      '--card-glow': da.glowColor || 'rgba(251, 191, 36, 0.4)',
-                    }}
-                    onMouseEnter={() => setHoveredCardId(da.id)}
-                    onMouseLeave={() => setHoveredCardId(null)}
-                    onClick={() => {
-                      setSelectedDaoAnh(da);
-                      setPreviewKiep(5);
-                    }}
-                  >
+                  <DaoAnhErrorBoundary key={da.id}>
+                    <div
+                      className={styles.daoAnhCard}
+                      style={{
+                        '--card-p-color': da.primaryColor || '#fbbf24',
+                        '--card-s-color': da.secondaryColor || '#f97316',
+                        '--card-glow': da.glowColor || 'rgba(251, 191, 36, 0.4)',
+                      }}
+                      onMouseEnter={() => setHoveredCardId(da.id)}
+                      onMouseLeave={() => setHoveredCardId(null)}
+                      onClick={() => {
+                        setSelectedDaoAnh(da);
+                        setPreviewKiep(5);
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Chi tiết ${da.name}`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedDaoAnh(da);
+                          setPreviewKiep(5);
+                        }
+                      }}
+                    >
+                      {/* Avatar container */}
+                      <div className={styles.avatarStageWrap}>
+                        <DaoAnhAvatarRenderer
+                          daoAnh={da}
+                          size={160}
+                          imageSize="thumb"
+                          currentKiep={5}
+                          animate={isHovered}
+                          showAura={isHovered}
+                        />
+                      </div>
 
-
-                    {/* Stage Portrait Mirror */}
-                    <div className={styles.avatarStageWrap}>
-                      <DaoAnhAvatarRenderer
-                        daoAnh={da}
-                        size={185}
-                        imageSize="thumb"
-                        currentKiep={5}
-                        animate={isHovered}
-                        showAura={isHovered}
-                      />
-                    </div>
-
-                    {/* Card Plaque / Bottom Info */}
-                    <div className={styles.cardContent}>
-                      <h3 className={styles.cardName} title={da.name}>
-                        {da.name.replace(/ Đạo Anh$/, '')}
-                      </h3>
-                      <div className={styles.cardHonorificText}>
-                        {da.title}
+                      {/* Card Content */}
+                      <div className={styles.cardContent}>
+                        <div className={styles.cardBadgesRow}>
+                          <span className={styles.cardCatBadge}>{catShortName}</span>
+                          <span className={styles.cardSourceBadge}>
+                            {da.sourceType === 'lamp' ? 'Mệnh Đăng' : 'Trấn Áp'}
+                          </span>
+                        </div>
+                        <h3 className={styles.cardName} title={da.name}>
+                          {da.name}
+                        </h3>
+                        {da.title && (
+                          <div className={styles.cardHonorificText} title={da.title}>
+                            {da.title}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
+                  </DaoAnhErrorBoundary>
                 );
               })}
             </div>
           )}
 
-          {/* B. COMPACT LIST VIEW */}
+          {/* B. LIST VIEW */}
           {viewMode === 'list' && (
             <div className={styles.listContainer}>
-              {filteredList.map((da, idx) => (
-                <div
-                  key={da.id}
-                  className={styles.listItemRow}
-                  style={{
-                    '--row-color': da.primaryColor || '#fbbf24',
-                    '--row-glow': da.glowColor || 'rgba(251, 191, 36, 0.3)',
-                  }}
-                  onClick={() => {
-                    setSelectedDaoAnh(da);
-                    setPreviewKiep(5);
-                  }}
-                >
-                  <div className={styles.listIndex}>#{idx + 1}</div>
+              {filteredList.map((da, idx) => {
+                const catInfo = DAO_ANH_ELEMENT_TYPES[da.category?.toUpperCase()] || null;
+                const catShortName = catInfo ? getCategoryShortName(catInfo) : da.category;
 
-                  <div className={styles.listAvatarWrap}>
-                    <DaoAnhAvatarRenderer
-                      daoAnh={da}
-                      size={52}
-                      imageSize="thumb"
-                      currentKiep={5}
-                      animate={false}
-                      showAura={false}
-                    />
-                  </div>
+                return (
+                  <DaoAnhErrorBoundary key={da.id}>
+                    <div
+                      className={styles.listItemRow}
+                      style={{
+                        '--row-color': da.primaryColor || '#fbbf24',
+                        '--row-glow': da.glowColor || 'rgba(251, 191, 36, 0.3)',
+                      }}
+                      onClick={() => {
+                        setSelectedDaoAnh(da);
+                        setPreviewKiep(5);
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Chi tiết ${da.name}`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedDaoAnh(da);
+                          setPreviewKiep(5);
+                        }
+                      }}
+                    >
+                      <div className={styles.listIndex}>#{idx + 1}</div>
 
-                  <div className={styles.listMainInfo}>
-                    <div className={styles.listTitleRow}>
-                      <h4 className={styles.listName}>{da.name}</h4>
-                      <span className={styles.listTier}>THẦN PHẨM</span>
-                      <span className={styles.listSource}>
-                        {da.sourceType === 'lamp' ? 'Mệnh Đăng' : 'Trấn Áp'}
-                      </span>
+                      <div className={styles.listAvatarWrap}>
+                        <DaoAnhAvatarRenderer
+                          daoAnh={da}
+                          size={52}
+                          imageSize="thumb"
+                          currentKiep={5}
+                          animate={false}
+                          showAura={false}
+                        />
+                      </div>
+
+                      <div className={styles.listMainInfo}>
+                        <div className={styles.listTitleRow}>
+                          <h4 className={styles.listName}>{da.name}</h4>
+                          <span className={styles.listTier}>THẦN PHẨM</span>
+                          <span className={styles.listCatBadge}>{catShortName}</span>
+                          <span className={styles.listSource}>
+                            {da.sourceType === 'lamp' ? 'Mệnh Đăng' : 'Trấn Áp'}
+                          </span>
+                        </div>
+                        <div className={styles.listSubTitle}>
+                          {da.title && <span>{da.title}</span>}
+                          {da.poem && <em>"{da.poem}"</em>}
+                        </div>
+                      </div>
+
+                      {da.skillName && (
+                        <div className={styles.listSkillCol}>
+                          <div className={styles.listSkillName}>
+                            <Icon name="bolt" size={12} /> {da.skillName}
+                          </div>
+                          {da.skillDesc && <div className={styles.listSkillDesc}>{da.skillDesc}</div>}
+                        </div>
+                      )}
+
+                      <div className={styles.listActionCol}>
+                        <span className={styles.listInspectBtn}>
+                          Xem <Icon name="chevron-right" size={14} />
+                        </span>
+                      </div>
                     </div>
-                    <div className={styles.listSubTitle}>{da.title} · <em>"{da.poem}"</em></div>
-                  </div>
-
-                  <div className={styles.listSkillCol}>
-                    <div className={styles.listSkillName}><Icon name="bolt" size={12} /> {da.skillName}</div>
-                    <div className={styles.listSkillDesc}>{da.skillDesc}</div>
-                  </div>
-
-                  <div className={styles.listActionCol}>
-                    <button className={styles.listInspectBtn}>
-                      Chi Tiết ➔
-                    </button>
-                  </div>
-                </div>
-              ))}
+                  </DaoAnhErrorBoundary>
+                );
+              })}
             </div>
           )}
 
-          {/* Empty State */}
+          {/* C. EMPTY STATE */}
           {filteredList.length === 0 && (
             <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}><Icon name="orb" size={32} /></div>
+              <div className={styles.emptyIcon}>
+                <Icon name="orb" size={36} />
+              </div>
               <h3>Không tìm thấy Đạo Anh phù hợp</h3>
-              <p>Thử điều chỉnh bộ lọc Mệnh Đăng / Trấn Áp hoặc từ khóa tìm kiếm</p>
+              <p>Thử đổi bộ lọc nguồn, danh mục hoặc cụm từ tìm kiếm</p>
               <button
+                type="button"
                 className={styles.resetFilterBtn}
                 onClick={() => {
                   setSourceFilter('all');
@@ -365,17 +502,24 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                   setSearchTerm('');
                 }}
               >
-                Khôi Phục Bộ Lọc
+                <Icon name="refresh" size={14} />
+                <span>Xóa bộ lọc</span>
               </button>
             </div>
           )}
         </div>
 
         {/* ========================================================
-            5. SPOTLIGHT DETAIL INSPECTOR (MODAL DIALOG)
+            5. SPOTLIGHT DETAIL (MODAL INSPECTOR)
            ======================================================== */}
         {selectedDaoAnh && (
-          <div className={styles.spotlightOverlay} onClick={() => setSelectedDaoAnh(null)}>
+          <div
+            className={styles.spotlightOverlay}
+            onClick={() => setSelectedDaoAnh(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Chi tiết Đạo Anh ${selectedDaoAnh.name}`}
+          >
             <div
               className={styles.spotlightDialog}
               onClick={(e) => e.stopPropagation()}
@@ -389,37 +533,28 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
               <button
                 className={styles.spotlightCloseBtn}
                 onClick={() => setSelectedDaoAnh(null)}
+                aria-label="Đóng chi tiết"
                 title="Đóng (ESC)"
               >
-                ✕
+                <Icon name="x" size={18} />
               </button>
 
               {/* Spotlight Content Split */}
               <div className={styles.spotlightSplit}>
-                
-                {/* LEFT PANE: Pure Art Showcase */}
+                {/* LEFT PANE: Art Showcase & Kiếp Selection */}
                 <div className={styles.spotlightLeft}>
                   <div className={styles.spotlightAvatarBackdrop}>
                     <DaoAnhAvatarRenderer
                       daoAnh={selectedDaoAnh}
-                      size={300}
+                      size={280}
                       imageSize="full"
                       currentKiep={previewKiep}
                       animate={true}
                       showAura={true}
                     />
                   </div>
-                </div>
 
-                {/* RIGHT PANE: Title, Halo Stage Selector, Skill & Lore */}
-                <div className={styles.spotlightRight}>
-                  {/* Title & Honorific */}
-                  <div className={styles.spotlightHeader}>
-                    <h2 className={styles.spotlightName}>{selectedDaoAnh.name}</h2>
-                    <div className={styles.spotlightHonorific}>{selectedDaoAnh.title}</div>
-                  </div>
-
-                  {/* Interactive Tribulation Halo Stage Selector */}
+                  {/* Tribulation Kiếp Selector */}
                   <div className={styles.haloStageControl}>
                     <div className={styles.haloLabelRow}>
                       <span className={styles.haloHeadingText}>HÀO QUANG ĐỘ KIẾP</span>
@@ -428,48 +563,85 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                       </strong>
                     </div>
 
-                    <div className={styles.haloBtnGroup}>
+                    <div className={styles.haloBtnGroup} role="group" aria-label="Xem trước kiếp">
                       {[1, 2, 3, 4, 5].map((k) => (
                         <button
                           key={`k-btn-${k}`}
+                          type="button"
                           className={`${styles.haloBtn} ${previewKiep === k ? styles.activeHaloBtn : ''}`}
                           onClick={() => setPreviewKiep(k)}
+                          aria-label={`Kiếp ${k}`}
                         >
                           K{k}
                         </button>
                       ))}
                     </div>
+                  </div>
+                </div>
 
-                    {/* Evolution Form Title */}
+                {/* RIGHT PANE: Title, Skill & Lore */}
+                <div className={styles.spotlightRight}>
+                  {/* Title & Honorific */}
+                  <div className={styles.spotlightHeader}>
+                    <div className={styles.spotlightBadgesRow}>
+                      <span className={styles.spotlightTierBadge}>THẦN PHẨM</span>
+                      <span className={styles.spotlightSourceBadge}>
+                        {selectedDaoAnh.sourceType === 'lamp' ? 'Mệnh Đăng' : 'Vật Trấn Áp'}
+                      </span>
+                    </div>
+                    <h2 className={styles.spotlightName}>{selectedDaoAnh.name}</h2>
+                    {selectedDaoAnh.title && (
+                      <div className={styles.spotlightHonorific}>{selectedDaoAnh.title}</div>
+                    )}
+                    {selectedDaoAnh.poem && (
+                      <div className={styles.spotlightPoem}>"{selectedDaoAnh.poem}"</div>
+                    )}
+                  </div>
+
+                  {/* Tribulation Form Title */}
+                  {selectedDaoAnh.tribulationForm && (
                     <div className={styles.tribulationFormBadge}>
                       <span className={styles.formTag}>CỰC HẠN THẦN THÂN:</span>
                       <span className={styles.formValue}>{selectedDaoAnh.tribulationForm}</span>
                     </div>
-                  </div>
+                  )}
 
                   {/* Signature Skill Box */}
-                  <div className={styles.spotlightSectionSkill}>
-                    <div className={styles.sectionSkillHeader}>
-                      <span className={styles.sectionSkillIcon}><Icon name="bolt" size={14} /></span>
-                      <span className={styles.sectionSkillTitle}>THẦN THÔNG:</span>
-                      <span className={styles.skillCoreName}>{selectedDaoAnh.skillName}</span>
+                  {(selectedDaoAnh.skillName || selectedDaoAnh.skillDesc) && (
+                    <div className={styles.spotlightSectionSkill}>
+                      <div className={styles.sectionSkillHeader}>
+                        <Icon name="bolt" size={15} className={styles.sectionSkillIcon} />
+                        <span className={styles.sectionSkillTitle}>THẦN THÔNG:</span>
+                        <span className={styles.skillCoreName}>{selectedDaoAnh.skillName}</span>
+                      </div>
+                      {selectedDaoAnh.skillDesc && (
+                        <p className={styles.skillCoreDesc}>{selectedDaoAnh.skillDesc}</p>
+                      )}
                     </div>
-                    <p className={styles.skillCoreDesc}>{selectedDaoAnh.skillDesc}</p>
-                  </div>
+                  )}
 
                   {/* Lore Description */}
-                  <div className={styles.spotlightSectionLore}>
-                    <div className={styles.sectionLoreHeader}>
-                      <span><Icon name="scroll" size={14} /> CHÂN THÂN & KHỞI NGUYÊN</span>
+                  {selectedDaoAnh.desc && (
+                    <div className={styles.spotlightSectionLore}>
+                      <div className={styles.sectionLoreHeader}>
+                        <Icon name="scroll" size={14} />
+                        <span>CHÂN THÂN & KHỞI NGUYÊN</span>
+                      </div>
+                      <p className={styles.loreDescText}>{selectedDaoAnh.desc}</p>
                     </div>
-                    <p className={styles.loreDescText}>{selectedDaoAnh.desc}</p>
-                  </div>
+                  )}
                 </div>
               </div>
 
-              {/* Bottom Quick Navigation Between Items */}
+              {/* Bottom Quick Navigation */}
               <div className={styles.spotlightNavFooter}>
-                <button className={styles.spotlightNavBtn} onClick={handlePrev}>
+                <button
+                  type="button"
+                  className={styles.spotlightNavBtn}
+                  onClick={handlePrev}
+                  aria-label="Đạo Anh trước"
+                >
+                  <Icon name="arrow-left" size={16} />
                   <span>Đạo Anh Trước</span>
                   <span className={styles.navKeyHint}>[←]</span>
                 </button>
@@ -477,22 +649,26 @@ export default function DaoAnhGalleryModal({ isOpen, onClose }) {
                 <div className={styles.spotlightNavCounter}>
                   {currentIndex >= 0 && (
                     <span>
-                      ✦ Đạo Anh <strong>{currentIndex + 1}</strong> / {filteredList.length} ✦
+                      Đạo Anh <strong>{currentIndex + 1}</strong> / {filteredList.length}
                     </span>
                   )}
                 </div>
 
-                <button className={styles.spotlightNavBtn} onClick={handleNext}>
-                  <span className={styles.navKeyHint}>[→]</span>
+                <button
+                  type="button"
+                  className={styles.spotlightNavBtn}
+                  onClick={handleNext}
+                  aria-label="Đạo Anh kế tiếp"
+                >
                   <span>Đạo Anh Kế Tiếp</span>
+                  <span className={styles.navKeyHint}>[→]</span>
+                  <Icon name="arrow-right" size={16} />
                 </button>
               </div>
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
 }
-

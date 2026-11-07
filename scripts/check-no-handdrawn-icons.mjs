@@ -47,12 +47,24 @@ const violations = [];
 
 for (const file of files) {
   const relPath = path.relative(process.cwd(), file).replace(/\\/g, '/');
-  
+
+  const content = fs.readFileSync(file, 'utf8');
+
+  // Check: Ensure DaoAnhGalleryModal.jsx does not use GlyphIcon or toIconKey
+  if (relPath.includes('DaoAnhGalleryModal.jsx')) {
+    if (content.includes('GlyphIcon') || content.includes('toIconKey')) {
+      violations.push({
+        file: relPath,
+        type: 'forbidden-glyph-import',
+        symbol: 'GlyphIcon / toIconKey in DaoAnhGalleryModal',
+        line: 1
+      });
+    }
+  }
+
   if (ALLOWLIST.includes(relPath)) {
     continue;
   }
-
-  const content = fs.readFileSync(file, 'utf8');
 
   // Check 1: Hand-drawn icon function or const declarations (e.g. function IconX, const IconX =)
   // Skip top-level React page components like IconsPreviewPage

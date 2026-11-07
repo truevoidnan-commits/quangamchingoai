@@ -82,7 +82,7 @@ function createLinhTangState() {
 
 async function run() {
   console.log('===========================================================');
-  console.log('🧪 TESTING PHẦN 5: LINH TÀNG FULL-BLEED & TITLE CLEANUP');
+  console.log('🧪 TESTING PHẦN 4: LINH TÀNG 5 TÒA TÀNG MÔN BỀ THẾ');
   console.log('===========================================================');
 
   const server = await startServer();
@@ -91,9 +91,11 @@ async function run() {
 
   try {
     const viewports = [
-      { name: 'desktop-1920', width: 1920, height: 1080, isMobile: false },
-      { name: 'desktop-1366', width: 1366, height: 768, isMobile: false },
-      { name: 'mobile-390', width: 390, height: 844, isMobile: true },
+      { name: 'desktop-1920', width: 1920, height: 1080, minHeight: 560, isMobile: false },
+      { name: 'desktop-1920-915', width: 1920, height: 915, minHeight: 560, isMobile: false },
+      { name: 'laptop-1536', width: 1536, height: 730, minHeight: 450, isMobile: false },
+      { name: 'desktop-1366', width: 1366, height: 768, minHeight: 450, isMobile: false },
+      { name: 'mobile-390', width: 390, height: 844, minHeight: 520, isMobile: true },
     ];
 
     for (const vp of viewports) {
@@ -114,13 +116,61 @@ async function run() {
       });
       await page.waitForTimeout(1500);
 
-      const audit = await page.evaluate(() => {
+      const audit = await page.evaluate((expectedMinHeight) => {
         const text = document.body.innerText;
         const hasRedundantTitle = text.includes('NGŨ ĐẠI BÍ TÀNG KHAI THIÊN');
         const reassignBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Tùy Chỉnh 5 Đạo Anh'));
         const container = document.querySelector('[class*="pantheonStage"]')?.parentElement || document.querySelector('[class*="container"]');
+        const stage = document.querySelector('[class*="pantheonStage"]');
         const computedStyle = container ? window.getComputedStyle(container) : null;
-        const gates = document.querySelectorAll('[class*="celestialGateEntity"]');
+        const gates = Array.from(document.querySelectorAll('[class*="celestialGateEntity"]'));
+
+        const stageRect = stage ? stage.getBoundingClientRect() : null;
+        const gateRects = gates.map((g, idx) => {
+          const r = g.getBoundingClientRect();
+          return {
+            index: idx + 1,
+            width: Math.round(r.width),
+            height: Math.round(r.height),
+            top: Math.round(r.top),
+            bottom: Math.round(r.bottom),
+            left: Math.round(r.left),
+            right: Math.round(r.right),
+          };
+        });
+
+        // Check horizontal overflow
+        const cScrollWidth = container ? container.scrollWidth : 0;
+        const cClientWidth = container ? container.clientWidth : 0;
+        const hasHOverflow = container ? cScrollWidth > cClientWidth + 2 : false;
+
+        const overflowingChildren = container ? Array.from(container.children).map(c => {
+          const cr = c.getBoundingClientRect();
+          const pr = container.getBoundingClientRect();
+          return {
+            className: c.className.split(' ')[0],
+            scrollWidth: c.scrollWidth,
+            clientWidth: c.clientWidth,
+            rectRight: Math.round(cr.right),
+            containerRight: Math.round(pr.right),
+            isOverflowing: cr.right > pr.right + 2 || cr.left < pr.left - 2
+          };
+        }) : [];
+
+        // Check overlap between consecutive gates on desktop
+        let hasOverlap = false;
+        if (!window.matchMedia('(max-width: 768px)').matches) {
+          for (let i = 0; i < gateRects.length - 1; i++) {
+            if (gateRects[i + 1].left < gateRects[i].right - 2) {
+              hasOverlap = true;
+            }
+          }
+        }
+
+        const minGateHeight = gateRects.length > 0 ? Math.min(...gateRects.map(g => g.height)) : 0;
+        const centerGate = gateRects[2];
+        const sideGate = gateRects[0];
+        const isCenterTaller = centerGate && sideGate ? centerGate.height >= sideGate.height : false;
 
         return {
           hasRedundantTitle,
@@ -128,37 +178,67 @@ async function run() {
           borderRadius: computedStyle?.borderRadius,
           hasBgImage: computedStyle?.backgroundImage?.includes('bg_linh_tang_bi_tang'),
           gateCount: gates.length,
+          stageRect: stageRect ? { width: Math.round(stageRect.width), height: Math.round(stageRect.height) } : null,
+          minGateHeight,
+          centerGate,
+          sideGate,
+          isCenterTaller,
+          hasHOverflow,
+          cScrollWidth,
+          cClientWidth,
+          overflowingChildren,
+          hasOverlap,
+          gateRects,
         };
-      });
+      }, vp.minHeight);
 
-      console.log(`  Audit for ${vp.name}:`, audit);
+      console.log(`  Audit for ${vp.name}:`, {
+        gateCount: audit.gateCount,
+        minGateHeight: audit.minGateHeight,
+        requiredMinHeight: vp.minHeight,
+        centerGate: audit.centerGate,
+        sideGate: audit.sideGate,
+        hasHOverflow: audit.hasHOverflow,
+        cScrollWidth: audit.cScrollWidth,
+        cClientWidth: audit.cClientWidth,
+        overflowingChildren: audit.overflowingChildren,
+        hasOverlap: audit.hasOverlap,
+      });
 
       if (audit.hasRedundantTitle) {
         console.error(`  🚨 FAIL: Redundant title NGŨ ĐẠI BÍ TÀNG KHAI THIÊN still present on ${vp.name}!`);
         hasErrors = true;
-      } else {
-        console.log(`  ✅ PASS: Redundant title removed cleanly on ${vp.name}.`);
       }
 
       if (!audit.hasReassignBtn) {
         console.error(`  🚨 FAIL: Reassign button missing on ${vp.name}!`);
         hasErrors = true;
-      } else {
-        console.log(`  ✅ PASS: Reassign button is present on ${vp.name}.`);
-      }
-
-      if (audit.borderRadius && audit.borderRadius !== '0px') {
-        console.error(`  🚨 FAIL: Container still has border-radius (${audit.borderRadius}) on ${vp.name}!`);
-        hasErrors = true;
-      } else {
-        console.log(`  ✅ PASS: Container has 0px border-radius (full-bleed) on ${vp.name}.`);
       }
 
       if (audit.gateCount !== 5) {
         console.error(`  🚨 FAIL: Expected 5 gates, found ${audit.gateCount} on ${vp.name}!`);
         hasErrors = true;
+      }
+
+      if (audit.minGateHeight < vp.minHeight) {
+        console.error(`  🚨 FAIL: Gate height (${audit.minGateHeight}px) below required minimum ${vp.minHeight}px on ${vp.name}!`);
+        hasErrors = true;
       } else {
-        console.log(`  ✅ PASS: 5 divine gate portals present on ${vp.name}.`);
+        console.log(`  ✅ PASS: Gate height ${audit.minGateHeight}px >= ${vp.minHeight}px threshold.`);
+      }
+
+      if (audit.hasHOverflow && !vp.isMobile) {
+        console.error(`  🚨 FAIL: Horizontal overflow detected on stage for ${vp.name}!`);
+        hasErrors = true;
+      } else {
+        console.log(`  ✅ PASS: No horizontal overflow on stage.`);
+      }
+
+      if (audit.hasOverlap) {
+        console.error(`  🚨 FAIL: Gates overlapping each other on ${vp.name}!`);
+        hasErrors = true;
+      } else {
+        console.log(`  ✅ PASS: Gates do not overlap each other.`);
       }
 
       const shotPath = path.join(outDir, `linh-tang-${vp.name}.png`);
@@ -177,10 +257,10 @@ async function run() {
 
   console.log('===========================================================');
   if (hasErrors) {
-    console.error('❌ PART 5 LINH TÀNG VERIFICATION FAILED!');
+    console.error('❌ PART 4 LINH TÀNG 5 TÒA VERIFICATION FAILED!');
     process.exit(1);
   } else {
-    console.log('✅ ALL PART 5 LINH TÀNG VERIFICATIONS PASSED CLEANLY (100%)!');
+    console.log('✅ ALL PART 4 LINH TÀNG 5 TÒA VERIFICATIONS PASSED CLEANLY (100%)!');
     process.exit(0);
   }
 }

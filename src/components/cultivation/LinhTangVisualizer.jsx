@@ -281,12 +281,14 @@ export default function LinhTangVisualizer() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.cosmicBg} />
-      <div 
-        className={styles.godEyeOverlay} 
-        style={{ backgroundImage: `url(${godEyeImg})` }} 
-      />
-      <div className={styles.astralFloorRing} />
+      <div className={styles.bgVoidLayer}>
+        <div className={styles.cosmicBg} />
+        <div 
+          className={styles.godEyeOverlay} 
+          style={{ backgroundImage: `url(${godEyeImg})` }} 
+        />
+        <div className={styles.astralFloorRing} />
+      </div>
 
       {/* THANH ĐIỀU HƯỚNG TRÊN CÙNG CỦA LINH TÀNG */}
       <div className={styles.topControlBar}>

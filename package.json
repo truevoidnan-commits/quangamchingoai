@@ -11,7 +11,8 @@
     "check:icons": "node scripts/check-no-handdrawn-icons.mjs",
     "optimize-images": "node scripts/optimize-images.mjs",
     "compute-daoanh-fit": "node scripts/compute-daoanh-fit.mjs",
-    "compute-daoanh-bbox": "node scripts/compute-daoanh-bbox.mjs"
+    "compute-daoanh-bbox": "node scripts/compute-daoanh-bbox.mjs",
+    "check:jsx-undefined": "node scripts/check-undefined-jsx.mjs"
   },
   "dependencies": {
     "@jsquash/webp": "^1.5.0",

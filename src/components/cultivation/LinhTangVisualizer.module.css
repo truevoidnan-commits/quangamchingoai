@@ -16,7 +16,7 @@
   border-radius: 0;
   border: none;
   box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.85);
-  padding: 16px 20px;
+  padding: 12px clamp(6px, 1vw, 16px);
   position: relative;
   overflow: hidden;
   color: #f1f5f9;
@@ -38,6 +38,14 @@
    BACKGROUND COSMIC VOID & DIVINE EYE LAYERS
    ========================================================================= */
 
+.bgVoidLayer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
 .cosmicBg {
   position: absolute;
   inset: 0;
@@ -55,7 +63,8 @@
   top: 42%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 720px;
+  width: min(720px, 94%);
+  max-width: 100%;
   height: 440px;
   background-size: cover;
   background-position: center;
@@ -81,8 +90,9 @@
   bottom: -240px;
   left: 50%;
   transform: translateX(-50%) rotateX(70deg);
-  width: 1040px;
-  height: 1040px;
+  width: min(1040px, 96%);
+  max-width: 100%;
+  height: min(1040px, 96%);
   border-radius: 50%;
   border: 1.5px dashed rgba(56, 189, 248, 0.25);
   box-shadow: 0 0 80px rgba(56, 189, 248, 0.14), inset 0 0 80px rgba(168, 85, 247, 0.14);
@@ -144,27 +154,31 @@
   z-index: 5;
   width: 100%;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 4px 0;
+  padding: 2px 0 6px 0;
+  container-type: size;
 }
 
 .gatesRow {
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  gap: 12px;
+  gap: clamp(6px, 1vw, 16px);
   width: 100%;
-  max-width: min(1380px, 94vw);
+  max-width: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .celestialGateEntity {
   flex: 1 1 0;
-  max-width: clamp(175px, 16vw, 245px);
-  min-width: 125px;
-  height: clamp(430px, 58vh, 620px);
+  max-width: clamp(180px, 18.5cqw, 255px);
+  min-width: 0;
+  height: clamp(450px, 86cqh, 820px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -184,8 +198,9 @@
 }
 
 .centerGateEntity {
-  max-width: clamp(185px, 17vw, 260px);
-  height: clamp(450px, 61vh, 650px);
+  flex: 1.06 1.06 0;
+  max-width: clamp(195px, 20cqw, 275px);
+  height: clamp(475px, 91cqh, 860px);
   z-index: 4;
 }
 
@@ -438,22 +453,29 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-top: 10px;
-  padding: 0 6px;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(11, 15, 28, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
 }
 
 .gateTierIndex {
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 1.5px;
-  color: #94a3b8;
+  color: #e2e8f0;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
   margin-bottom: 3px;
 }
 
 .gateMainName {
   font-size: 13.5px;
   font-weight: 800;
-  color: #f8fafc;
+  color: #ffffff;
   line-height: 1.35;
   min-height: 36px;
   display: flex;
@@ -471,7 +493,9 @@
 }
 
 .gateMainNameLocked {
-  color: #64748b;
+  color: #94a3b8;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
 .gateBadgesRow {
@@ -1165,16 +1189,16 @@
 
   .celestialGateEntity {
     flex: 0 0 84vw;
-    max-width: 330px;
+    max-width: 340px;
     min-width: 280px;
-    height: 535px;
+    height: clamp(520px, 64vh, 660px);
     scroll-snap-align: center;
     transition: transform 0.3s ease, filter 0.3s ease;
   }
 
   .centerGateEntity {
-    max-width: 330px;
-    height: 535px;
+    max-width: 340px;
+    height: clamp(520px, 64vh, 660px);
   }
 
   .gateArchFrame {
