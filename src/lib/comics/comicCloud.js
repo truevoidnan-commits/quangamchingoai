@@ -1145,8 +1145,12 @@ export async function downloadVolume(volumeId, options = {}) {
         const coverRes = await customFetch(coverPresign.coverUrl, { signal });
         if (coverRes.ok) {
           const coverBlob = await coverRes.blob();
-          const { updateSeries } = await import('./comicDb.js');
-          await updateSeries(series.id, { coverBlob });
+          const { getSeries, updateSeries } = await import('./comicDb.js');
+          const currentSeries = await getSeries(series.id);
+          const isPending = typeof localStorage !== 'undefined' && localStorage.getItem(`tcl_comic_meta_pending_${series.id}`);
+          if (!currentSeries?.coverBlob && !isPending) {
+            await updateSeries(series.id, { coverBlob });
+          }
         }
       }
     } catch (e) {

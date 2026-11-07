@@ -1,3 +1,4 @@
+import { notifyComicsChanged } from '../sync/realtimeSignal.js';
 /**
  * Dedicated IndexedDB layer for Comics ('thien-co-lau-comics')
  * Completely isolated from main 'thien-co-lau' text novel database.
@@ -254,6 +255,118 @@ export async function updateSeries(id, patch) {
   return updated;
 }
 
+/**
+ * Sets a custom 3:4 cover Blob for a comic series.
+ * Updates metaUpdatedAt & updatedAt, clears 'cover' from volume upload progress,
+ * and notifies listeners.
+ * 
+ * @param {string} seriesId
+ * @param {Blob} blob
+ * @returns {Promise<object>}
+ */
+export async function setSeriesCover(seriesId, blob) {
+  if (!seriesId || !blob) {
+    throw new Error('seriesId và blob là bắt buộc khi đặt ảnh bìa');
+  }
+  const db = await getComicDB();
+  const series = await db.get('series', seriesId);
+  if (!series) {
+    throw new Error(`Không tìm thấy bộ truyện với id: ${seriesId}`);
+  }
+
+  const now = Date.now();
+  series.coverBlob = blob;
+  series.metaUpdatedAt = now;
+  series.updatedAt = now;
+
+  await db.put('series', series);
+
+  // Invalidate cloud volume upload progress for volumes belonging to this series
+  // so if volumes are uploaded to cloud later, the new cover is uploaded.
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const tx = db.transaction('volumes', 'readonly');
+      const volStore = tx.objectStore('volumes');
+      let vols = [];
+      if (volStore.indexNames && volStore.indexNames.contains('seriesId')) {
+        const range = typeof IDBKeyRange !== 'undefined' ? IDBKeyRange.only(seriesId) : seriesId;
+        vols = await volStore.index('seriesId').getAll(range);
+      } else {
+        const all = await volStore.getAll();
+        vols = all.filter((v) => v.seriesId === seriesId);
+      }
+      for (const v of vols) {
+        const progressKey = `tcl_comic_upload_progress_${v.id}`;
+        const rawProgress = localStorage.getItem(progressKey);
+        if (rawProgress) {
+          try {
+            const arr = JSON.parse(rawProgress);
+            if (Array.isArray(arr)) {
+              const filtered = arr.filter((item) => item !== 'cover');
+              localStorage.setItem(progressKey, JSON.stringify(filtered));
+            }
+          } catch {}
+        }
+      }
+      // Set pending metadata sync flag for cloud
+      localStorage.setItem(`tcl_comic_meta_pending_${seriesId}`, JSON.stringify({
+        type: 'series',
+        id: seriesId,
+        title: series.title,
+        hasCustomCover: true,
+        metaUpdatedAt: now,
+      }));
+    }
+  } catch (syncErr) {
+    console.warn('[comicDb] Error updating upload progress / pending meta:', syncErr);
+  }
+
+  notifyComicsChanged();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('tcl_series_cover_changed', { detail: { seriesId } }));
+  }
+  return series;
+}
+
+/**
+ * Clears custom cover Blob from a comic series (reverts to automatic first volume cover).
+ * Updates metaUpdatedAt & updatedAt and notifies listeners.
+ * 
+ * @param {string} seriesId
+ * @returns {Promise<object|null>}
+ */
+export async function clearSeriesCover(seriesId) {
+  if (!seriesId) return null;
+  const db = await getComicDB();
+  const series = await db.get('series', seriesId);
+  if (!series) return null;
+
+  const now = Date.now();
+  series.coverBlob = null;
+  series.metaUpdatedAt = now;
+  series.updatedAt = now;
+
+  await db.put('series', series);
+
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(`tcl_comic_meta_pending_${seriesId}`, JSON.stringify({
+        type: 'series',
+        id: seriesId,
+        title: series.title,
+        hasCustomCover: false,
+        metaUpdatedAt: now,
+      }));
+    }
+  } catch {}
+
+  notifyComicsChanged();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('tcl_series_cover_changed', { detail: { seriesId } }));
+  }
+  return series;
+}
+
 // ---- Volume CRUD ----
 
 export async function getVolumes(seriesId, includeAllStates = false) {
@@ -507,3 +620,5 @@ export async function requestStoragePersistence() {
   }
   return false;
 }
+
+export { dataUrlToCoverWebpBlob, cropBlobToCoverWebp, COVER_TARGET_WIDTH, COVER_TARGET_HEIGHT } from './coverCrop.js';
