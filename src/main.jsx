@@ -15,7 +15,7 @@ if ('serviceWorker' in navigator) {
   if ('caches' in window) {
     caches.keys().then((keys) => {
       keys.forEach((key) => {
-        if (key.startsWith('tcl-') && key !== 'tcl-custom-backdrop-cache') {
+        if (key.startsWith('tcl-')) {
           caches.delete(key).catch(() => {});
         }
       });

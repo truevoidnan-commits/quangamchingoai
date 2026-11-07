@@ -46,6 +46,13 @@ function ScrollRestorer() {
     preloadCoreArtifactIcons();
     startBackgroundPrefetch();
     runMigrationV2().catch(() => {});
+    try {
+      localStorage.removeItem('tcl_custom_comic_backdrop');
+      localStorage.removeItem('tcl_comic_series_backdrops');
+      if (typeof caches !== 'undefined') {
+        caches.delete('tcl-custom-backdrop-cache').catch(() => {});
+      }
+    } catch (e) {}
     import('./lib/comics/comicDb.js').then((m) => m.cleanOrphanImportingVolumes()).catch(() => {});
     pullCultivationBeforeMeditation().finally(() => {
       initAutoSync();

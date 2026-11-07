@@ -114,6 +114,37 @@
   border: 1px solid rgba(255, 204, 0, 0.28);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 20px rgba(255, 204, 0, 0.15);
   background: #0c0f1d;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.coverWrap:hover {
+  border-color: var(--accent-gold);
+  transform: translateY(-2px);
+}
+
+.coverHoverBadge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 4px;
+  background: linear-gradient(180deg, transparent 0%, rgba(8, 10, 20, 0.85) 40%, rgba(8, 10, 20, 0.95) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #ffd21f;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.coverWrap:hover .coverHoverBadge {
+  opacity: 1;
 }
 
 .coverImg {
@@ -2008,7 +2039,8 @@
   color: #f87171 !important;
 }
 
-.changeBackdropBtn {
+
+.changeCoverBtn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -2028,19 +2060,19 @@
   position: relative;
 }
 
-.changeBackdropBtn:hover {
+.changeCoverBtn:hover {
   border-color: var(--accent-gold);
   color: var(--accent-gold);
   background: rgba(28, 34, 52, 0.85);
   box-shadow: 0 0 12px rgba(255, 204, 0, 0.2);
 }
 
-.backdropActiveDot {
+.coverActiveDot {
   display: inline-block;
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 6px #10b981;
+  background: #ffd21f;
+  box-shadow: 0 0 6px rgba(255, 210, 31, 0.8);
   margin-left: 2px;
 }
