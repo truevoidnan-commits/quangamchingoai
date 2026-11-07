@@ -1,4 +1,4 @@
-import Icon, { toIconKey } from '../ui/Icon';
+import Icon, { toIconKey, GlyphIcon } from '../ui/Icon';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { DAO_ANH_LIST, DAO_ANH_ELEMENT_TYPES } from '../../lib/daoAnhData';
 import DaoAnhAvatarRenderer from './DaoAnhAvatarRenderer';
