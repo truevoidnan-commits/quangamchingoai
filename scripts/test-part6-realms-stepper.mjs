@@ -67,6 +67,43 @@ function createKimDanState() {
   };
 }
 
+async function verifyNoTruncation(page, label) {
+  const truncationAudit = await page.evaluate(() => {
+    const cards = Array.from(document.querySelectorAll('.stepper-card'));
+    return cards.map((c) => {
+      const titleEl = c.querySelector('.stepper-title');
+      const subEl = c.querySelector('.stepper-sub');
+      return {
+        title: titleEl?.textContent?.trim() || '',
+        titleScrollWidth: titleEl?.scrollWidth || 0,
+        titleClientWidth: titleEl?.clientWidth || 0,
+        titleTruncated: titleEl ? titleEl.scrollWidth > titleEl.clientWidth + 1 : false,
+        subText: subEl?.textContent?.trim() || '',
+        subScrollWidth: subEl?.scrollWidth || 0,
+        subClientWidth: subEl?.clientWidth || 0,
+        subTruncated: subEl ? subEl.scrollWidth > subEl.clientWidth + 1 : false,
+      };
+    });
+  });
+
+  console.log(`  [${label}] Truncation Audit:`, JSON.stringify(truncationAudit, null, 2));
+  let hasTruncation = false;
+  for (const item of truncationAudit) {
+    if (item.titleTruncated) {
+      console.error(`  🚨 FAIL: Realm title "${item.title}" is truncated on ${label}! (scroll=${item.titleScrollWidth} > client=${item.titleClientWidth})`);
+      hasTruncation = true;
+    }
+    if (item.subTruncated) {
+      console.error(`  🚨 FAIL: Subtitle "${item.subText}" is truncated on ${label}! (scroll=${item.subScrollWidth} > client=${item.subClientWidth})`);
+      hasTruncation = true;
+    }
+  }
+  if (!hasTruncation) {
+    console.log(`  ✅ PASS: All realm titles and subtitles never truncate on ${label}!`);
+  }
+  return !hasTruncation;
+}
+
 async function run() {
   console.log('===========================================================');
   console.log('🧪 TESTING PHẦN 6: UNIFIED FROSTED REALM STEPPER AUDIT');
@@ -97,7 +134,7 @@ async function run() {
 
     const stepperAudit = await page.evaluate(() => {
       const cards = Array.from(document.querySelectorAll('.stepper-card'));
-      return cards.map(c => {
+      return cards.map((c) => {
         const title = c.querySelector('.stepper-title')?.innerText || '';
         const isCurrent = c.classList.contains('current');
         const isCompleted = c.classList.contains('completed');
@@ -132,11 +169,11 @@ async function run() {
     }
 
     // Check states for Kim Dan state (Ngung Khi: completed, Truc Co: completed, Kim Dan: current, Nguyen Anh: locked, Linh Tang: locked)
-    const ngungKhi = stepperAudit.find(c => c.title.includes('NGƯNG KHÍ'));
-    const trucCo = stepperAudit.find(c => c.title.includes('TRÚC CƠ'));
-    const kimDan = stepperAudit.find(c => c.title.includes('KIM ĐAN'));
-    const nguyenAnh = stepperAudit.find(c => c.title.includes('NGUYÊN ANH'));
-    const linhTang = stepperAudit.find(c => c.title.includes('LINH TÀNG'));
+    const ngungKhi = stepperAudit.find((c) => c.title.includes('NGƯNG KHÍ'));
+    const trucCo = stepperAudit.find((c) => c.title.includes('TRÚC CƠ'));
+    const kimDan = stepperAudit.find((c) => c.title.includes('KIM ĐAN'));
+    const nguyenAnh = stepperAudit.find((c) => c.title.includes('NGUYÊN ANH'));
+    const linhTang = stepperAudit.find((c) => c.title.includes('LINH TÀNG'));
 
     if (!ngungKhi?.isCompleted || !ngungKhi?.badgeText.includes('Đã đạt')) {
       console.error('  🚨 FAIL: Ngưng Khí card state mismatch (expected completed)!');
@@ -173,6 +210,10 @@ async function run() {
       console.log('  ✅ PASS: Linh Tàng card is CHƯA MỞ.');
     }
 
+    // Check non-truncation at 1920
+    const noTrunc1920 = await verifyNoTruncation(page, 'Desktop 1920x1080');
+    if (!noTrunc1920) hasErrors = true;
+
     // Capture initial Kim Dan 1920
     const shotKimDan = path.join(outDir, 'stepper-kim-dan-desktop-1920.png');
     await page.screenshot({ path: shotKimDan, fullPage: false });
@@ -185,7 +226,7 @@ async function run() {
     await page.waitForTimeout(500);
 
     const viewingAudit = await page.evaluate(() => {
-      const trucCoCard = Array.from(document.querySelectorAll('.stepper-card')).find(c => c.innerText.includes('TRÚC CƠ'));
+      const trucCoCard = Array.from(document.querySelectorAll('.stepper-card')).find((c) => c.innerText.includes('TRÚC CƠ'));
       return {
         isViewing: trucCoCard?.classList.contains('viewing'),
         hasViewingTag: Boolean(trucCoCard?.querySelector('.stepper-viewing-tag')),
@@ -223,6 +264,10 @@ async function run() {
       await page1366.waitForTimeout(1000);
     });
     await page1366.waitForTimeout(1000);
+
+    // Check non-truncation at 1366
+    const noTrunc1366 = await verifyNoTruncation(page1366, 'Laptop 1366x768');
+    if (!noTrunc1366) hasErrors = true;
 
     const shot1366 = path.join(outDir, 'stepper-desktop-1366.png');
     await page1366.screenshot({ path: shot1366, fullPage: false });
@@ -268,12 +313,15 @@ async function run() {
       console.log('  ✅ PASS: Mobile realm tab displays all 5 frosted cards cleanly.');
     }
 
+    // Check non-truncation at 390
+    const noTruncMobile = await verifyNoTruncation(pageMobile, 'Mobile 390x844');
+    if (!noTruncMobile) hasErrors = true;
+
     const shotMobile = path.join(outDir, 'stepper-mobile-390.png');
     await pageMobile.screenshot({ path: shotMobile, fullPage: false });
     await compressImage(shotMobile);
     console.log(`  📸 Screenshot saved: ${shotMobile}`);
     await contextMobile.close();
-
   } catch (err) {
     console.error('Test execution error:', err);
     hasErrors = true;

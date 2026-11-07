@@ -136,21 +136,32 @@ export default function RealmTimeline() {
                   {isCompleted ? details.completedText : isCurrent ? details.currentText : details.lockedText}
                 </div>
               </div>
+            </div>
+
+            {/* Status row below title: Left = status badge, Right = viewing tag */}
+            <div className="stepper-status-row">
               <div className="stepper-badge-wrap">
                 {isCurrent ? (
-                  <span className="stepper-badge badge-current">
+                  <span className="stepper-badge badge-current" aria-label="Cảnh giới hiện tại">
                     <span className="pulsing-glow-dot" /> Hiện tại
                   </span>
                 ) : isCompleted ? (
-                  <span className="stepper-badge badge-completed">
+                  <span className="stepper-badge badge-completed" aria-label="Đã hoàn thành">
                     <Icon name="check" size={11} /> Đã đạt
                   </span>
                 ) : (
-                  <span className="stepper-badge badge-locked">
+                  <span className="stepper-badge badge-locked" aria-label="Chưa mở">
                     <Icon name="lock" size={11} /> Chưa mở
                   </span>
                 )}
               </div>
+
+              {/* Viewing Indicator Tag */}
+              {isViewing && (
+                <div className="stepper-viewing-tag" aria-label="Đang xem cảnh giới này">
+                  <Icon name="eye" size={10} /> ĐANG XEM
+                </div>
+              )}
             </div>
 
             {/* Cực Cảnh 121 Badge inside Trúc Cơ */}
@@ -176,12 +187,7 @@ export default function RealmTimeline() {
               </div>
             )}
 
-            {/* Viewing Indicator Tag */}
-            {isViewing && (
-              <div className="stepper-viewing-tag">
-                <Icon name="eye" size={10} /> ĐANG XEM
-              </div>
-            )}
+
           </button>
         );
       })}
