@@ -124,70 +124,68 @@ export default function RealmTimeline() {
             title={`Bấm để xem ${displayName}`}
             aria-current={isCurrent ? 'step' : undefined}
           >
+            {/* Hàng 1: Icon + Tên cảnh giới + Huy hiệu trạng thái nhỏ bên phải */}
             <div className="stepper-card-header">
               <div className="stepper-icon-wrap">
                 <Icon name={item.icon} size={15} />
               </div>
-              <div className="stepper-title-wrap">
-                <div className="stepper-title">
-                  {displayName}
-                </div>
-                <div className="stepper-sub">
-                  {isCompleted ? details.completedText : isCurrent ? details.currentText : details.lockedText}
-                </div>
+              <div className="stepper-title">
+                {displayName}
               </div>
-            </div>
-
-            {/* Status row below title: Left = status badge, Right = viewing tag */}
-            <div className="stepper-status-row">
               <div className="stepper-badge-wrap">
                 {isCurrent ? (
-                  <span className="stepper-badge badge-current" aria-label="Cảnh giới hiện tại">
-                    <span className="pulsing-glow-dot" /> Hiện tại
+                  <span className="stepper-badge badge-current" aria-label="Hiện tại" title="Cảnh giới hiện tại">
+                    <span className="pulsing-glow-dot" />
+                    <span>Hiện tại</span>
                   </span>
                 ) : isCompleted ? (
-                  <span className="stepper-badge badge-completed" aria-label="Đã hoàn thành">
-                    <Icon name="check" size={11} /> Đã đạt
+                  <span className="stepper-badge badge-completed" aria-label="Đã đạt" title="Đã đạt">
+                    <Icon name="check" size={10} />
+                    <span>Đã đạt</span>
                   </span>
                 ) : (
-                  <span className="stepper-badge badge-locked" aria-label="Chưa mở">
-                    <Icon name="lock" size={11} /> Chưa mở
+                  <span className="stepper-badge badge-locked" aria-label="Chưa mở" title="Chưa mở">
+                    <Icon name="lock" size={10} />
+                    <span>Chưa mở</span>
                   </span>
                 )}
               </div>
-
-              {/* Viewing Indicator Tag */}
-              {isViewing && (
-                <div className="stepper-viewing-tag" aria-label="Đang xem cảnh giới này">
-                  <Icon name="eye" size={10} /> ĐANG XEM
-                </div>
-              )}
             </div>
 
-            {/* Cực Cảnh 121 Badge inside Trúc Cơ */}
-            {details.has121Badge && (
-              <div className="cuc-canh-badge-row">
-                <span className="cuc-canh-chip achieved">
-                  <Icon name="sparkles" size={10} /> Cực Cảnh 121: Thiên Đỉnh
-                </span>
-              </div>
-            )}
-            {details.is121Ready && (
-              <div className="cuc-canh-badge-row">
-                <span className="cuc-canh-chip ready">
-                  <Icon name="bolt" size={10} /> Cực Cảnh 121: Sẵn Sàng
-                </span>
+            {/* Hàng 2: Dòng phụ mô tả tiến độ */}
+            <div className="stepper-sub-row">
+              <span className="stepper-sub">
+                {isCompleted ? details.completedText : isCurrent ? details.currentText : details.lockedText}
+              </span>
+            </div>
+
+            {/* Thẻ trạng thái đặc biệt (Cực Cảnh 121 / ĐANG XEM) */}
+            {(isViewing || details.has121Badge || details.is121Ready) && (
+              <div className="stepper-special-tags-row">
+                {isViewing && (
+                  <span className="stepper-viewing-tag" aria-label="Đang xem cảnh giới này">
+                    <Icon name="eye" size={10} /> ĐANG XEM
+                  </span>
+                )}
+                {details.has121Badge && (
+                  <span className="cuc-canh-chip achieved">
+                    <Icon name="sparkles" size={10} /> Cực Cảnh 121
+                  </span>
+                )}
+                {details.is121Ready && (
+                  <span className="cuc-canh-chip ready">
+                    <Icon name="bolt" size={10} /> Cực Cảnh 121
+                  </span>
+                )}
               </div>
             )}
 
-            {/* Mini Progress Bar */}
+            {/* Mini Progress Bar 3px ở đáy thẻ */}
             {details.hasProgress && (isCurrent || isViewing) && (
               <div className="stepper-progress-wrap">
                 <div className="stepper-progress-bar" style={{ width: `${details.progressPercent}%` }} />
               </div>
             )}
-
-
           </button>
         );
       })}
