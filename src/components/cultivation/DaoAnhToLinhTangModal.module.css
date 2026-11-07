@@ -1,0 +1,691 @@
+/* DaoAnhToLinhTangModal.module.css */
+/* =========================================================================
+   TUYỂN CHỌN 5 ĐẠO ANH HÓA 5 BÍ TÀNG (FROSTED GLASS MODAL)
+   ========================================================================= */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(2, 6, 18, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeInOverlay 0.25s ease-out;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 1080px;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(4, 11, 22, 0.98) 100%);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  border-radius: 20px;
+  box-shadow: 
+    0 24px 60px rgba(0, 0, 0, 0.85),
+    0 0 35px rgba(234, 179, 8, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  font-family: inherit;
+  overflow: hidden;
+  position: relative;
+  animation: zoomInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes zoomInModal {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* =========================================================================
+   HEADER
+   ========================================================================= */
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 18px 24px 14px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.headerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #fef08a 0%, #fbbf24 60%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 20px rgba(245, 158, 11, 0.35);
+}
+
+.modalSubtitle {
+  margin: 0;
+  font-size: 12.5px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.closeBtn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.closeBtn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  transform: scale(1.05);
+}
+
+/* =========================================================================
+   BODY SCROLLABLE CONTENT
+   ========================================================================= */
+
+.modalBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 22px;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+/* Scrollbars */
+.modalBody::-webkit-scrollbar {
+  width: 5px;
+}
+.modalBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+.modalBody::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.25);
+  border-radius: 4px;
+}
+.modalBody::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.45);
+}
+
+/* =========================================================================
+   PHẦN 1: 5 SLOTS BÍ TÀNG
+   ========================================================================= */
+
+.slotsSection {
+  background: rgba(6, 14, 26, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(56, 189, 248, 0.24);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+
+.slotsSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.slotsTitle {
+  font-size: 12px;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.slotsActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.quickActionBtn {
+  padding: 5px 11px;
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #7dd3fc;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.quickActionBtn:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  color: #e0f2fe;
+}
+
+.clearActionBtn {
+  padding: 5px 11px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.clearActionBtn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #fee2e2;
+}
+
+/* 5 Cột Slots Grid */
+.slotsGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.slotCard {
+  border-radius: 14px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  min-height: 180px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.slotCard:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  transform: translateY(-2px);
+}
+
+.slotCardActive {
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.22) 0%, rgba(3, 14, 28, 0.95) 100%) !important;
+  border: 1.5px solid #38bdf8 !important;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.35), inset 0 0 14px rgba(56, 189, 248, 0.15) !important;
+  transform: translateY(-3px);
+}
+
+.slotCardLocked {
+  cursor: not-allowed !important;
+  opacity: 0.85;
+}
+
+.slotCardEmpty {
+  border: 1.5px dashed rgba(255, 255, 255, 0.2);
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.slotCardEmptyActive {
+  border: 1.5px dashed #38bdf8 !important;
+  background: rgba(14, 165, 233, 0.1) !important;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+}
+
+.slotChip {
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.slotChipActive {
+  background: rgba(250, 204, 21, 0.15);
+  border-color: rgba(250, 204, 21, 0.4);
+  color: #fde047;
+}
+
+/* Avatar Tròn Lớn */
+.slotAvatarRing {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #38bdf8;
+  background: #020617;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.slotAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.slotDaoAnhName {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1.35;
+  margin-bottom: 3px;
+  word-break: break-word;
+  width: 100%;
+}
+
+.slotOriginTreasury {
+  font-size: 10px;
+  color: #7dd3fc;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+
+.unassignBtn {
+  margin-top: auto;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.2s ease;
+}
+
+.unassignBtn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.emptySlotIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.emptySlotText {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+/* =========================================================================
+   PHẦN 2: KHO ĐẠO ANH THỨC HẢI (REPOSITORY)
+   ========================================================================= */
+
+.repoSection {
+  flex: 1;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.repoToolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 6px 12px;
+  flex: 1;
+  min-width: 220px;
+  max-width: 360px;
+  transition: border-color 0.2s ease;
+}
+
+.searchBox:focus-within {
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+}
+
+.searchInput {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f8fafc;
+  font-size: 12.5px;
+  font-family: inherit;
+  width: 100%;
+}
+
+.searchInput::placeholder {
+  color: #64748b;
+}
+
+.filterPills {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filterPill {
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filterPill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
+
+.filterPillActive {
+  background: rgba(14, 165, 233, 0.2) !important;
+  border-color: #38bdf8 !important;
+  color: #7dd3fc !important;
+}
+
+/* Kho Đạo Anh Grid */
+.daoAnhGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.repoCard {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.repoCard:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  transform: translateY(-2px);
+  background: rgba(20, 30, 52, 0.85);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.repoCardAssigned {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.16) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+  border: 1.5px solid #22c55e !important;
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.22) !important;
+}
+
+.repoCardLocked {
+  cursor: not-allowed !important;
+  opacity: 0.75;
+}
+
+.repoThumbnail {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  background: #020617;
+  flex-shrink: 0;
+}
+
+.repoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.repoInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.repoName {
+  font-size: 13px;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1.3;
+}
+
+.repoMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tierBadge {
+  font-size: 9.5px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.kiepBadge {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.assignedStatusTag {
+  margin-top: 3px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #4ade80;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.checkBadge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: #020617;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 12px;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.emptyRepoState {
+  padding: 30px;
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+  grid-column: 1 / -1;
+}
+
+/* =========================================================================
+   FOOTER ACTIONS
+   ========================================================================= */
+
+.modalFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px 24px;
+  background: rgba(6, 11, 20, 0.7);
+  flex-shrink: 0;
+}
+
+.cancelBtn {
+  padding: 9px 18px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancelBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.confirmBtn {
+  padding: 10px 22px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0284c7 0%, #38bdf8 50%, #f59e0b 100%);
+  border: 1.5px solid #fde047;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.5), 0 0 10px rgba(253, 224, 71, 0.35);
+  letter-spacing: 0.5px;
+  transition: all 0.25s ease;
+  flex: 1 1 240px;
+  max-width: 400px;
+  text-align: center;
+}
+
+.confirmBtn:hover:not(:disabled) {
+  box-shadow: 0 0 35px rgba(56, 189, 248, 0.7), 0 0 15px rgba(253, 224, 71, 0.5);
+  transform: translateY(-1px);
+}
+
+.confirmBtn:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #64748b;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* =========================================================================
+   RESPONSIVE
+   ========================================================================= */
+
+@media (max-width: 900px) {
+  .slotsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .slotsGrid > div:nth-child(4),
+  .slotsGrid > div:nth-child(5) {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .modalOverlay {
+    padding: 8px;
+    align-items: flex-end;
+  }
+  .modalCard {
+    max-height: 96vh;
+    border-radius: 20px 20px 0 0;
+  }
+  .modalHeader {
+    padding: 14px 16px;
+  }
+  .modalBody {
+    padding: 12px 14px;
+  }
+  .slotsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .slotsGrid > div:last-child {
+    grid-column: 1 / -1;
+  }
+  .daoAnhGrid {
+    grid-template-columns: 1fr;
+  }
+  .modalFooter {
+    padding: 12px 16px;
+  }
+}

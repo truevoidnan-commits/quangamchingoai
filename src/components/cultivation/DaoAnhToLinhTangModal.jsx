@@ -1,7 +1,7 @@
-import Icon, { toIconKey } from '../ui/Icon';
-import React, { useState, useEffect } from 'react';
+import Icon from '../ui/Icon';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import styles from './LinhTangVisualizer.module.css';
+import styles from './DaoAnhToLinhTangModal.module.css';
 import { 
   getProminentDaoAnhs, 
   getLinhTangNameFromDaoAnh 
@@ -12,12 +12,35 @@ import {
 } from '../../lib/artifactIcons';
 
 const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
+
+const TIER_LABELS = {
+  than_pham: 'Thần Phẩm',
+  THAN_PHAM: 'Thần Phẩm',
+  tien_pham: 'Tiên Phẩm',
+  TIEN_PHAM: 'Tiên Phẩm',
+  cuc_pham: 'Cực Phẩm',
+  CUC_PHAM: 'Cực Phẩm',
+  thuong_pham: 'Thượng Phẩm',
+  THUONG_PHAM: 'Thượng Phẩm',
+  trung_pham: 'Trung Phẩm',
+  TRUNG_PHAM: 'Trung Phẩm',
+  ha_pham: 'Hạ Phẩm',
+  HA_PHAM: 'Hạ Phẩm',
+};
+
 const TIER_COLORS = {
   than_pham: '#ef4444',
-  cuc_pham: '#f59e0b',
+  THAN_PHAM: '#ef4444',
+  tien_pham: '#f59e0b',
+  TIEN_PHAM: '#f59e0b',
+  cuc_pham: '#eab308',
+  CUC_PHAM: '#eab308',
   thuong_pham: '#a855f7',
-  trung_pham: '#3b82f6',
+  THUONG_PHAM: '#a855f7',
+  trung_pham: '#38bdf8',
+  TRUNG_PHAM: '#38bdf8',
   ha_pham: '#10b981',
+  HA_PHAM: '#10b981',
 };
 
 export default function DaoAnhToLinhTangModal({
@@ -30,6 +53,9 @@ export default function DaoAnhToLinhTangModal({
 }) {
   const [selectedIds, setSelectedIds] = useState([null, null, null, null, null]);
   const [activeSlot, setActiveSlot] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'unassigned' | 'assigned'
+  const modalRef = useRef(null);
 
   // Khởi tạo lựa chọn ban đầu
   useEffect(() => {
@@ -54,7 +80,18 @@ export default function DaoAnhToLinhTangModal({
     setActiveSlot(0);
   }, [isOpen, daoAnhs, currentLinhTangs, mode]);
 
-  if (!isOpen) return null;
+  // Phím Escape đóng modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   // Helper lấy ảnh đại diện của Đạo Anh
   const getDaoAnhArt = (da) => {
@@ -84,9 +121,7 @@ export default function DaoAnhToLinhTangModal({
 
     // Nếu đã được chọn -> Bỏ chọn khỏi vị trí đó
     if (existingIndex !== -1) {
-      // Kiểm tra nếu ở mode reassign và Tòa này đã mở cổng thì không được bỏ
       if (mode === 'reassign' && currentLinhTangs[existingIndex]?.isGateOpen) {
-        alert('Tòa này đã mở Tàng Môn, không thể đổi Đạo Anh nguồn!');
         return;
       }
       const next = [...selectedIds];
@@ -105,9 +140,7 @@ export default function DaoAnhToLinhTangModal({
       }
     }
 
-    // Nếu slot đó đã mở cổng (ở mode reassign), không cho ghi đè
     if (mode === 'reassign' && currentLinhTangs[targetSlot]?.isGateOpen) {
-      alert('Tòa này đã mở Tàng Môn, không thể đổi Đạo Anh nguồn!');
       return;
     }
 
@@ -122,12 +155,11 @@ export default function DaoAnhToLinhTangModal({
     }
   };
 
-  // Nút tự động chọn nhanh 5 Đạo Anh mạnh nhất
+  // Gợi ý Top 5 mạnh nhất
   const handleAutoSelectTop5 = () => {
     const top5 = getProminentDaoAnhs(daoAnhs, 5);
     const next = [...selectedIds];
     top5.forEach((da, idx) => {
-      // Giữ nguyên các Tòa đã mở cổng
       if (mode === 'reassign' && currentLinhTangs[idx]?.isGateOpen) return;
       if (idx < 5) next[idx] = da.id;
     });
@@ -145,389 +177,362 @@ export default function DaoAnhToLinhTangModal({
     setActiveSlot(firstEmpty !== -1 ? firstEmpty : 0);
   };
 
-  // Số lượng đã chọn
-  const selectedCount = selectedIds.filter(Boolean).length;
-  const isReady = selectedCount === 5;
+  // Lọc danh sách Đạo Anh kho
+  const filteredDaoAnhs = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return daoAnhs.filter(da => {
+      const isAssigned = selectedIds.includes(da.id);
+      if (statusFilter === 'assigned' && !isAssigned) return false;
+      if (statusFilter === 'unassigned' && isAssigned) return false;
+
+      if (!q) return true;
+      const nameMatch = (da.name || '').toLowerCase().includes(q);
+      const tierMatch = (TIER_LABELS[da.tier] || '').toLowerCase().includes(q);
+      return nameMatch || tierMatch;
+    });
+  }, [daoAnhs, selectedIds, statusFilter, searchQuery]);
+
+  const assignedCount = selectedIds.filter(Boolean).length;
+  const isReady = assignedCount === 5;
 
   const handleConfirm = () => {
-    if (!isReady) {
-      alert('Vui lòng chọn đủ 5 Đạo Anh cho cả 5 Tòa Bí Tàng!');
-      return;
-    }
-    if (onConfirm) {
-      onConfirm(selectedIds);
-    }
+    if (!isReady) return;
+    if (onConfirm) onConfirm(selectedIds);
     if (onClose) onClose();
   };
 
   if (!isOpen) return null;
 
   return createPortal(
-    <div className={styles.modalOverlay} onClick={onClose}>
+    <div 
+      className={styles.modalOverlay} 
+      onClick={onClose}
+      role="presentation"
+    >
       <div 
-        className={`${styles.modalCard} ${styles.assignModalCard}`}
+        ref={modalRef}
+        className={styles.modalCard}
         onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="assign-modal-title"
       >
         {/* HEADER */}
-        <div className={styles.modalHeader} style={{ marginBottom: 4 }}>
-          <div>
-            <h3 className={`${styles.modalTitle} ${styles.assignModalTitle}`}>
-              <span><Icon name="shield" size={14} /></span>
+        <div className={styles.modalHeader}>
+          <div className={styles.headerInfo}>
+            <h3 id="assign-modal-title" className={styles.modalTitle}>
+              <Icon name="shield" size={18} />
               <span>TUYỂN CHỌN 5 ĐẠO ANH HÓA 5 BÍ TÀNG</span>
             </h3>
-            <p style={{ margin: '6px 0 0 0', fontSize: 13, color: '#94a3b8' }}>
-              Đạo hữu tự tay chọn 5 Tôn Đạo Anh tinh hoa nhất làm nguyên liệu chính đúc nên 5 Cự Tọa Tàng Môn.
+            <p className={styles.modalSubtitle}>
+              Tự tay chọn 5 Tôn Đạo Anh tinh hoa nhất làm nguyên liệu chính đúc nên 5 Cự Tọa Tàng Môn Thức Hải.
             </p>
           </div>
-          <button className={styles.modalCloseBtn} onClick={onClose}>✕</button>
+          <button 
+            type="button"
+            className={styles.closeBtn} 
+            onClick={onClose}
+            aria-label="Đóng bảng chọn"
+            title="Đóng (Escape)"
+          >
+            <Icon name="x" size={16} />
+          </button>
         </div>
 
-        {/* PHẦN 1: 5 SLOTS CỰ TỌA BÍ TÀNG */}
-        <div style={{
-          background: 'rgba(5, 12, 22, 0.75)',
-          border: '1px solid rgba(56, 189, 248, 0.25)',
-          borderRadius: 14,
-          padding: '12px 14px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <span style={{ fontSize: 12, fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: 1 }}>
-              5 CỰ TỌA TÀNG MÔN ({selectedCount}/5 ĐÃ CHỌN)
-            </span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button 
-                onClick={handleAutoSelectTop5}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: 6,
-                  background: 'rgba(56, 189, 248, 0.15)',
-                  border: '1px solid rgba(56, 189, 248, 0.35)',
-                  color: '#7dd3fc',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                <Icon name="bolt" size={14} /> Gợi Ý Top 5 Mạnh Nhất
-              </button>
-              <button 
-                onClick={handleClearAll}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: 6,
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  border: '1px solid rgba(239, 68, 68, 0.35)',
-                  color: '#fca5a5',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                ✕ Xóa Hết
-              </button>
+        {/* BODY */}
+        <div className={styles.modalBody}>
+          {/* PHẦN 1: 5 SLOTS BÍ TÀNG */}
+          <div className={styles.slotsSection}>
+            <div className={styles.slotsSectionHeader}>
+              <span className={styles.slotsTitle}>
+                <Icon name="planet" size={15} />
+                5 CỰ TỌA TÀNG MÔN ({assignedCount}/5 ĐÃ CHỌN)
+              </span>
+              <div className={styles.slotsActions}>
+                <button 
+                  type="button"
+                  className={styles.quickActionBtn}
+                  onClick={handleAutoSelectTop5}
+                  title="Gợi ý 5 Đạo Anh phẩm cấp cao nhất"
+                >
+                  <Icon name="bolt" size={13} />
+                  Gợi Ý Top 5 Mạnh Nhất
+                </button>
+                <button 
+                  type="button"
+                  className={styles.clearActionBtn}
+                  onClick={handleClearAll}
+                  title="Gỡ toàn bộ Đạo Anh đang chọn"
+                >
+                  <Icon name="trash" size={13} />
+                  Xóa Hết
+                </button>
+              </div>
+            </div>
+
+            {/* 5 Cột tương ứng 5 Tòa */}
+            <div className={styles.slotsGrid}>
+              {Array.from({ length: 5 }).map((_, slotIdx) => {
+                const daId = selectedIds[slotIdx];
+                const da = daoAnhs.find(d => d.id === daId);
+                const isActive = activeSlot === slotIdx;
+                const isLocked = mode === 'reassign' && currentLinhTangs[slotIdx]?.isGateOpen;
+                const originName = da ? getLinhTangNameFromDaoAnh(da, slotIdx) : null;
+                const artUrl = getDaoAnhArt(da);
+
+                let cardClass = styles.slotCard;
+                if (isActive) cardClass += ` ${styles.slotCardActive}`;
+                if (isLocked) cardClass += ` ${styles.slotCardLocked}`;
+                if (!da) {
+                  cardClass += ` ${styles.slotCardEmpty}`;
+                  if (isActive) cardClass += ` ${styles.slotCardEmptyActive}`;
+                }
+
+                return (
+                  <div
+                    key={slotIdx}
+                    className={cardClass}
+                    onClick={() => {
+                      if (!isLocked) setActiveSlot(slotIdx);
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Tòa ${ROMAN_NUMERALS[slotIdx]}: ${da ? da.name : 'Chưa an bài'}`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (!isLocked) setActiveSlot(slotIdx);
+                      }
+                    }}
+                  >
+                    <div className={`${styles.slotChip} ${isActive ? styles.slotChipActive : ''}`}>
+                      TÒA {ROMAN_NUMERALS[slotIdx]}
+                      {isLocked && <span style={{ color: '#4ade80', marginLeft: 4 }}>✓</span>}
+                    </div>
+
+                    {da ? (
+                      <>
+                        <div className={styles.slotAvatarRing}>
+                          {artUrl ? (
+                            <img src={artUrl} alt={da.name} className={styles.slotAvatarImg} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Icon name="orb" size={24} />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className={styles.slotDaoAnhName}>
+                          {da.name}
+                        </div>
+
+                        {originName && (
+                          <div className={styles.slotOriginTreasury}>
+                            {originName} Bí Tàng
+                          </div>
+                        )}
+
+                        {!isLocked && (
+                          <button
+                            type="button"
+                            className={styles.unassignBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const next = [...selectedIds];
+                              next[slotIdx] = null;
+                              setSelectedIds(next);
+                              setActiveSlot(slotIdx);
+                            }}
+                            title="Gỡ khỏi slot này"
+                            aria-label={`Gỡ ${da.name} khỏi Tòa ${ROMAN_NUMERALS[slotIdx]}`}
+                          >
+                            <Icon name="x" size={11} />
+                            Gỡ
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className={styles.emptySlotIcon}>
+                          <Icon name="plus" size={18} />
+                        </div>
+                        <div className={styles.emptySlotText}>
+                          {isActive ? 'Đang chọn' : 'Chưa an bài'}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* 5 Cột tương ứng 5 Tòa */}
-          <div className={styles.assignSlotsGrid}>
-            {Array.from({ length: 5 }).map((_, slotIdx) => {
-              const daId = selectedIds[slotIdx];
-              const da = daoAnhs.find(d => d.id === daId);
-              const isActive = activeSlot === slotIdx;
-              const isLocked = mode === 'reassign' && currentLinhTangs[slotIdx]?.isGateOpen;
-              const originName = da ? getLinhTangNameFromDaoAnh(da, slotIdx) : null;
-              const artUrl = getDaoAnhArt(da);
+          {/* PHẦN 2: KHO ĐẠO ANH THỨC HẢI (REPOSITORY) */}
+          <div className={styles.repoSection}>
+            <div className={styles.repoToolbar}>
+              <div className={styles.searchBox}>
+                <Icon name="search" size={15} />
+                <input
+                  type="text"
+                  className={styles.searchInput}
+                  placeholder="Tìm kiếm Đạo Anh theo tên, phẩm cấp..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  aria-label="Tìm kiếm Đạo Anh"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+                    aria-label="Xóa tìm kiếm"
+                  >
+                    <Icon name="x" size={14} />
+                  </button>
+                )}
+              </div>
 
-              return (
-                <div
-                  key={slotIdx}
-                  className={styles.assignSlotItem}
-                  onClick={() => {
-                    if (!isLocked) setActiveSlot(slotIdx);
-                  }}
-                  style={{
-                    background: isActive 
-                      ? 'linear-gradient(180deg, rgba(14, 165, 233, 0.25) 0%, rgba(2, 6, 23, 0.9) 100%)' 
-                      : da 
-                        ? 'rgba(15, 23, 42, 0.8)' 
-                        : 'rgba(255, 255, 255, 0.02)',
-                    border: isActive 
-                      ? '1.5px solid #38bdf8' 
-                      : da 
-                        ? '1px solid rgba(56, 189, 248, 0.35)' 
-                        : '1px dashed rgba(255, 255, 255, 0.2)',
-                    boxShadow: isActive ? '0 0 16px rgba(56, 189, 248, 0.35)' : 'none',
-                    cursor: isLocked ? 'not-allowed' : 'pointer'
-                  }}
+              <div className={styles.filterPills}>
+                <button
+                  type="button"
+                  className={`${styles.filterPill} ${statusFilter === 'all' ? styles.filterPillActive : ''}`}
+                  onClick={() => setStatusFilter('all')}
                 >
-                  <div style={{
-                    fontSize: 10,
-                    fontWeight: 800,
-                    color: isActive ? '#fde047' : '#94a3b8',
-                    marginBottom: 4
-                  }}>
-                    TÒA {ROMAN_NUMERALS[slotIdx]}
-                    {isLocked && <span style={{ color: '#4ade80', marginLeft: 3 }}>✓</span>}
-                  </div>
+                  Tất cả ({daoAnhs.length})
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.filterPill} ${statusFilter === 'unassigned' ? styles.filterPillActive : ''}`}
+                  onClick={() => setStatusFilter('unassigned')}
+                >
+                  Chưa gán ({daoAnhs.filter(da => !selectedIds.includes(da.id)).length})
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.filterPill} ${statusFilter === 'assigned' ? styles.filterPillActive : ''}`}
+                  onClick={() => setStatusFilter('assigned')}
+                >
+                  Đã gán ({daoAnhs.filter(da => selectedIds.includes(da.id)).length})
+                </button>
+              </div>
+            </div>
 
-                  {da ? (
-                    <>
-                      <div style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: '50%',
-                        overflow: 'hidden',
-                        border: '1.5px solid #38bdf8',
-                        background: '#020617',
-                        margin: '2px 0 6px 0',
-                        boxShadow: '0 0 10px rgba(56, 189, 248, 0.3)'
-                      }}>
+            {/* Grid Đạo Anh kho */}
+            <div className={styles.daoAnhGrid}>
+              {filteredDaoAnhs.length === 0 ? (
+                <div className={styles.emptyRepoState}>
+                  <Icon name="inbox" size={32} />
+                  <p style={{ marginTop: 8 }}>Không tìm thấy Đạo Anh nào phù hợp với bộ lọc.</p>
+                </div>
+              ) : (
+                filteredDaoAnhs.map(da => {
+                  const assignedSlotIndex = selectedIds.indexOf(da.id);
+                  const isAssigned = assignedSlotIndex !== -1;
+                  const isLocked = mode === 'reassign' && isAssigned && currentLinhTangs[assignedSlotIndex]?.isGateOpen;
+                  const artUrl = getDaoAnhArt(da);
+                  const tierColor = TIER_COLORS[da.tier] || '#38bdf8';
+                  const tierLabel = TIER_LABELS[da.tier] || 'Thần Phẩm';
+
+                  let repoClass = styles.repoCard;
+                  if (isAssigned) repoClass += ` ${styles.repoCardAssigned}`;
+                  if (isLocked) repoClass += ` ${styles.repoCardLocked}`;
+
+                  return (
+                    <div
+                      key={da.id}
+                      className={repoClass}
+                      onClick={() => {
+                        if (!isLocked) handleToggleDaoAnh(da);
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${da.name}, ${tierLabel}, Kiếp ${da.currentKiep || 5}/5${isAssigned ? `, đang an bài tại Tòa ${ROMAN_NUMERALS[assignedSlotIndex]}` : ''}`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          if (!isLocked) handleToggleDaoAnh(da);
+                        }
+                      }}
+                    >
+                      {/* Thumbnail */}
+                      <div 
+                        className={styles.repoThumbnail}
+                        style={{ borderColor: isAssigned ? '#22c55e' : tierColor }}
+                      >
                         {artUrl ? (
-                          <img src={artUrl} alt={da.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={artUrl} alt={da.name} className={styles.repoImg} />
                         ) : (
-                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-                            
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Icon name="orb" size={20} />
                           </div>
                         )}
                       </div>
 
-                      <div style={{
-                        fontSize: 11.5,
-                        fontWeight: 900,
-                        color: '#f8fafc',
-                        lineHeight: 1.2,
-                        marginBottom: 2
-                      }}>
-                        {originName} Bí Tàng
+                      {/* Info */}
+                      <div className={styles.repoInfo}>
+                        <div className={styles.repoName}>
+                          {da.name}
+                        </div>
+
+                        <div className={styles.repoMetaRow}>
+                          <span 
+                            className={styles.tierBadge}
+                            style={{
+                              background: `${tierColor}20`,
+                              border: `1px solid ${tierColor}60`,
+                              color: tierColor,
+                            }}
+                          >
+                            {tierLabel}
+                          </span>
+                          <span className={styles.kiepBadge}>
+                            Kiếp {da.currentKiep || 5}/5
+                          </span>
+                        </div>
+
+                        {/* Vị trí gán */}
+                        {isAssigned && (
+                          <div className={styles.assignedStatusTag}>
+                            <Icon name="shield" size={13} />
+                            <span>Đang an bài tại Tòa {ROMAN_NUMERALS[assignedSlotIndex]}</span>
+                            {isLocked && <span style={{ color: '#4ade80' }}>(Đã mở cổng)</span>}
+                          </div>
+                        )}
                       </div>
 
-                      <div style={{
-                        fontSize: 9.5,
-                        color: '#38bdf8',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        maxWidth: '100%'
-                      }}>
-                        {da.name.replace(/Đạo Anh/gi, '').trim()}
-                      </div>
-
-                      {!isLocked && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const next = [...selectedIds];
-                            next[slotIdx] = null;
-                            setSelectedIds(next);
-                            setActiveSlot(slotIdx);
-                          }}
-                          style={{
-                            marginTop: 'auto',
-                            padding: '1px 6px',
-                            borderRadius: 4,
-                            background: 'rgba(239, 68, 68, 0.2)',
-                            border: '1px solid rgba(239, 68, 68, 0.4)',
-                            color: '#fca5a5',
-                            fontSize: 9.5,
-                            cursor: 'pointer'
-                          }}
-                          title="Bỏ chọn slot này"
-                        >
-                          ✕ Gỡ
-                        </button>
+                      {/* Checkmark icon */}
+                      {isAssigned && (
+                        <div className={styles.checkBadge}>
+                          ✓
+                        </div>
                       )}
-                    </>
-                  ) : (
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '100%',
-                      paddingTop: 14,
-                      color: isActive ? '#38bdf8' : '#64748b'
-                    }}>
-                      <span style={{ fontSize: 20 }}>+</span>
-                      <span style={{ fontSize: 10, fontWeight: 700, marginTop: 4 }}>
-                        {isActive ? 'Đang chọn' : 'Trống'}
-                      </span>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
 
-        {/* PHẦN 2: DANH SÁCH ĐẠO ANH THỨC HẢI ĐỂ LỰA CHỌN */}
-        <div style={{ flex: 1, overflowY: 'auto', minHeight: 220, paddingRight: 4 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.8 }}>
-            KHO ĐẠO ANH THỨC HẢI ({daoAnhs.length} TÔN) · NHẤP ĐỂ GÁN VÀO CỰ TỌA
-          </div>
-
-          <div className={styles.assignDaoAnhGrid}>
-            {daoAnhs.map(da => {
-              const assignedSlotIndex = selectedIds.indexOf(da.id);
-              const isAssigned = assignedSlotIndex !== -1;
-              const isLocked = mode === 'reassign' && isAssigned && currentLinhTangs[assignedSlotIndex]?.isGateOpen;
-              const artUrl = getDaoAnhArt(da);
-              const tierColor = TIER_COLORS[da.tier] || '#38bdf8';
-
-              return (
-                <div
-                  key={da.id}
-                  onClick={() => {
-                    if (!isLocked) handleToggleDaoAnh(da);
-                  }}
-                  style={{
-                    padding: '10px 12px',
-                    borderRadius: 12,
-                    background: isAssigned 
-                      ? 'linear-gradient(135deg, rgba(14, 165, 233, 0.18) 0%, rgba(15, 23, 42, 0.95) 100%)' 
-                      : 'rgba(15, 23, 42, 0.75)',
-                    border: isAssigned ? '1.5px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: isAssigned ? '0 0 14px rgba(56, 189, 248, 0.25)' : 'none',
-                    cursor: isLocked ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    position: 'relative',
-                    transition: 'all 0.2s ease',
-                    opacity: isLocked ? 0.75 : 1
-                  }}
-                >
-                  {/* Thumbnail */}
-                  <div style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 10,
-                    overflow: 'hidden',
-                    border: `1.5px solid ${isAssigned ? '#38bdf8' : tierColor}`,
-                    background: '#020617',
-                    flexShrink: 0
-                  }}>
-                    {artUrl ? (
-                      <img src={artUrl} alt={da.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-                        
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Info */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: 13,
-                      fontWeight: 800,
-                      color: isAssigned ? '#fde047' : '#f8fafc',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
-                      {da.name}
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                      <span style={{
-                        fontSize: 9.5,
-                        padding: '1px 6px',
-                        borderRadius: 4,
-                        background: `${tierColor}20`,
-                        border: `1px solid ${tierColor}60`,
-                        color: tierColor,
-                        fontWeight: 800,
-                        textTransform: 'uppercase'
-                      }}>
-                        {da.tier || 'Thần Phẩm'}
-                      </span>
-                      <span style={{ fontSize: 10, color: '#94a3b8' }}>
-                        Kiếp {da.currentKiep || 5}/5
-                      </span>
-                    </div>
-
-                    {/* Vị trí gán */}
-                    {isAssigned && (
-                      <div style={{
-                        marginTop: 4,
-                        fontSize: 10.5,
-                        fontWeight: 800,
-                        color: '#38bdf8',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4
-                      }}>
-                        <span><Icon name="shield" size={14} /> Đã gán vào TÒA {ROMAN_NUMERALS[assignedSlotIndex]}</span>
-                        {isLocked && <span style={{ color: '#4ade80' }}>(Đã mở cổng)</span>}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Checkmark icon */}
-                  {isAssigned && (
-                    <div style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: '50%',
-                      background: '#38bdf8',
-                      color: '#020617',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 900,
-                      fontSize: 12,
-                      flexShrink: 0
-                    }}>
-                      ✓
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* FOOTER ACTIONS */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 10,
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-          paddingTop: 12
-        }}>
+        {/* FOOTER */}
+        <div className={styles.modalFooter}>
           <button 
-            className={styles.modalCloseBtn} 
+            type="button"
+            className={styles.cancelBtn} 
             onClick={onClose}
-            style={{ width: 'auto', padding: '8px 16px', borderRadius: 8, height: 'auto', alignSelf: 'center' }}
           >
             Hủy Bỏ
           </button>
 
           <button
+            type="button"
+            className={styles.confirmBtn}
             onClick={handleConfirm}
             disabled={!isReady}
-            style={{
-              padding: '10px 18px',
-              borderRadius: 10,
-              background: isReady 
-                ? 'linear-gradient(135deg, #0284c7 0%, #38bdf8 50%, #f59e0b 100%)' 
-                : 'rgba(255, 255, 255, 0.08)',
-              border: isReady ? '1.5px solid #fde047' : '1px solid rgba(255, 255, 255, 0.15)',
-              color: isReady ? '#ffffff' : '#64748b',
-              fontSize: 13,
-              fontWeight: 900,
-              cursor: isReady ? 'pointer' : 'not-allowed',
-              boxShadow: isReady ? '0 0 25px rgba(56, 189, 248, 0.6), 0 0 10px rgba(253, 224, 71, 0.4)' : 'none',
-              letterSpacing: '0.4px',
-              transition: 'all 0.25s ease',
-              flex: '1 1 200px',
-              textAlign: 'center'
-            }}
           >
             {mode === 'reassign' 
-              ? `XÁC NHẬN THIẾT LẬP 5 BÍ TÀNG (${selectedCount}/5)`
-              : `XÁC NHẬN ĐỘT PHÁ LINH TÀNG (${selectedCount}/5)`}
+              ? `Xác Nhận Thiết Lập 5 Bí Tàng (${assignedCount}/5)`
+              : `Xác Nhận Đột Phá Linh Tàng (${assignedCount}/5)`}
           </button>
         </div>
       </div>
