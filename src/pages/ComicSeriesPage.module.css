@@ -2008,39 +2008,3 @@
   color: #f87171 !important;
 }
 
-.changeBackdropBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 42px;
-  padding: 0 16px;
-  border-radius: 999px;
-  background: rgba(20, 24, 38, 0.65);
-  color: var(--text-primary);
-  font-weight: 600;
-  font-size: 13px;
-  border: 1px solid rgba(255, 204, 0, 0.35);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  position: relative;
-}
-
-.changeBackdropBtn:hover {
-  border-color: var(--accent-gold);
-  color: var(--accent-gold);
-  background: rgba(28, 34, 52, 0.85);
-  box-shadow: 0 0 12px rgba(255, 204, 0, 0.2);
-}
-
-.backdropActiveDot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 6px #10b981;
-  margin-left: 2px;
-}

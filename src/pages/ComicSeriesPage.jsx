@@ -30,9 +30,7 @@ import {
 } from '../lib/comics/comicSyncQueue.js';
 import { supabase } from '../lib/supabaseClient.js';
 import ComicImportModal from '../components/comics/ComicImportModal.jsx';
-import CustomBackdropModal from '../components/comics/CustomBackdropModal.jsx';
 import ComicsBackdrop from '../components/comics/ComicsBackdrop.jsx';
-import { getCustomBackdropSettings, clearCustomBackdrop } from '../lib/comics/customBackdrop.js';
 import Icon from '../components/ui/Icon.jsx';
 import Footer from '../components/layout/Footer.jsx';
 import PopoverMenu from '../components/ui/PopoverMenu.jsx';
@@ -350,8 +348,6 @@ export default function ComicSeriesPage() {
 
   // Series Action Dropdown
   const [seriesMenuOpen, setSeriesMenuOpen] = useState(false);
-  const [isBackdropModalOpen, setIsBackdropModalOpen] = useState(false);
-  const [hasCustomBackdrop, setHasCustomBackdrop] = useState(false);
   const seriesMoreBtnRef = useRef(null);
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 700 : false
@@ -361,22 +357,6 @@ export default function ComicSeriesPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  useEffect(() => {
-    if (!seriesId) return;
-    setHasCustomBackdrop(Boolean(getCustomBackdropSettings(seriesId)));
-
-    const handleBackdropChanged = (e) => {
-      if (!e?.detail?.seriesId || e.detail.seriesId === seriesId) {
-        setHasCustomBackdrop(Boolean(getCustomBackdropSettings(seriesId)));
-      }
-    };
-
-    window.addEventListener('tcl_custom_backdrop_changed', handleBackdropChanged);
-    return () => {
-      window.removeEventListener('tcl_custom_backdrop_changed', handleBackdropChanged);
-    };
-  }, [seriesId]);
 
 
   // Edit Volume Order & Title Modal (D2)
@@ -823,7 +803,6 @@ export default function ComicSeriesPage() {
     if (!seriesToDelete) return;
     setIsDeleting(true);
     try {
-      await clearCustomBackdrop(seriesId);
       await deleteSeriesEverywhere(seriesId);
       clearPersistedSort(`tcl:volumeSort:${seriesId}`);
       showToast(`Đã xóa bộ truyện "${seriesToDelete.title}".`);
@@ -898,7 +877,7 @@ export default function ComicSeriesPage() {
   if (loading) {
     return (
       <div className={styles.page}>
-        <ComicsBackdrop seriesId={seriesId} />
+        <ComicsBackdrop />
         <div className={styles.topNav}>
           <div className={styles.backBtnSkeleton} />
         </div>
@@ -946,7 +925,7 @@ export default function ComicSeriesPage() {
 
   return (
     <div className={styles.page}>
-      <ComicsBackdrop seriesId={seriesId} />
+      <ComicsBackdrop />
 
       {/* Top Navigation */}
       <div className={styles.topNav}>
@@ -1065,22 +1044,6 @@ export default function ComicSeriesPage() {
                   <span>Nhập thêm tập</span>
                 </button>
 
-                {!isMobile && (
-                  <button
-                    type="button"
-                    className={styles.changeBackdropBtn}
-                    onClick={() => setIsBackdropModalOpen(true)}
-                    title="Đổi nền riêng cho bộ truyện này"
-                    aria-label="Đổi ảnh nền bộ truyện"
-                    id="btn-series-change-backdrop"
-                  >
-                    <Icon name="image" size={15} />
-                    <span>Đổi nền</span>
-                    {hasCustomBackdrop && (
-                      <span className={styles.backdropActiveDot} title="Đang dùng nền riêng" />
-                    )}
-                  </button>
-                )}
 
                 {/* Series More ⋯ Menu */}
                 <div className={styles.seriesMenuWrap} onClick={(e) => e.stopPropagation()}>
@@ -1105,39 +1068,6 @@ export default function ComicSeriesPage() {
                       triggerRef={seriesMoreBtnRef}
                       ariaLabel="Tùy chọn bộ truyện"
                     >
-                      <button
-                        type="button"
-                        role="menuitem"
-                        tabIndex={0}
-                        className={styles.seriesPopoverItem}
-                        onClick={() => {
-                          setSeriesMenuOpen(false);
-                          setIsBackdropModalOpen(true);
-                        }}
-                        id="btn-series-change-backdrop-menu"
-                      >
-                        <Icon name="image" size={16} />
-                        <span>Đổi nền bộ truyện</span>
-                      </button>
-
-                      {hasCustomBackdrop && (
-                        <button
-                          type="button"
-                          role="menuitem"
-                          tabIndex={0}
-                          className={styles.seriesPopoverItem}
-                          onClick={async () => {
-                            setSeriesMenuOpen(false);
-                            await clearCustomBackdrop(seriesId);
-                            setHasCustomBackdrop(false);
-                            showToast('Đã xóa nền riêng, trở về nền mặc định.');
-                          }}
-                          id="btn-series-reset-backdrop-menu"
-                        >
-                          <Icon name="refresh" size={16} />
-                          <span>Về nền mặc định</span>
-                        </button>
-                      )}
 
                       <div className={styles.seriesPopoverDivider} />
                       {isLoggedIn && unsyncedCount > 0 && (
@@ -1371,43 +1301,6 @@ export default function ComicSeriesPage() {
             </button>
           </div>
           <div className={styles.seriesSheetActions}>
-            <button
-              type="button"
-              className={styles.seriesSheetActionRow}
-              onClick={() => {
-                setSeriesMenuOpen(false);
-                setIsBackdropModalOpen(true);
-              }}
-              id="btn-series-change-backdrop-mobile"
-            >
-              <div className={styles.seriesSheetIconWrap}>
-                <Icon name="image" size={18} />
-              </div>
-              <span className={styles.seriesSheetActionLabel}>
-                Đổi nền bộ truyện {hasCustomBackdrop ? '(Đang dùng nền riêng)' : ''}
-              </span>
-            </button>
-
-            {hasCustomBackdrop && (
-              <button
-                type="button"
-                className={styles.seriesSheetActionRow}
-                onClick={async () => {
-                  setSeriesMenuOpen(false);
-                  await clearCustomBackdrop(seriesId);
-                  setHasCustomBackdrop(false);
-                  showToast('Đã xóa nền riêng, trở về nền mặc định.');
-                }}
-                id="btn-series-reset-backdrop-mobile"
-              >
-                <div className={styles.seriesSheetIconWrap}>
-                  <Icon name="refresh" size={18} />
-                </div>
-                <span className={styles.seriesSheetActionLabel}>
-                  Về nền mặc định
-                </span>
-              </button>
-            )}
 
             <div className={styles.seriesPopoverDivider} />
             {isLoggedIn && unsyncedCount > 0 && (
@@ -1692,16 +1585,6 @@ export default function ComicSeriesPage() {
         </div>
       )}
 
-      {/* Custom Backdrop Modal */}
-      <CustomBackdropModal
-        isOpen={isBackdropModalOpen}
-        onClose={() => {
-          setIsBackdropModalOpen(false);
-          setHasCustomBackdrop(Boolean(getCustomBackdropSettings(seriesId)));
-        }}
-        series={series}
-        onToast={showToast}
-      />
 
       {/* Import Modal */}
       <ComicImportModal
