@@ -1,3 +1,9 @@
+.sidePanelRoot {
+  width: 100%;
+  padding-bottom: 48px;
+  box-sizing: border-box;
+}
+
 /* ===== SidePanelInfo.module.css ===== */
 
 /* --- Lộ trình 10 tầng Hải Sơn / Hóa Hải --- */
@@ -24,13 +30,13 @@
 
 .roadmapGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   width: 100%;
   box-sizing: border-box;
 }
 
-@media (max-width: 440px) {
+@media (max-width: 360px) {
   .roadmapGrid {
     grid-template-columns: 1fr;
   }
@@ -40,12 +46,14 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
-  padding: 7px 9px;
-  border-radius: 12px;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 10px;
   min-width: 0;
   box-sizing: border-box;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .roadmapCell:hover {
@@ -110,12 +118,13 @@
 }
 
 .cellTitle {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   letter-spacing: 0.01em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.25;
 }
 
 .cellMetaRow {

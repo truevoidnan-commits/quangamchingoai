@@ -27,6 +27,8 @@ import LinhTangVisualizer from './LinhTangVisualizer';
 import styles from './RealmPreviewVisualizer.module.css';
 
 import bgTrucCoGalaxy from '../../assets/images/truc_co_galaxy_bg.jpg';
+import bgNguyenAnhThucHai from '../../assets/images/bg_nguyen_anh_thuc_hai.webp';
+import bgNguyenAnhThucHaiMobile from '../../assets/images/bg_nguyen_anh_thuc_hai_mobile.webp';
 import bgGodCosmicEye from '../../assets/images/bg_god_cosmic_eye.jpg';
 import imgHuyetHoGod from '../../assets/images/huyet_ho_god.webp';
 import imgLongKinhGod from '../../assets/images/long_kinh_god.webp';
@@ -5396,6 +5398,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
         const naCanvasHeight = isMobile ? 1140 : 960;
         const naCenterX = isMobile ? 360 : 640;
         const naCenterY = isMobile ? 570 : 480;
+        const currentBgNguyenAnh = isMobile ? bgNguyenAnhThucHaiMobile : bgNguyenAnhThucHai;
 
         const desktop13Positions = [
           { id: 'pos_0',  x: 640,  y: 480, isCenter: true, scale: 1.28, nw: 240 }, // Index 0: TÂM (Bản Mệnh Tối Cao Tọa Trấn Trung Xu)
@@ -5923,15 +5926,17 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                 style={{
                   position: 'absolute',
                   top: 14,
-                  left: 56,
+                  left: 16,
                   zIndex: 50,
-                  width: 34,
                   height: 34,
-                  borderRadius: '50%',
+                  padding: '0 12px',
+                  borderRadius: 20,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 15,
+                  gap: 6,
+                  fontSize: 12,
+                  fontWeight: 700,
                   cursor: 'pointer',
                   border: isSwapMode ? '1.5px solid #fde047' : '1px solid rgba(56, 189, 248, 0.4)',
                   background: isSwapMode 
@@ -5939,17 +5944,18 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                     : 'rgba(8, 14, 28, 0.75)',
                   color: isSwapMode ? '#fef08a' : '#38bdf8',
                   backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
                   boxShadow: isSwapMode 
                     ? '0 0 16px rgba(253, 224, 71, 0.6), 0 4px 12px rgba(0,0,0,0.5)' 
                     : '0 4px 16px rgba(0, 0, 0, 0.4), 0 0 10px rgba(56, 189, 248, 0.2)',
                   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   userSelect: 'none',
-                  padding: 0,
                 }}
               >
-                <span style={{ transform: isSwapMode ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }}>
-                  
+                <span style={{ display: 'inline-flex', alignItems: 'center', transform: isSwapMode ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }}>
+                  <Icon name="arrowLeftRight" size={15} />
                 </span>
+                <span>Hoán vị</span>
               </button>
             )}
 
@@ -6014,7 +6020,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               height: '100%',
               minHeight: '100%',
               flex: 1,
-              background: `#040714 url(${bgTrucCoGalaxy}) center/cover no-repeat`,
+              background: `#040714 url(${currentBgNguyenAnh}) center/cover no-repeat`,
               border: 'none',
               borderRadius: 0,
               overflow: 'hidden'
@@ -6107,7 +6113,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
 
                 {/* ─── HÌNH NỀN GEN AI CỬU THIÊN TINH HÀ RỰC RỠ ─── */}
                 <image
-                  href={bgTrucCoGalaxy}
+                  href={currentBgNguyenAnh}
                   x="0"
                   y="0"
                   width={naCanvasWidth}
@@ -6622,7 +6628,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
               background: 'rgba(15, 23, 42, 0.9)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 24 }}></span>
+                <span style={{ fontSize: 24, display: 'inline-flex', alignItems: 'center' }}><Icon name="gem" size={24} style={{ color: 'var(--color-kim)' }} /></span>
                 <div>
                   <h3 style={{ margin: 0, color: 'var(--color-kim)', fontSize: 16, fontFamily: 'var(--font-serif)', fontWeight: 900 }}>
                     KHẢM NẠM VẬT TRẤN ÁP · THIÊN CUNG TỰ THÂN #{anchorModalPalace + 1}

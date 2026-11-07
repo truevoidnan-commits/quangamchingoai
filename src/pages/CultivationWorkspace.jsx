@@ -1,6 +1,7 @@
 import Icon, { toIconKey } from '../components/ui/Icon';
 import React, { useState, useEffect } from 'react';
 import { useCultivationContext } from '../context/CultivationContext';
+import { getActiveProfile } from '../lib/cultivation';
 import RealmTimeline from '../components/cultivation/RealmTimeline';
 import SidePanelInfo from '../components/cultivation/SidePanelInfo';
 import RealmPreviewVisualizer from '../components/cultivation/RealmPreviewVisualizer';
@@ -114,8 +115,8 @@ export default function CultivationWorkspace() {
           title={!canSwap ? "Chỉ khả dụng ở Trận Đồ Nguyên Anh / Giả Anh" : (isSwapMode ? "Đang bật hoán vị (Bấm để tắt)" : "Hoán đổi vị trí Đạo Anh")}
           aria-label={isSwapMode ? "Tắt hoán đổi" : "Bật hoán đổi"}
         >
-          <span className="mobile-btn-icon" style={{ display: 'inline-block', transform: isSwapActive ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }}>
-            
+          <span className="mobile-btn-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transform: isSwapActive ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }}>
+            <Icon name="arrowLeftRight" size={16} />
           </span>
         </button>
       </div>
@@ -206,41 +207,36 @@ export default function CultivationWorkspace() {
           <span><Icon name="package" size={14} /> XUẤT SAO LƯU TU VI</span>
         </button>
 
-        {/* Quick Tu Linh Tran */}
-        <button
-          onClick={() => gainReadingExp(500)}
-          style={{
-            marginTop: 8,
-            padding: '8px 12px',
-            borderRadius: 8,
-            background: 'rgba(255, 255, 255, 0.04)',
-            border: '1px dashed rgba(255, 204, 0, 0.4)',
-            color: 'var(--color-kim)',
-            fontSize: 11.5,
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            width: '100%'
-          }}
-          title="Kích hoạt Tụ Linh Trận bổ sung nhanh linh khí"
-        >
-          <span><Icon name="bolt" size={14} /> Tụ Linh Trận (+500 EXP)</span>
-        </button>
+        {/* Quick Tu Linh Tran - Chỉ dành cho hồ sơ Thử Nghiệm (Sandbox) */}
+        {getActiveProfile() === 'sandbox' && (
+          <button
+            onClick={() => gainReadingExp(1000)}
+            style={{
+              marginTop: 8,
+              padding: '8px 12px',
+              borderRadius: 8,
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px dashed rgba(255, 204, 0, 0.4)',
+              color: 'var(--color-kim)',
+              fontSize: 11.5,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              width: '100%'
+            }}
+            title="Kích hoạt Tụ Linh Trận bổ sung nhanh linh khí (+1000 EXP - Chỉ dành cho Thử Nghiệm)"
+            id="btn-quick-tu-linh-tran"
+          >
+            <span><Icon name="bolt" size={14} /> Tụ Linh Trận (+1.000 EXP)</span>
+          </button>
+        )}
       </div>
 
       {/* 2. CENTER COLUMN: Celestial Array Visualizer (100% Tối Giản & Tràn Viền Tuyệt Đối) */}
       <div className={`cultivation-col-center ${mobileTab === 'visualizer' ? 'mobile-show' : ''}`}>
-        {/* Nút Quay Lại Thư Viện Nổi Siêu Nhỏ Gọn (Ẩn trên mobile khi tab trận đồ dùng thanh công cụ mới) */}
-        <button
-          className="floating-back-library-btn"
-          onClick={handleSmartBack}
-          title="Quay lại Thư Viện"
-        >
-          <span className="floating-back-arrow">←</span>
-        </button>
 
         {/* Dynamic Canvas Container (100% Chiều Cao Sạch Sẽ) */}
         <div 

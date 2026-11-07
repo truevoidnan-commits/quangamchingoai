@@ -3,6 +3,7 @@ import styles from './SidePanelInfo.module.css';
 import React, { useState, useEffect } from 'react';
 import { useCultivationContext } from '../../context/CultivationContext';
 import { 
+  getActiveProfile,
   TRUC_CO_KHIEU_THRESHOLDS, 
   NGUNG_KHI_THRESHOLDS,
   HAI_SON_QUYET_LAYERS,
@@ -242,7 +243,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
   };
 
   return (
-    <div className="side-panel-info">
+    <div className={`side-panel-info ${styles.sidePanelRoot}`}>
       
       {/* ========================================================
           KHỐI THÔNG TIN TIÊN ĐẠO THỐNG NHẤT (3 CHỈ SỐ: TU VI - CHIẾN LỰC - TIÊN TINH CĂN GIỮA)
@@ -491,48 +492,59 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                 </div>
 
                 {/* BẢNG 10 TẦNG HẢI SƠN QUYẾT */}
-                <div style={{
-                  padding: '10px 12px',
-                  borderRadius: 12,
-                  background: 'rgba(10, 16, 26, 0.85)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 5
-                }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 800, color: '#cbd5e1', marginBottom: 2 }}>
+                <div className={styles.roadmapCard}>
+                  <div className={styles.roadmapHeader}>
                     LỘ TRÌNH HẢI SƠN QUYẾT (1 HỔ ĐẾN 1 BẠT)
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-                    {HAI_SON_QUYET_LAYERS.map(layer => {
+                  <div className={styles.roadmapGrid}>
+                    {HAI_SON_QUYET_LAYERS.map((layer) => {
                       const isReached = theExp >= layer.target;
                       const isCurrent = !isReached && (layer.level === 1 || theExp >= NGUNG_KHI_THRESHOLDS[layer.level - 1]);
+                      const cleanName = (layer.name || '').replace(/\s*\([^)]*\)/g, '').trim();
+                      const hasMax = (layer.name || '').includes('Viên Mãn');
                       return (
                         <div
                           key={layer.level}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '4px 6px',
-                            borderRadius: 6,
-                            background: isCurrent ? 'rgba(239, 68, 68, 0.15)' : isReached ? 'rgba(16, 185, 129, 0.08)' : 'rgba(0, 0, 0, 0.25)',
-                            border: `1px solid ${isCurrent ? '#ef4444' : isReached ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.04)'}`
-                          }}
+                          className={`${styles.roadmapCell} ${
+                            isCurrent
+                              ? styles.cellTheCurrent
+                              : isReached
+                              ? styles.cellTheReached
+                              : styles.cellTheLocked
+                          }`}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
-                            <span style={{ fontSize: 8.5, fontWeight: 800, padding: '1px 3px', borderRadius: 3, background: isReached ? '#10b981' : isCurrent ? '#ef4444' : '#334155', color: '#fff' }}>
-                              T{layer.level}
-                            </span>
-                            <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                              <div style={{ fontSize: 9.5, fontWeight: isCurrent || isReached ? 700 : 500, color: isReached ? '#a7f3d0' : isCurrent ? '#fca5a5' : '#64748b' }}>
-                                {layer.name} {layer.hasPhantom ? '(Hổ Ảnh)' : ''}
-                              </div>
-                              <div style={{ fontSize: 8, color: '#94a3b8' }}>{layer.target} EXP</div>
+                          <span
+                            className={styles.tierBadge}
+                            style={{
+                              background: isReached ? '#10b981' : isCurrent ? '#ef4444' : '#334155',
+                            }}
+                          >
+                            T{layer.level}
+                          </span>
+                          <div className={styles.cellContent}>
+                            <div
+                              className={styles.cellTitle}
+                              style={{
+                                color: isReached ? '#a7f3d0' : isCurrent ? '#fca5a5' : '#64748b',
+                              }}
+                              title={layer.name}
+                            >
+                              {cleanName}
+                            </div>
+                            <div className={styles.cellMetaRow}>
+                              {hasMax && <span className={`${styles.metaChip} ${styles.chipMax}`}>Đại Viên Mãn</span>}
+                              {layer.hasPhantom && <span className={`${styles.metaChip} ${styles.chipTiger}`}>Hổ Ảnh</span>}
+                              <span className={styles.cellExp}>{layer.target.toLocaleString()} EXP</span>
                             </div>
                           </div>
-                          <span style={{ fontSize: 9, fontWeight: 700 }}>
-                            {isReached ? <Icon name="check" size={12} style={{ color: '#34d399' }} /> : isCurrent ? <Icon name="bolt" size={12} style={{ color: '#ef4444' }} /> : <Icon name="lock" size={12} style={{ color: '#475569' }} />}
+                          <span className={styles.cellStatusIcon}>
+                            {isReached ? (
+                              <Icon name="check" size={13} style={{ color: '#34d399' }} />
+                            ) : isCurrent ? (
+                              <Icon name="bolt" size={13} style={{ color: '#ef4444' }} />
+                            ) : (
+                              <Icon name="lock" size={12} style={{ color: '#475569' }} />
+                            )}
                           </span>
                         </div>
                       );
@@ -1443,24 +1455,40 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     <Icon name="bolt" size={14} /> HÓA SINH ĐẠO ANH
                   </button>
                 ) : (
-                  <button
-                    onClick={() => {
-                      if (gainReadingExp) gainReadingExp(1000);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px',
+                  getActiveProfile() === 'sandbox' ? (
+                    <button
+                      onClick={() => {
+                        if (gainReadingExp) gainReadingExp(1000);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: 8,
+                        background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(217, 70, 239, 0.08) 100%)',
+                        border: '1px dashed rgba(217, 70, 239, 0.4)',
+                        color: '#f0abfc',
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                      title="Kích hoạt Tụ Khí thai nghén Đạo Anh (+1000 EXP - Chỉ dành cho Thử Nghiệm)"
+                      id="btn-quick-tu-khi-thai-nghen"
+                    >
+                      <Icon name="orb" size={14} /> Tụ Khí Thai Nghén (+1.000 EXP)
+                    </button>
+                  ) : (
+                    <div style={{
+                      fontSize: 11,
+                      color: '#94a3b8',
+                      textAlign: 'center',
+                      padding: '8px 12px',
+                      background: 'rgba(0, 0, 0, 0.25)',
                       borderRadius: 8,
-                      background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(217, 70, 239, 0.08) 100%)',
-                      border: '1px dashed rgba(217, 70, 239, 0.4)',
-                      color: '#f0abfc',
-                      fontSize: 11.5,
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <Icon name="orb" size={14} /> Tụ Khí Thai Nghén (+1.000 EXP)
-                  </button>
+                      border: '1px solid rgba(255, 255, 255, 0.06)'
+                    }}>
+                      Đọc thêm truyện để tích lũy đủ 10.000 EXP thai nghén Đạo Anh
+                    </div>
+                  )
                 )}
               </div>
             )}

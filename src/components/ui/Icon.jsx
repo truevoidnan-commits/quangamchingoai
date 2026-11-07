@@ -228,6 +228,9 @@ const ICON_REGISTRY = {
   'more-horizontal': { type: 'lucide', comp: MoreHorizontal },
   'dots-horizontal': { type: 'lucide', comp: MoreHorizontal },
   sort: { type: 'lucide', comp: ArrowUpDown },
+  'arrow-left-right': { type: 'lucide', comp: ArrowLeftRight },
+  arrowLeftRight: { type: 'lucide', comp: ArrowLeftRight },
+  swap: { type: 'lucide', comp: ArrowLeftRight },
   play: { type: 'lucide', comp: Play },
   pause: { type: 'lucide', comp: Pause },
   rewind: { type: 'lucide', comp: Rewind },
@@ -534,5 +537,7 @@ export const IconPen = (props) => <Icon name="pen" {...props} />;
 export const IconMeditation = (props) => <Icon name="meditation" {...props} />;
 export const IconLotus = (props) => <Icon name="lotus" {...props} />;
 export const IconSliders = (props) => <Icon name="sliders" {...props} />;
+export const IconSwap = (props) => <Icon name="swap" {...props} />;
+export const IconArrowLeftRight = (props) => <Icon name="swap" {...props} />;
 
 export { ICON_REGISTRY };

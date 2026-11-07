@@ -5,15 +5,18 @@
 
 .container {
   width: 100%;
-  min-height: 740px;
+  min-height: 100%;
   height: 100%;
-  background: radial-gradient(ellipse at 50% 20%, #0c182b 0%, #050b16 55%, #020409 100%);
-  border-radius: 20px;
-  border: 1px solid rgba(56, 189, 248, 0.28);
-  box-shadow: 
-    0 0 60px rgba(14, 165, 233, 0.12),
-    inset 0 0 90px rgba(2, 6, 23, 0.95);
-  padding: 24px 16px;
+  flex: 1;
+  background-color: #030b14;
+  background-image: url('../../assets/images/bg_linh_tang_bi_tang.webp');
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  border: none;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.85);
+  padding: 16px 20px;
   position: relative;
   overflow: hidden;
   color: #f1f5f9;
@@ -23,6 +26,12 @@
   justify-content: center;
   align-items: center;
   user-select: none;
+}
+
+@media (max-width: 768px) {
+  .container {
+    background-image: url('../../assets/images/bg_linh_tang_bi_tang_mobile.webp');
+  }
 }
 
 /* =========================================================================
@@ -95,36 +104,12 @@
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 1080px;
+  max-width: min(1380px, 94vw);
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   padding: 0 8px 10px 8px;
   margin-bottom: 2px;
-}
-
-.topControlTitle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.pantheonBadge {
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 1.5px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  color: #38bdf8;
-}
-
-.pantheonSubtitle {
-  font-size: 12px;
-  color: #94a3b8;
-  font-weight: 700;
-  letter-spacing: 1px;
 }
 
 .reassignBtn {
@@ -172,14 +157,14 @@
   align-items: flex-end;
   gap: 12px;
   width: 100%;
-  max-width: 1080px;
+  max-width: min(1380px, 94vw);
 }
 
 .celestialGateEntity {
   flex: 1 1 0;
-  max-width: 195px;
+  max-width: clamp(175px, 16vw, 245px);
   min-width: 125px;
-  height: 525px;
+  height: clamp(430px, 58vh, 620px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -199,8 +184,8 @@
 }
 
 .centerGateEntity {
-  max-width: 205px;
-  height: 545px;
+  max-width: clamp(185px, 17vw, 260px);
+  height: clamp(450px, 61vh, 650px);
   z-index: 4;
 }
 
@@ -477,6 +462,7 @@
   margin-bottom: 6px;
   text-align: center;
   word-break: break-word;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
 }
 
 .gateMainNameGold {
@@ -1078,27 +1064,11 @@
 
   /* Thụt lề 46px bên trái để tránh nút quay lại tròn đè lên chữ VŨ TRỤ THỨC HẢI */
   .topControlBar {
-    flex-direction: column;
-    gap: 8px;
-    align-items: stretch;
-    padding: 0 8px 8px 46px;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0 8px 8px 8px;
     margin-bottom: 2px;
-  }
-
-  .topControlTitle {
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-
-  .pantheonBadge {
-    font-size: 10px;
-    padding: 2px 6px;
-  }
-
-  .pantheonSubtitle {
-    font-size: 11px;
-    letter-spacing: 0.5px;
   }
 
   .reassignBtn {

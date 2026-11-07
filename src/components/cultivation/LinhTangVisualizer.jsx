@@ -10,6 +10,7 @@ import {
 } from '../../lib/cultivation';
 import { getArtifactImageUrl, getLampImageUrl, THAN_PHAM_AI_ICONS, LAMP_THAN_PHAM_AI_ICONS } from '../../lib/artifactIcons';
 import godEyeImg from '../../assets/images/bg_god_cosmic_eye.jpg';
+import bgLinhTangBiTang from '../../assets/images/bg_linh_tang_bi_tang.webp';
 import styles from './LinhTangVisualizer.module.css';
 import DaoAnhToLinhTangModal from './DaoAnhToLinhTangModal';
 
@@ -289,10 +290,7 @@ export default function LinhTangVisualizer() {
 
       {/* THANH ĐIỀU HƯỚNG TRÊN CÙNG CỦA LINH TÀNG */}
       <div className={styles.topControlBar}>
-        <div className={styles.topControlTitle}>
-          <span className={styles.pantheonBadge}>VŨ TRỤ THỨC HẢI</span>
-          <span className={styles.pantheonSubtitle}>NGŨ ĐẠI BÍ TÀNG KHAI THIÊN</span>
-        </div>
+
         <button
           className={styles.reassignBtn}
           onClick={() => setIsReassignModalOpen(true)}
