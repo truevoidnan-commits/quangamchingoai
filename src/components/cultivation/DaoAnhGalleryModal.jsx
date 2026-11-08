@@ -834,15 +834,15 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                   <div className={styles.detailNameRow}>
                     <h3 className={styles.detailName}>{selectedDaoAnh.name}</h3>
                     {currentOwn?.owned ? (
-                      <span className={`${styles.ownershipBadge} ${styles.badgeOwned}`}>
+                      <span className={`${styles.detailOwnershipBadge} ${styles.badgeOwned}`}>
                         <Icon name="check" size={11} /> Kiếp {currentOwn.kiep}/5
                       </span>
                     ) : currentOwn?.inBag ? (
-                      <span className={`${styles.ownershipBadge} ${styles.badgeInBag}`}>
+                      <span className={`${styles.detailOwnershipBadge} ${styles.badgeInBag}`}>
                         Sẵn trong túi
                       </span>
                     ) : (
-                      <span className={`${styles.ownershipBadge} ${styles.badgeUnowned}`}>
+                      <span className={`${styles.detailOwnershipBadge} ${styles.badgeUnowned}`}>
                         <Icon name="lock" size={10} /> Chưa sở hữu
                       </span>
                     )}

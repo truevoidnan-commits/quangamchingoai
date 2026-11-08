@@ -181,6 +181,35 @@ async function run() {
     }
     console.log(`  ✓ Card click synced detail panel to "${updatedDetailName}"`);
 
+    // Verify detail panel ownership badge does NOT overlap navigation footer buttons (Trước / Kế)
+    const detailBadge = detailPanel.locator('[class*="detailOwnershipBadge"]').first();
+    const prevBtn = detailPanel.locator('button[aria-label="Đạo Anh trước"]').first();
+    const nextBtn = detailPanel.locator('button[aria-label="Đạo Anh kế"]').first();
+
+    if (await detailBadge.isVisible() && await nextBtn.isVisible()) {
+      const badgeBox = await detailBadge.boundingBox();
+      const nextBox = await nextBtn.boundingBox();
+      const prevBox = await prevBtn.boundingBox();
+
+      const overlaps = (b1, b2) => {
+        if (!b1 || !b2) return false;
+        return !(
+          b1.x + b1.width <= b2.x ||
+          b2.x + b2.width <= b1.x ||
+          b1.y + b1.height <= b2.y ||
+          b2.y + b2.height <= b1.y
+        );
+      };
+
+      if (overlaps(badgeBox, nextBox) || overlaps(badgeBox, prevBox)) {
+        throw new Error('Detail panel ownership badge overlaps with navigation buttons (Trước / Kế)!');
+      }
+      if (badgeBox.y + badgeBox.height > nextBox.y) {
+        throw new Error(`Detail badge (bottom: ${badgeBox.y + badgeBox.height}) is lower than footer buttons (top: ${nextBox.y})`);
+      }
+      console.log('  ✓ Detail panel ownership badge is positioned in header row, NOT overlapping footer buttons');
+    }
+
     // Test List Mode toggle
     const listModeBtn = pageDesktop.locator('button[aria-label="Hiển thị dạng danh sách"]').first();
     await listModeBtn.click();
@@ -313,6 +342,32 @@ async function run() {
     const k5ImgSrc = await mobileDetail.locator('img[class*="detailArtImg"]').getAttribute('src');
 
     console.log(`  ✓ K1->K5 image switch works: K1="${k1ImgSrc?.slice(-25)}" -> K5="${k5ImgSrc?.slice(-25)}"`);
+
+    // Verify mobile detail sheet ownership badge does not overlap navigation footer buttons
+    const mDetailBadge = mobileDetail.locator('[class*="detailOwnershipBadge"]').first();
+    const mNextBtn = mobileDetail.locator('button[aria-label="Đạo Anh kế"]').first();
+    const mPrevBtn = mobileDetail.locator('button[aria-label="Đạo Anh trước"]').first();
+    if (await mDetailBadge.isVisible() && await mNextBtn.isVisible()) {
+      const bBox = await mDetailBadge.boundingBox();
+      const nBox = await mNextBtn.boundingBox();
+      const pBox = await mPrevBtn.boundingBox();
+      const overlaps = (b1, b2) => {
+        if (!b1 || !b2) return false;
+        return !(
+          b1.x + b1.width <= b2.x ||
+          b2.x + b2.width <= b1.x ||
+          b1.y + b1.height <= b2.y ||
+          b2.y + b2.height <= b1.y
+        );
+      };
+      if (overlaps(bBox, nBox) || overlaps(bBox, pBox)) {
+        throw new Error('Mobile detail badge overlaps with footer navigation buttons!');
+      }
+      if (bBox.y + bBox.height > nBox.y) {
+        throw new Error(`Mobile detail badge (bottom: ${bBox.y + bBox.height}) is lower than footer buttons (top: ${nBox.y})`);
+      }
+      console.log('  ✓ Mobile detail badge is positioned in header row, NOT overlapping footer buttons');
+    }
 
     // Capture mobile detail sheet
     await pageMobile.screenshot({
