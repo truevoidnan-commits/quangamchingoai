@@ -9,6 +9,7 @@ import TribulationModal from './TribulationModal';
 import ArtifactIcon from './ArtifactIcon';
 import DaoAnhAvatarRenderer from './DaoAnhAvatarRenderer';
 import DaoAnhGalleryModal from './DaoAnhGalleryModal';
+import SwapAnchorModal from './SwapAnchorModal';
 import CultivationBackupModal from './CultivationBackupModal';
 import ProfileSwitcher from './ProfileSwitcher';
 import { findDaoAnhDefinition } from '../../lib/daoAnhData';
@@ -25,6 +26,7 @@ export default function CultivationModal({ isOpen, onClose }) {
     burnExpForLamp,
     sellLamp,
     anchorPalace,
+    swapAnchor,
     sellArtifact,
     buyArtifact,
     activateKimDanTrialV2,
@@ -55,6 +57,7 @@ export default function CultivationModal({ isOpen, onClose }) {
   const [tierFilter, setTierFilter] = useState('all');
   const [artifactTierFilter, setArtifactTierFilter] = useState('all');
   const [anchorModalPalace, setAnchorModalPalace] = useState(null);
+  const [swapModalPalace, setSwapModalPalace] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
   const [breakthroughData, setBreakthroughData] = useState(null);
   const [tribulationModalData, setTribulationModalData] = useState(null);
@@ -1003,11 +1006,29 @@ export default function CultivationModal({ isOpen, onClose }) {
                                 <Icon name="sparkle" size={14} /> Luyện Hóa ({isNguyenAnhStage ? '+50 TM' : '+3k'})
                               </button>
                             </>
-                          ) : isAnchored ? (
-                            <span style={{ fontSize: 11, color: '#ffcc00', fontStyle: 'italic' }}>
-                              ✦ Đã tọa trấn vĩnh cửu tại Thiên Cung
-                            </span>
-                          ) : (
+                          ) : isAnchored ? (() => {
+                            const anchoredEntry = Object.entries(cultivation.palaceAnchors || {}).find(([pIdx, a]) => {
+                              return typeof a === 'string' ? a === art.id : a?.id === art.id;
+                            });
+                            const anchoredIdx = anchoredEntry ? Number(anchoredEntry[0]) : null;
+                            const canSwap = ['kim_dan', 'gia_anh', 'nguyen_anh'].includes(cultivation.realm) && anchoredIdx !== null;
+                            if (canSwap) {
+                              return (
+                                <button
+                                  className="btn-gold"
+                                  style={{ fontSize: 11.5, padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                                  onClick={() => setSwapModalPalace(anchoredIdx)}
+                                >
+                                  <Icon name="swap" size={13} /> Đổi Vật Trấn Áp
+                                </button>
+                              );
+                            }
+                            return (
+                              <span style={{ fontSize: 11, color: cultivation.realm === 'linh_tang' ? '#94a3b8' : '#ffcc00', fontStyle: 'italic', opacity: cultivation.realm === 'linh_tang' ? 0.7 : 1 }}>
+                                ✦ Đã tọa trấn vĩnh cửu tại Thiên Cung
+                              </span>
+                            );
+                          })() : (
                             /* Nút Đổi Vật Trấn Áp */
                             <button
                               className={styles.burnExpBtn}
@@ -1410,6 +1431,14 @@ export default function CultivationModal({ isOpen, onClose }) {
       <CultivationBackupModal
         isOpen={backupModalOpen}
         onClose={() => setBackupModalOpen(false)}
+      />
+      <SwapAnchorModal
+        isOpen={swapModalPalace !== null}
+        onClose={() => setSwapModalPalace(null)}
+        palaceIndex={swapModalPalace}
+        cultivation={cultivation}
+        onSwap={swapAnchor}
+        onNavigateToShop={() => setActiveTab('artifacts')}
       />
     </BottomSheet>
   );

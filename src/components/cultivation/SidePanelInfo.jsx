@@ -55,6 +55,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
     anchorPalace,
     anchorModalPalace,
     setAnchorModalPalace,
+    setSwapModalPalace,
     dropDaoAnhKiep
   } = useCultivationContext();
 
@@ -1108,7 +1109,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
               {/* Tiêu đề & Tiến trình */}
               <div className={styles.thienCungHeader}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                  <GlyphIcon value="shield" size={16} />
+                  <Icon name="shield" size={16} />
                   <span className={styles.thienCungTitle} style={{ fontFamily: 'var(--font-serif)' }}>
                     THIÊN CUNG KIM ĐAN
                   </span>
@@ -1709,6 +1710,40 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   }} />
                 </div>
               </div>
+
+              {targetDa && !targetDa.fromLamp && ['kim_dan', 'gia_anh', 'nguyen_anh'].includes(realm) && (
+                <button
+                  onClick={() => {
+                    const maxThienCung = cultivation?.maxThienCung || 13;
+                    let targetIdx = (maxThienCung - 1) - (targetDa.palaceIndex !== undefined ? targetDa.palaceIndex : 0);
+                    if (targetDa.artifactId && cultivation?.palaceAnchors) {
+                      const found = Object.entries(cultivation.palaceAnchors).find(([p, a]) => {
+                        return typeof a === 'string' ? a === targetDa.artifactId : a?.id === targetDa.artifactId;
+                      });
+                      if (found) targetIdx = Number(found[0]);
+                    }
+                    if (setSwapModalPalace) setSwapModalPalace(targetIdx);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    background: 'rgba(251, 191, 36, 0.12)',
+                    border: '1px solid rgba(251, 191, 36, 0.4)',
+                    color: '#fde047',
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    marginBottom: 10
+                  }}
+                >
+                  <Icon name="swap" size={14} /> ĐỔI VẬT TRẤN ÁP
+                </button>
+              )}
 
               {canDropKiep && (
                 <button
