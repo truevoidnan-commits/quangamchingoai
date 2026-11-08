@@ -9,6 +9,7 @@ import {
 import { buildOwnershipMap, getDaoAnhStats } from '../../lib/daoAnhGalleryUtils';
 import { useCultivationContext } from '../../context/CultivationContext';
 import { PersistentImage } from '../../lib/persistentImageCache';
+import DaoAnhArt from './DaoAnhArt';
 import styles from './DaoAnhGalleryModal.module.css';
 
 class DaoAnhErrorBoundary extends React.Component {
@@ -35,59 +36,7 @@ class DaoAnhErrorBoundary extends React.Component {
   }
 }
 
-/**
- * Image component with safe fallback:
- * 1. Tries optimized WebP/PNG via PersistentImage
- * 2. On error, renders stylized avatar placeholder
- */
-function SafeDaoAnhImage({ daoAnh, currentKiep = 5, size = 'full', className, style, glowColor }) {
-  const [hasError, setHasError] = useState(false);
 
-  useEffect(() => {
-    setHasError(false);
-  }, [daoAnh?.id, currentKiep]);
-
-  if (hasError || !daoAnh) {
-    const initials = (daoAnh?.name || 'ĐA')
-      .split(' ')
-      .slice(0, 2)
-      .map((w) => w[0])
-      .join('')
-      .toUpperCase();
-    return (
-      <div
-        className={styles.cardFallback}
-        style={{
-          background: 'rgba(255, 255, 255, 0.04)',
-          borderRadius: 12,
-          border: '1px solid rgba(251, 191, 36, 0.25)',
-          ...style,
-        }}
-      >
-        <Icon name="sparkle" size={24} style={{ color: daoAnh?.primaryColor || '#fbbf24' }} />
-        <span style={{ fontWeight: 800, fontSize: 13, color: '#fde047' }}>{initials}</span>
-        <span style={{ fontSize: 10, color: '#94a3b8' }}>Không hiển thị được Đạo Anh này</span>
-      </div>
-    );
-  }
-
-  const src = getDaoAnhEvolutionImage(daoAnh, currentKiep, size);
-
-  return (
-    <PersistentImage
-      src={src}
-      alt={daoAnh.name}
-      loading="lazy"
-      decoding="async"
-      onError={() => setHasError(true)}
-      className={className}
-      style={{
-        ...style,
-        filter: glowColor ? `drop-shadow(0 0 10px ${glowColor})` : undefined,
-      }}
-    />
-  );
-}
 
 export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propCultivation }) {
   const context = useCultivationContext ? useCultivationContext() : {};
@@ -650,12 +599,14 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                               className={styles.artGlowBackdrop}
                               style={{ background: da.glowColor || da.primaryColor }}
                             />
-                            <SafeDaoAnhImage
+                            <DaoAnhArt
                               daoAnh={da}
-                              currentKiep={cardKiep}
-                              size="thumb"
-                              className={styles.artImage}
-                              glowColor={cardGlow}
+                              kiep={cardKiep}
+                              size="fill"
+                              imageSize="thumb"
+                              glow={cardGlow}
+                              className={styles.artFrame}
+                              imageClassName={styles.artImage}
                             />
 
                             {/* Ownership Badge */}
@@ -717,11 +668,13 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                           }}
                         >
                           <div className={styles.listThumb}>
-                            <SafeDaoAnhImage
+                            <DaoAnhArt
                               daoAnh={da}
-                              currentKiep={listKiep}
-                              size="thumb"
-                              className={styles.listThumbImg}
+                              kiep={listKiep}
+                              size={44}
+                              imageSize="thumb"
+                              className={styles.listThumbFrame}
+                              imageClassName={styles.listThumbImg}
                             />
                           </div>
                           <div className={styles.listInfo}>
@@ -801,12 +754,14 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                       className={styles.detailArtGlow}
                       style={{ background: selectedDaoAnh.primaryColor || glow }}
                     />
-                    <SafeDaoAnhImage
+                    <DaoAnhArt
                       daoAnh={selectedDaoAnh}
-                      currentKiep={previewKiep}
-                      size="full"
-                      className={styles.detailArtImg}
-                      glowColor={glow}
+                      kiep={previewKiep}
+                      size={220}
+                      imageSize="full"
+                      glow={glow}
+                      className={styles.detailArtFrame}
+                      imageClassName={styles.detailArtImg}
                     />
                   </div>
 

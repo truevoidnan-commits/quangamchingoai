@@ -1398,7 +1398,7 @@ for (const [filepath, mod] of Object.entries(daoAnhThumbModules)) {
   bundledDaoAnhThumb[filename] = mod;
 }
 
-import { getAssetUrl } from './assetHelper';
+import { getAssetUrl } from './assetHelper.js';
 import { DAO_ANH_FIT } from './daoAnhFit.generated.js';
 import { DAO_ANH_BBOX } from './daoAnhBBox.generated.js';
 export { getAssetUrl, DAO_ANH_FIT, DAO_ANH_BBOX };
@@ -2310,7 +2310,7 @@ export const DAO_ANH_CUSTOM_TRANSFORMS = {
   },
 };
 
-export function getDaoAnhTransformStyle(daoAnhDef, currentKiep = 1) {
+export function getDaoAnhTransformStyle(daoAnhDef, currentKiep = 1, options = {}) {
   if (!daoAnhDef) return 'translateZ(0)';
   const id = daoAnhDef.id || '';
   const sourceId = daoAnhDef.sourceId || '';
@@ -2318,24 +2318,39 @@ export function getDaoAnhTransformStyle(daoAnhDef, currentKiep = 1) {
   if (cfg) {
     const kCfg = cfg[currentKiep] || cfg[1] || { scale: 1, x: 0, y: 0 };
     const s = kCfg.scale ?? 1;
-    const x = kCfg.x ?? 0;
-    const y = kCfg.y ?? 0;
+    let x = kCfg.x ?? 0;
+    let y = kCfg.y ?? 0;
+    if (typeof options === 'object' && options !== null && typeof options.size === 'number' && options.size > 0) {
+      const refSize = options.refSize || 185;
+      const ratio = options.size / refSize;
+      x = Math.round(x * ratio * 10) / 10;
+      y = Math.round(y * ratio * 10) / 10;
+    }
     return `translate3d(${x}px, ${y}px, 0) scale(${s})`;
   }
   return 'translateZ(0)';
 }
 
-export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1) {
+export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {}) {
   if (!daoAnhDef) return { scale: 1, x: 0, y: 0 };
   const id = daoAnhDef.id || '';
   const sourceId = daoAnhDef.sourceId || '';
   const cfg = DAO_ANH_CUSTOM_TRANSFORMS[id] || DAO_ANH_CUSTOM_TRANSFORMS[sourceId];
   if (cfg) {
     const kCfg = cfg[currentKiep] || cfg[1] || { scale: 1, x: 0, y: 0 };
+    const s = kCfg.scale ?? 1;
+    let x = kCfg.x ?? 0;
+    let y = kCfg.y ?? 0;
+    if (typeof options === 'object' && options !== null && typeof options.size === 'number' && options.size > 0) {
+      const refSize = options.refSize || 185;
+      const ratio = options.size / refSize;
+      x = Math.round(x * ratio * 10) / 10;
+      y = Math.round(y * ratio * 10) / 10;
+    }
     return {
-      scale: kCfg.scale ?? 1,
-      x: kCfg.x ?? 0,
-      y: kCfg.y ?? 0,
+      scale: s,
+      x,
+      y,
     };
   }
   return { scale: 1, x: 0, y: 0 };
