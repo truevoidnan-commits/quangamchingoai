@@ -251,12 +251,16 @@ try {
     updatedAt: initialLibTime,
   });
 
-  const { mergeNovelWithCloud } = await import('../src/lib/sync/syncEngine.js');
+  const { mergeNovelWithCloud, compressChapters } = await import('../src/lib/sync/syncEngine.js');
+  const ch1 = [{ id: 'ch_1', novelId: 'novel_preserve_time', title: 'C1', content: 'C1', order: 0 }];
+  await saveChaptersBulk(ch1, { skipDirty: true });
+  const { blob: validGzipBlob } = await compressChapters(JSON.stringify(ch1));
+
   const mockSupabase = {
     auth: { getUser: async () => ({ data: { user: { id: 'usr_test' } } }) },
     storage: {
       from: () => ({
-        download: async () => ({ data: new Blob([JSON.stringify([])]), error: null }),
+        download: async () => ({ data: validGzipBlob, error: null }),
         upload: async () => ({ data: {}, error: null }),
       }),
     },
