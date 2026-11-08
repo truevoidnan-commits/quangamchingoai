@@ -1383,8 +1383,8 @@ export function findDaoAnhDefinition(da, state) {
   return DAO_ANH_LIST[0];
 }
 
-const daoAnhFullModules = import.meta.glob('../assets/images/dao_anh_webp/*.webp', { eager: true, import: 'default' });
-const daoAnhThumbModules = import.meta.glob('../assets/images/dao_anh_thumb/*.webp', { eager: true, import: 'default' });
+const daoAnhFullModules = typeof import.meta.glob === 'function' ? import.meta.glob('../assets/images/dao_anh_webp/*.webp', { eager: true, import: 'default' }) : {};
+const daoAnhThumbModules = typeof import.meta.glob === 'function' ? import.meta.glob('../assets/images/dao_anh_thumb/*.webp', { eager: true, import: 'default' }) : {};
 
 const bundledDaoAnhFull = {};
 for (const [filepath, mod] of Object.entries(daoAnhFullModules)) {
@@ -2308,35 +2308,32 @@ export const DAO_ANH_CUSTOM_TRANSFORMS = {
     4: { scale: 1.65, x: 0, y: 0 },
     5: { scale: 1.85, x: 0, y: 4 },
   },
+  da_de_kiem: {
+    0: { scale: 1.00, x: -13, y: 0 },
+    1: { scale: 1.00, x: -13, y: 0 },
+    2: { scale: 1.05, x: 0, y: 0 },
+    3: { scale: 1.25, x: -2, y: 0 },
+    4: { scale: 1.25, x: 3, y: 1 },
+    5: { scale: 1.45, x: 3, y: 1 },
+  },
+  de_kiem: {
+    0: { scale: 1.00, x: -13, y: 0 },
+    1: { scale: 1.00, x: -13, y: 0 },
+    2: { scale: 1.05, x: 0, y: 0 },
+    3: { scale: 1.25, x: -2, y: 0 },
+    4: { scale: 1.25, x: 3, y: 1 },
+    5: { scale: 1.45, x: 3, y: 1 },
+  },
 };
 
-export function getDaoAnhTransformStyle(daoAnhDef, currentKiep = 1, options = {}) {
-  if (!daoAnhDef) return 'translateZ(0)';
-  const id = daoAnhDef.id || '';
-  const sourceId = daoAnhDef.sourceId || '';
-  const cfg = DAO_ANH_CUSTOM_TRANSFORMS[id] || DAO_ANH_CUSTOM_TRANSFORMS[sourceId];
-  if (cfg) {
-    const kCfg = cfg[currentKiep] || cfg[1] || { scale: 1, x: 0, y: 0 };
-    const s = kCfg.scale ?? 1;
-    let x = kCfg.x ?? 0;
-    let y = kCfg.y ?? 0;
-    if (typeof options === 'object' && options !== null && typeof options.size === 'number' && options.size > 0) {
-      const refSize = options.refSize || 185;
-      const ratio = options.size / refSize;
-      x = Math.round(x * ratio * 10) / 10;
-      y = Math.round(y * ratio * 10) / 10;
-    }
-    return `translate3d(${x}px, ${y}px, 0) scale(${s})`;
-  }
-  return 'translateZ(0)';
-}
-
 export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {}) {
-  if (!daoAnhDef) return { scale: 1, x: 0, y: 0 };
+  if (!daoAnhDef) return { scale: 1, x: 0, y: 0, isAuto: false };
   const id = daoAnhDef.id || '';
   const sourceId = daoAnhDef.sourceId || '';
   const cfg = DAO_ANH_CUSTOM_TRANSFORMS[id] || DAO_ANH_CUSTOM_TRANSFORMS[sourceId];
-  if (cfg) {
+
+  // 1. Nếu có mục chỉnh tay (có cấu hình cho kiếp hiện tại hoặc kiếp 1 để fallback) -> THẮNG
+  if (cfg && (cfg[currentKiep] !== undefined || cfg[1] !== undefined)) {
     const kCfg = cfg[currentKiep] || cfg[1] || { scale: 1, x: 0, y: 0 };
     const s = kCfg.scale ?? 1;
     let x = kCfg.x ?? 0;
@@ -2351,8 +2348,47 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
       scale: s,
       x,
       y,
+      isAuto: false,
     };
   }
-  return { scale: 1, x: 0, y: 0 };
+
+  // 2. Tự chuẩn hóa theo DAO_ANH_BBOX khi CHƯA có chỉnh tay
+  const bb = getDaoAnhBBox(daoAnhDef, currentKiep);
+  if (bb && typeof bb.w === 'number' && bb.w > 0 && typeof bb.h === 'number' && bb.h > 0) {
+    const TARGET = 0.80;
+    const maxDim = Math.max(bb.w, bb.h);
+    const rawScale = TARGET / maxDim;
+    const scale = Math.min(Math.max(rawScale, 0.85), 1.9);
+    const roundedScale = Math.round(scale * 100) / 100;
+
+    // Dịch theo % của phần tử: tx = (0.5 - bb.cx) * scale * 100 (%)
+    const tx = (0.5 - bb.cx) * scale * 100;
+    const ty = (0.5 - bb.cy) * scale * 100;
+    const roundedTx = Math.round(tx * 10) / 10;
+    const roundedTy = Math.round(ty * 10) / 10;
+
+    return {
+      scale: roundedScale,
+      x: roundedTx,
+      y: roundedTy,
+      tx: roundedTx,
+      ty: roundedTy,
+      isAuto: true,
+      unit: '%',
+    };
+  }
+
+  return { scale: 1, x: 0, y: 0, isAuto: false };
+}
+
+export function getDaoAnhTransformStyle(daoAnhDef, currentKiep = 1, options = {}) {
+  if (!daoAnhDef) return 'translateZ(0)';
+  const cfg = getDaoAnhTransformConfig(daoAnhDef, currentKiep, options);
+  if (cfg.isAuto) {
+    const tx = cfg.tx !== undefined ? cfg.tx : cfg.x;
+    const ty = cfg.ty !== undefined ? cfg.ty : cfg.y;
+    return `translate(${tx}%, ${ty}%) scale(${cfg.scale})`;
+  }
+  return `translate3d(${cfg.x}px, ${cfg.y}px, 0) scale(${cfg.scale})`;
 }
 
