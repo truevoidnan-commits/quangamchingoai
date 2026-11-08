@@ -528,6 +528,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                   className={`${styles.chipItem} ${isActive ? styles.chipItemActive : ''}`}
                   onClick={() => handleSelectCategory(cat.id)}
                   aria-selected={isActive}
+                  title={cat.name}
                 >
                   <Icon name={cat.icon} size={13} />
                   <span>{cat.name} ({cat.count})</span>
@@ -606,6 +607,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                     className={`${styles.categoryItem} ${isActive ? styles.categoryItemActive : ''}`}
                     onClick={() => setCategoryFilter(cat.id)}
                     aria-current={isActive ? 'true' : undefined}
+                    title={cat.name}
                   >
                     <span className={styles.categoryItemLeft}>
                       <Icon name={cat.icon} size={15} />
