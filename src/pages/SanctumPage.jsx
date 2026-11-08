@@ -728,11 +728,40 @@ export default function SanctumPage() {
 
                     {/* Action buttons */}
                     <div className={styles.cardFooter}>
-                      {isAnchored ? (
-                        <div className={styles.equippedStatus}>
-                          ✓ Đã khảm nạm
-                        </div>
-                      ) : isInBag ? (
+                      {isAnchored ? (() => {
+                        const anchoredEntry = Object.entries(cultivation?.palaceAnchors || {}).find(([pIdx, a]) => {
+                          return typeof a === 'string' ? a === art.id : a?.id === art.id;
+                        });
+                        const anchoredIdx = anchoredEntry ? Number(anchoredEntry[0]) : null;
+                        const canSwap = ['kim_dan', 'gia_anh', 'nguyen_anh'].includes(cultivation?.realm) && anchoredIdx !== null;
+                        return (
+                          <div style={{ display: 'flex', gap: 6, width: '100%', alignItems: 'center' }}>
+                            <div className={styles.equippedStatus} style={{ flex: 1 }}>
+                              ✓ Đã khảm nạm
+                            </div>
+                            {canSwap && (
+                              <button
+                                onClick={() => setSwapModalPalace(anchoredIdx)}
+                                style={{
+                                  padding: '5px 12px',
+                                  borderRadius: 6,
+                                  fontSize: 11.5,
+                                  fontWeight: 800,
+                                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                  color: '#000',
+                                  border: '1px solid #fde047',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4
+                                }}
+                              >
+                                <Icon name="swap" size={12} /> Đổi
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })() : isInBag ? (
                         <>
                           <button
                             onClick={() => {

@@ -6,6 +6,7 @@ import RealmTimeline from '../components/cultivation/RealmTimeline';
 import SidePanelInfo from '../components/cultivation/SidePanelInfo';
 import RealmPreviewVisualizer from '../components/cultivation/RealmPreviewVisualizer';
 import DaoAnhGalleryModal from '../components/cultivation/DaoAnhGalleryModal';
+import SwapAnchorModal from '../components/cultivation/SwapAnchorModal';
 import TribulationModal from '../components/cultivation/TribulationModal';
 import BreakthroughModal from '../components/cultivation/BreakthroughModal';
 import CultivationBackupModal from '../components/cultivation/CultivationBackupModal';
@@ -28,7 +29,10 @@ export default function CultivationWorkspace() {
     chooseSwitchDaoAnhAfter80,
     chooseContinueDaoAnhTo100,
     dismissPromptAllDaoAnhFull,
-    attemptTribulationAll
+    attemptTribulationAll,
+    swapModalPalace,
+    setSwapModalPalace,
+    swapAnchor
   } = useCultivationContext();
 
   const navigate = useNavigate();
@@ -316,6 +320,16 @@ export default function CultivationWorkspace() {
       )}
 
     
+
+      {/* MODAL ĐỔI VẬT TRẤN ÁP */}
+      <SwapAnchorModal
+        isOpen={swapModalPalace !== null}
+        onClose={() => setSwapModalPalace && setSwapModalPalace(null)}
+        palaceIndex={swapModalPalace}
+        cultivation={cultivation}
+        onSwap={swapAnchor}
+      />
+
       {/* MODAL XUẤT SAO LƯU TU VI */}
       <CultivationBackupModal
         isOpen={backupModalOpen}

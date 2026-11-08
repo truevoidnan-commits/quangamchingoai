@@ -12,6 +12,7 @@ import {
   sellLampForPoints,
   buyLampWithPointsAndExp,
   anchorPalaceWithArtifact,
+  swapAnchoredArtifact,
   sellArtifactForTienTinh,
   buyArtifactWithTienTinhAndExp,
   sellArtifactForPoints,
@@ -130,6 +131,12 @@ export function useCultivation() {
 
   const handleAnchorPalace = useCallback((palaceIndex, artifactId) => {
     const res = anchorPalaceWithArtifact(palaceIndex, artifactId);
+    setCultivation({ ...res.state });
+    return res;
+  }, []);
+
+  const handleSwapAnchor = useCallback((palaceIndex, newArtifactId) => {
+    const res = swapAnchoredArtifact(palaceIndex, newArtifactId);
     setCultivation({ ...res.state });
     return res;
   }, []);
@@ -410,6 +417,7 @@ export function useCultivation() {
     sellLamp: handleSellLamp,
     refineLamp: handleSellLamp,
     anchorPalace: handleAnchorPalace,
+    swapAnchor: handleSwapAnchor,
     sellArtifact: handleSellArtifact,
     refineArtifact: handleSellArtifact,
     sellMultipleItems: handleSellMultipleItems,

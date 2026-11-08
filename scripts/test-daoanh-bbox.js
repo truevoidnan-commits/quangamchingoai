@@ -22,9 +22,9 @@ async function main() {
   const webpFiles = fs.readdirSync(webpDir).filter(f => f.endsWith('.webp'));
   const keys = Object.keys(DAO_ANH_BBOX);
   console.log(`[1] Kiểm tra số lượng: ${webpFiles.length} file WebP trên đĩa, ${keys.length} khóa trong DAO_ANH_BBOX`);
-  assert.strictEqual(keys.length, 205, 'BBox table should contain exactly 205 entries');
+  assert.strictEqual(keys.length, 210, 'BBox table should contain exactly 205 entries');
   assert.strictEqual(keys.length, webpFiles.length, 'BBox entries should match disk WebP file count');
-  console.log('    ✓ Khớp chính xác 205 ảnh');
+  console.log('    ✓ Khớp chính xác 210 ảnh');
 
   // 2. Validate bounding box coordinates and sizes for every key
   console.log('[2] Kiểm tra toạ độ hình học và công thức scale/translate...');
@@ -50,7 +50,7 @@ async function main() {
     assert(Math.abs(tx) <= 50, `tx for ${key} (${tx}%) must be within [-50%, 50%]`);
     assert(Math.abs(ty) <= 50, `ty for ${key} (${ty}%) must be within [-50%, 50%]`);
   }
-  console.log('    ✓ Toàn bộ 205 bounding box đều hợp lệ: w,h in (0, 1], cx,cy in [0, 1], s in [0.8, 1.6]');
+  console.log('    ✓ Toàn bộ 210 bounding box đều hợp lệ: w,h in (0, 1], cx,cy in [0, 1], s in [0.8, 1.6]');
 
   // 3. Test specific target Đạo Anh mentioned in requirement
   console.log('[3] Kiểm tra các trường hợp tiêu biểu...');

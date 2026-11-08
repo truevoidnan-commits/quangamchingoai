@@ -9,7 +9,23 @@ export const DAO_ANH_ELEMENT_TYPES = {
   TAO_HOA: { id: 'tao_hoa', name: 'Tạo Hóa & Sinh Mệnh', icon: 'mist', iconKey: 'mist' },
   KIEM_DAO: { id: 'kiem_dao', name: 'Kiếm Đạo & Sát Phạt', icon: 'sword', iconKey: 'sword' },
   THAN_THE: { id: 'than_the', name: 'Thần Thể & Vô Địch', icon: 'crown', iconKey: 'crown' },
+  HU_VO: { id: 'hu_vo', name: 'Hư Vô & Tịch Diệt', icon: 'orb', iconKey: 'orb' },
+  TRAN_PHAP: { id: 'tran_phap', name: 'Trận Pháp & Diễn Toán', icon: 'planet', iconKey: 'planet' },
+  HOANG_TUYEN: { id: 'hoang_tuyen', name: 'Hoàng Tuyền & U Minh', icon: 'skull', iconKey: 'skull' },
 };
+
+export const FALLBACK_DAO_ANH_ELEMENT_TYPE = {
+  id: 'khac',
+  name: 'Khác',
+  icon: 'sparkle',
+  iconKey: 'sparkle',
+};
+
+export function getDaoAnhElementType(category) {
+  if (!category) return FALLBACK_DAO_ANH_ELEMENT_TYPE;
+  const match = Object.values(DAO_ANH_ELEMENT_TYPES).find((t) => t.id === category);
+  return match || FALLBACK_DAO_ANH_ELEMENT_TYPE;
+}
 
 export const TINH_TRUNG_LAO_NGUYET_POEM = 'Tỉnh trung lao nguyệt, hạo nguyệt chiếu chư thiên.';
 export const TINH_TRUNG_LAO_NGUYET_DESC = 'Đạo Anh ngưng tụ từ dị tượng vô thượng tỉnh trung lao nguyệt, vầng trăng vằng vặc vớt lên từ đáy giếng, xua tan mọi tà niệm ma chướng cõi phàm.';

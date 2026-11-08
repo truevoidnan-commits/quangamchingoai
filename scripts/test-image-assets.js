@@ -45,7 +45,7 @@ async function main() {
   // -------------------------------------------------------------------------
   // Test A: Kiểm tra mọi file gốc đều có đủ bản _webp và _thumb
   // -------------------------------------------------------------------------
-  runTest('A.1: Kiểm tra Đạo Ảnh PNG (205 files) có đủ bản full webp và thumb webp', () => {
+  runTest('A.1: Kiểm tra Đạo Ảnh PNG (210 files) có đủ bản full webp và thumb webp', () => {
     const pngFiles = fs.readdirSync(DAO_ANH_SRC).filter(f => f.endsWith('.png'));
     assert.ok(pngFiles.length > 0, 'Phải có file PNG trong dao_anh');
     

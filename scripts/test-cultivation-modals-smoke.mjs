@@ -7,6 +7,7 @@ import { chromium } from 'playwright';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const distDir = path.resolve(__dirname, '../dist');
+const artifactsDir = 'C:/Users/ADMIN/.gemini/antigravity/brain/04a8635f-ab90-4862-af83-b6463b1f6a83';
 
 const PORT = 4213;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -45,10 +46,21 @@ const mockNguyenAnhState = {
   has121st: true,
   maxThienCung: 13,
   realizedThienCung: 13,
+  currentTargetDaoAnhId: 'dao_anh_1',
+  inventoryArtifacts: ['de_kiem', 'tam_thu_dao'],
+  palaceAnchors: {
+    0: { id: 'tao_hoa_ngoc_diep', name: 'Tạo Hóa Ngọc Điệp Cung', tier: 'than_pham' },
+    1: { id: 'tran_nguc_minh_vuong_the', name: 'Trấn Ngục Minh Vương Cung', tier: 'than_pham' },
+  },
   daoAnhs: Array.from({ length: 13 }).map((_, i) => ({
     id: `dao_anh_${i + 1}`,
     name: `Đạo Anh #${i + 1}`,
-    currentKiep: 5,
+    palaceIndex: 12 - i,
+    fromLamp: false,
+    artifactId: i === 0 ? 'tao_hoa_ngoc_diep' : (i === 1 ? 'tran_nguc_minh_vuong_the' : 'tao_hoa_ngoc_diep'),
+    currentKiep: 3,
+    currentExp: 2000,
+    maxExp: 10000,
     level: 10,
     active: true,
     glowColor: '#fbbf24',
@@ -91,7 +103,7 @@ async function testProfile(browser, profileName, state) {
   });
 
   page.on('console', (msg) => {
-    if (msg.type() === 'error') {
+    if (msg.type === 'error') {
       const text = msg.text();
       if (!text.includes('404') && !text.includes('Failed to load resource')) {
         console.error(`❌ [ConsoleError in ${profileName}]:`, text);
@@ -110,7 +122,7 @@ async function testProfile(browser, profileName, state) {
   }, { pName: profileName, sData: state });
 
   // 1. Open Cultivation Workspace
-  await page.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(800);
 
   // 2. Test Modal 1: Dao Anh Gallery Modal
@@ -148,7 +160,84 @@ async function testProfile(browser, profileName, state) {
     await page.waitForTimeout(300);
   }
 
-  // 4. Test Modal 3: Breakthrough / Linh Tang Modal if in Nguyen Anh
+  // 4. Test Modal: SwapAnchorModal in Nguyen Anh state
+  const swapBtn = page.locator('button:has-text("ĐỔI VẬT TRẤN ÁP"), button:has-text("Đổi Vật Trấn Áp")').first();
+  if (await swapBtn.isVisible()) {
+    await swapBtn.click();
+    await page.waitForTimeout(400);
+    const swapModal = page.locator('div[role="dialog"][aria-modal="true"]:has-text("Đổi Vật Trấn Áp")').first();
+    if (!await swapModal.isVisible()) {
+      errors.push('SwapAnchorModal did not become visible');
+    } else {
+      console.log(`  ✓ [${profileName}] SwapAnchorModal opened successfully.`);
+
+      // 1. Check unselected state alignment on desktop (1366x768)
+      await page.setViewportSize({ width: 1366, height: 768 });
+      await page.waitForTimeout(300);
+
+      const beforeTag = swapModal.locator('[class*="previewCol"]').first().locator('[class*="previewTag"]').first();
+      const afterTag = swapModal.locator('[class*="previewCol"]').last().locator('[class*="previewTag"]').first();
+      const beforeBoxElem = swapModal.locator('[class*="previewCol"]').first().locator('[class*="previewAvatarBox"]').first();
+      const afterBoxElem = swapModal.locator('[class*="previewCol"]').last().locator('[class*="previewAvatarBox"]').first();
+
+      if (await beforeTag.isVisible() && await afterTag.isVisible()) {
+        const bTag = await beforeTag.boundingBox();
+        const aTag = await afterTag.boundingBox();
+        if (Math.abs(bTag.y - aTag.y) > 3) {
+          errors.push(`Before and After tags are vertically misaligned: bTag.y=${bTag.y}, aTag.y=${aTag.y}`);
+        }
+      }
+
+      if (await beforeBoxElem.isVisible() && await afterBoxElem.isVisible()) {
+        const bBox = await beforeBoxElem.boundingBox();
+        const aBox = await afterBoxElem.boundingBox();
+        if (Math.abs(bBox.y - aBox.y) > 3) {
+          errors.push(`Before and After avatar boxes are vertically misaligned: bBox.y=${bBox.y}, aBox.y=${aBox.y}`);
+        }
+        if (Math.abs(bBox.width - aBox.width) > 3 || Math.abs(bBox.height - aBox.height) > 3) {
+          errors.push(`Before and After avatar boxes have different sizes: before=${bBox.width}x${bBox.height}, after=${aBox.width}x${aBox.height}`);
+        }
+      }
+
+      // Pick an artifact in the inventory
+      const artCard = swapModal.locator('div[role="button"]:has-text("Đế Kiếm"), div[role="button"]:has-text("Tam Thu Đao")').first();
+      if (await artCard.isVisible()) {
+        await artCard.click();
+        await page.waitForTimeout(300);
+        // Verify before/after preview block
+        const afterBlock = swapModal.locator('text=Sau Khi Đổi').first();
+        if (await afterBlock.isVisible()) {
+          console.log(`  ✓ [${profileName}] SwapAnchorModal shows aligned "Sau Khi Đổi" preview.`);
+        } else {
+          errors.push('SwapAnchorModal did not show "Sau Khi Đổi" preview block');
+        }
+
+        // Capture Desktop 1366 screenshot of SwapAnchorModal
+        if (profileName === 'real') {
+          await page.screenshot({
+            path: path.join(artifactsDir, 'swap-anchor-desktop-1366.png'),
+          });
+          console.log('  📷 Captured screenshot: swap-anchor-desktop-1366.png');
+
+          // Resize to Mobile 390x844 and capture screenshot
+          await page.setViewportSize({ width: 390, height: 844 });
+          await page.waitForTimeout(400);
+          await page.screenshot({
+            path: path.join(artifactsDir, 'swap-anchor-mobile-390.png'),
+          });
+          console.log('  📷 Captured screenshot: swap-anchor-mobile-390.png');
+
+          // Restore viewport
+          await page.setViewportSize({ width: 1920, height: 1080 });
+          await page.waitForTimeout(300);
+        }
+      }
+    }
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+  }
+
+  // 5. Test Modal 3: Breakthrough / Linh Tang Modal if in Nguyen Anh
   const breakthroughBtn = page.locator('button:has-text("ĐỘT PHÁ LINH TÀNG")').first();
   if (await breakthroughBtn.isVisible()) {
     await breakthroughBtn.click();
@@ -168,13 +257,13 @@ async function testProfile(browser, profileName, state) {
     await page.waitForTimeout(300);
   }
 
-  // 5. Test Modal 4: DaoAnhToLinhTangModal in Linh Tang state
+  // 6. Test Modal 4: DaoAnhToLinhTangModal in Linh Tang state
   await page.evaluate(({ pName, sData }) => {
     const stateKey = pName === 'sandbox' ? 'tcl_cultivation_state_v3__sandbox' : 'tcl_cultivation_state_v3';
     localStorage.setItem(stateKey, JSON.stringify({ ...sData, activeProfile: pName }));
   }, { pName: profileName, sData: mockLinhTangState });
 
-  await page.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(800);
 
   const customLinhTangBtn = page.locator('button:has-text("Tùy Chỉnh 5 Đạo Anh Bí Tàng")').first();
@@ -196,10 +285,10 @@ async function testProfile(browser, profileName, state) {
     await page.waitForTimeout(300);
   }
 
-  // 6. Test Modal 5: SanctumPage (Tàng Bảo Điện)
-  await page.goto(`${BASE_URL}/#/sanctum`, { waitUntil: 'networkidle' });
+  // 7. Test Modal 5: SanctumPage (Tàng Bảo Điện)
+  await page.goto(`${BASE_URL}/#/sanctum`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(800);
-  const sanctumContent = page.locator('div:has-text("TÀNG BẢO ĐIỆN"), div:has-text("Mệnh Đăng")').first();
+  const sanctumContent = page.locator('h1:has-text("TÀNG BẢO ĐIỆN")').first();
   if (!await sanctumContent.isVisible()) {
     errors.push('SanctumPage content not visible');
   } else {

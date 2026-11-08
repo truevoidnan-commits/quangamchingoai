@@ -589,11 +589,40 @@ export default function SanctumModal({ isOpen, onClose, initialTab = 'lamps' }) 
 
                       {/* Action */}
                       <div style={{ width: '100%', marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                        {isAnchored ? (
-                          <div style={{ fontSize: 11.5, color: '#38bdf8', fontWeight: 800, textAlign: 'center', padding: '4px 0', background: 'rgba(56,189,248,0.1)', borderRadius: 6, border: '1px solid rgba(56,189,248,0.25)' }}>
-                            ✓ Đã khảm nạm
-                          </div>
-                        ) : isInBag ? (
+                        {isAnchored ? (() => {
+                          const anchoredEntry = Object.entries(cultivation?.palaceAnchors || {}).find(([pIdx, a]) => {
+                            return typeof a === 'string' ? a === art.id : a?.id === art.id;
+                          });
+                          const anchoredIdx = anchoredEntry ? Number(anchoredEntry[0]) : null;
+                          const canSwap = ['kim_dan', 'gia_anh', 'nguyen_anh'].includes(cultivation?.realm) && anchoredIdx !== null;
+                          return (
+                            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                              <div style={{ flex: 1, fontSize: 11, color: '#38bdf8', fontWeight: 800, textAlign: 'center', padding: '4px 0', background: 'rgba(56,189,248,0.1)', borderRadius: 6, border: '1px solid rgba(56,189,248,0.25)' }}>
+                                ✓ Đã khảm
+                              </div>
+                              {canSwap && (
+                                <button
+                                  onClick={() => setSwapModalPalace && setSwapModalPalace(anchoredIdx)}
+                                  style={{
+                                    padding: '4px 10px',
+                                    borderRadius: 6,
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                    color: '#000',
+                                    border: '1px solid #fde047',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 3
+                                  }}
+                                >
+                                  <Icon name="swap" size={12} /> Đổi
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })() : isInBag ? (
                           <button
                             onClick={() => {
                               if (cultivation?.realm !== 'kim_dan') {

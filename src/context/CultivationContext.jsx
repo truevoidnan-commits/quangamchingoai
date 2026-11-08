@@ -24,6 +24,9 @@ export const CultivationProvider = ({ children }) => {
   // Add anchor modal palace state globally so Palace clicks and SidePanel can open Khảm Nạm Modal
   const [anchorModalPalace, setAnchorModalPalace] = useState(null);
 
+  // Add swap anchor modal state globally
+  const [swapModalPalace, setSwapModalPalace] = useState(null);
+
   const toggleFocusMode = useCallback(() => {
     setIsFocusMode(prev => !prev);
   }, []);
@@ -42,6 +45,8 @@ export const CultivationProvider = ({ children }) => {
     setGalleryModalOpen,
     anchorModalPalace,
     setAnchorModalPalace,
+    swapModalPalace,
+    setSwapModalPalace,
   };
 
   return (

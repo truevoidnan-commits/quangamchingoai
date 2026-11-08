@@ -1631,6 +1631,9 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
     setGalleryModalOpen: contextSetGalleryModalOpen,
     anchorModalPalace: contextAnchorModalPalace,
     setAnchorModalPalace: contextSetAnchorModalPalace,
+    swapModalPalace: contextSwapModalPalace,
+    setSwapModalPalace: contextSetSwapModalPalace,
+    swapAnchor: contextSwapAnchor,
     dropDaoAnhKiep
   } = useCultivationContext();
 
@@ -1660,6 +1663,10 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
   const [localAnchorModalPalace, setLocalAnchorModalPalace] = useState(null);
   const anchorModalPalace = contextAnchorModalPalace !== undefined ? contextAnchorModalPalace : localAnchorModalPalace;
   const setAnchorModalPalace = contextSetAnchorModalPalace || setLocalAnchorModalPalace;
+  const [localSwapModalPalace, setLocalSwapModalPalace] = useState(null);
+  const setSwapModalPalace = contextSetSwapModalPalace || setLocalSwapModalPalace;
+  const swapModalPalace = contextSwapModalPalace !== undefined ? contextSwapModalPalace : localSwapModalPalace;
+  const swapAnchor = contextSwapAnchor || cultivation?.swapAnchor;
   const [localGalleryModalOpen, setLocalGalleryModalOpen] = useState(false);
   const galleryModalOpen = contextGalleryModalOpen !== undefined ? contextGalleryModalOpen : localGalleryModalOpen;
   const setGalleryModalOpen = contextSetGalleryModalOpen || setLocalGalleryModalOpen;
@@ -4586,6 +4593,10 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                           setAnchorModalPalace(selfLocalIdx);
                         } else if (!isRealized && selfLocalIdx === realizedThienCung) {
                           setAnchorModalPalace(selfLocalIdx);
+                        } else if (isRealized && anchor) {
+                          if (['kim_dan', 'gia_anh', 'nguyen_anh'].includes(cultivation?.realm)) {
+                            setSwapModalPalace(selfLocalIdx);
+                          }
                         }
                       }
                     };
@@ -4626,6 +4637,8 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                               : (isRealized ? 'Cung Tự Thân (100% Cung Thật)' : (isBottleneck ? 'Cung Tự Thân (99.99% Chờ Khảm Nạm)' : (isCurrentActiveSelf ? 'Cung Tự Thân (Đang Nạp EXP)' : 'Cung Tự Thân (Chưa Mở)'))),
                             rank: cfg.tag || tierKey.toUpperCase(),
                             item: itemObj?.name || (isLampPalace ? lobj?.name : artifactObj?.name) || 'Chưa Khảm Nạm',
+                            selfLocalIdx: selfLocalIdx,
+                            canSwap: !isLampPalace && isRealized && Boolean(anchor) && ['kim_dan', 'gia_anh', 'nguyen_anh'].includes(cultivation?.realm),
                             desc: isLampPalace 
                               ? (lobj?.desc || 'Mệnh Đăng Thần Phẩm thiên địa khai minh, trấn áp vĩnh cửu không cần khảm nạm.') 
                               : (artifactObj?.poem || artifactObj?.desc || (isRealized ? 'Đã khảm nạm bảo vật trấn áp hoàn tất 100% Cung Thật.' : (isBottleneck ? 'Đã tích lũy đủ 99.99% linh lực! Nhấp vào để khảm nạm Bảo Vật.' : 'Cung tự thân thai nghén từ đan điền, cần nạp đủ linh lực.'))),
@@ -5362,6 +5375,12 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   <div style={{ fontSize: 11, color: 'var(--text-sub)', lineHeight: 1.4, marginTop: 2, fontStyle: 'italic', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 4 }}>
                     "{hoveredPalace.desc}"
                   </div>
+
+                  {hoveredPalace.canSwap && (
+                    <div style={{ fontSize: 10.5, color: '#fde047', fontWeight: 800, textAlign: 'center', marginTop: 2, background: 'rgba(251, 191, 36, 0.15)', padding: '4px 6px', borderRadius: 4 }}>
+                      ✦ Nhấp vào để Đổi Vật Trấn Áp
+                    </div>
+                  )}
 
                   {hoveredPalace.isBottleneck && (
                     <div style={{ fontSize: 10.5, color: '#fde047', fontWeight: 800, textAlign: 'center', marginTop: 2, background: 'rgba(234, 88, 12, 0.2)', padding: '3px 6px', borderRadius: 4 }}>
@@ -6542,6 +6561,41 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                               </div>
                             )}
                           </div>
+
+                          {!matchedDaoAnh.fromLamp && ['kim_dan', 'gia_anh', 'nguyen_anh'].includes(cultivation?.realm) && (
+                            <button
+                              onClick={() => {
+                                const maxThienCung = cultivation?.maxThienCung || 13;
+                                let targetIdx = (maxThienCung - 1) - (matchedDaoAnh.palaceIndex !== undefined ? matchedDaoAnh.palaceIndex : 0);
+                                if (matchedDaoAnh.artifactId && cultivation?.palaceAnchors) {
+                                  const found = Object.entries(cultivation.palaceAnchors).find(([p, a]) => {
+                                    return typeof a === 'string' ? a === matchedDaoAnh.artifactId : a?.id === matchedDaoAnh.artifactId;
+                                  });
+                                  if (found) targetIdx = Number(found[0]);
+                                }
+                                setFocusedDaoAnhId(null);
+                                setSwapModalPalace(targetIdx);
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '10px 14px',
+                                borderRadius: 8,
+                                background: 'rgba(251, 191, 36, 0.12)',
+                                border: '1px solid rgba(251, 191, 36, 0.45)',
+                                color: '#fde047',
+                                fontSize: 12.5,
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 6,
+                                marginTop: 4
+                              }}
+                            >
+                              <Icon name="swap" size={14} /> Đổi Vật Trấn Áp
+                            </button>
+                          )}
 
                           {modalCanDropKiep && (
                             <button
