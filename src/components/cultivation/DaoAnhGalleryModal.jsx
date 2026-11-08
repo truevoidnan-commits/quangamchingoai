@@ -100,9 +100,14 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [selectedId, setSelectedId] = useState(null);
   const [previewKiep, setPreviewKiep] = useState(5);
+  const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   const modalRef = useRef(null);
+  const chipsRowRef = useRef(null);
   const previouslyFocusedRef = useRef(null);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
 
   // Build ownership lookup map
   const ownershipMap = useMemo(() => buildOwnershipMap(cultivation), [cultivation]);
@@ -180,7 +185,6 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
       const found = DAO_ANH_LIST.find((d) => d.id === selectedId);
       if (found) return found;
     }
-    // Default to first owned in filteredList, or first item
     const firstOwned = filteredList.find((d) => ownershipMap[d.id]?.owned);
     return firstOwned || filteredList[0] || DAO_ANH_LIST[0];
   }, [selectedId, filteredList, ownershipMap]);
@@ -203,6 +207,23 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
     }
   }, [selectedDaoAnh?.id, ownershipMap]);
 
+  // Auto scroll category chip into view in mobile horizontal bar
+  const handleSelectCategory = (catId) => {
+    setCategoryFilter(catId);
+    if (chipsRowRef.current) {
+      const btn = chipsRowRef.current.querySelector(`[data-cat-id="${catId}"]`);
+      if (btn && btn.scrollIntoView) {
+        btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  };
+
+  // Card click handler
+  const handleCardClick = (daId) => {
+    setSelectedId(daId);
+    setIsMobileDetailOpen(true);
+  };
+
   // Navigation handlers
   const handlePrev = useCallback(() => {
     if (filteredList.length === 0) return;
@@ -216,6 +237,29 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
     setSelectedId(filteredList[nextIdx].id);
   }, [currentIndex, filteredList]);
 
+  // Touch handlers for mobile detail swipe
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+
+    // Horizontal swipe
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (deltaX > 0) {
+        handlePrev();
+      } else {
+        handleNext();
+      }
+    } else if (deltaY > 80 && Math.abs(deltaY) > Math.abs(deltaX)) {
+      // Downward swipe closes detail sheet
+      setIsMobileDetailOpen(false);
+    }
+  };
+
   // Focus trap & keyboard listeners
   useEffect(() => {
     if (!isOpen) return;
@@ -223,7 +267,11 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        onClose();
+        if (isMobileDetailOpen) {
+          setIsMobileDetailOpen(false);
+        } else {
+          onClose();
+        }
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         handlePrev();
       } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
@@ -238,7 +286,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
         previouslyFocusedRef.current.focus();
       }
     };
-  }, [isOpen, onClose, handlePrev, handleNext]);
+  }, [isOpen, onClose, isMobileDetailOpen, handlePrev, handleNext]);
 
   const isFilterActive =
     sourceFilter !== 'all' || categoryFilter !== 'all' || onlyOwned || searchTerm.trim() !== '';
@@ -270,6 +318,9 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
         onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
       >
+        {/* Mobile Drag Handle */}
+        <div className={styles.dragHandleBar} />
+
         {/* ================= HEADER ================= */}
         <header className={styles.header}>
           <div className={styles.headerLeft}>
@@ -291,6 +342,16 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
               <Icon name="crown" size={14} />
               <span>Kiếp tối đa {stats.maxKiepCount}</span>
             </div>
+          </div>
+
+          <div className={styles.headerActions}>
+            <button
+              className={styles.mobileSearchToggleBtn}
+              onClick={() => setIsMobileSearchOpen((prev) => !prev)}
+              aria-label="Mở tìm kiếm"
+            >
+              <Icon name="search" size={18} />
+            </button>
             <button
               className={styles.closeBtn}
               onClick={onClose}
@@ -301,9 +362,100 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
           </div>
         </header>
 
+        {/* ================= MOBILE COLLAPSIBLE SEARCH ================= */}
+        {(isMobileSearchOpen || searchTerm) && (
+          <div className={styles.mobileSearchCollapsible}>
+            <div className={styles.searchBox}>
+              <Icon name="search" size={16} className={styles.searchIcon} />
+              <input
+                type="text"
+                placeholder="Tìm Đạo Anh, thơ, thần thông..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={styles.searchInput}
+                aria-label="Tìm kiếm Đạo Anh"
+                autoFocus
+              />
+              {searchTerm && (
+                <button
+                  className={styles.searchClearBtn}
+                  onClick={() => setSearchTerm('')}
+                  aria-label="Xóa từ khóa tìm kiếm"
+                >
+                  <Icon name="x" size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ================= MOBILE / TABLET CONTROLS BAR ================= */}
+        <div className={styles.mobileControlsBar}>
+          {/* Segmented Source Tabs */}
+          <div className={styles.sourceSegmented} role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sourceFilter === 'all'}
+              className={`${styles.sourceTab} ${sourceFilter === 'all' ? styles.sourceTabActive : ''}`}
+              onClick={() => setSourceFilter('all')}
+            >
+              Tất cả ({sourceCounts.all})
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sourceFilter === 'lamp'}
+              className={`${styles.sourceTab} ${sourceFilter === 'lamp' ? styles.sourceTabActive : ''}`}
+              onClick={() => setSourceFilter('lamp')}
+            >
+              Mệnh Đăng ({sourceCounts.lamp})
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sourceFilter === 'artifact'}
+              className={`${styles.sourceTab} ${sourceFilter === 'artifact' ? styles.sourceTabActive : ''}`}
+              onClick={() => setSourceFilter('artifact')}
+            >
+              Trấn Cung ({sourceCounts.artifact})
+            </button>
+          </div>
+
+          {/* Horizontal Category Chips Row */}
+          <div ref={chipsRowRef} className={styles.horizontalChipsRow} role="tablist">
+            {/* Only Owned Toggle Chip */}
+            <button
+              type="button"
+              className={`${styles.chipItem} ${onlyOwned ? styles.chipItemActive : ''}`}
+              onClick={() => setOnlyOwned((prev) => !prev)}
+            >
+              <Icon name="check" size={13} />
+              <span>Đã có ({stats.ownedCount})</span>
+            </button>
+
+            {categoriesWithCounts.map((cat) => {
+              const isActive = categoryFilter === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  data-cat-id={cat.id}
+                  type="button"
+                  className={`${styles.chipItem} ${isActive ? styles.chipItemActive : ''}`}
+                  onClick={() => handleSelectCategory(cat.id)}
+                  aria-selected={isActive}
+                >
+                  <Icon name={cat.icon} size={13} />
+                  <span>{cat.name} ({cat.count})</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* ================= 3-COLUMN MASTER-DETAIL BODY ================= */}
         <div className={styles.bodyContainer}>
-          {/* ----- 1. LEFT SIDEBAR: FILTERS ----- */}
+          {/* ----- 1. LEFT SIDEBAR: DESKTOP FILTERS ----- */}
           <aside className={styles.sidebar}>
             {/* Search Input */}
             <div className={styles.searchBox}>
@@ -473,11 +625,11 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                             '--card-glow': cardGlow,
                             background: `radial-gradient(circle at 50% 30%, ${da.primaryColor || '#fbbf24'}15 0%, rgba(13, 20, 36, 0.85) 85%)`,
                           }}
-                          onClick={() => setSelectedId(da.id)}
+                          onClick={() => handleCardClick(da.id)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
-                              setSelectedId(da.id);
+                              handleCardClick(da.id);
                             }
                           }}
                         >
@@ -556,11 +708,11 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                           tabIndex={0}
                           aria-pressed={isSelected}
                           className={`${styles.listRow} ${isSelected ? styles.listRowSelected : ''}`}
-                          onClick={() => setSelectedId(da.id)}
+                          onClick={() => handleCardClick(da.id)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
-                              setSelectedId(da.id);
+                              handleCardClick(da.id);
                             }
                           }}
                         >
@@ -607,10 +759,38 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
             </div>
           </main>
 
-          {/* ----- 3. RIGHT COLUMN: DETAIL PANEL ----- */}
+          {/* ----- 3. RIGHT COLUMN / MOBILE DETAIL PANEL ----- */}
           {selectedDaoAnh && (
-            <aside className={styles.detailPanel} aria-label="Chi tiết Đạo Anh">
+            <aside
+              className={`${styles.detailPanel} ${isMobileDetailOpen ? styles.detailPanelOpen : ''}`}
+              aria-label="Chi tiết Đạo Anh"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
               <DaoAnhErrorBoundary>
+                {/* Mobile Detail Top Bar with Back Button */}
+                <div className={styles.mobileDetailTopBar}>
+                  <button
+                    type="button"
+                    className={styles.backBtn}
+                    onClick={() => setIsMobileDetailOpen(false)}
+                    aria-label="Quay lại danh sách"
+                  >
+                    <Icon name="arrow-left" size={16} /> Quay lại
+                  </button>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>
+                    {selectedDaoAnh.name}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.closeBtn}
+                    onClick={() => setIsMobileDetailOpen(false)}
+                    aria-label="Đóng chi tiết"
+                  >
+                    <Icon name="x" size={16} />
+                  </button>
+                </div>
+
                 {/* Large Art & Aura Section */}
                 <div className={styles.detailArtSection}>
                   <div

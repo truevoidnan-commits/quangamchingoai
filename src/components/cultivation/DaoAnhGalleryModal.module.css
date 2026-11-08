@@ -1,6 +1,6 @@
 /* =========================================================================
    DAO ANH GALLERY MODAL (BÁCH THẦN ĐIỂN) - STYLES
-   Master-Detail Single Frame Layout (Desktop) + Responsive Extensions
+   Master-Detail Single Frame Layout (Desktop) + Dedicated Mobile/Tablet
    Theme: Frosted glass, thin gold borders, 14-20px radii, unified tokens
    ========================================================================= */
 
@@ -31,7 +31,7 @@
   width: min(1480px, 95vw);
   height: min(92vh, 960px);
   max-height: 960px;
-  background: rgba(13, 20, 36, 0.92);
+  background: rgba(13, 20, 36, 0.94);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(251, 191, 36, 0.35);
@@ -44,6 +44,17 @@
   position: relative;
 }
 
+/* Mobile Drag Handle */
+.dragHandleBar {
+  display: none;
+  width: 40px;
+  height: 4px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.25);
+  margin: 8px auto 2px;
+  flex-shrink: 0;
+}
+
 /* =========================================================================
    HEADER: Compact single row
    ========================================================================= */
@@ -54,15 +65,17 @@
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid rgba(251, 191, 36, 0.2);
-  background: rgba(15, 23, 42, 0.65);
+  background: rgba(15, 23, 42, 0.75);
   flex-shrink: 0;
   gap: 16px;
+  position: relative;
+  z-index: 5;
 }
 
 .headerLeft {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .headerIconWrap {
@@ -75,6 +88,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .title {
@@ -118,6 +132,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .statPillHighlight {
@@ -126,9 +141,29 @@
   color: #fde047;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobileSearchToggleBtn {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
 .closeBtn {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -146,6 +181,65 @@
   color: #fca5a5;
 }
 
+/* Mobile Collapsible Search Row */
+.mobileSearchCollapsible {
+  display: none;
+  padding: 10px 16px;
+  background: rgba(15, 23, 42, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Mobile Horizontal Controls Under Header */
+.mobileControlsBar {
+  display: none;
+  flex-direction: column;
+  background: rgba(10, 16, 30, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 12px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.horizontalChipsRow {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 8px;
+  padding: 2px 4px 6px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
+}
+
+.horizontalChipsRow::-webkit-scrollbar {
+  display: none;
+}
+
+.chipItem {
+  scroll-snap-align: center;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.chipItemActive {
+  background: rgba(251, 191, 36, 0.18);
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #fde047;
+}
+
 /* =========================================================================
    BODY: 3-column Master-Detail
    ========================================================================= */
@@ -155,6 +249,7 @@
   grid-template-columns: 260px 1fr 420px;
   min-height: 0;
   overflow: hidden;
+  position: relative;
 }
 
 /* =========================================================================
@@ -378,6 +473,7 @@
   min-height: 0;
   background: rgba(13, 20, 36, 0.4);
   position: relative;
+  overflow: hidden;
 }
 
 .centerToolbar {
@@ -944,8 +1040,89 @@
   padding: 10px;
 }
 
+/* Mobile Top Bar inside detail sheet */
+.mobileDetailTopBar {
+  display: none;
+  height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.backBtn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  min-height: 44px;
+  min-width: 44px;
+}
+
 /* =========================================================================
-   RESPONSIVE DESIGN (Desktop Adjustments)
+   TABLET RESPONSIVE (768px - 1023px)
+   ========================================================================= */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .bodyContainer {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .mobileControlsBar {
+    display: flex;
+  }
+
+  .centerRegion {
+    flex: 1;
+  }
+
+  .cardsGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  /* Right detail becomes sliding drawer over the grid */
+  .detailPanel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(420px, 85vw);
+    z-index: 10;
+    background: rgba(13, 20, 36, 0.98);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.7);
+    border-left: 1px solid rgba(251, 191, 36, 0.35);
+    transform: translateX(100%);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .detailPanelOpen {
+    transform: translateX(0);
+  }
+
+  .mobileDetailTopBar {
+    display: flex;
+  }
+}
+
+/* =========================================================================
+   DESKTOP ADJUSTMENTS (1024px - 1279px)
    ========================================================================= */
 @media (min-width: 1024px) and (max-width: 1279px) {
   .bodyContainer {
@@ -954,5 +1131,186 @@
   .detailArtWrapper {
     width: 180px;
     height: 180px;
+  }
+}
+
+/* =========================================================================
+   MOBILE RESPONSIVE (< 768px)
+   ========================================================================= */
+@media (max-width: 767px) {
+  .overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modalFrame {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .dragHandleBar {
+    display: block;
+  }
+
+  .header {
+    height: 54px;
+    padding: 0 16px;
+    gap: 8px;
+  }
+
+  .title {
+    font-size: 16px;
+    gap: 6px;
+  }
+
+  .headerIconWrap {
+    display: none;
+  }
+
+  .badgeDien {
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+
+  .headerStats {
+    display: none;
+  }
+
+  .mobileSearchToggleBtn {
+    display: flex;
+  }
+
+  .closeBtn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .mobileSearchCollapsible {
+    display: block;
+  }
+
+  .mobileControlsBar {
+    display: flex;
+  }
+
+  .bodyContainer {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .centerToolbar {
+    height: 40px;
+    padding: 0 14px;
+  }
+
+  .cardsScrollArea {
+    padding: 12px;
+  }
+
+  .cardsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .card {
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .cardTitle {
+    display: none;
+  }
+
+  .cardMetaRow {
+    display: none;
+  }
+
+  .cardName {
+    font-size: 12px;
+  }
+
+  /* Mobile Fullscreen Detail Sheet */
+  .detailPanel {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    z-index: 20;
+    background: rgba(10, 16, 30, 0.98);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-left: none;
+    padding: 14px 16px;
+    transform: translateY(100%);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .detailPanelOpen {
+    transform: translateY(0);
+  }
+
+  .mobileDetailTopBar {
+    display: flex;
+  }
+
+  .detailArtSection {
+    padding-bottom: 8px;
+  }
+
+  .detailArtWrapper {
+    width: 160px;
+    height: 160px;
+    margin-bottom: 6px;
+  }
+
+  .evolutionSelector {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    width: 100%;
+    justify-content: center;
+    padding: 6px;
+  }
+}
+
+/* =========================================================================
+   MOBILE LANDSCAPE (844px x 390px, height <= 450px)
+   ========================================================================= */
+@media (max-height: 450px) and (orientation: landscape) {
+  .modalFrame {
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .header {
+    height: 44px;
+    padding: 0 12px;
+  }
+
+  .detailArtWrapper {
+    width: 110px;
+    height: 110px;
+  }
+
+  .detailPanel {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  .cardsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
 }
