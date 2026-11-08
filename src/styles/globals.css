@@ -201,6 +201,14 @@ button {
   touch-action: manipulation;
 }
 
+/* Chống rò rỉ căn giữa cho các nút dạng menuitem / row trong popover và sheet */
+button[role="menuitem"],
+.menu-row,
+[data-menu-item] {
+  justify-content: flex-start !important;
+  text-align: left !important;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, var(--accent-cyan), #1aa8d3);
   color: #070b12;

@@ -8,12 +8,18 @@
   border-radius: 12px;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 204, 0, 0.08);
   padding: 6px;
-  min-width: 195px;
+  min-width: 252px;
   display: flex;
   flex-direction: column;
   gap: 2px;
   animation: popoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   box-sizing: border-box;
+}
+
+.popoverMenu button,
+.popoverMenu [role="menuitem"] {
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .flipped {
