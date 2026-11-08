@@ -1131,7 +1131,7 @@ export default function SyncPage() {
                   </button>
                   {cloudHasMore && (
                     <span style={{ color: '#ef4444', fontSize: '0.78rem', paddingLeft: '4px' }}>
-                      ⚠️ Cloud có nhiều hơn {diffCloud} chương, chọn mục này sẽ làm Cloud mất chúng!
+                      <Icon name="alert-triangle" size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Cloud có nhiều hơn {diffCloud} chương, chọn mục này sẽ làm Cloud mất chúng!
                     </span>
                   )}
                 </div>
@@ -1147,7 +1147,7 @@ export default function SyncPage() {
                   </button>
                   {localHasMore && (
                     <span style={{ color: '#ef4444', fontSize: '0.78rem', paddingLeft: '4px' }}>
-                      ⚠️ Máy này có nhiều hơn {diffLocal} chương, chọn mục này sẽ làm máy này mất chúng!
+                      <Icon name="alert-triangle" size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Máy này có nhiều hơn {diffLocal} chương, chọn mục này sẽ làm máy này mất chúng!
                     </span>
                   )}
                 </div>
