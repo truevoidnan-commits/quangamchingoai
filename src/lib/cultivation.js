@@ -2577,6 +2577,182 @@ export function anchorPalaceWithArtifact(palaceIndex, artifactId) {
 }
 
 /**
+ * ĐỔI VẬT TRẤN ÁP TẠI THIÊN CUNG (Đồng bộ Đạo Anh tương ứng)
+ * - Chỉ cho phép khi realm in ['kim_dan', 'gia_anh', 'nguyen_anh']
+ * - Không cho phép ở 'linh_tang'
+ * - Cung phải là cung tự thân và đã khảm nạm
+ * - newArtifactId phải khác vật hiện tại và có trong inventoryArtifacts
+ * - Trả vật cũ về túi, rút 1 vật mới khỏi túi
+ * - Đồng bộ Đạo Anh tương ứng (nếu đã có): giữ nguyên id, currentKiep, currentExp, maxExp, thứ tự
+ */
+export function swapAnchoredArtifact(palaceIndex, newArtifactId) {
+  const state = getCultivationState();
+  if (state.realm === 'linh_tang') {
+    throw new Error('Đã nhập Linh Tàng, Đạo Anh đã gắn với Bí Tàng, không thể đổi Vật Trấn Áp.');
+  }
+  if (state.realm !== 'kim_dan' && state.realm !== 'gia_anh' && state.realm !== 'nguyen_anh') {
+    throw new Error('Chỉ có thể đổi Vật Trấn Áp ở cảnh giới Kim Đan, Giả Anh hoặc Nguyên Anh.');
+  }
+
+  const pIdx = Number(palaceIndex);
+  if (isNaN(pIdx) || pIdx < 0) {
+    throw new Error('Chỉ số Thiên Cung không hợp lệ.');
+  }
+
+  const lampBonusCount = (state.absorbedLamps || []).length;
+  const maxThienCung = state.maxThienCung || 13;
+  const lampPalaceStartIndex = maxThienCung - lampBonusCount;
+  if (pIdx >= lampPalaceStartIndex) {
+    throw new Error('Thiên Cung này hình thành từ Mệnh Đăng, không thể đổi Vật Trấn Áp.');
+  }
+
+  if (!state.palaceAnchors || state.palaceAnchors[pIdx] === undefined || state.palaceAnchors[pIdx] === null) {
+    throw new Error('Thiên Cung này chưa được khảm nạm Vật Trấn Áp.');
+  }
+
+  // Chuẩn hóa anchor hiện tại (hỗ trợ cả dạng string và object)
+  let rawAnchor = state.palaceAnchors[pIdx];
+  let currentAnchor;
+  if (typeof rawAnchor === 'string') {
+    const foundOld = (SUPPRESSING_ARTIFACTS || []).find(a => a.id === rawAnchor);
+    currentAnchor = {
+      id: rawAnchor,
+      name: foundOld?.name || rawAnchor,
+      shortName: foundOld?.shortName || foundOld?.name || rawAnchor,
+      palaceName: foundOld ? getPalaceNameFromArtifact(foundOld, pIdx, {}) : ('Thiên Cung #' + (pIdx + 1)),
+      tier: foundOld?.tier || 'ha_pham',
+      type: foundOld?.type || 'bao_vat',
+      icon: foundOld?.icon,
+      color: foundOld?.color,
+    };
+  } else {
+    currentAnchor = { ...rawAnchor };
+  }
+
+  const oldArtifactId = currentAnchor.id;
+  if (!newArtifactId || newArtifactId === oldArtifactId) {
+    throw new Error('Vật Trấn Áp mới phải khác với vật đang trấn áp hiện tại.');
+  }
+
+  // Kiểm tra vật mới trong túi trữ vật
+  const invArtifacts = [...(state.inventoryArtifacts || [])];
+  const artIndex = invArtifacts.findIndex(id => id === newArtifactId);
+  if (artIndex === -1) {
+    throw new Error('Không tìm thấy Vật Trấn Áp mới trong Túi Trữ Vật.');
+  }
+
+  const newArtObj = (SUPPRESSING_ARTIFACTS || []).find(a => a.id === newArtifactId);
+  if (!newArtObj) {
+    throw new Error('Dữ liệu Vật Trấn Áp mới không hợp lệ.');
+  }
+
+  // Tính tên cung mới: bỏ anchor cũ của cung đó khỏi danh sách để không tính là trùng với chính nó
+  const allAnchorsExceptCurrent = { ...state.palaceAnchors };
+  delete allAnchorsExceptCurrent[pIdx];
+  const newPalaceName = getPalaceNameFromArtifact(newArtObj, pIdx, allAnchorsExceptCurrent);
+
+  // Thực hiện đổi nguyên tử trên state
+  // 1. Rút 1 vật mới khỏi túi
+  invArtifacts.splice(artIndex, 1);
+  // 2. Trả vật cũ về túi
+  if (oldArtifactId) {
+    invArtifacts.push(oldArtifactId);
+  }
+  state.inventoryArtifacts = invArtifacts;
+
+  // 3. Cập nhật palaceAnchors
+  const updatedAnchor = {
+    id: newArtObj.id,
+    name: newArtObj.name,
+    shortName: newArtObj.shortName || newArtObj.name,
+    palaceName: newPalaceName,
+    tier: newArtObj.tier,
+    type: newArtObj.type,
+    icon: newArtObj.icon,
+    color: newArtObj.color,
+    anchoredAt: Date.now(),
+  };
+  state.palaceAnchors[pIdx] = updatedAnchor;
+
+  // 4. Đồng bộ Đạo Anh nếu đã có
+  let daoAnhBefore = null;
+  let daoAnhAfter = null;
+
+  if (state.daoAnhs && Array.isArray(state.daoAnhs) && state.daoAnhs.length > 0) {
+    // Thứ tự ưu tiên tìm Đạo Anh:
+    // (a) !fromLamp && artifactId === oldArtifactId
+    // (b) palaceIndex === (maxThienCung - 1 - pIdx)
+    // (c) fallback palaceIndex === pIdx + lampBonusCount
+    let targetDa = state.daoAnhs.find(d => !d.fromLamp && d.artifactId === oldArtifactId);
+    if (!targetDa) {
+      const expectedIdx = maxThienCung - 1 - pIdx;
+      targetDa = state.daoAnhs.find(d => !d.fromLamp && d.palaceIndex === expectedIdx);
+    }
+    if (!targetDa) {
+      const fallbackIdx = pIdx + lampBonusCount;
+      targetDa = state.daoAnhs.find(d => !d.fromLamp && d.palaceIndex === fallbackIdx);
+    }
+
+    if (targetDa) {
+      daoAnhBefore = { ...targetDa };
+
+      let shortName = newArtObj.shortName || newArtObj.name;
+      shortName = shortName.replace(/Mệnh Đăng|Thần Đăng|Đăng|Cung/g, '').trim();
+
+      targetDa.artifactId = newArtObj.id;
+      targetDa.palaceName = newPalaceName;
+      targetDa.name = formatDaoAnhTitle(newPalaceName);
+      targetDa.element = `${shortName} Thần Thể`;
+      targetDa.tier = newArtObj.tier;
+
+      // Xóa các trường cache khác nếu có
+      if (targetDa.artId) targetDa.artId = newArtObj.id;
+      if (targetDa.sourceArtifactId) targetDa.sourceArtifactId = newArtObj.id;
+      if (targetDa.image) delete targetDa.image;
+
+      // Đồng bộ Linh Tàng nếu có tham chiếu
+      if (state.linhTangs && Array.isArray(state.linhTangs)) {
+        state.linhTangs.forEach(lt => {
+          if (lt.sourceDaoAnhId === targetDa.id || lt.sourceArtifactId === oldArtifactId) {
+            lt.sourceDaoAnhName = targetDa.name;
+            lt.sourceArtifactId = newArtObj.id;
+            lt.artifactId = newArtObj.id;
+            lt.artId = newArtObj.id;
+          }
+        });
+      }
+
+      daoAnhAfter = { ...targetDa };
+    }
+  }
+
+  // 5. Ghi log
+  if (!state.logs) state.logs = [];
+  if (daoAnhBefore && daoAnhAfter) {
+    state.logs.unshift({
+      text: ` ĐỔI VẬT TRẤN ÁP! [${currentAnchor.name || oldArtifactId}] → [${newArtObj.name}] tại Thiên Cung #${pIdx + 1}. Đạo Anh [${daoAnhBefore.name}] lột xác thành [${daoAnhAfter.name}] (bảo toàn Kiếp và Tu Vi).`,
+      time: Date.now()
+    });
+  } else {
+    state.logs.unshift({
+      text: ` ĐỔI VẬT TRẤN ÁP! [${currentAnchor.name || oldArtifactId}] → [${newArtObj.name}] tại Thiên Cung #${pIdx + 1}.`,
+      time: Date.now()
+    });
+  }
+
+  // 6. Lưu trạng thái
+  saveCultivationState(state);
+
+  return {
+    state,
+    oldArtifact: currentAnchor,
+    newArtifact: newArtObj,
+    daoAnhBefore,
+    daoAnhAfter
+  };
+}
+
+/**
  * LUYỆN HÓA VẬT TRẤN ÁP TRONG TÚI TRỮ VẬT HOÀN TRẢ TU VI / THIÊN MỆNH (+3.000 Tu Vi / +50 TM)
  */
 export function refineArtifactForExp(artifactId) {
