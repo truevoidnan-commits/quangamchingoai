@@ -340,7 +340,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
             </div>
             <div className={styles.statPill}>
               <Icon name="crown" size={14} />
-              <span>Kiếp tối đa {stats.maxKiepCount}</span>
+              <span>Viên mãn Kiếp 5: {stats.maxKiepCount}</span>
             </div>
           </div>
 
