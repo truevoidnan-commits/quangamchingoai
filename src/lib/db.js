@@ -385,7 +385,7 @@ export async function replaceTextInNovel(novelId, searchText, replaceText = '', 
 export async function reconcileLibraryChapterCounts(novelIds = null) {
   try {
     const { getLibrary, updateLibraryItem } = await import('./storage.js');
-    const library = getLibrary();
+    const library = getLibrary({ includeHidden: true });
     if (!library || library.length === 0) return 0;
 
     const db = await getDB();
@@ -405,7 +405,8 @@ export async function reconcileLibraryChapterCounts(novelIds = null) {
         updateLibraryItem(item.id, {
           chapterCount: realCount,
           totalChapters: realCount,
-        });
+          updatedAt: item.updatedAt,
+        }, { touch: false });
         reconciledCount++;
       }
     }

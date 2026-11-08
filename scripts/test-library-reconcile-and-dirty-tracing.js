@@ -231,12 +231,48 @@ try {
   libItem = getLibrary().find(item => item.id === novelId);
   assert.strictEqual(libItem.chapterCount, 2, 'Sau khi đối chiếu: chapterCount phải đúng là 2 (từ DB thật)');
   assert.strictEqual(libItem.totalChapters, 2, 'totalChapters cũng phải là 2');
+  assert.strictEqual(libItem.updatedAt, now, 'reconcileLibraryChapterCounts TUYỆT ĐỐI không được thay đổi updatedAt của metadata');
 
   // Gọi lại lần nữa (idempotency) -> không còn truyện nào lệch
   const secondRun = await reconcileLibraryChapterCounts([novelId]);
   assert.strictEqual(secondRun, 0, 'Lần chạy tiếp theo không thay đổi gì (idempotent)');
 
-  console.log('  ✓ Test 3 đạt: Thư viện tự động đối chiếu số chương chuẩn xác từ IndexedDB!\n');
+  console.log('  ✓ Test 3 đạt: Thư viện tự động đối chiếu số chương chuẩn xác từ IndexedDB, bảo toàn updatedAt!\n');
+
+  // 4. Kiểm tra mergeNovelWithCloud không làm sai lệch updatedAt
+  console.log('--- Test 4: mergeNovelWithCloud bảo toàn updatedAt ---');
+  const cloudMetaTime = 123456789;
+  const initialLibTime = 1000000;
+  addToLibrary({
+    id: 'novel_preserve_time',
+    title: 'Preserve Time Novel',
+    chapterCount: 1,
+    totalChapters: 1,
+    updatedAt: initialLibTime,
+  });
+
+  const { mergeNovelWithCloud } = await import('../src/lib/sync/syncEngine.js');
+  const mockSupabase = {
+    auth: { getUser: async () => ({ data: { user: { id: 'usr_test' } } }) },
+    storage: {
+      from: () => ({
+        download: async () => ({ data: new Blob([JSON.stringify([])]), error: null }),
+        upload: async () => ({ data: {}, error: null }),
+      }),
+    },
+    from: () => ({
+      select: () => ({ eq: () => ({ eq: () => Promise.resolve({ data: [{ id: 'novel_preserve_time', chapter_count: 1, updated_at: cloudMetaTime }] }) }) }),
+      update: () => ({ eq: () => ({ eq: () => Promise.resolve({ data: [] }) }) }),
+    }),
+  };
+
+  const testLedger = { novels: {} };
+  await mergeNovelWithCloud(mockSupabase, 'usr_test', 'novel_preserve_time', { id: 'novel_preserve_time', chapter_count: 1, updated_at: cloudMetaTime }, testLedger);
+
+  const afterMergeItem = getLibrary({ includeHidden: true }).find(n => n.id === 'novel_preserve_time');
+  assert.strictEqual(afterMergeItem.updatedAt, cloudMetaTime, 'mergeNovelWithCloud phải giữ cloudRow.updated_at, không được bump Date.now()');
+  assert.strictEqual(testLedger.novels['novel_preserve_time'].lastSyncedMetaAt, cloudMetaTime, 'lastSyncedMetaAt phải khớp cloudMetaTime');
+  console.log('  ✓ Test 4 đạt: mergeNovelWithCloud bảo toàn metadata updatedAt và lastSyncedMetaAt!\n');
 
   console.log('🎉 TẤT CẢ TEST PHẦN 5 ĐỀU ĐẠT 100%!');
   process.exit(0);

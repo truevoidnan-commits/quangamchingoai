@@ -925,10 +925,13 @@ export async function mergeNovelWithCloud(supabase, userId, novelId, cloudRow, l
   saveSyncLedger(currentLedger);
 
   // 7. Cập nhật metadata thư viện (số chương thật)
+  const existingLibItem = getLibrary({ includeHidden: true }).find(item => item.id === novelId);
+  const preservedUpdatedAt = cloudRow?.updated_at || existingLibItem?.updatedAt;
   updateLibraryItem(novelId, {
     chapterCount: merged.length,
     totalChapters: merged.length,
-  });
+    ...(preservedUpdatedAt !== undefined ? { updatedAt: preservedUpdatedAt } : {}),
+  }, { touch: false });
 
   // 8. Log sync event
   logSyncEvent({
@@ -1027,10 +1030,13 @@ export async function resyncNovel(novelId, options = {}) {
     const mergeRes = await mergeNovelWithCloud(client, userId, novelId, cloudRow, ledger);
 
     // Cập nhật lại số chương thực tế vào Library item
+    const existingLibItem = getLibrary({ includeHidden: true }).find(item => item.id === novelId);
+    const preservedUpdatedAt = cloudRow?.updated_at || existingLibItem?.updatedAt;
     updateLibraryItem(novelId, {
       chapterCount: mergeRes.merged,
       totalChapters: mergeRes.merged,
-    });
+      ...(preservedUpdatedAt !== undefined ? { updatedAt: preservedUpdatedAt } : {}),
+    }, { touch: false });
 
     clearNovelDirty(novelId);
     saveSyncLedger(ledger);
