@@ -104,6 +104,9 @@ export default function SwapAnchorModal({
     return findDaoAnhDefinition(currentDa, cultivation);
   }, [currentDa, cultivation]);
 
+  const currentSkillName = currentDaDef?.skillName || currentDa?.skillName || 'Thần Thông Trấn Thủ';
+  const currentSkillDesc = currentDaDef?.skillDesc || currentDa?.skillDesc || 'Uy áp trấn giữ thiên cung.';
+
   // Inventory artifacts (excluding the one already anchored in this palace)
   const groupedInventory = useMemo(() => {
     const inv = cultivation?.inventoryArtifacts || [];
@@ -260,20 +263,42 @@ export default function SwapAnchorModal({
           {/* Before & After Dao Anh Preview (Giả Anh / Nguyên Anh) */}
           {isDaoAnhStage && currentDa && (
             <div className={styles.previewGrid}>
-              {/* Before */}
+              {/* Before Column */}
               <div className={styles.previewCol}>
                 <span className={styles.previewTag}>Hiện Tại</span>
-                <DaoAnhAvatarRenderer
-                  daoAnh={currentDaDef}
-                  currentKiep={currentDa.currentKiep || 0}
-                  size={64}
-                  animate={false}
-                  showAura={false}
-                />
-                <span className={styles.previewName}>{currentDa.name}</span>
-                <span style={{ fontSize: 11, color: '#38bdf8' }}>
-                  Kiếp {currentDa.currentKiep || 0}/5
+                <div className={styles.previewAvatarBox}>
+                  <DaoAnhAvatarRenderer
+                    daoAnh={currentDaDef}
+                    currentKiep={currentDa.currentKiep || 0}
+                    size={72}
+                    imageSize={60}
+                    animate={false}
+                    showAura={false}
+                  />
+                </div>
+                <span className={styles.previewName} title={currentDa.name}>
+                  {currentDa.name}
                 </span>
+                <div className={styles.previewMetaRow}>
+                  <span
+                    className="badge"
+                    style={{
+                      fontSize: 9.5,
+                      padding: '1px 6px',
+                      color: currentTierInfo.color,
+                      background: currentTierInfo.bg || 'rgba(255,255,255,0.06)',
+                      borderColor: currentTierInfo.border || currentTierInfo.color,
+                    }}
+                  >
+                    {currentTierInfo.name}
+                  </span>
+                  <span style={{ fontSize: 11, color: '#38bdf8', fontWeight: 700 }}>
+                    Kiếp {currentDa.currentKiep || 0}/5
+                  </span>
+                </div>
+                <div className={styles.previewSkill} title={currentSkillDesc}>
+                  {currentSkillName}
+                </div>
               </div>
 
               {/* Arrow */}
@@ -281,50 +306,63 @@ export default function SwapAnchorModal({
                 <Icon name="arrow-right" size={22} />
               </div>
 
-              {/* After */}
+              {/* After Column */}
               <div className={styles.previewCol}>
                 <span className={styles.previewTag}>Sau Khi Đổi</span>
                 {previewNewDaoAnh ? (
                   <>
-                    <DaoAnhAvatarRenderer
-                      daoAnh={previewNewDaoAnh.def}
-                      currentKiep={currentDa.currentKiep || 0}
-                      size={64}
-                      animate={false}
-                      showAura={false}
-                    />
-                    <span className={styles.previewName}>{previewNewDaoAnh.name}</span>
-                    <span
-                      className="badge"
-                      style={{
-                        fontSize: 9.5,
-                        padding: '1px 6px',
-                        color: previewNewDaoAnh.tierInfo.color,
-                        background: previewNewDaoAnh.tierInfo.bg,
-                        borderColor: previewNewDaoAnh.tierInfo.border,
-                      }}
-                    >
-                      {previewNewDaoAnh.tierInfo.name}
-                      {previewNewDaoAnh.isDefaultFallback ? ' (Mặc định)' : ''}
+                    <div className={styles.previewAvatarBox}>
+                      <DaoAnhAvatarRenderer
+                        daoAnh={previewNewDaoAnh.def}
+                        currentKiep={currentDa.currentKiep || 0}
+                        size={72}
+                        imageSize={60}
+                        animate={false}
+                        showAura={false}
+                      />
+                    </div>
+                    <span className={styles.previewName} title={previewNewDaoAnh.name}>
+                      {previewNewDaoAnh.name}
                     </span>
-                    <span className={styles.previewSkill} title={previewNewDaoAnh.skillDesc}>
+                    <div className={styles.previewMetaRow}>
+                      <span
+                        className="badge"
+                        style={{
+                          fontSize: 9.5,
+                          padding: '1px 6px',
+                          color: previewNewDaoAnh.tierInfo.color,
+                          background: previewNewDaoAnh.tierInfo.bg,
+                          borderColor: previewNewDaoAnh.tierInfo.border,
+                        }}
+                      >
+                        {previewNewDaoAnh.tierInfo.name}
+                        {previewNewDaoAnh.isDefaultFallback ? ' (Mặc định)' : ''}
+                      </span>
+                      <span style={{ fontSize: 11, color: '#38bdf8', fontWeight: 700 }}>
+                        Kiếp {currentDa.currentKiep || 0}/5
+                      </span>
+                    </div>
+                    <div className={styles.previewSkill} title={previewNewDaoAnh.skillDesc}>
                       {previewNewDaoAnh.skillName}
-                    </span>
+                    </div>
                   </>
                 ) : (
-                  <div
-                    style={{
-                      height: 100,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#64748b',
-                      fontSize: 11.5,
-                      fontStyle: 'italic',
-                    }}
-                  >
-                    Chọn vật mới bên dưới để xem trước
-                  </div>
+                  <>
+                    <div className={`${styles.previewAvatarBox} ${styles.previewAvatarEmpty}`}>
+                      <Icon name="swap" size={24} style={{ opacity: 0.4 }} />
+                    </div>
+                    <span className={`${styles.previewName} ${styles.previewMuted}`}>
+                      Chưa chọn bảo vật
+                    </span>
+                    <div className={styles.previewMetaRow}>
+                      <span style={{ fontSize: 10.5, color: '#64748b', fontStyle: 'italic' }}>
+                        Kiếp {currentDa.currentKiep || 0}/5 (Bảo toàn)
+                      </span>
+                    </div>
+                    <div className={`${styles.previewSkill} ${styles.previewSkillEmpty}`}>
+                      Chọn vật phẩm bên dưới để xem trước
+                    </div>
+                  </>
                 )}
               </div>
             </div>

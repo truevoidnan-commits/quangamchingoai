@@ -143,10 +143,10 @@
 /* Before & After Dao Anh Preview */
 .previewGrid {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
+  grid-template-columns: 1fr 36px 1fr;
+  align-items: stretch;
   gap: 12px;
-  padding: 14px;
+  padding: 14px 16px;
   border-radius: 14px;
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(251, 191, 36, 0.25);
@@ -159,22 +159,46 @@
   text-align: center;
   gap: 6px;
   min-width: 0;
+  height: 100%;
 }
 
 .previewArrow {
   color: #fbbf24;
-  opacity: 0.8;
+  opacity: 0.85;
   display: flex;
   align-items: center;
   justify-content: center;
+  align-self: center;
 }
 
 .previewTag {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   text-transform: uppercase;
   color: #94a3b8;
+  height: 16px;
+  line-height: 16px;
+}
+
+/* Avatar Box - 72px desktop, 64px mobile, fixed square, soft aura */
+.previewAvatarBox {
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.15) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.previewAvatarEmpty {
+  border: 1.5px dashed rgba(255, 255, 255, 0.2);
+  background: rgba(15, 23, 42, 0.3);
+  color: #64748b;
 }
 
 .previewName {
@@ -185,15 +209,48 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  height: 18px;
+  line-height: 18px;
+}
+
+.previewMuted {
+  color: #64748b;
+  font-style: italic;
+  font-weight: 600;
+}
+
+.previewMetaRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 20px;
 }
 
 .previewSkill {
   font-size: 11px;
+  font-weight: 600;
   color: #cbd5e1;
   background: rgba(255, 255, 255, 0.05);
-  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 5px 10px;
   border-radius: 6px;
   max-width: 100%;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.previewSkillEmpty {
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: #64748b;
+  font-style: italic;
 }
 
 .preserveNote {
@@ -432,11 +489,17 @@
 
   .previewGrid {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: 10px;
   }
 
   .previewArrow {
     transform: rotate(90deg);
+    padding: 2px 0;
+  }
+
+  .previewAvatarBox {
+    width: 64px;
+    height: 64px;
   }
 
   .artifactGrid {
