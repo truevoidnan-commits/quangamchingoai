@@ -33,7 +33,7 @@ const daoAnhBBoxUrl = pathToFileURL(daoAnhBBoxPath).href;
 
 const transformedSource = rawDaoAnhSource
   .replace(/const daoAnh\w+Modules = import\.meta\.glob\([^)]*\);/g, (m) => m.split('=')[0] + '= {};')
-  .replace(/from\s+['"]\.\/assetHelper['"]/g, `from '${assetHelperUrl}'`)
+  .replace(/from\s+['"]\.\/assetHelper(?:\.js)?['"]/g, `from '${assetHelperUrl}'`)
   .replace(/from\s+['"]\.\/daoAnhFit\.generated\.js['"]/g, `from '${daoAnhFitUrl}'`)
   .replace(/from\s+['"]\.\/daoAnhBBox\.generated\.js['"]/g, `from '${daoAnhBBoxUrl}'`);
 

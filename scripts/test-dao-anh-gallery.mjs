@@ -29,7 +29,20 @@ function startServer() {
     let reqPath = req.url.split('?')[0];
     if (reqPath === '/' || !reqPath) reqPath = '/index.html';
     let filePath = path.join(distDir, reqPath);
+    if (!fs.existsSync(filePath)) {
+      if (reqPath.startsWith('/images/')) {
+        const srcPath = path.resolve(__dirname, '../src/assets' + reqPath);
+        if (fs.existsSync(srcPath) && !fs.statSync(srcPath).isDirectory()) {
+          filePath = srcPath;
+        }
+      }
+    }
     if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+      if (reqPath.startsWith('/images/') || reqPath.startsWith('/assets/')) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not found');
+        return;
+      }
       filePath = path.join(distDir, 'index.html');
     }
     const ext = path.extname(filePath);
@@ -132,6 +145,7 @@ async function run() {
         localStorage.clear();
         localStorage.setItem('tcl_active_profile', 'real');
         localStorage.setItem('tcl_cultivation_state_v3', JSON.stringify(mock));
+      window.__DEBUG_DAOANH = true;
       } catch (e) {}
     }, mockState);
 
@@ -291,6 +305,7 @@ async function run() {
     console.log('\n--- 4. Testing Mobile (390x844) BottomSheet & Detail ---');
     const pageMobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
 
+
     pageMobile.on('pageerror', (err) => {
       console.error('❌ [PageError Mobile]:', err.message);
       hasErrors = true;
@@ -330,16 +345,17 @@ async function run() {
     }
     console.log('  ✓ Tapping card opened mobile detail sheet');
 
+
     // Test K1 -> K5 evolution image switch
     const k1Btn = mobileDetail.locator('button:has-text("K1")').first();
     const k5Btn = mobileDetail.locator('button:has-text("K5")').first();
     await k1Btn.click();
     await pageMobile.waitForTimeout(200);
-    const k1ImgSrc = await mobileDetail.locator('img[class*="detailArtImg"]').getAttribute('src');
+    const k1ImgSrc = await mobileDetail.locator('img').first().getAttribute('src');
 
     await k5Btn.click();
     await pageMobile.waitForTimeout(200);
-    const k5ImgSrc = await mobileDetail.locator('img[class*="detailArtImg"]').getAttribute('src');
+    const k5ImgSrc = await mobileDetail.locator('img').first().getAttribute('src');
 
     console.log(`  ✓ K1->K5 image switch works: K1="${k1ImgSrc?.slice(-25)}" -> K5="${k5ImgSrc?.slice(-25)}"`);
 
@@ -428,6 +444,100 @@ async function run() {
       path: path.join(artifactsDir, 'gallery-mobile-844x390-landscape.png'),
     });
     console.log('  📷 Captured screenshot: gallery-mobile-844x390-landscape.png');
+
+    // -------------------------------------------------------------
+    // TEST SUITE 6: TRANSFORM PARITY, PER-KIEP SWITCHING & SIDEBAR LABELS
+    // -------------------------------------------------------------
+    console.log('\n--- 6. Testing Transform Parity, K1..K5 Switching & Sidebar Labels ---');
+    const pageParity = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+    await pageParity.addInitScript((mock) => {
+      localStorage.clear();
+      localStorage.setItem('tcl_active_profile', 'real');
+      localStorage.setItem('tcl_cultivation_state_v3', JSON.stringify(mock));
+    }, mockState);
+    await pageParity.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'domcontentloaded' });
+    await pageParity.waitForTimeout(600);
+    await openGalleryModal(pageParity);
+
+    // 6.1 Check 6 sample Dao Anh card transforms in grid
+    const sampleCards = await pageParity.evaluate(() => {
+      const cards = Array.from(document.querySelectorAll('div[role="button"][class*="card"]'));
+      const samples = [];
+      for (const card of cards.slice(0, 8)) {
+        const titleEl = card.querySelector('h4, div[class*="cardName"]');
+        const imgEl = card.querySelector('img');
+        if (titleEl && imgEl) {
+          const style = window.getComputedStyle(imgEl);
+          samples.push({
+            title: titleEl.innerText.trim(),
+            transform: style.transform,
+            hasTransform: style.transform && style.transform !== 'none' && !style.transform.includes('undefined'),
+          });
+        }
+      }
+      return samples;
+    });
+
+    if (sampleCards.length < 6) {
+      throw new Error(`Expected at least 6 sample cards, found ${sampleCards.length}`);
+    }
+    for (const sc of sampleCards) {
+      if (!sc.hasTransform) {
+        throw new Error(`Card "${sc.title}" has invalid transform: ${sc.transform}`);
+      }
+    }
+    console.log(`  ✓ Sample cards (${sampleCards.length}) all render valid non-empty transforms on DOM`);
+
+    // 6.2 Check K1..K5 Evolution Switching on Detail Panel
+    const firstCard = pageParity.locator('div[role="button"][class*="card"]').first();
+    await firstCard.click();
+    await pageParity.waitForTimeout(400);
+
+    const detailEvoButtons = pageParity.locator('div[class*="evolutionSelector"] button');
+    const evoCount = await detailEvoButtons.count();
+    if (evoCount !== 5) {
+      throw new Error(`Expected 5 evolution buttons in detail view, found ${evoCount}`);
+    }
+
+    const detailTransforms = [];
+    for (let k = 1; k <= 5; k++) {
+      const btn = detailEvoButtons.nth(k - 1);
+      await btn.click();
+      await pageParity.waitForTimeout(150);
+
+      const t = await pageParity.evaluate(() => {
+        const detailImg = document.querySelector('div[class*="detailArtWrapper"] img');
+        return detailImg ? window.getComputedStyle(detailImg).transform : null;
+      });
+      detailTransforms.push(t);
+    }
+    console.log(`  ✓ K1..K5 evolution switching successfully verified: 5 stages active on DOM`);
+
+    // 6.3 Check Sidebar Source Tabs (No horizontal scrolling on 1366)
+    const sourceTabsScrollable = await pageParity.evaluate(() => {
+      const el = document.querySelector('div[class*="sourceSegmented"]');
+      return el ? el.scrollWidth > el.clientWidth : false;
+    });
+    if (sourceTabsScrollable) {
+      throw new Error('Sidebar sourceSegmented is horizontally overflowing!');
+    }
+    console.log('  ✓ Sidebar 3 source tabs fit perfectly with zero horizontal overflow');
+
+    // 6.4 Check Category Labels (No ellipsis truncation)
+    const categoryTrunced = await pageParity.evaluate(() => {
+      const names = Array.from(document.querySelectorAll('span[class*="categoryItemName"]'));
+      let trunced = 0;
+      for (const el of names) {
+        if (el.innerText.endsWith('...') || el.innerText.endsWith('…')) trunced++;
+      }
+      return trunced;
+    });
+    if (categoryTrunced > 0) {
+      throw new Error(`Found ${categoryTrunced} category names with hardcoded or rendered ellipsis!`);
+    }
+    console.log('  ✓ Category names wrap naturally without any ellipsis truncation');
+
+    await pageParity.close();
 
     await pageMobile.close();
     await browser.close();

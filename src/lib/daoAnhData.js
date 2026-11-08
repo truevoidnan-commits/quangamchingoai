@@ -2344,9 +2344,10 @@ export function getDaoAnhDevTuneOverrides() {
 
 export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {}) {
   if (!daoAnhDef) return { scale: 1, x: 0, y: 0, isAuto: false };
-  const id = daoAnhDef.id || '';
-  const sourceId = daoAnhDef.sourceId || '';
+  const id = typeof daoAnhDef === 'string' ? daoAnhDef : (daoAnhDef.id || '');
+  const sourceId = typeof daoAnhDef === 'string' ? daoAnhDef : (daoAnhDef.sourceId || '');
   const cleanId = id.replace(/^da_/, '');
+  const daId = id.startsWith('da_') ? id : `da_${id}`;
 
   // 0. Nếu đang có dev tune override cho id này & kiếp này
   if (!options?.ignoreOverrides) {
@@ -2371,7 +2372,7 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
     }
   }
 
-  const cfg = DAO_ANH_CUSTOM_TRANSFORMS[id] || DAO_ANH_CUSTOM_TRANSFORMS[sourceId];
+  const cfg = DAO_ANH_CUSTOM_TRANSFORMS[id] || DAO_ANH_CUSTOM_TRANSFORMS[sourceId] || DAO_ANH_CUSTOM_TRANSFORMS[cleanId] || DAO_ANH_CUSTOM_TRANSFORMS[daId];
 
   // 1. Nếu có mục chỉnh tay (có cấu hình cho kiếp hiện tại hoặc kiếp 1 để fallback) -> THẮNG
   if (cfg && (cfg[currentKiep] !== undefined || cfg[1] !== undefined)) {
