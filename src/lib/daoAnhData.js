@@ -2326,10 +2326,51 @@ export const DAO_ANH_CUSTOM_TRANSFORMS = {
   },
 };
 
+let devTuneOverrides = {};
+if (typeof window !== 'undefined') {
+  try {
+    const saved = window.localStorage.getItem('tcl_dao_anh_tune_overrides');
+    if (saved) devTuneOverrides = JSON.parse(saved);
+  } catch (e) {}
+}
+
+export function setDaoAnhDevTuneOverrides(overrides) {
+  devTuneOverrides = overrides || {};
+}
+
+export function getDaoAnhDevTuneOverrides() {
+  return devTuneOverrides;
+}
+
 export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {}) {
   if (!daoAnhDef) return { scale: 1, x: 0, y: 0, isAuto: false };
   const id = daoAnhDef.id || '';
   const sourceId = daoAnhDef.sourceId || '';
+  const cleanId = id.replace(/^da_/, '');
+
+  // 0. Nếu đang có dev tune override cho id này & kiếp này
+  if (!options?.ignoreOverrides) {
+    const tuneOvr = devTuneOverrides[id] || devTuneOverrides[sourceId] || devTuneOverrides[cleanId];
+    if (tuneOvr && tuneOvr[currentKiep]) {
+      const kCfg = tuneOvr[currentKiep];
+      const s = kCfg.scale ?? 1;
+      let x = kCfg.x ?? 0;
+      let y = kCfg.y ?? 0;
+      if (typeof options === 'object' && options !== null && typeof options.size === 'number' && options.size > 0) {
+        const refSize = options.refSize || 185;
+        const ratio = options.size / refSize;
+        x = Math.round(x * ratio * 10) / 10;
+        y = Math.round(y * ratio * 10) / 10;
+      }
+      return {
+        scale: s,
+        x,
+        y,
+        isAuto: false,
+      };
+    }
+  }
+
   const cfg = DAO_ANH_CUSTOM_TRANSFORMS[id] || DAO_ANH_CUSTOM_TRANSFORMS[sourceId];
 
   // 1. Nếu có mục chỉnh tay (có cấu hình cho kiếp hiện tại hoặc kiếp 1 để fallback) -> THẮNG

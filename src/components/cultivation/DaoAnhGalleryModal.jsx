@@ -5,6 +5,9 @@ import {
   DAO_ANH_ELEMENT_TYPES,
   getDaoAnhElementType,
   getDaoAnhEvolutionImage,
+  getDaoAnhBBox,
+  getDaoAnhTransformConfig,
+  setDaoAnhDevTuneOverrides,
 } from '../../lib/daoAnhData';
 import { buildOwnershipMap, getDaoAnhStats } from '../../lib/daoAnhGalleryUtils';
 import { useCultivationContext } from '../../context/CultivationContext';
@@ -51,6 +54,50 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
   const [previewKiep, setPreviewKiep] = useState(5);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+
+  // Dev Tuner state
+  const [isTuneMode, setIsTuneMode] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const search = window.location.search;
+        if (search.includes('tune=1') || search.includes('daoanh_tune=1')) return true;
+        if (window.localStorage.getItem('tcl_dao_anh_tune') === '1') return true;
+      }
+    } catch (e) {}
+    return false;
+  });
+
+  const [tuneOverrides, setTuneOverrides] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem('tcl_dao_anh_tune_overrides');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  const [copiedTune, setCopiedTune] = useState(false);
+
+  useEffect(() => {
+    setDaoAnhDevTuneOverrides(tuneOverrides);
+  }, [tuneOverrides]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 't' || e.key === 'T')) {
+        e.preventDefault();
+        setIsTuneMode((prev) => {
+          const next = !prev;
+          try {
+            window.localStorage.setItem('tcl_dao_anh_tune', next ? '1' : '0');
+          } catch (err) {}
+          return next;
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const modalRef = useRef(null);
   const chipsRowRef = useRef(null);
@@ -245,6 +292,94 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
     setCategoryFilter('all');
     setOnlyOwned(false);
     setSearchTerm('');
+  };
+
+  // Dev Tuner handlers
+  const currentCleanId = (selectedDaoAnh?.id || '').replace(/^da_/, '');
+  const activeDaoAnhOverride = (selectedDaoAnh ? (tuneOverrides[currentCleanId] || tuneOverrides[selectedDaoAnh.id]) : null) || {};
+  const currentKiepTune = activeDaoAnhOverride[previewKiep];
+  const baseCfg = selectedDaoAnh ? getDaoAnhTransformConfig(selectedDaoAnh, previewKiep, { size: 185, refSize: 185, ignoreOverrides: true }) : null;
+  const currentScale = currentKiepTune?.scale !== undefined ? currentKiepTune.scale : (baseCfg?.scale ?? 1.0);
+  const currentX = currentKiepTune?.x !== undefined ? currentKiepTune.x : (baseCfg?.x ?? 0);
+  const currentY = currentKiepTune?.y !== undefined ? currentKiepTune.y : (baseCfg?.y ?? 0);
+
+  const handleTuneChange = (field, val) => {
+    if (!selectedDaoAnh) return;
+    const num = Number(val);
+    setTuneOverrides((prev) => {
+      const daMap = { ...(prev[currentCleanId] || {}) };
+      const existing = daMap[previewKiep] || { scale: currentScale, x: currentX, y: currentY };
+      daMap[previewKiep] = {
+        ...existing,
+        [field]: field === 'scale' ? Math.round(num * 100) / 100 : Math.round(num),
+      };
+      const next = { ...prev, [currentCleanId]: daMap };
+      try {
+        window.localStorage.setItem('tcl_dao_anh_tune_overrides', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const handleTuneAutoBBox = () => {
+    if (!selectedDaoAnh) return;
+    const bb = getDaoAnhBBox(selectedDaoAnh, previewKiep);
+    if (!bb || !bb.w || !bb.h) return;
+    const TARGET = 0.80;
+    const maxDim = Math.max(bb.w, bb.h);
+    const rawScale = TARGET / maxDim;
+    const s = Math.min(Math.max(rawScale, 0.85), 1.9);
+    const scale = Math.round(s * 100) / 100;
+    const x = Math.round((0.5 - bb.cx) * scale * 185);
+    const y = Math.round((0.5 - bb.cy) * scale * 185);
+
+    setTuneOverrides((prev) => {
+      const daMap = { ...(prev[currentCleanId] || {}) };
+      daMap[previewKiep] = { scale, x, y };
+      const next = { ...prev, [currentCleanId]: daMap };
+      try {
+        window.localStorage.setItem('tcl_dao_anh_tune_overrides', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const handleTuneReset = () => {
+    if (!selectedDaoAnh) return;
+    setTuneOverrides((prev) => {
+      const daMap = { ...(prev[currentCleanId] || {}) };
+      delete daMap[previewKiep];
+      const next = { ...prev };
+      if (Object.keys(daMap).length === 0) {
+        delete next[currentCleanId];
+      } else {
+        next[currentCleanId] = daMap;
+      }
+      try {
+        window.localStorage.setItem('tcl_dao_anh_tune_overrides', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const handleCopyTuneConfig = async () => {
+    if (!selectedDaoAnh) return;
+    const lines = [1, 2, 3, 4, 5].map((k) => {
+      const cfg = activeDaoAnhOverride[k] || getDaoAnhTransformConfig(selectedDaoAnh, k, { size: 185, refSize: 185 });
+      const s = Number(cfg.scale || 1.0).toFixed(2);
+      const x = Math.round(cfg.x || 0);
+      const y = Math.round(cfg.y || 0);
+      return `    ${k}: { scale: ${s}, x: ${x}, y: ${y} },`;
+    });
+
+    const code = `  ${currentCleanId}: {\n${lines.join('\n')}\n  },`;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedTune(true);
+      setTimeout(() => setCopiedTune(false), 2000);
+    } catch (err) {
+      console.warn('Clipboard write failed:', err);
+    }
   };
 
   if (!isOpen) return null;
@@ -765,24 +900,122 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                     />
                   </div>
 
-                  {/* K1 - K5 Evolution Selector */}
-                  <div className={styles.evolutionSelector} role="group" aria-label="Chọn tầng kiếp">
-                    {[1, 2, 3, 4, 5].map((k) => {
-                      const isActive = previewKiep === k;
-                      return (
-                        <button
-                          key={k}
-                          type="button"
-                          className={`${styles.evolutionBtn} ${isActive ? styles.evolutionBtnActive : ''}`}
-                          onClick={() => setPreviewKiep(k)}
-                          aria-pressed={isActive}
-                        >
-                          K{k}
-                        </button>
-                      );
-                    })}
+                                      {/* K1 - K5 Evolution Selector */}
+                    <div className={styles.evolutionSelector} role="group" aria-label="Chọn tầng kiếp">
+                      {[1, 2, 3, 4, 5].map((k) => {
+                        const isActive = previewKiep === k;
+                        return (
+                          <button
+                            key={k}
+                            type="button"
+                            className={`${styles.evolutionBtn} ${isActive ? styles.evolutionBtnActive : ''}`}
+                            onClick={() => setPreviewKiep(k)}
+                            aria-pressed={isActive}
+                          >
+                            K{k}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+
+                  {/* Dev Tuner Section (visible only when isTuneMode is active) */}
+                  {isTuneMode && selectedDaoAnh && (
+                    <div className={styles.devTunerBox} role="region" aria-label="Bộ tinh chỉnh kích thước ảnh">
+                      <div className={styles.tunerHeader}>
+                        <span className={styles.tunerTitle}>
+                          <Icon name="sliders" size={13} /> Dev Tuner · Kiếp {previewKiep}
+                        </span>
+                        <button
+                          type="button"
+                          className={styles.tunerCloseBtn}
+                          onClick={() => {
+                            setIsTuneMode(false);
+                            try {
+                              window.localStorage.setItem('tcl_dao_anh_tune', '0');
+                            } catch (e) {}
+                          }}
+                          title="Đóng Tuner (Ctrl+Shift+T để mở lại)"
+                        >
+                          <Icon name="x" size={12} />
+                        </button>
+                      </div>
+
+                      <div className={styles.tunerControls}>
+                        <div className={styles.tunerRow}>
+                          <label className={styles.tunerLabel}>
+                            Scale: <strong>{Number(currentScale).toFixed(2)}</strong>
+                          </label>
+                          <input
+                            type="range"
+                            min="0.50"
+                            max="2.20"
+                            step="0.02"
+                            value={currentScale}
+                            onChange={(e) => handleTuneChange('scale', e.target.value)}
+                            className={styles.tunerSlider}
+                          />
+                        </div>
+
+                        <div className={styles.tunerRow}>
+                          <label className={styles.tunerLabel}>
+                            X: <strong>{currentX}px</strong>
+                          </label>
+                          <input
+                            type="range"
+                            min="-80"
+                            max="80"
+                            step="1"
+                            value={currentX}
+                            onChange={(e) => handleTuneChange('x', e.target.value)}
+                            className={styles.tunerSlider}
+                          />
+                        </div>
+
+                        <div className={styles.tunerRow}>
+                          <label className={styles.tunerLabel}>
+                            Y: <strong>{currentY}px</strong>
+                          </label>
+                          <input
+                            type="range"
+                            min="-80"
+                            max="80"
+                            step="1"
+                            value={currentY}
+                            onChange={(e) => handleTuneChange('y', e.target.value)}
+                            className={styles.tunerSlider}
+                          />
+                        </div>
+                      </div>
+
+                      <div className={styles.tunerActions}>
+                        <button
+                          type="button"
+                          className={styles.tunerActionBtn}
+                          onClick={handleTuneAutoBBox}
+                          title="Tự tính toán scale và tâm dịch chuyển từ Bounding Box"
+                        >
+                          <Icon name="sparkle" size={12} /> Tự động (bbox)
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.tunerActionBtn} ${styles.tunerActionBtnPrimary}`}
+                          onClick={handleCopyTuneConfig}
+                          title="Sao chép đoạn mã JS để dán vào DAO_ANH_CUSTOM_TRANSFORMS"
+                        >
+                          <Icon name="copy" size={12} /> {copiedTune ? 'Đã sao chép!' : 'Sao chép cấu hình'}
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.tunerActionBtn} ${styles.tunerActionBtnDanger}`}
+                          onClick={handleTuneReset}
+                          title="Xóa override của kiếp này về mặc định"
+                        >
+                          <Icon name="refresh" size={12} /> Đặt lại
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                 {/* Name, Title, Poem */}
                 <div className={styles.detailHeader}>

@@ -1378,3 +1378,144 @@
     padding: 8px;
   }
 }
+
+
+/* =========================================================================
+   DEV TUNER STYLES (Chỉ hiển thị khi bật cờ dev tuner)
+   ========================================================================= */
+.devTunerBox {
+  margin-top: 12px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), inset 0 0 16px rgba(251, 191, 36, 0.06);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 20;
+}
+
+.tunerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+}
+
+.tunerTitle {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fde047;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tunerCloseBtn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.tunerCloseBtn:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tunerControls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tunerRow {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tunerLabel {
+  font-size: 11px;
+  color: #cbd5e1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tunerLabel strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #fde047;
+}
+
+.tunerSlider {
+  width: 100%;
+  accent-color: #fbbf24;
+  height: 4px;
+  cursor: pointer;
+}
+
+.tunerActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tunerActionBtn {
+  flex: 1;
+  min-width: 80px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.tunerActionBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.tunerActionBtnPrimary {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.4);
+  color: #fde047;
+}
+
+.tunerActionBtnPrimary:hover {
+  background: rgba(251, 191, 36, 0.25);
+  border-color: rgba(251, 191, 36, 0.6);
+}
+
+.tunerActionBtnDanger {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.tunerActionBtnDanger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+}
