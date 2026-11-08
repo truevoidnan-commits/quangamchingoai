@@ -1133,6 +1133,14 @@ export async function syncNovelMetadata(supabase, userId, novelId, localItem, cl
     }
 
     const coverThumb = await makeCoverThumb(coverUrl);
+    let realChapterCount = cloudRow.chapter_count;
+    try {
+      const localChapters = await getChapters(novelId);
+      if (localChapters && localChapters.length > 0) {
+        realChapterCount = localChapters.length;
+      }
+    } catch {}
+
     setSyncBypassDirty(true);
     try {
       updateLibraryItem(novelId, {
@@ -1140,8 +1148,8 @@ export async function syncNovelMetadata(supabase, userId, novelId, localItem, cl
         description: description || '',
         coverThumb,
         isHidden: Boolean(isHidden),
-        chapterCount: cloudRow.chapter_count,
-        totalChapters: cloudRow.chapter_count,
+        chapterCount: realChapterCount,
+        totalChapters: realChapterCount,
         updatedAt: cloudRow.updated_at,
       });
       const n = await getNovel(novelId);
@@ -2029,6 +2037,11 @@ export async function performSync(supabase, {
     if (pushedScopes.size > 0) {
       notifyOtherDevices(Array.from(pushedScopes));
     }
+
+    try {
+      const { reconcileLibraryChapterCounts } = await import('../db.js');
+      await reconcileLibraryChapterCounts();
+    } catch {}
 
     return {
       success: isAllSuccess,

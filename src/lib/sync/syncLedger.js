@@ -1,3 +1,4 @@
+import { logSyncEvent } from './syncLog.js';
 /**
  * Quản lý sổ đồng bộ (Ledger), cờ bẩn (Dirty flags) và bia mộ (Tombstones) cho local-first sync
  */
@@ -110,28 +111,66 @@ export function recordContentPushed(ledger, novelId, timestamp) {
 export function getDirtyNovels() {
   try {
     const raw = localStorage.getItem(DIRTY_KEY);
-    return raw ? JSON.parse(raw) : {};
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    const result = {};
+    for (const [key, val] of Object.entries(parsed)) {
+      if (typeof val === 'number') {
+        const item = { t: val, reason: 'unknown' };
+        Object.defineProperty(item, 'valueOf', { value: () => item.t });
+        result[key] = item;
+      } else if (val && typeof val === 'object') {
+        const item = { t: val.t || Date.now(), reason: val.reason || 'unknown' };
+        Object.defineProperty(item, 'valueOf', { value: () => item.t });
+        result[key] = item;
+      }
+    }
+    return result;
   } catch {
     return {};
   }
 }
 
-export function markNovelDirty(novelId, timestamp = Date.now()) {
+export function getDirtyNovelDetails(novelId) {
+  if (!novelId) return null;
+  const dirty = getDirtyNovels();
+  return dirty[novelId] || null;
+}
+
+export function markNovelDirty(novelId, timestamp = Date.now(), reason = 'unknown') {
   if (_syncBypassDirty || !novelId) return;
   try {
-    const dirty = getDirtyNovels();
-    dirty[novelId] = timestamp;
-    localStorage.setItem(DIRTY_KEY, JSON.stringify(dirty));
+    const raw = localStorage.getItem(DIRTY_KEY);
+    const dirtyMap = raw ? JSON.parse(raw) : {};
+    const ts = typeof timestamp === 'number' && timestamp > 0 ? timestamp : Date.now();
+    const finalReason = String(reason || 'unknown');
+    dirtyMap[novelId] = {
+      t: ts,
+      reason: finalReason,
+    };
+    localStorage.setItem(DIRTY_KEY, JSON.stringify(dirtyMap));
+
+    try {
+      logSyncEvent({
+        level: 'info',
+        src: 'local',
+        evt: 'dirty_marked',
+        novelId,
+        reason: finalReason,
+      });
+    } catch {}
   } catch (e) {}
 }
 
 export function clearNovelDirty(novelId) {
   try {
-    const dirty = getDirtyNovels();
+    const raw = localStorage.getItem(DIRTY_KEY);
+    if (!raw) return;
+    const dirtyMap = JSON.parse(raw);
     if (novelId) {
-      delete dirty[novelId];
+      delete dirtyMap[novelId];
     }
-    localStorage.setItem(DIRTY_KEY, JSON.stringify(dirty));
+    localStorage.setItem(DIRTY_KEY, JSON.stringify(dirtyMap));
   } catch (e) {}
 }
 

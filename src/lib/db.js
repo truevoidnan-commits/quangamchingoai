@@ -81,7 +81,7 @@ export async function saveNovel(novel, options = {}) {
   const db = await getDB();
   await db.put('novels', novel);
   if (options?.markDirty && !options?.skipDirty && novel?.id) {
-    markNovelDirty(novel.id, novel.updatedAt || Date.now());
+    markNovelDirty(novel.id, novel.updatedAt || Date.now(), 'novel_save');
   }
 }
 
@@ -121,7 +121,7 @@ export async function saveChapter(chapter, options = {}) {
   const db = await getDB();
   await db.put('chapters', chapter);
   if (!options?.skipDirty && chapter?.novelId) {
-    markNovelDirty(chapter.novelId, Date.now());
+    markNovelDirty(chapter.novelId, Date.now(), 'chapter_edit');
   }
 }
 
@@ -133,7 +133,7 @@ export async function saveChaptersBulk(chapters, options = {}) {
   if (!options?.skipDirty && Array.isArray(chapters) && chapters.length > 0) {
     const novelIds = new Set(chapters.map(c => c?.novelId).filter(Boolean));
     const now = Date.now();
-    novelIds.forEach(nId => markNovelDirty(nId, now));
+    novelIds.forEach(nId => markNovelDirty(nId, now, 'bulk_add'));
   }
 }
 
@@ -153,7 +153,7 @@ export async function deleteChapterDB(id, novelId = null, options = {}) {
   }
   await tx.done;
   if (!options?.skipDirty && novelId) {
-    markNovelDirty(novelId, Date.now());
+    markNovelDirty(novelId, Date.now(), 'chapter_delete');
   }
 }
 
@@ -373,4 +373,45 @@ export async function replaceTextInNovel(novelId, searchText, replaceText = '', 
     totalReplacements,
     modifiedChapters,
   };
+}
+
+/**
+ * Tự động đối chiếu và đồng bộ lại số chương trong Thư viện (Library) theo dữ liệu thật trong IndexedDB.
+ * Ngăn chặn lỗi số chương "ảo" (khi metadata cloud trả về số chương khác với nội dung thực tế máy đang có).
+ *
+ * @param {string[]} [novelIds] - Danh sách novelId cụ thể cần đối chiếu, hoặc null để đối chiếu toàn bộ
+ * @returns {Promise<number>} Số truyện đã được sửa lại số chương
+ */
+export async function reconcileLibraryChapterCounts(novelIds = null) {
+  try {
+    const { getLibrary, updateLibraryItem } = await import('./storage.js');
+    const library = getLibrary();
+    if (!library || library.length === 0) return 0;
+
+    const db = await getDB();
+    const tx = db.transaction(['novels', 'chapters'], 'readonly');
+    const chapterStore = tx.objectStore('chapters');
+    const chapterIndex = chapterStore.index('novelId');
+
+    const targetList = Array.isArray(novelIds) && novelIds.length > 0
+      ? library.filter(item => novelIds.includes(item.id))
+      : library;
+
+    let reconciledCount = 0;
+    for (const item of targetList) {
+      if (!item?.id) continue;
+      const realCount = await chapterIndex.count(IDBKeyRange.only(item.id));
+      if (realCount > 0 && (item.chapterCount !== realCount || item.totalChapters !== realCount)) {
+        updateLibraryItem(item.id, {
+          chapterCount: realCount,
+          totalChapters: realCount,
+        });
+        reconciledCount++;
+      }
+    }
+    return reconciledCount;
+  } catch (err) {
+    console.warn('Lỗi khi reconcileLibraryChapterCounts:', err);
+    return 0;
+  }
 }

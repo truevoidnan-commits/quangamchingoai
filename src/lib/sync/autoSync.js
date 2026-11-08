@@ -1005,6 +1005,11 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       notifyOtherDevices(Array.from(pushedScopes));
     }
 
+    try {
+      const { reconcileLibraryChapterCounts } = await import('../db.js');
+      await reconcileLibraryChapterCounts();
+    } catch {}
+
     if (hasAttention) {
       setSyncStatus({
         state: 'attention',

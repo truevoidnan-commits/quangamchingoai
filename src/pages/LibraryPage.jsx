@@ -97,6 +97,15 @@ export default function LibraryPage() {
     };
   }, [refreshLibrary]);
 
+  // Reconcile real chapter counts from IndexedDB on load
+  useEffect(() => {
+    reconcileLibraryChapterCounts().then((reconciled) => {
+      if (reconciled > 0) {
+        refreshLibrary();
+      }
+    }).catch(() => {});
+  }, [refreshLibrary]);
+
   // Seed sample data on first load
   useEffect(() => {
     const hasSeed = localStorage.getItem('tcl_seeded');
