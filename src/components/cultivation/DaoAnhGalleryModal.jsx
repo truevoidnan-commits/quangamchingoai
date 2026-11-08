@@ -530,6 +530,9 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                             {da.title && <div className={styles.cardTitle}>{da.title}</div>}
                             <div className={styles.cardMetaRow}>
                               <span className={styles.categoryPill}>{catObj.name}</span>
+                              <span className={styles.sourcePill}>
+                                {da.sourceType === 'lamp' ? 'Mệnh Đăng' : 'Trấn Cung'}
+                              </span>
                             </div>
                           </div>
                         </div>
