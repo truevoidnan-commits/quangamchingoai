@@ -244,20 +244,26 @@ export function removeFromLibrary(id) {
   notifyLibraryChanged(id);
 }
 
-export function updateLibraryItem(id, updates) {
+export function updateLibraryItem(id, updates, options = {}) {
   const library = getLibrary({ includeHidden: true });
   const idx = library.findIndex((n) => n.id === id);
   if (idx !== -1) {
-    const existingUpdatedAt = library[idx]?.updatedAt || 0;
-    const newUpdatedAt = updates.updatedAt !== undefined
-      ? updates.updatedAt
-      : Math.max(Date.now(), existingUpdatedAt + 1);
+    const existing = library[idx];
+    const existingUpdatedAt = existing?.updatedAt || 0;
+    let newUpdatedAt;
+    if (options?.touch === false) {
+      newUpdatedAt = updates.updatedAt !== undefined ? updates.updatedAt : existingUpdatedAt;
+    } else {
+      newUpdatedAt = updates.updatedAt !== undefined
+        ? updates.updatedAt
+        : Math.max(Date.now(), existingUpdatedAt + 1);
+    }
 
     const cleanUpdates = { ...updates, updatedAt: newUpdatedAt };
     if (cleanUpdates.coverUrl && /^data:/i.test(cleanUpdates.coverUrl)) {
       delete cleanUpdates.coverUrl;
     }
-    library[idx] = { ...library[idx], ...cleanUpdates };
+    library[idx] = { ...existing, ...cleanUpdates };
     saveLibrary(library);
     notifyLibraryChanged(id);
   }

@@ -3,7 +3,8 @@ import { useState, useEffect, useTransition, useCallback, useMemo, useRef, lazy,
 import { useParams, useNavigate } from 'react-router-dom';
 import { getNovel, getChapters, deleteChapterDB, searchChapters } from '../lib/db';
 import { getReadingProgress, updateLibraryItem, getLibrary, isVaultSessionUnlocked } from '../lib/storage';
-import { pullNovelProgressNow } from '../lib/sync/syncEngine.js';
+import { pullNovelProgressNow, resyncNovel } from '../lib/sync/syncEngine.js';
+import Icon, { IconRefresh } from '../components/ui/Icon';
 import Footer from '../components/layout/Footer';
 import TextBackdrop from '../components/layout/TextBackdrop';
 import BottomSheet from '../components/ui/BottomSheet';
@@ -106,6 +107,41 @@ export default function NovelDetailPage() {
 
   // More menu & tools popover state
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [resyncing, setResyncing] = useState(false);
+  const [resyncFeedback, setResyncFeedback] = useState(null);
+
+  const handleResyncNovel = async () => {
+    setMoreMenuOpen(false);
+    setResyncing(true);
+    setResyncFeedback(null);
+    try {
+      const res = await resyncNovel(activeNovelId);
+      if (res.success) {
+        const [freshChapters, freshNovel] = await Promise.all([
+          getChapters(activeNovelId),
+          getNovel(activeNovelId),
+        ]);
+        setChapters(freshChapters);
+        if (freshNovel) setNovel(freshNovel);
+
+        let msg = `Nội dung hai bên đã khớp (${res.merged} chương).`;
+        if (res.addedFromCloud > 0 && res.addedFromLocal > 0) {
+          msg = `Đã gộp: ${res.merged} chương (thêm ${res.addedFromCloud} từ Cloud, thêm ${res.addedFromLocal} từ máy này lên Cloud).`;
+        } else if (res.addedFromCloud > 0) {
+          msg = `Đã gộp: ${res.merged} chương (thêm ${res.addedFromCloud} chương từ Cloud).`;
+        } else if (res.addedFromLocal > 0) {
+          msg = `Đã gộp: ${res.merged} chương (đẩy ${res.addedFromLocal} chương từ máy này lên Cloud).`;
+        }
+        setResyncFeedback({ type: 'success', message: msg });
+      } else {
+        setResyncFeedback({ type: 'error', message: res.error || 'Đồng bộ lại thất bại.' });
+      }
+    } catch (err) {
+      setResyncFeedback({ type: 'error', message: err.message || 'Đồng bộ lại thất bại.' });
+    } finally {
+      setResyncing(false);
+    }
+  };
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const moreBtnRef = useRef(null);
   const toolsBtnRef = useRef(null);
@@ -319,6 +355,51 @@ export default function NovelDetailPage() {
             {isVaultNovel ? '← Mật Thất' : '← Thư viện'}
           </button>
 
+          {resyncing && (
+            <div style={{
+              margin: '0 0 16px 0',
+              padding: '10px 16px',
+              borderRadius: '12px',
+              background: 'rgba(56, 189, 248, 0.12)',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              color: '#38bdf8',
+              fontSize: '0.88rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}>
+              <IconRefresh size={16} className={styles.spin} />
+              <span>Đang gộp nội dung bộ truyện với Cloud...</span>
+            </div>
+          )}
+          {resyncFeedback && (
+            <div style={{
+              margin: '0 0 16px 0',
+              padding: '10px 16px',
+              borderRadius: '12px',
+              background: resyncFeedback.type === 'success' ? 'rgba(52, 211, 153, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+              border: `1px solid ${resyncFeedback.type === 'success' ? 'rgba(52, 211, 153, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
+              color: resyncFeedback.type === 'success' ? '#34d399' : '#f87171',
+              fontSize: '0.88rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icon name={resyncFeedback.type === 'success' ? 'check' : 'alert-circle'} size={16} />
+                <span>{resyncFeedback.message}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResyncFeedback(null)}
+                style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', padding: 4 }}
+                aria-label="Đóng"
+              >
+                <IconClose size={14} />
+              </button>
+            </div>
+          )}
           <div className={styles.heroMain}>
             {/* Floating Cover */}
             <div className={styles.coverWrap}>
@@ -453,6 +534,21 @@ export default function NovelDetailPage() {
                           <IconEdit size={16} />
                         </div>
                         <span>Sửa truyện</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        tabIndex={0}
+                        className={styles.popoverItem}
+                        onClick={handleResyncNovel}
+                        disabled={resyncing}
+                        id="btn-resync-novel-detail"
+                      >
+                        <div className={styles.popoverIconWrap}>
+                          <IconRefresh size={16} className={resyncing ? styles.spin : undefined} />
+                        </div>
+                        <span>{resyncing ? 'Đang đồng bộ...' : 'Đồng bộ lại (gộp với Cloud)'}</span>
                       </button>
 
                       {canShowExport && (
@@ -868,6 +964,19 @@ export default function NovelDetailPage() {
               <IconEdit size={18} />
             </div>
             <span className={styles.sheetActionLabel}>Sửa truyện</span>
+          </button>
+
+          <button
+            type="button"
+            className={styles.sheetActionRow}
+            onClick={handleResyncNovel}
+            disabled={resyncing}
+            id="btn-resync-novel-detail-mobile"
+          >
+            <div className={styles.sheetIconWrap}>
+              <IconRefresh size={18} className={resyncing ? styles.spin : undefined} />
+            </div>
+            <span className={styles.sheetActionLabel}>{resyncing ? 'Đang đồng bộ lại...' : 'Đồng bộ lại (gộp với Cloud)'}</span>
           </button>
 
           {canShowExport && (

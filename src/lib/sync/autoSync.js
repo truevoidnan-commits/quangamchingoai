@@ -19,6 +19,9 @@ import {
   releaseSyncLock,
   refreshSyncLock,
   SYNC_LOCK_KEY,
+  getContentSyncPoint,
+  recordContentPulled,
+  recordContentPushed,
 } from './syncLedger.js';
 import {
   getActiveProfile,
@@ -47,6 +50,7 @@ import {
   syncReadingProgress,
   pullNovelProgressNow,
   pullNovelFromCloud,
+  mergeNovelWithCloud,
   pushNovelToCloud,
   syncNovelMetadata,
 } from './syncEngine.js';
@@ -725,8 +729,8 @@ export async function runAutoSync(customSupabase = null, options = {}) {
         });
       } else if (localItem && cloudRow) {
         const localDirty = Boolean(dirty[novelId]);
-        const novelLedger = ledger.novels[novelId] || {};
-        const cloudContentChanged = (cloudRow.content_updated_at || 0) > (novelLedger.lastPushedContentAt || 0);
+        const syncPoint = getContentSyncPoint(ledger, novelId);
+        const cloudContentChanged = (cloudRow.content_updated_at || 0) > syncPoint;
 
         if (localDirty && cloudContentChanged) {
           heavyTasks.push({
@@ -786,11 +790,37 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       setSyncStatus({ state: 'syncing', message: displayMsg });
 
       if (task.type === 'conflict') {
-        hasAttention = true;
-        if (attentionReason !== 'cultivation_conflict') {
-          attentionReason = 'novel_conflict';
+        try {
+          refreshSyncLock();
+          const mergeResult = await mergeNovelWithCloud(client, userId, task.novelId, task.cloudRow, ledger);
+          refreshSyncLock();
+          cloudLibraryModified = true;
+          newlyPulledNovels.push(task.novelId);
+          saveSyncLedger(ledger);
+          logSyncEvent({
+            level: 'info',
+            src: syncSource,
+            evt: 'auto_novel_merged',
+            novelId: task.novelId,
+            merged: mergeResult.merged,
+            addedFromCloud: mergeResult.addedFromCloud,
+            addedFromLocal: mergeResult.addedFromLocal,
+            uploaded: mergeResult.uploaded,
+            ms: Date.now() - taskStartTime,
+          });
+          hasAttention = true;
+          if (attentionReason !== 'cultivation_conflict') {
+            attentionReason = 'novel_merged';
+          }
+        } catch (mergeErr) {
+          console.warn('Auto merge novel conflict error:', mergeErr.message);
+          hasAttention = true;
+          if (attentionReason !== 'cultivation_conflict') {
+            attentionReason = 'novel_conflict';
+          }
+          logSyncEvent({ level: 'warn', src: syncSource, evt: 'novel_conflict', novelId: task.novelId, error: mergeErr.message });
+          errors.push(mergeErr.message);
         }
-        logSyncEvent({ level: 'warn', src: syncSource, evt: 'novel_conflict', novelId: task.novelId });
         continue;
       }
 
@@ -892,10 +922,9 @@ export async function runAutoSync(customSupabase = null, options = {}) {
               setSyncBypassDirty(false);
             }
             refreshSyncLock();
-            const novelLedger = ledger.novels[task.novelId] || {};
-            novelLedger.lastPushedContentAt = task.cloudRow.content_updated_at;
-            novelLedger.lastPulledAt = Date.now();
-            ledger.novels[task.novelId] = novelLedger;
+            recordContentPulled(ledger, task.novelId, task.cloudRow.content_updated_at);
+            if (!ledger.novels[task.novelId]) ledger.novels[task.novelId] = {};
+            ledger.novels[task.novelId].lastPulledAt = Date.now();
             saveSyncLedger(ledger);
             newlyPulledNovels.push(task.novelId);
             logSyncEvent({
@@ -976,11 +1005,16 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       notifyOtherDevices(Array.from(pushedScopes));
     }
 
+    try {
+      const { reconcileLibraryChapterCounts } = await import('../db.js');
+      await reconcileLibraryChapterCounts();
+    } catch {}
+
     if (hasAttention) {
       setSyncStatus({
         state: 'attention',
         attentionReason,
-        message: 'Có dữ liệu cần bạn kiểm tra tại trang Đồng bộ',
+        message: attentionReason === 'novel_merged' ? 'Đã tự động gộp chương mới từ máy khác' : 'Có dữ liệu cần bạn kiểm tra tại trang Đồng bộ',
         lastSyncedAt: ledger.lastSyncedAt,
         parallelDeviceDetected,
       });

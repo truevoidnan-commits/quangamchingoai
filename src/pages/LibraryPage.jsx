@@ -14,9 +14,8 @@ import {
   setVaultSessionUnlocked,
   lockVaultSession,
 } from '../lib/storage';
-import { deleteNovelDB } from '../lib/db';
+import { deleteNovelDB, saveNovel, saveChaptersBulk, reconcileLibraryChapterCounts } from '../lib/db';
 import { sampleNovel, sampleCatalogEntry, sampleChapters } from '../lib/sampleData';
-import { saveNovel, saveChaptersBulk } from '../lib/db';
 import { addToLibrary } from '../lib/storage';
 import { useCultivation } from '../hooks/useCultivation';
 import { runMigrationV2 } from '../lib/migration';
@@ -95,6 +94,15 @@ export default function LibraryPage() {
     return () => {
       window.removeEventListener('tcl_library_updated', handleLibraryUpdated);
     };
+  }, [refreshLibrary]);
+
+  // Reconcile real chapter counts from IndexedDB on load
+  useEffect(() => {
+    reconcileLibraryChapterCounts().then((reconciled) => {
+      if (reconciled > 0) {
+        refreshLibrary();
+      }
+    }).catch(() => {});
   }, [refreshLibrary]);
 
   // Seed sample data on first load

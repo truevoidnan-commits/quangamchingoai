@@ -3,10 +3,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { PageShell, Card, Button } from '../components/ui/FormKit';
 import { supabase } from '../lib/supabaseClient.js';
-import { performSync, checkFirstSyncCondition } from '../lib/sync/syncEngine.js';
+import { performSync, checkFirstSyncCondition, resyncNovel } from '../lib/sync/syncEngine.js';
 import { getSyncLedger } from '../lib/sync/syncLedger.js';
-import { deleteNovelDB } from '../lib/db.js';
-import { removeFromLibrary } from '../lib/storage.js';
+import { deleteNovelDB, getChapters } from '../lib/db.js';
+import { removeFromLibrary, getLibrary } from '../lib/storage.js';
 import { isProductionHost } from '../lib/sync/envProtection.js';
 import { isAutoSyncEnabled, setAutoSyncEnabled, getSyncStatus, setConflictDialogOpen } from '../lib/sync/autoSync.js';
 import {
@@ -40,6 +40,91 @@ export default function SyncPage() {
   const [syncError, setSyncError] = useState('');
   const [lastSyncedAt, setLastSyncedAt] = useState(getSyncLedger()?.lastSyncedAt || 0);
   const [needsReload, setNeedsReload] = useState(false);
+
+  // Diagnostics: Mismatched novels
+  const [mismatchedNovels, setMismatchedNovels] = useState([]);
+  const [isScanningMismatches, setIsScanningMismatches] = useState(false);
+  const [hasScannedMismatches, setHasScannedMismatches] = useState(false);
+
+  const scanNovelMismatches = async () => {
+    if (!session?.user) return;
+    setIsScanningMismatches(true);
+    try {
+      const library = getLibrary();
+      if (!library || library.length === 0) {
+        setMismatchedNovels([]);
+        setHasScannedMismatches(true);
+        return;
+      }
+
+      const { data: cloudRows, error } = await supabase
+        .from('novels')
+        .select('id, title, chapter_count')
+        .eq('user_id', session.user.id);
+
+      if (error) throw error;
+      const cloudMap = new Map((cloudRows || []).map(r => [r.id, r]));
+
+      const results = [];
+      for (const item of library) {
+        const cloudItem = cloudMap.get(item.id);
+        if (!cloudItem) continue;
+
+        let realLocalCount = 0;
+        try {
+          const chs = await getChapters(item.id);
+          realLocalCount = chs.length;
+        } catch {
+          realLocalCount = item.chapterCount || item.totalChapters || 0;
+        }
+
+        const cloudCount = cloudItem.chapter_count || 0;
+        if (realLocalCount !== cloudCount) {
+          results.push({
+            novelId: item.id,
+            title: item.title || cloudItem.title || item.id,
+            localCount: realLocalCount,
+            cloudCount,
+            status: 'idle',
+            errorMsg: null,
+          });
+        }
+      }
+      setMismatchedNovels(results);
+      setHasScannedMismatches(true);
+    } catch (err) {
+      console.warn('Lỗi quét kiểm tra độ lệch:', err);
+    } finally {
+      setIsScanningMismatches(false);
+    }
+  };
+
+  const handleResyncSingleNovel = async (novelId) => {
+    setMismatchedNovels(prev => prev.map(n => n.novelId === novelId ? { ...n, status: 'resyncing', errorMsg: null } : n));
+    try {
+      const res = await resyncNovel(novelId, { supabase, userId: session.user.id });
+      if (res.success) {
+        setMismatchedNovels(prev => prev.map(n => n.novelId === novelId ? {
+          ...n,
+          status: 'done',
+          localCount: res.merged,
+          cloudCount: res.merged,
+        } : n));
+      } else {
+        setMismatchedNovels(prev => prev.map(n => n.novelId === novelId ? {
+          ...n,
+          status: 'error',
+          errorMsg: res.error || 'Gộp thất bại',
+        } : n));
+      }
+    } catch (err) {
+      setMismatchedNovels(prev => prev.map(n => n.novelId === novelId ? {
+        ...n,
+        status: 'error',
+        errorMsg: err.message || 'Gộp thất bại',
+      } : n));
+    }
+  };
 
   // Modals state
   const [firstSyncData, setFirstSyncData] = useState(null);
@@ -678,6 +763,101 @@ export default function SyncPage() {
             );
           })()}
 
+          {/* Mục: Chẩn đoán & Cứu dữ liệu truyện lệch số chương */}
+          <div style={{
+            margin: '20px 0',
+            padding: '16px',
+            borderRadius: '12px',
+            background: 'rgba(234, 179, 8, 0.04)',
+            border: '1px solid rgba(234, 179, 8, 0.25)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Icon name="shield" size={18} style={{ color: '#facc15' }} />
+                <span style={{ fontWeight: 600, fontSize: '0.98rem', color: '#facc15' }}>
+                  Cứu dữ liệu truyện bị lệch số chương
+                </span>
+              </div>
+              <button
+                type="button"
+                className={styles.btnLogAction}
+                style={{ padding: '6px 12px', fontSize: '0.82rem', borderColor: 'rgba(234, 179, 8, 0.4)', color: '#facc15' }}
+                onClick={scanNovelMismatches}
+                disabled={isScanningMismatches}
+              >
+                <Icon name="refresh" size={13} className={isScanningMismatches ? styles.spinnerIcon : undefined} />
+                <span>{isScanningMismatches ? 'Đang quét...' : 'Quét kiểm tra độ lệch'}</span>
+              </button>
+            </div>
+            <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '0 0 10px 0', lineHeight: 1.5 }}>
+              Tự động đối chiếu số chương thực tế trong máy với Cloud. Nếu truyện từng bị ghi đè nhầm hoặc kẹt bản nháp, nhấn "Gộp ngay" để hợp nhất đầy đủ cả hai bên mà không mất chương nào.
+            </p>
+
+            {hasScannedMismatches && mismatchedNovels.length === 0 && (
+              <div className={styles.alertSuccess} style={{ margin: '8px 0', fontSize: '0.84rem' }}>
+                <Icon name="check" size={14} /> Tất cả truyện trong Thư viện đều khớp số chương với Cloud!
+              </div>
+            )}
+
+            {mismatchedNovels.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                {mismatchedNovels.map((item) => (
+                  <div
+                    key={item.novelId}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: 10,
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      background: 'rgba(0, 0, 0, 0.25)',
+                      border: '1px solid rgba(234, 179, 8, 0.2)',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.92rem', color: '#f8fafc' }}>{item.title}</div>
+                      <div style={{ fontSize: '0.82rem', color: '#fbbf24', marginTop: 2 }}>
+                        Máy này: <strong>{item.localCount}</strong> chương · Cloud: <strong>{item.cloudCount}</strong> chương
+                      </div>
+                      {item.errorMsg && (
+                        <div style={{ fontSize: '0.78rem', color: '#f87171', marginTop: 2 }}>
+                          {item.errorMsg}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      {item.status === 'done' ? (
+                        <span style={{ fontSize: '0.84rem', color: '#34d399', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Icon name="check" size={14} /> Đã gộp ({item.localCount} chương)
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.btnPrimary}
+                          style={{
+                            padding: '6px 14px',
+                            fontSize: '0.82rem',
+                            background: 'linear-gradient(135deg, #d97706, #b45309)',
+                            border: '1px solid #f59e0b',
+                            borderRadius: '6px',
+                            cursor: item.status === 'resyncing' ? 'not-allowed' : 'pointer',
+                          }}
+                          onClick={() => handleResyncSingleNovel(item.novelId)}
+                          disabled={item.status === 'resyncing'}
+                        >
+                          <Icon name="refresh" size={13} className={item.status === 'resyncing' ? styles.spinnerIcon : undefined} />
+                          <span>{item.status === 'resyncing' ? 'Đang gộp...' : 'Gộp ngay'}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Mục thu gọn: Nhật ký đồng bộ */}
           <div className={styles.logAccordion}>
             <div
@@ -885,44 +1065,106 @@ export default function SyncPage() {
       )}
 
       {/* MODAL 2: Xung đột nội dung truyện */}
-      {novelConflictData && (
-        <div className={styles.modalBackdrop}>
-          <div className={styles.modalContent}>
-            <h3 className={styles.modalTitle}><Icon name="sword" size={18} /> Xung Đột Nội Dung Truyện</h3>
-            <p style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>
-              Truyện <strong>"{novelConflictData.title}"</strong> đã được chỉnh sửa ở cả hai bên kể từ lần đồng bộ trước:
-            </p>
-            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '0.85rem' }}>
-              <div>• Sửa đổi trên máy này: {formatTime(novelConflictData.localUpdatedAt)}</div>
-              <div>• Sửa đổi trên Cloud: {formatTime(novelConflictData.cloudUpdatedAt)}</div>
-            </div>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-              Vui lòng chọn bản bạn muốn lưu giữ:
-            </p>
-            <div className={styles.modalActions}>
-              <button
-                className={styles.btnPrimary}
-                onClick={() => handleResolveNovelConflict('local')}
-              >
-                Giữ bản máy này (Đẩy lên Cloud)
-              </button>
-              <button
-                className={styles.btnSecondary}
-                onClick={() => handleResolveNovelConflict('cloud')}
-              >
-                Lấy bản Cloud (Tải về máy)
-              </button>
-              <button
-                className={styles.btnSecondary}
-                style={{ opacity: 0.7 }}
-                onClick={() => handleResolveNovelConflict('skip')}
-              >
-                Bỏ qua truyện này (Không đổi gì)
-              </button>
+      {novelConflictData && (() => {
+        const localCount = novelConflictData.localChapterCount ?? 0;
+        const cloudCount = novelConflictData.cloudChapterCount ?? 0;
+        const cloudHasMore = cloudCount > localCount;
+        const localHasMore = localCount > cloudCount;
+        const diffCloud = cloudCount - localCount;
+        const diffLocal = localCount - cloudCount;
+
+        return (
+          <div className={styles.modalBackdrop}>
+            <div className={styles.modalContent} style={{ maxWidth: '520px' }}>
+              <h3 className={styles.modalTitle}><Icon name="sword" size={18} /> Xung Đột Nội Dung Truyện</h3>
+              <p style={{ color: '#cbd5e1', fontSize: '0.9rem', marginBottom: '12px', lineHeight: 1.5 }}>
+                Truyện <strong>"{novelConflictData.title}"</strong> có nội dung khác nhau giữa máy này và Cloud (có chương mới hoặc chỉnh sửa ở cả hai bên):
+              </p>
+
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '14px', borderRadius: '10px', marginBottom: '16px', fontSize: '0.88rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontWeight: 700 }}>
+                  <span style={{ color: '#38bdf8' }}>• Máy này: {localCount} chương</span>
+                  <span style={{ color: '#fbbf24' }}>• Cloud: {cloudCount} chương</span>
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '4px' }}>
+                  • Sửa đổi trên máy này: {formatTime(novelConflictData.localUpdatedAt)}
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '10px' }}>
+                  • Sửa đổi trên Cloud: {formatTime(novelConflictData.cloudUpdatedAt)}
+                </div>
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '8px', color: '#cbd5e1', fontSize: '0.82rem', lineHeight: 1.5 }}>
+                  Gộp sẽ giữ mọi chương từ cả hai bên, không mất chương nào, tiến độ đọc không bị ảnh hưởng.
+                </div>
+              </div>
+
+              <div className={styles.modalActions}>
+                {/* 1. Nút Gộp khuyên dùng nổi bật nhất */}
+                <button
+                  className={styles.btnPrimary}
+                  style={{
+                    padding: '12px 16px',
+                    fontSize: '0.95rem',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    color: '#000',
+                    border: '1px solid #fde047',
+                    boxShadow: '0 0 16px rgba(251, 191, 36, 0.3)',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => handleResolveNovelConflict('merge')}
+                >
+                  <Icon name="sparkle" size={18} /> Gộp cả hai (Khuyên dùng)
+                </button>
+
+                {/* 2. Giữ bản máy này */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <button
+                    className={styles.btnSecondary}
+                    style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+                    onClick={() => handleResolveNovelConflict('local')}
+                  >
+                    Giữ bản máy này (Đẩy đè lên Cloud)
+                  </button>
+                  {cloudHasMore && (
+                    <span style={{ color: '#ef4444', fontSize: '0.78rem', paddingLeft: '4px' }}>
+                      <Icon name="alert-triangle" size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Cloud có nhiều hơn {diffCloud} chương, chọn mục này sẽ làm Cloud mất chúng!
+                    </span>
+                  )}
+                </div>
+
+                {/* 3. Lấy bản Cloud */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <button
+                    className={styles.btnSecondary}
+                    style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+                    onClick={() => handleResolveNovelConflict('cloud')}
+                  >
+                    Lấy bản Cloud (Tải đè về máy)
+                  </button>
+                  {localHasMore && (
+                    <span style={{ color: '#ef4444', fontSize: '0.78rem', paddingLeft: '4px' }}>
+                      <Icon name="alert-triangle" size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Máy này có nhiều hơn {diffLocal} chương, chọn mục này sẽ làm máy này mất chúng!
+                    </span>
+                  )}
+                </div>
+
+                {/* 4. Bỏ qua */}
+                <button
+                  className={styles.btnSecondary}
+                  style={{ opacity: 0.65, fontSize: '0.82rem', padding: '6px 12px', marginTop: '2px' }}
+                  onClick={() => handleResolveNovelConflict('skip')}
+                >
+                  Bỏ qua truyện này (Không đổi gì)
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* MODAL 3: Xung đột Tu Vi */}
       {cultivationConflictData && (

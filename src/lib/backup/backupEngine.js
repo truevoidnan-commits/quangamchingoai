@@ -863,7 +863,7 @@ export async function performRestore(options = {}, onProgress = null) {
           // Gỡ tombstone nếu truyện này từng bị xóa ở máy này
           removeTombstone(targetId);
           // Đánh dấu dirty để đồng bộ cloud ở lần chạy tới
-          markNovelDirty(targetId, causalUpdatedAt);
+          markNovelDirty(targetId, causalUpdatedAt, 'backup_restore');
           notifyLibraryChanged(targetId);
 
           if (existing || isOverwriteTitleConflict) {
