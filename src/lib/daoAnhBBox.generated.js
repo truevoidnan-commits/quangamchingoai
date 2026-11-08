@@ -51,7 +51,7 @@ export const DAO_ANH_BBOX = {
   'de_kiem_k2': { cx: 0.502, cy: 0.5029, w: 0.918, h: 0.9004 },
   'de_kiem_k3': { cx: 0.5151, cy: 0.5024, w: 0.6904, h: 0.6768 },
   'de_kiem_k4': { cx: 0.4805, cy: 0.4932, w: 0.6934, h: 0.6621 },
-  'de_kiem_k5': { cx: 0.4893, cy: 0.5088, w: 0.584, h: 0.5664 },
+  'de_kiem_k5': { cx: 0.4854, cy: 0.4946, w: 0.5703, h: 0.5381 },
   'diet_the_loi_viem_dong': { cx: 0.5216, cy: 0.501, w: 0.8595, h: 0.8164 },
   'diet_the_loi_viem_dong_k2': { cx: 0.5065, cy: 0.4731, w: 0.9373, h: 0.8721 },
   'diet_the_loi_viem_dong_k3': { cx: 0.5076, cy: 0.4727, w: 0.9395, h: 0.8672 },
