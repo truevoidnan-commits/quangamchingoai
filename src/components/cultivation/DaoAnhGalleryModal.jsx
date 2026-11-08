@@ -778,7 +778,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                   >
                     <Icon name="arrow-left" size={16} /> Quay lại
                   </button>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>
+                  <span className={styles.mobileDetailTitle}>
                     {selectedDaoAnh.name}
                   </span>
                   <button
