@@ -885,44 +885,106 @@ export default function SyncPage() {
       )}
 
       {/* MODAL 2: Xung đột nội dung truyện */}
-      {novelConflictData && (
-        <div className={styles.modalBackdrop}>
-          <div className={styles.modalContent}>
-            <h3 className={styles.modalTitle}><Icon name="sword" size={18} /> Xung Đột Nội Dung Truyện</h3>
-            <p style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>
-              Truyện <strong>"{novelConflictData.title}"</strong> đã được chỉnh sửa ở cả hai bên kể từ lần đồng bộ trước:
-            </p>
-            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '0.85rem' }}>
-              <div>• Sửa đổi trên máy này: {formatTime(novelConflictData.localUpdatedAt)}</div>
-              <div>• Sửa đổi trên Cloud: {formatTime(novelConflictData.cloudUpdatedAt)}</div>
-            </div>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-              Vui lòng chọn bản bạn muốn lưu giữ:
-            </p>
-            <div className={styles.modalActions}>
-              <button
-                className={styles.btnPrimary}
-                onClick={() => handleResolveNovelConflict('local')}
-              >
-                Giữ bản máy này (Đẩy lên Cloud)
-              </button>
-              <button
-                className={styles.btnSecondary}
-                onClick={() => handleResolveNovelConflict('cloud')}
-              >
-                Lấy bản Cloud (Tải về máy)
-              </button>
-              <button
-                className={styles.btnSecondary}
-                style={{ opacity: 0.7 }}
-                onClick={() => handleResolveNovelConflict('skip')}
-              >
-                Bỏ qua truyện này (Không đổi gì)
-              </button>
+      {novelConflictData && (() => {
+        const localCount = novelConflictData.localChapterCount ?? 0;
+        const cloudCount = novelConflictData.cloudChapterCount ?? 0;
+        const cloudHasMore = cloudCount > localCount;
+        const localHasMore = localCount > cloudCount;
+        const diffCloud = cloudCount - localCount;
+        const diffLocal = localCount - cloudCount;
+
+        return (
+          <div className={styles.modalBackdrop}>
+            <div className={styles.modalContent} style={{ maxWidth: '520px' }}>
+              <h3 className={styles.modalTitle}><Icon name="sword" size={18} /> Xung Đột Nội Dung Truyện</h3>
+              <p style={{ color: '#cbd5e1', fontSize: '0.9rem', marginBottom: '12px', lineHeight: 1.5 }}>
+                Truyện <strong>"{novelConflictData.title}"</strong> có nội dung khác nhau giữa máy này và Cloud (có chương mới hoặc chỉnh sửa ở cả hai bên):
+              </p>
+
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '14px', borderRadius: '10px', marginBottom: '16px', fontSize: '0.88rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontWeight: 700 }}>
+                  <span style={{ color: '#38bdf8' }}>• Máy này: {localCount} chương</span>
+                  <span style={{ color: '#fbbf24' }}>• Cloud: {cloudCount} chương</span>
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '4px' }}>
+                  • Sửa đổi trên máy này: {formatTime(novelConflictData.localUpdatedAt)}
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '10px' }}>
+                  • Sửa đổi trên Cloud: {formatTime(novelConflictData.cloudUpdatedAt)}
+                </div>
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '8px', color: '#cbd5e1', fontSize: '0.82rem', lineHeight: 1.5 }}>
+                  Gộp sẽ giữ mọi chương từ cả hai bên, không mất chương nào, tiến độ đọc không bị ảnh hưởng.
+                </div>
+              </div>
+
+              <div className={styles.modalActions}>
+                {/* 1. Nút Gộp khuyên dùng nổi bật nhất */}
+                <button
+                  className={styles.btnPrimary}
+                  style={{
+                    padding: '12px 16px',
+                    fontSize: '0.95rem',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    color: '#000',
+                    border: '1px solid #fde047',
+                    boxShadow: '0 0 16px rgba(251, 191, 36, 0.3)',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => handleResolveNovelConflict('merge')}
+                >
+                  <Icon name="sparkle" size={18} /> Gộp cả hai (Khuyên dùng)
+                </button>
+
+                {/* 2. Giữ bản máy này */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <button
+                    className={styles.btnSecondary}
+                    style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+                    onClick={() => handleResolveNovelConflict('local')}
+                  >
+                    Giữ bản máy này (Đẩy đè lên Cloud)
+                  </button>
+                  {cloudHasMore && (
+                    <span style={{ color: '#ef4444', fontSize: '0.78rem', paddingLeft: '4px' }}>
+                      ⚠️ Cloud có nhiều hơn {diffCloud} chương, chọn mục này sẽ làm Cloud mất chúng!
+                    </span>
+                  )}
+                </div>
+
+                {/* 3. Lấy bản Cloud */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <button
+                    className={styles.btnSecondary}
+                    style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+                    onClick={() => handleResolveNovelConflict('cloud')}
+                  >
+                    Lấy bản Cloud (Tải đè về máy)
+                  </button>
+                  {localHasMore && (
+                    <span style={{ color: '#ef4444', fontSize: '0.78rem', paddingLeft: '4px' }}>
+                      ⚠️ Máy này có nhiều hơn {diffLocal} chương, chọn mục này sẽ làm máy này mất chúng!
+                    </span>
+                  )}
+                </div>
+
+                {/* 4. Bỏ qua */}
+                <button
+                  className={styles.btnSecondary}
+                  style={{ opacity: 0.65, fontSize: '0.82rem', padding: '6px 12px', marginTop: '2px' }}
+                  onClick={() => handleResolveNovelConflict('skip')}
+                >
+                  Bỏ qua truyện này (Không đổi gì)
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* MODAL 3: Xung đột Tu Vi */}
       {cultivationConflictData && (

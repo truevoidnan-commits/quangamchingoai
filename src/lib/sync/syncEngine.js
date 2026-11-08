@@ -7,6 +7,7 @@ import {
 import { setSyncStatus } from './autoSync.js';
 import { notifyOtherDevices } from './realtimeSignal.js';
 import { supabase } from '../supabaseClient.js';
+import { mergeChapterSets } from './chapterMerge.js';
 
 import {
   getSyncLedger,
@@ -794,6 +795,167 @@ export async function pullNovelFromCloud(supabase, userId, cloudRow, ledger = nu
 /**
  * Đẩy trọn vẹn một truyện mới (hoặc truyện có nội dung cập nhật) từ Local lên Cloud
  */
+/**
+ * Hợp nhất an toàn nội dung một truyện giữa Cloud và Local.
+ * Đảm bảo dữ liệu chương là CỘNG DỒN, tuyệt đối không làm mất chương.
+ *
+ * @param {Object} supabase - Client Supabase
+ * @param {string} userId - ID người dùng
+ * @param {string} novelId - ID bộ truyện
+ * @param {Object} cloudRow - Dòng dữ liệu của truyện trên bảng novels Cloud
+ * @param {Object} [ledger] - Sổ cái đồng bộ (tùy chọn)
+ * @returns {Promise<{ merged: number, addedFromCloud: number, addedFromLocal: number, uploaded: boolean }>}
+ */
+export async function mergeNovelWithCloud(supabase, userId, novelId, cloudRow, ledger = null) {
+  if (!supabase || !userId || !novelId) {
+    throw new Error('mergeNovelWithCloud: thiếu tham số bắt buộc.');
+  }
+
+  refreshSyncLock();
+
+  // 1. Tải nội dung từ Cloud (nếu có content_path)
+  let cloudChapters = [];
+  const contentPath = cloudRow?.content_path || `${userId}/${novelId}.json.gz`;
+  try {
+    const { data: blob, error: downloadErr } = await supabase.storage
+      .from(BUCKET_NAME)
+      .download(contentPath);
+    if (downloadErr) {
+      console.warn(`[mergeNovelWithCloud] Không tải được file từ Cloud (${contentPath}):`, downloadErr.message);
+    } else if (blob) {
+      refreshSyncLock();
+      cloudChapters = await decompressChapters(blob, contentPath);
+      refreshSyncLock();
+    }
+  } catch (err) {
+    console.warn('[mergeNovelWithCloud] Lỗi giải nén nội dung Cloud:', err.message);
+  }
+
+  // 2. Lấy danh sách chương Local
+  refreshSyncLock();
+  let localChapters = [];
+  try {
+    localChapters = await getChapters(novelId);
+  } catch (err) {
+    console.warn('[mergeNovelWithCloud] Lỗi đọc chương local:', err.message);
+    localChapters = [];
+  }
+
+  // 3. Hợp nhất hai tập chương bằng hàm mergeChapterSets thuần
+  const {
+    merged,
+    addedFromCloud,
+    addedFromLocal,
+    updatedFromCloud,
+    updatedFromLocal,
+    conflictsResolved,
+  } = mergeChapterSets(localChapters, cloudChapters, { preferLocalOnTie: true });
+
+  refreshSyncLock();
+
+  // 4. Lưu hợp nhất vào IndexedDB với setSyncBypassDirty(true)
+  setSyncBypassDirty(true);
+  try {
+    await saveChaptersBulk(merged, { skipDirty: true });
+
+    // Đồng bộ lại novel record và library item với số chương thực tế
+    const localNovel = await getNovel(novelId);
+    if (localNovel) {
+      await saveNovel({
+        ...localNovel,
+        chapterCount: merged.length,
+        totalChapters: merged.length,
+      }, { skipDirty: true });
+    }
+  } finally {
+    setSyncBypassDirty(false);
+  }
+
+  // 5. Nếu hợp nhất có chương khác với Cloud thì nén và upload bản hợp nhất
+  const needUpload = addedFromLocal > 0 || updatedFromLocal > 0 || merged.length !== (cloudChapters?.length || 0);
+  let wasUploaded = false;
+  let newContentUpdatedAt = cloudRow?.content_updated_at || Date.now();
+
+  if (needUpload) {
+    refreshSyncLock();
+    const { blob, ext, contentType } = await compressChapters(JSON.stringify(merged));
+    refreshSyncLock();
+
+    if (blob.size > MAX_FILE_SIZE) {
+      const mbSize = (blob.size / (1024 * 1024)).toFixed(1);
+      throw new Error(`Dung lượng nội dung sau khi gộp (${mbSize}MB) vượt quá 45MB.`);
+    }
+
+    const uploadPath = `${userId}/${novelId}${ext}`;
+    const { error: uploadErr } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(uploadPath, blob, { upsert: true, contentType });
+    if (uploadErr) {
+      throw new Error(`Lỗi upload nội dung sau khi gộp lên Cloud: ${uploadErr.message}`);
+    }
+
+    const nowTime = Date.now();
+    newContentUpdatedAt = nowTime;
+    const { error: updateErr } = await supabase
+      .from('novels')
+      .update({
+        content_path: uploadPath,
+        content_updated_at: nowTime,
+        chapter_count: merged.length,
+      })
+      .eq('user_id', userId)
+      .eq('id', novelId);
+
+    if (updateErr) {
+      throw new Error(`Lỗi cập nhật bảng novels sau khi gộp: ${updateErr.message}`);
+    }
+
+    wasUploaded = true;
+  }
+
+  // 6. Cập nhật ledger: lastPulledContentAt và lastPushedContentAt đều = content_updated_at mới
+  const currentLedger = ledger || getSyncLedger();
+  if (!currentLedger.novels) currentLedger.novels = {};
+  currentLedger.novels[novelId] = {
+    ...(currentLedger.novels[novelId] || {}),
+    lastPulledContentAt: newContentUpdatedAt,
+    lastPushedContentAt: newContentUpdatedAt,
+    lastSyncedMetaAt: cloudRow?.updated_at || Date.now(),
+  };
+  clearNovelDirty(novelId);
+  saveSyncLedger(currentLedger);
+
+  // 7. Cập nhật metadata thư viện (số chương thật)
+  updateLibraryItem(novelId, {
+    chapterCount: merged.length,
+    totalChapters: merged.length,
+  });
+
+  // 8. Log sync event
+  logSyncEvent({
+    level: 'info',
+    src: 'merge',
+    evt: 'novel_merge',
+    novelId,
+    localCount: localChapters.length,
+    cloudCount: cloudChapters.length,
+    mergedCount: merged.length,
+    addedFromCloud,
+    addedFromLocal,
+    updatedFromCloud,
+    updatedFromLocal,
+    conflictsResolved,
+    uploaded: wasUploaded,
+  });
+
+  return {
+    merged: merged.length,
+    addedFromCloud,
+    addedFromLocal,
+    uploaded: wasUploaded,
+  };
+}
+
 export async function pushNovelToCloud(supabase, userId, novelId, localItem, ledger = null) {
   const novel = await getNovel(novelId);
   refreshSyncLock();
@@ -1537,17 +1699,34 @@ export async function performSync(supabase, {
         if (item.type === 'conflict') {
           conflicts++;
           logSyncEvent({ level: 'warn', src: 'manual', evt: 'novel_conflict', novelId: item.novelId });
-          let choice = 'skip';
+          let choice = 'merge';
           if (typeof onConflictNovel === 'function') {
+            let localChapterCount = item.localItem?.chapterCount || item.localItem?.totalChapters || 0;
+            try {
+              const localChs = await getChapters(item.novelId);
+              localChapterCount = localChs.length;
+            } catch {}
+
             choice = await onConflictNovel({
               novelId: item.novelId,
               title: novelTitle,
               localUpdatedAt: item.localItem?.updatedAt,
               cloudUpdatedAt: item.cloudRow?.content_updated_at || item.cloudRow?.updated_at,
+              localChapterCount,
+              cloudChapterCount: item.cloudRow?.chapter_count || 0,
             });
           }
 
-          if (choice === 'local') {
+          if (!choice || choice === 'merge') {
+            refreshSyncLock();
+            const mergeResult = await mergeNovelWithCloud(supabase, userId, item.novelId, item.cloudRow, ledger);
+            if (mergeResult.uploaded) {
+              pushedNovels++;
+            } else {
+              pulledNovels++;
+            }
+            newlyPulledNovels.push(item.novelId);
+          } else if (choice === 'local') {
             refreshSyncLock();
           const chapters = await getChapters(item.novelId);
           

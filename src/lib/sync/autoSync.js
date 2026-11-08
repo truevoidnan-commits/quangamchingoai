@@ -47,6 +47,7 @@ import {
   syncReadingProgress,
   pullNovelProgressNow,
   pullNovelFromCloud,
+  mergeNovelWithCloud,
   pushNovelToCloud,
   syncNovelMetadata,
 } from './syncEngine.js';
@@ -786,11 +787,37 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       setSyncStatus({ state: 'syncing', message: displayMsg });
 
       if (task.type === 'conflict') {
-        hasAttention = true;
-        if (attentionReason !== 'cultivation_conflict') {
-          attentionReason = 'novel_conflict';
+        try {
+          refreshSyncLock();
+          const mergeResult = await mergeNovelWithCloud(client, userId, task.novelId, task.cloudRow, ledger);
+          refreshSyncLock();
+          cloudLibraryModified = true;
+          newlyPulledNovels.push(task.novelId);
+          saveSyncLedger(ledger);
+          logSyncEvent({
+            level: 'info',
+            src: syncSource,
+            evt: 'auto_novel_merged',
+            novelId: task.novelId,
+            merged: mergeResult.merged,
+            addedFromCloud: mergeResult.addedFromCloud,
+            addedFromLocal: mergeResult.addedFromLocal,
+            uploaded: mergeResult.uploaded,
+            ms: Date.now() - taskStartTime,
+          });
+          hasAttention = true;
+          if (attentionReason !== 'cultivation_conflict') {
+            attentionReason = 'novel_merged';
+          }
+        } catch (mergeErr) {
+          console.warn('Auto merge novel conflict error:', mergeErr.message);
+          hasAttention = true;
+          if (attentionReason !== 'cultivation_conflict') {
+            attentionReason = 'novel_conflict';
+          }
+          logSyncEvent({ level: 'warn', src: syncSource, evt: 'novel_conflict', novelId: task.novelId, error: mergeErr.message });
+          errors.push(mergeErr.message);
         }
-        logSyncEvent({ level: 'warn', src: syncSource, evt: 'novel_conflict', novelId: task.novelId });
         continue;
       }
 
@@ -980,7 +1007,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       setSyncStatus({
         state: 'attention',
         attentionReason,
-        message: 'Có dữ liệu cần bạn kiểm tra tại trang Đồng bộ',
+        message: attentionReason === 'novel_merged' ? 'Đã tự động gộp chương mới từ máy khác' : 'Có dữ liệu cần bạn kiểm tra tại trang Đồng bộ',
         lastSyncedAt: ledger.lastSyncedAt,
         parallelDeviceDetected,
       });
