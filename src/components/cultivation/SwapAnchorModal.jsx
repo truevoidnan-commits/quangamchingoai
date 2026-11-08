@@ -49,13 +49,9 @@ export default function SwapAnchorModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen || palaceIndex === null || palaceIndex === undefined) {
-    return null;
-  }
-
-  const pIdx = Number(palaceIndex);
+  const pIdx = palaceIndex !== null && palaceIndex !== undefined ? Number(palaceIndex) : 0;
   const realm = cultivation?.realm || 'kim_dan';
-  const rawAnchor = cultivation?.palaceAnchors?.[pIdx];
+  const rawAnchor = palaceIndex !== null && palaceIndex !== undefined ? cultivation?.palaceAnchors?.[pIdx] : null;
 
   // Resolve current anchor object
   let currentAnchor = null;
@@ -204,6 +200,10 @@ export default function SwapAnchorModal({
       setIsSubmitting(false);
     }
   };
+
+  if (!isOpen || palaceIndex === null || palaceIndex === undefined) {
+    return null;
+  }
 
   return (
     <div className={styles.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="swap-anchor-title">

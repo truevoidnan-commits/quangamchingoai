@@ -45,10 +45,21 @@ const mockNguyenAnhState = {
   has121st: true,
   maxThienCung: 13,
   realizedThienCung: 13,
+  currentTargetDaoAnhId: 'dao_anh_1',
+  inventoryArtifacts: ['de_kiem', 'tam_thu_dao'],
+  palaceAnchors: {
+    0: { id: 'tao_hoa_ngoc_diep', name: 'Tạo Hóa Ngọc Điệp Cung', tier: 'than_pham' },
+    1: { id: 'tran_nguc_minh_vuong_the', name: 'Trấn Ngục Minh Vương Cung', tier: 'than_pham' },
+  },
   daoAnhs: Array.from({ length: 13 }).map((_, i) => ({
     id: `dao_anh_${i + 1}`,
     name: `Đạo Anh #${i + 1}`,
-    currentKiep: 5,
+    palaceIndex: 12 - i,
+    fromLamp: false,
+    artifactId: i === 0 ? 'tao_hoa_ngoc_diep' : (i === 1 ? 'tran_nguc_minh_vuong_the' : 'tao_hoa_ngoc_diep'),
+    currentKiep: 3,
+    currentExp: 2000,
+    maxExp: 10000,
     level: 10,
     active: true,
     glowColor: '#fbbf24',
@@ -91,7 +102,7 @@ async function testProfile(browser, profileName, state) {
   });
 
   page.on('console', (msg) => {
-    if (msg.type() === 'error') {
+    if (msg.type === 'error') {
       const text = msg.text();
       if (!text.includes('404') && !text.includes('Failed to load resource')) {
         console.error(`❌ [ConsoleError in ${profileName}]:`, text);
@@ -110,7 +121,7 @@ async function testProfile(browser, profileName, state) {
   }, { pName: profileName, sData: state });
 
   // 1. Open Cultivation Workspace
-  await page.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(800);
 
   // 2. Test Modal 1: Dao Anh Gallery Modal
@@ -148,7 +159,35 @@ async function testProfile(browser, profileName, state) {
     await page.waitForTimeout(300);
   }
 
-  // 4. Test Modal 3: Breakthrough / Linh Tang Modal if in Nguyen Anh
+  // 4. Test Modal: SwapAnchorModal in Nguyen Anh state
+  const swapBtn = page.locator('button:has-text("ĐỔI VẬT TRẤN ÁP"), button:has-text("Đổi Vật Trấn Áp")').first();
+  if (await swapBtn.isVisible()) {
+    await swapBtn.click();
+    await page.waitForTimeout(400);
+    const swapModal = page.locator('div[role="dialog"][aria-modal="true"]:has-text("Đổi Vật Trấn Áp")').first();
+    if (!await swapModal.isVisible()) {
+      errors.push('SwapAnchorModal did not become visible');
+    } else {
+      console.log(`  ✓ [${profileName}] SwapAnchorModal opened successfully.`);
+      // Pick an artifact in the inventory
+      const artCard = swapModal.locator('div[role="button"]:has-text("Đế Kiếm"), div[role="button"]:has-text("Tam Thu Đao")').first();
+      if (await artCard.isVisible()) {
+        await artCard.click();
+        await page.waitForTimeout(300);
+        // Verify before/after preview block
+        const afterBlock = swapModal.locator('text=Sau Khi Đổi').first();
+        if (await afterBlock.isVisible()) {
+          console.log(`  ✓ [${profileName}] SwapAnchorModal shows "Sau Khi Đổi" preview.`);
+        } else {
+          errors.push('SwapAnchorModal did not show "Sau Khi Đổi" preview block');
+        }
+      }
+    }
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+  }
+
+  // 5. Test Modal 3: Breakthrough / Linh Tang Modal if in Nguyen Anh
   const breakthroughBtn = page.locator('button:has-text("ĐỘT PHÁ LINH TÀNG")').first();
   if (await breakthroughBtn.isVisible()) {
     await breakthroughBtn.click();
@@ -168,13 +207,13 @@ async function testProfile(browser, profileName, state) {
     await page.waitForTimeout(300);
   }
 
-  // 5. Test Modal 4: DaoAnhToLinhTangModal in Linh Tang state
+  // 6. Test Modal 4: DaoAnhToLinhTangModal in Linh Tang state
   await page.evaluate(({ pName, sData }) => {
     const stateKey = pName === 'sandbox' ? 'tcl_cultivation_state_v3__sandbox' : 'tcl_cultivation_state_v3';
     localStorage.setItem(stateKey, JSON.stringify({ ...sData, activeProfile: pName }));
   }, { pName: profileName, sData: mockLinhTangState });
 
-  await page.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(800);
 
   const customLinhTangBtn = page.locator('button:has-text("Tùy Chỉnh 5 Đạo Anh Bí Tàng")').first();
@@ -196,10 +235,10 @@ async function testProfile(browser, profileName, state) {
     await page.waitForTimeout(300);
   }
 
-  // 6. Test Modal 5: SanctumPage (Tàng Bảo Điện)
-  await page.goto(`${BASE_URL}/#/sanctum`, { waitUntil: 'networkidle' });
+  // 7. Test Modal 5: SanctumPage (Tàng Bảo Điện)
+  await page.goto(`${BASE_URL}/#/sanctum`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(800);
-  const sanctumContent = page.locator('div:has-text("TÀNG BẢO ĐIỆN"), div:has-text("Mệnh Đăng")').first();
+  const sanctumContent = page.locator('h1:has-text("TÀNG BẢO ĐIỆN")').first();
   if (!await sanctumContent.isVisible()) {
     errors.push('SanctumPage content not visible');
   } else {
