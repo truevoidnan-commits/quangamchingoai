@@ -19,6 +19,9 @@ import {
   releaseSyncLock,
   refreshSyncLock,
   SYNC_LOCK_KEY,
+  getContentSyncPoint,
+  recordContentPulled,
+  recordContentPushed,
 } from './syncLedger.js';
 import {
   getActiveProfile,
@@ -726,8 +729,8 @@ export async function runAutoSync(customSupabase = null, options = {}) {
         });
       } else if (localItem && cloudRow) {
         const localDirty = Boolean(dirty[novelId]);
-        const novelLedger = ledger.novels[novelId] || {};
-        const cloudContentChanged = (cloudRow.content_updated_at || 0) > (novelLedger.lastPushedContentAt || 0);
+        const syncPoint = getContentSyncPoint(ledger, novelId);
+        const cloudContentChanged = (cloudRow.content_updated_at || 0) > syncPoint;
 
         if (localDirty && cloudContentChanged) {
           heavyTasks.push({
@@ -919,10 +922,9 @@ export async function runAutoSync(customSupabase = null, options = {}) {
               setSyncBypassDirty(false);
             }
             refreshSyncLock();
-            const novelLedger = ledger.novels[task.novelId] || {};
-            novelLedger.lastPushedContentAt = task.cloudRow.content_updated_at;
-            novelLedger.lastPulledAt = Date.now();
-            ledger.novels[task.novelId] = novelLedger;
+            recordContentPulled(ledger, task.novelId, task.cloudRow.content_updated_at);
+            if (!ledger.novels[task.novelId]) ledger.novels[task.novelId] = {};
+            ledger.novels[task.novelId].lastPulledAt = Date.now();
             saveSyncLedger(ledger);
             newlyPulledNovels.push(task.novelId);
             logSyncEvent({

@@ -21,6 +21,9 @@ import {
   acquireSyncLock,
   releaseSyncLock,
   refreshSyncLock,
+  getContentSyncPoint,
+  recordContentPulled,
+  recordContentPushed,
 } from './syncLedger.js';
 import {
   getNovel,
@@ -782,12 +785,8 @@ export async function pullNovelFromCloud(supabase, userId, cloudRow, ledger = nu
   }
 
   const currentLedger = ledger || getSyncLedger();
-  if (!currentLedger.novels) currentLedger.novels = {};
-  currentLedger.novels[novelId] = {
-    lastPulledContentAt: cloudRow.content_updated_at || Date.now(),
-    lastPushedContentAt: 0,
-    lastSyncedMetaAt: cloudRow.updated_at,
-  };
+  recordContentPulled(currentLedger, novelId, cloudRow.content_updated_at);
+  currentLedger.novels[novelId].lastSyncedMetaAt = cloudRow.updated_at;
   clearNovelDirty(novelId);
   return { success: true };
 }
@@ -998,12 +997,8 @@ export async function pushNovelToCloud(supabase, userId, novelId, localItem, led
   }
 
   const currentLedger = ledger || getSyncLedger();
-  if (!currentLedger.novels) currentLedger.novels = {};
-  currentLedger.novels[novelId] = {
-    lastPulledContentAt: 0,
-    lastPushedContentAt: now,
-    lastSyncedMetaAt: localItem.updatedAt || now,
-  };
+  recordContentPushed(currentLedger, novelId, now);
+  currentLedger.novels[novelId].lastSyncedMetaAt = localItem.updatedAt || now;
   clearNovelDirty(novelId);
   return { success: true, contentUpdatedAt: now, bytes: blob.size };
 }
@@ -1453,8 +1448,7 @@ export async function performSync(supabase, {
 
         // Chế độ Normal
         const isLocalContentDirty = Boolean(dirty[novelId]);
-        const novelLedger = ledger.novels[novelId] || {};
-        const lastSyncPoint = Math.max(novelLedger.lastPulledContentAt || 0, novelLedger.lastPushedContentAt || 0);
+        const lastSyncPoint = getContentSyncPoint(ledger, novelId);
         const hasCloudContentChanged = (cloudRow.content_updated_at || 0) > lastSyncPoint;
 
         if (isLocalContentDirty && hasCloudContentChanged) {
@@ -1592,11 +1586,8 @@ export async function performSync(supabase, {
             throw new Error(`Lỗi lưu thông tin truyện lên cloud: ${upsertErr.message}`);
           }
 
-          ledger.novels[item.novelId] = {
-            lastPulledContentAt: 0,
-            lastPushedContentAt: nowTime,
-            lastSyncedMetaAt: item.localItem.updatedAt || nowTime,
-          };
+          recordContentPushed(ledger, item.novelId, nowTime);
+          ledger.novels[item.novelId].lastSyncedMetaAt = item.localItem.updatedAt || nowTime;
           clearNovelDirty(item.novelId);
           saveSyncLedger(ledger);
           pushedNovels++;
@@ -1632,10 +1623,7 @@ export async function performSync(supabase, {
           } finally {
             setSyncBypassDirty(false);
           }
-          ledger.novels[item.novelId] = {
-            ...(ledger.novels[item.novelId] || {}),
-            lastPulledContentAt: item.cloudRow.content_updated_at || Date.now(),
-          };
+          recordContentPulled(ledger, item.novelId, item.cloudRow.content_updated_at);
           clearNovelDirty(item.novelId);
           saveSyncLedger(ledger);
           pulledNovels++;
@@ -1677,10 +1665,7 @@ export async function performSync(supabase, {
 
           if (updateErr) throw new Error(`Lỗi cập nhật dòng truyện lên cloud: ${updateErr.message}`);
 
-          ledger.novels[item.novelId] = {
-            ...(ledger.novels[item.novelId] || {}),
-            lastPushedContentAt: nowTime,
-          };
+          recordContentPushed(ledger, item.novelId, nowTime);
           clearNovelDirty(item.novelId);
           saveSyncLedger(ledger);
           pushedNovels++;
@@ -1821,10 +1806,7 @@ export async function performSync(supabase, {
 
           if (updateErr) throw new Error(`Lỗi cập nhật dòng truyện lên cloud: ${updateErr.message}`);
 
-          ledger.novels[item.novelId] = {
-            ...(ledger.novels[item.novelId] || {}),
-            lastPushedContentAt: nowTime,
-          };
+          recordContentPushed(ledger, item.novelId, nowTime);
           clearNovelDirty(item.novelId);
           saveSyncLedger(ledger);
           pushedNovels++;
@@ -1859,10 +1841,7 @@ export async function performSync(supabase, {
           } finally {
             setSyncBypassDirty(false);
           }
-          ledger.novels[item.novelId] = {
-            ...(ledger.novels[item.novelId] || {}),
-            lastPulledContentAt: item.cloudRow.content_updated_at || Date.now(),
-          };
+          recordContentPulled(ledger, item.novelId, item.cloudRow.content_updated_at);
           clearNovelDirty(item.novelId);
           saveSyncLedger(ledger);
           pulledNovels++;
