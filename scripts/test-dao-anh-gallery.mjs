@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { chromium } from 'playwright';
+import { DAO_ANH_LIST } from '../src/lib/daoAnhData.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -164,38 +165,25 @@ async function run() {
     has121st: true,
     maxThienCung: 13,
     realizedThienCung: 13,
-    inventoryArtifacts: ['de_kiem'],
-    inventoryLamps: ['nguyen_thuy_thien_ma'],
+    inventoryArtifacts: ['de_kiem', 'tam_thu_dao'],
+    inventoryLamps: ['nguyen_thuy_thien_ma', 'hon_don_so_khai'],
     palaceAnchors: {
       0: { id: 'tao_hoa_ngoc_diep', name: 'Tạo Hóa Ngọc Điệp Cung', tier: 'than_pham' },
     },
-    daoAnhs: [
-      {
-        id: 'dao_anh_1',
-        name: 'Tạo Hóa Ngọc Điệp Đạo Anh',
-        artifactId: 'tao_hoa_ngoc_diep',
-        palaceIndex: 0,
-        fromLamp: false,
-        currentKiep: 3,
-        currentExp: 4500,
-        maxExp: 10000,
-        level: 10,
-        active: true,
-        glowColor: '#38bdf8',
-      },
-      {
-        id: 'dao_anh_2',
-        name: 'Hỗn Độn Sơ Khai Đạo Anh',
-        fromLamp: true,
-        lampId: 'hon_don_so_khai',
-        currentKiep: 5,
-        currentExp: 10000,
-        maxExp: 10000,
-        level: 10,
-        active: true,
-        glowColor: '#fbbf24',
-      },
-    ],
+    daoAnhs: DAO_ANH_LIST.map((da, idx) => ({
+      id: da.id,
+      name: da.name,
+      artifactId: da.sourceType === 'artifact' ? da.sourceId : undefined,
+      lampId: da.sourceType === 'lamp' ? da.sourceId : undefined,
+      palaceIndex: idx < 13 ? idx : undefined,
+      fromLamp: da.sourceType === 'lamp',
+      currentKiep: 5,
+      currentExp: 10000,
+      maxExp: 10000,
+      level: 10,
+      active: true,
+      glowColor: da.glowColor || da.primaryColor || '#fbbf24',
+    })),
     activeProfile: 'real',
   };
 
@@ -543,8 +531,115 @@ async function run() {
     await pageParity.waitForTimeout(600);
     await openGalleryModal(pageParity);
 
-    // 6.1 Check 6 sample Dao Anh card transforms in grid
-    const sampleCards = await pageParity.evaluate(() => {
+    // 6.1 Kiểm tra Gallery dùng fit: "contain"
+    // (a) .artContainer và .detailArtWrapper có computed overflow = hidden
+    const overflowCheck = await pageParity.evaluate(() => {
+      const artContainers = Array.from(document.querySelectorAll('div[class*="artContainer"]'));
+      const detailWrapper = document.querySelector('div[class*="detailArtWrapper"]');
+
+      const artContainerOverflows = artContainers.map(el => window.getComputedStyle(el).overflow);
+      const detailWrapperOverflow = detailWrapper ? window.getComputedStyle(detailWrapper).overflow : null;
+
+      const allContainersHidden = artContainerOverflows.length > 0 && artContainerOverflows.every(ov => ov === 'hidden');
+      const detailHidden = detailWrapperOverflow === 'hidden';
+
+      return {
+        allContainersHidden,
+        detailHidden,
+        sampleContainerOverflow: artContainerOverflows[0],
+        detailWrapperOverflow,
+        count: artContainers.length,
+      };
+    });
+
+    if (!overflowCheck.allContainersHidden) {
+      throw new Error(`.artContainer has non-hidden overflow: ${overflowCheck.sampleContainerOverflow}`);
+    }
+    if (!overflowCheck.detailHidden) {
+      throw new Error(`.detailArtWrapper has non-hidden overflow: ${overflowCheck.detailWrapperOverflow}`);
+    }
+    console.log(`  ✓ (a) .artContainer (${overflowCheck.count}) & .detailArtWrapper have computed overflow = hidden`);
+
+    // (b) Bounding box của ảnh trong panel chi tiết không giao với bộ chọn K1–K5
+    const firstCard = pageParity.locator('div[role="button"][class*="card"]').first();
+    await firstCard.click();
+    await pageParity.waitForTimeout(300);
+
+    const detailBBoxCheck = await pageParity.evaluate(() => {
+      const detailImg = document.querySelector('div[class*="detailArtWrapper"] img');
+      const evoSelector = document.querySelector('div[class*="evolutionSelector"]');
+      if (!detailImg || !evoSelector) return { ok: false, reason: 'Missing detailImg or evoSelector' };
+
+      const imgRect = detailImg.getBoundingClientRect();
+      const evoRect = evoSelector.getBoundingClientRect();
+
+      const overlaps = !(
+        imgRect.right <= evoRect.left ||
+        imgRect.left >= evoRect.right ||
+        imgRect.bottom <= evoRect.top ||
+        imgRect.top >= evoRect.bottom
+      );
+
+      return {
+        ok: !overlaps,
+        imgRect: { top: imgRect.top, bottom: imgRect.bottom, left: imgRect.left, right: imgRect.right },
+        evoRect: { top: evoRect.top, bottom: evoRect.bottom, left: evoRect.left, right: evoRect.right },
+      };
+    });
+
+    if (!detailBBoxCheck.ok) {
+      throw new Error(`Detail image bounding box overlaps with K1..K5 selector! imgBottom=${detailBBoxCheck.imgRect?.bottom}, evoTop=${detailBBoxCheck.evoRect?.top}`);
+    }
+    console.log('  ✓ (b) Detail art image bounding box does NOT overlap K1..K5 evolution selector');
+
+    // (c) Kiểm tra layout .artContainer và DaoAnhArt frame được clip, không đè lên .cardBottom hay .cardTopRow
+    const cardLayoutCheck = await pageParity.evaluate(() => {
+      const cards = Array.from(document.querySelectorAll('div[role="button"][class*="card"]'));
+      const issues = [];
+
+      for (let i = 0; i < Math.min(cards.length, 12); i++) {
+        const card = cards[i];
+        const artContainer = card.querySelector('div[class*="artContainer"]');
+        const bottom = card.querySelector('div[class*="cardBottom"]');
+        const topRow = card.querySelector('div[class*="cardTopRow"]');
+        if (!artContainer || !bottom || !topRow) continue;
+
+        const artRect = artContainer.getBoundingClientRect();
+        const bottomRect = bottom.getBoundingClientRect();
+        const topRect = topRow.getBoundingClientRect();
+
+        // artContainer phải nằm giữa topRow và bottom, không giao nhau
+        const overlapsBottom = !(artRect.bottom <= bottomRect.top || artRect.top >= bottomRect.bottom);
+        const overlapsTop = !(artRect.bottom <= topRect.top || artRect.top >= topRect.bottom);
+
+        // Kiểm tra DaoAnhArt bên trong có overflow: hidden
+        const artFrame = artContainer.querySelector('div[class*="dao-anh-art-frame"]');
+        const artFrameOverflow = artFrame ? window.getComputedStyle(artFrame).overflow : null;
+
+        if (overlapsBottom || overlapsTop || artFrameOverflow !== 'hidden') {
+          issues.push({
+            index: i,
+            overlapsBottom,
+            overlapsTop,
+            artFrameOverflow,
+          });
+        }
+      }
+
+      return {
+        ok: issues.length === 0,
+        issues,
+        testedCount: Math.min(cards.length, 12),
+      };
+    });
+
+    if (!cardLayoutCheck.ok) {
+      throw new Error(`Card layout check failed on ${cardLayoutCheck.issues.length} cards: ${JSON.stringify(cardLayoutCheck.issues)}`);
+    }
+    console.log(`  ✓ (c) Card artContainer layout & clipped frames do NOT overlap header/bottom across tested cards (${cardLayoutCheck.testedCount})`);
+
+    // (d) Kiểm tra các thẻ có CSS transform hợp lệ
+    const sampleTransforms = await pageParity.evaluate(() => {
       const cards = Array.from(document.querySelectorAll('div[role="button"][class*="card"]'));
       const samples = [];
       for (const card of cards.slice(0, 8)) {
@@ -562,18 +657,17 @@ async function run() {
       return samples;
     });
 
-    if (sampleCards.length < 6) {
-      throw new Error(`Expected at least 6 sample cards, found ${sampleCards.length}`);
+    if (sampleTransforms.length < 6) {
+      throw new Error(`Expected at least 6 sample cards, found ${sampleTransforms.length}`);
     }
-    for (const sc of sampleCards) {
+    for (const sc of sampleTransforms) {
       if (!sc.hasTransform) {
         throw new Error(`Card "${sc.title}" has invalid transform: ${sc.transform}`);
       }
     }
-    console.log(`  ✓ Sample cards (${sampleCards.length}) all render valid non-empty transforms on DOM`);
+    console.log(`  ✓ (d) Sample cards (${sampleTransforms.length}) render valid computed transforms on DOM`);
 
     // 6.2 Check K1..K5 Evolution Switching on Detail Panel
-    const firstCard = pageParity.locator('div[role="button"][class*="card"]').first();
     await firstCard.click();
     await pageParity.waitForTimeout(400);
 

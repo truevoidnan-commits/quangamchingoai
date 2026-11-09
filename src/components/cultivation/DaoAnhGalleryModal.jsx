@@ -737,6 +737,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                               style={{ background: da.glowColor || da.primaryColor }}
                             />
                             <DaoAnhArt
+                              fit="contain"
                               daoAnh={da}
                               kiep={cardKiep}
                               size="fill"
@@ -806,6 +807,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                         >
                           <div className={styles.listThumb}>
                             <DaoAnhArt
+                              fit="contain"
                               daoAnh={da}
                               kiep={listKiep}
                               size={44}
@@ -892,6 +894,7 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                       style={{ background: selectedDaoAnh.primaryColor || glow }}
                     />
                     <DaoAnhArt
+                              fit="contain"
                       daoAnh={selectedDaoAnh}
                       kiep={previewKiep}
                       size={220}
@@ -941,6 +944,10 @@ export default function DaoAnhGalleryModal({ isOpen, onClose, cultivation: propC
                         >
                           <Icon name="x" size={12} />
                         </button>
+                      </div>
+
+                      <div className={styles.tunerNote}>
+                        Chỉnh tay áp dụng cho avatar (Nguyên Anh...), Đồ Lục luôn tự vừa khung
                       </div>
 
                       <div className={styles.tunerControls}>

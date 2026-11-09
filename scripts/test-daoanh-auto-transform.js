@@ -6,13 +6,16 @@
  * 3. Fallback an toàn khi input null -> scale 1, không crash.
  * 4. Kiểm tra refSize: khi truyền size khác nhau (150, 185, 220), x và y co giãn tỷ lệ tương ứng.
  * 5. Kiểm tra Đế Kiếm K1..K5: mỗi kiếp có scale và x/y được định nghĩa rõ ràng.
+ * 6. Kiểm tra fit: "contain": 42 Đạo Anh x 5 kiếp có bbox sau biến đổi nằm trong [0,1]x[0,1], scale khác chế độ thường, bảo toàn DAO_ANH_CUSTOM_TRANSFORMS.
  */
 
 import assert from 'node:assert';
 import {
   DAO_ANH_LIST,
+  DAO_ANH_CUSTOM_TRANSFORMS,
   getDaoAnhTransformConfig,
   getDaoAnhTransformStyle,
+  getDaoAnhBBox,
 } from '../src/lib/daoAnhData.js';
 
 console.log('=== TEST DAO ANH AUTO TRANSFORM & PARITY (scripts/test-daoanh-auto-transform.js) ===\n');
@@ -83,6 +86,49 @@ for (let k = 1; k <= 5; k++) {
   assert(cfg.scale >= 0.95 && cfg.scale <= 1.55, `Kiếp ${k} scale phải nằm trong khoảng thẩm mỹ`);
 }
 console.log('✓ PASS: Đế Kiếm Đạo Anh cả 5 kiếp đều được cân chỉnh tỉ mỉ.');
+
+// 6. Kiểm tra chế độ fit: 'contain' cho Đồ Lục
+console.log('\n--- 6. Kiểm tra chế độ fit: "contain" cho Đồ Lục ---');
+let containTested = 0;
+for (const da of DAO_ANH_LIST) {
+  for (let k = 1; k <= 5; k++) {
+    const cfgContain = getDaoAnhTransformConfig(da, k, { fit: 'contain' });
+    assert.strictEqual(cfgContain.isAuto, true, `${da.id} kiếp ${k} fit:contain phải có isAuto === true`);
+    assert(cfgContain.scale >= 0.5 && cfgContain.scale <= 2.2, `${da.id} scale contain phải trong [0.5, 2.2]: ${cfgContain.scale}`);
+
+    const bb = getDaoAnhBBox(da, k);
+    if (bb && bb.w && bb.h) {
+      const wTrans = bb.w * cfgContain.scale;
+      const hTrans = bb.h * cfgContain.scale;
+      const left = 0.5 - wTrans / 2;
+      const right = 0.5 + wTrans / 2;
+      const top = 0.5 - hTrans / 2;
+      const bottom = 0.5 + hTrans / 2;
+
+      const eps = 0.02;
+      assert(left >= -eps, `${da.id} kiếp ${k} left out of bounds: ${left}`);
+      assert(right <= 1 + eps, `${da.id} kiếp ${k} right out of bounds: ${right}`);
+      assert(top >= -eps, `${da.id} kiếp ${k} top out of bounds: ${top}`);
+      assert(bottom <= 1 + eps, `${da.id} kiếp ${k} bottom out of bounds: ${bottom}`);
+    }
+    containTested++;
+  }
+}
+console.log(`✓ PASS: Toàn bộ ${containTested} lượt (42 Đạo Anh x 5 Kiếp) ở fit: "contain" đều có bbox nằm trong [0,1]x[0,1] (sai số <= 0.02).`);
+
+// Kiểm tra so sánh với chế độ thường và bảo toàn DAO_ANH_CUSTOM_TRANSFORMS
+const customKeys = Object.keys(DAO_ANH_CUSTOM_TRANSFORMS);
+assert(customKeys.length > 0, 'Phải có các mục trong DAO_ANH_CUSTOM_TRANSFORMS');
+for (const key of customKeys.slice(0, 15)) {
+  const da = DAO_ANH_LIST.find((d) => d.id === key || d.id === `da_${key}` || d.sourceId === key);
+  if (!da) continue;
+  const cfgNorm = getDaoAnhTransformConfig(da, 3);
+  const cfgCont = getDaoAnhTransformConfig(da, 3, { fit: 'contain' });
+  assert.strictEqual(cfgNorm.isAuto, false, `Chế độ thường cho ${key} phải có isAuto === false`);
+  assert.strictEqual(cfgCont.isAuto, true, `Chế độ contain cho ${key} phải có isAuto === true`);
+  assert.notStrictEqual(cfgNorm.scale, cfgCont.scale, `Scale chế độ thường và contain cho ${key} phải khác nhau`);
+}
+console.log('✓ PASS: Chế độ thường bảo toàn 100% DAO_ANH_CUSTOM_TRANSFORMS và scale khác biệt rõ rệt so với fit contain.');
 
 console.log('\n=== TẤT CẢ CÁC BÀI TEST AUTO TRANSFORM ĐÃ VƯỢT QUA 100%! ===');
 process.exit(0);

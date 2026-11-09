@@ -3,6 +3,14 @@ import { PersistentImage } from '../../lib/persistentImageCache';
 import { getDaoAnhEvolutionImage, getDaoAnhTransformStyle } from '../../lib/daoAnhData';
 import Icon from '../ui/Icon';
 
+// Làm mờ dần 8% viền để phần hào quang bị clip không lộ mép vuông cứng.
+const CONTAIN_FEATHER = {
+  WebkitMaskImage: 'linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 9%, #000 91%, transparent 100%)',
+  maskImage: 'linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 9%, #000 91%, transparent 100%)',
+  WebkitMaskComposite: 'source-in',
+  maskComposite: 'intersect',
+};
+
 /**
  * DaoAnhArt: Component dùng chung chỉ vẽ ảnh Đạo Anh ở mọi nơi trong Đồ Lục.
  * Đảm bảo quy tắc hiển thị chuẩn đồng nhất với DaoAnhAvatarRenderer:
@@ -24,6 +32,7 @@ export default function DaoAnhArt({
   imageStyle = {},
   onClick,
   refSize = 185,
+  fit,
 }) {
   const [hasError, setHasError] = useState(false);
 
@@ -76,6 +85,7 @@ export default function DaoAnhArt({
   const transformStyle = getDaoAnhTransformStyle(daoAnh, currentKiep, {
     size: effectiveSize,
     refSize,
+    fit,
   });
 
   const glowColor = glow === true
@@ -94,8 +104,9 @@ export default function DaoAnhArt({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        overflow: 'visible',
+        overflow: fit === 'contain' ? 'hidden' : 'visible',
         flexShrink: 0,
+        ...(fit === 'contain' ? CONTAIN_FEATHER : null),
         ...style,
       }}
       onClick={onClick}
@@ -110,7 +121,7 @@ export default function DaoAnhArt({
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 2,
-          overflow: 'visible',
+          overflow: fit === 'contain' ? 'hidden' : 'visible',
         }}
       >
         <PersistentImage

@@ -2362,8 +2362,12 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
   const cleanId = id.replace(/^da_/, '');
   const daId = id.startsWith('da_') ? id : `da_${id}`;
 
+  // fit === 'contain': dùng cho Đồ Lục (khung có clip) — bỏ qua bảng chỉnh tay dành cho avatar tràn viền,
+  // luôn tự chuẩn hóa theo bbox để toàn bộ hình (kể cả hào quang) nằm gọn trong khung và đồng cỡ giữa các Đạo Anh.
+  const forceContain = options?.fit === 'contain';
+
   // 0. Nếu đang có dev tune override cho id này & kiếp này
-  if (!options?.ignoreOverrides) {
+  if (!forceContain && !options?.ignoreOverrides) {
     const tuneOvr = devTuneOverrides[id] || devTuneOverrides[sourceId] || devTuneOverrides[cleanId];
     if (tuneOvr && tuneOvr[currentKiep]) {
       const kCfg = tuneOvr[currentKiep];
@@ -2388,7 +2392,7 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
   const cfg = DAO_ANH_CUSTOM_TRANSFORMS[id] || DAO_ANH_CUSTOM_TRANSFORMS[sourceId] || DAO_ANH_CUSTOM_TRANSFORMS[cleanId] || DAO_ANH_CUSTOM_TRANSFORMS[daId];
 
   // 1. Nếu có mục chỉnh tay (có cấu hình cho kiếp hiện tại hoặc kiếp 1 để fallback) -> THẮNG
-  if (cfg && (cfg[currentKiep] !== undefined || cfg[1] !== undefined)) {
+  if (!forceContain && cfg && (cfg[currentKiep] !== undefined || cfg[1] !== undefined)) {
     const kCfg = cfg[currentKiep] || cfg[1] || { scale: 1, x: 0, y: 0 };
     const s = kCfg.scale ?? 1;
     let x = kCfg.x ?? 0;
@@ -2410,10 +2414,12 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
   // 2. Tự chuẩn hóa theo DAO_ANH_BBOX khi CHƯA có chỉnh tay
   const bb = getDaoAnhBBox(daoAnhDef, currentKiep);
   if (bb && typeof bb.w === 'number' && bb.w > 0 && typeof bb.h === 'number' && bb.h > 0) {
-    const TARGET = 0.80;
+    const TARGET = forceContain ? 1.0 : 0.80;
     const maxDim = Math.max(bb.w, bb.h);
     const rawScale = TARGET / maxDim;
-    const scale = Math.min(Math.max(rawScale, 0.85), 1.9);
+    const scale = forceContain
+      ? Math.min(Math.max(rawScale, 0.5), 2.2)
+      : Math.min(Math.max(rawScale, 0.85), 1.9);
     const roundedScale = Math.round(scale * 100) / 100;
 
     // Dịch theo % của phần tử: tx = (0.5 - bb.cx) * scale * 100 (%)
