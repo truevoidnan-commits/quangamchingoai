@@ -614,7 +614,7 @@
   justify-content: center;
   min-height: 0;
   margin: 4px 0;
-  overflow: visible;
+  overflow: hidden;
   z-index: 2;
 }
 
@@ -886,7 +886,7 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 12px;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .detailArtGlow {
@@ -1405,6 +1405,14 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   z-index: 20;
+}
+
+.tunerNote {
+  font-size: 10.5px;
+  color: #94a3b8;
+  font-style: italic;
+  line-height: 1.4;
+  padding: 4px 0 2px 0;
 }
 
 .tunerHeader {
