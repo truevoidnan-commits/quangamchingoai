@@ -1383,8 +1383,21 @@ export function findDaoAnhDefinition(da, state) {
   return DAO_ANH_LIST[0];
 }
 
-const daoAnhFullModules = typeof import.meta.glob === 'function' ? import.meta.glob('../assets/images/dao_anh_webp/*.webp', { eager: true, import: 'default' }) : {};
-const daoAnhThumbModules = typeof import.meta.glob === 'function' ? import.meta.glob('../assets/images/dao_anh_thumb/*.webp', { eager: true, import: 'default' }) : {};
+// CẢNH BÁO: TUYỆT ĐỐI KHÔNG dùng `typeof import.meta.glob === 'function' ? ... : {}`.
+// Vite chỉ biến đổi import.meta.glob(...) tĩnh lúc build; biểu thức typeof không được thay thế
+// khiến ở trình duyệt nó luôn là 'undefined' làm rỗng bảng ảnh trên production build.
+let daoAnhFullModules = {};
+try {
+  daoAnhFullModules = import.meta.glob('../assets/images/dao_anh_webp/*.webp', { eager: true, import: 'default' });
+} catch (e) {
+  /* Node thuần: không có Vite, dùng bảng rỗng */
+}
+let daoAnhThumbModules = {};
+try {
+  daoAnhThumbModules = import.meta.glob('../assets/images/dao_anh_thumb/*.webp', { eager: true, import: 'default' });
+} catch (e) {
+  /* Node thuần: không có Vite, dùng bảng rỗng */
+}
 
 const bundledDaoAnhFull = {};
 for (const [filepath, mod] of Object.entries(daoAnhFullModules)) {
