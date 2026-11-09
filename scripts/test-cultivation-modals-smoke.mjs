@@ -7,7 +7,11 @@ import { chromium } from 'playwright';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const distDir = path.resolve(__dirname, '../dist');
-const artifactsDir = 'C:/Users/ADMIN/.gemini/antigravity/brain/04a8635f-ab90-4862-af83-b6463b1f6a83';
+const artifactsDir = path.resolve(__dirname, '../docs/ui-redesign/gallery');
+if (!fs.existsSync(artifactsDir)) {
+  fs.mkdirSync(artifactsDir, { recursive: true });
+}
+const artifactDir = artifactsDir;
 
 const PORT = 4213;
 const BASE_URL = `http://127.0.0.1:${PORT}`;

@@ -7,7 +7,10 @@ import { chromium } from 'playwright';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const distDir = path.resolve(__dirname, '../dist');
-const artifactsDir = 'C:/Users/ADMIN/.gemini/antigravity/brain/04a8635f-ab90-4862-af83-b6463b1f6a83';
+const artifactsDir = path.resolve(__dirname, '../docs/ui-redesign/gallery');
+if (!fs.existsSync(artifactsDir)) {
+  fs.mkdirSync(artifactsDir, { recursive: true });
+}
 
 const PORT = 4212;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -29,14 +32,6 @@ function startServer() {
     let reqPath = req.url.split('?')[0];
     if (reqPath === '/' || !reqPath) reqPath = '/index.html';
     let filePath = path.join(distDir, reqPath);
-    if (!fs.existsSync(filePath)) {
-      if (reqPath.startsWith('/images/')) {
-        const srcPath = path.resolve(__dirname, '../src/assets' + reqPath);
-        if (fs.existsSync(srcPath) && !fs.statSync(srcPath).isDirectory()) {
-          filePath = srcPath;
-        }
-      }
-    }
     if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
       if (reqPath.startsWith('/images/') || reqPath.startsWith('/assets/')) {
         res.writeHead(404, { 'Content-Type': 'text/plain' });
@@ -51,6 +46,92 @@ function startServer() {
     fs.createReadStream(filePath).pipe(res);
   });
   return new Promise((resolve) => server.listen(PORT, '127.0.0.1', () => resolve(server)));
+}
+
+const requestedDaoAnhFallbackUrls = [];
+const image404Urls = [];
+
+function attachPageMonitors(page, pageName, tracker) {
+  page.on('request', (req) => {
+    const url = req.url();
+    if (url.includes('/images/dao_anh/')) {
+      console.error(`❌ [Request Violation - ${pageName}]: Request to fallback /images/dao_anh/ detected: ${url}`);
+      requestedDaoAnhFallbackUrls.push({ page: pageName, url });
+      tracker.hasErrors = true;
+    }
+  });
+
+  page.on('response', (res) => {
+    const url = res.url();
+    const status = res.status();
+    if (status === 404) {
+      if (url.includes('/images/') || /\/assets\/.*\.(webp|png|jpg|jpeg|svg)/i.test(url)) {
+        console.error(`❌ [404 Image Response - ${pageName}]: ${url}`);
+        image404Urls.push({ page: pageName, url });
+        tracker.hasErrors = true;
+      }
+    }
+  });
+
+  page.on('pageerror', (err) => {
+    console.error(`❌ [PageError ${pageName}]:`, err.message);
+    tracker.hasErrors = true;
+  });
+
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') {
+      const text = msg.text();
+      if (!text.includes('404') && !text.includes('Failed to load resource')) {
+        console.error(`❌ [ConsoleError ${pageName}]:`, text);
+        tracker.hasErrors = true;
+      }
+    }
+  });
+}
+
+async function assertVisibleImagesLoaded(page, contextLabel, timeout = 5000) {
+  const startTime = Date.now();
+  let lastCheck = null;
+
+  while (Date.now() - startTime < timeout) {
+    lastCheck = await page.evaluate(() => {
+      const modal = document.querySelector('div[role="dialog"][aria-modal="true"]');
+      if (!modal) return { ok: false, error: 'Modal not found in DOM' };
+      const imgs = Array.from(modal.querySelectorAll('img'));
+      const visible = imgs.filter((img) => {
+        const r = img.getBoundingClientRect();
+        const s = window.getComputedStyle(img);
+        const inViewport = r.top < window.innerHeight && r.bottom > 0 && r.left < window.innerWidth && r.right > 0;
+        return inViewport && r.width > 0 && r.height > 0 && s.display !== 'none' && s.visibility !== 'hidden';
+      });
+      if (visible.length === 0) return { ok: false, waitingForRender: true, totalVisible: 0 };
+      const broken = [];
+      for (const img of visible) {
+        if (!img.complete || img.naturalWidth === 0) {
+          broken.push({
+            src: img.src,
+            alt: img.alt || '',
+            complete: img.complete,
+            naturalWidth: img.naturalWidth,
+          });
+        }
+      }
+      return {
+        ok: broken.length === 0,
+        totalVisible: visible.length,
+        broken,
+      };
+    });
+
+    if (lastCheck && lastCheck.ok) break;
+    await page.waitForTimeout(100);
+  }
+
+  if (!lastCheck || !lastCheck.ok) {
+    console.error(`❌ [Broken Images in ${contextLabel}]:`, lastCheck ? lastCheck.broken : 'timeout');
+    throw new Error(`Found ${lastCheck?.broken?.length || 0} broken images (naturalWidth === 0) in ${contextLabel}`);
+  }
+  console.log(`  ✓ All ${lastCheck.totalVisible} visible <img> in ${contextLabel} loaded with naturalWidth > 0`);
 }
 
 async function openGalleryModal(page) {
@@ -74,7 +155,7 @@ async function run() {
 
   const server = await startServer();
   const browser = await chromium.launch({ headless: true });
-  let hasErrors = false;
+  const tracker = { hasErrors: false };
 
   const mockState = {
     realm: 'nguyen_anh',
@@ -160,6 +241,7 @@ async function run() {
       throw new Error('Gallery modal did not open on Desktop');
     }
     console.log('  ✓ Gallery Modal opened cleanly on 1920x1080');
+    await assertVisibleImagesLoaded(pageDesktop, 'Desktop 1920x1080');
 
     // Check Total Cards = 42
     const cards = pageDesktop.locator('div[role="button"][class*="card"]');
@@ -253,6 +335,7 @@ async function run() {
     // -------------------------------------------------------------
     console.log('\n--- 2. Testing Desktop (1366x768) ---');
     const page1366 = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+    attachPageMonitors(page1366, 'Desktop 1366', tracker);
     await page1366.addInitScript((mock) => {
       localStorage.clear();
       localStorage.setItem('tcl_active_profile', 'real');
@@ -273,6 +356,7 @@ async function run() {
     // -------------------------------------------------------------
     console.log('\n--- 3. Testing Tablet (768x1024) ---');
     const pageTablet = await browser.newPage({ viewport: { width: 768, height: 1024 } });
+    attachPageMonitors(pageTablet, 'Tablet 768', tracker);
     await pageTablet.addInitScript((mock) => {
       localStorage.clear();
       localStorage.setItem('tcl_active_profile', 'real');
@@ -306,10 +390,7 @@ async function run() {
     const pageMobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
 
 
-    pageMobile.on('pageerror', (err) => {
-      console.error('❌ [PageError Mobile]:', err.message);
-      hasErrors = true;
-    });
+    attachPageMonitors(pageMobile, 'Mobile 390', tracker);
 
     await pageMobile.addInitScript((mock) => {
       localStorage.clear();
@@ -327,6 +408,7 @@ async function run() {
       throw new Error('Horizontal chips row is not visible on mobile');
     }
     console.log('  ✓ Horizontal category chips row visible on mobile');
+    await assertVisibleImagesLoaded(pageMobile, 'Mobile 390x844 Grid');
 
     // Capture mobile grid
     await pageMobile.screenshot({
@@ -344,6 +426,7 @@ async function run() {
       throw new Error('Mobile detail sheet failed to open on card click');
     }
     console.log('  ✓ Tapping card opened mobile detail sheet');
+    await assertVisibleImagesLoaded(pageMobile, 'Mobile 390x844 Detail');
 
 
     // Test K1 -> K5 evolution image switch
@@ -450,6 +533,7 @@ async function run() {
     // -------------------------------------------------------------
     console.log('\n--- 6. Testing Transform Parity, K1..K5 Switching & Sidebar Labels ---');
     const pageParity = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+    attachPageMonitors(pageParity, 'Parity 1366', tracker);
     await pageParity.addInitScript((mock) => {
       localStorage.clear();
       localStorage.setItem('tcl_active_profile', 'real');
@@ -543,7 +627,19 @@ async function run() {
     await browser.close();
     server.close();
 
-    if (hasErrors) {
+    if (requestedDaoAnhFallbackUrls.length > 0) {
+      console.error(`\n❌ Found ${requestedDaoAnhFallbackUrls.length} requests to /images/dao_anh/:`);
+      requestedDaoAnhFallbackUrls.forEach((r) => console.error(`   - [${r.page}] ${r.url}`));
+      tracker.hasErrors = true;
+    }
+
+    if (image404Urls.length > 0) {
+      console.error(`\n❌ Found ${image404Urls.length} 404 image responses:`);
+      image404Urls.forEach((r) => console.error(`   - [${r.page}] ${r.url}`));
+      tracker.hasErrors = true;
+    }
+
+    if (tracker.hasErrors) {
       console.error('\n❌ Gallery verification encountered errors!');
       process.exit(1);
     }
