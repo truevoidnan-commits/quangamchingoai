@@ -1,7 +1,7 @@
 import { useRef, useState, useMemo } from 'react';
 import { useLongPress } from '../../hooks/useLongPress';
 import BottomSheet from './BottomSheet';
-import { getReadingProgress } from '../../lib/storage';
+import { useNovelReadingProgress } from '../../hooks/useNovelReadingProgress';
 import {
   IconDownload,
   IconEdit,
@@ -97,26 +97,8 @@ export default function NovelCard({
     onUnhide?.(novel);
   };
 
-  // Reading progress calculation
-  const progressInfo = useMemo(() => {
-    const prog = getReadingProgress(novel.id);
-    if (!prog || !prog.chapterId) return null;
-
-    let chNum = prog.chapterNumber || prog.chapterIndex;
-    if (!chNum) {
-      // Try extract number from chapterId if format ch-123 or sample-ch-001
-      const m = String(prog.chapterId).match(/(\d+)/);
-      if (m) chNum = parseInt(m[1], 10);
-    }
-    const currentNum = chNum || 1;
-    const total = novel.chapterCount || 1;
-    const percent = Math.min(100, Math.max(1, Math.round((currentNum / total) * 100)));
-
-    return {
-      chapterNum: currentNum,
-      percent,
-    };
-  }, [novel.id, novel.chapterCount]);
+  // Reading progress calculation from real chapter position in IndexedDB
+  const progressInfo = useNovelReadingProgress(novel);
 
   // Reusable bottom sheet action menu
   const renderActionSheet = () => (

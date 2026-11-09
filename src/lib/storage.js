@@ -323,6 +323,15 @@ export function saveReadingProgress(novelId, progress) {
 
   const dataToSave = { ...progress, updatedAt: newUpdatedAt };
   localStorage.setItem(`${PROGRESS_KEY}_${novelId}`, JSON.stringify(dataToSave));
+  try {
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(
+        new CustomEvent('tcl_reading_progress_changed', {
+          detail: { novelId, progress: dataToSave },
+        })
+      );
+    }
+  } catch (e) {}
 }
 
 // ---- Reading Settings ----

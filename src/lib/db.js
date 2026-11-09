@@ -416,3 +416,43 @@ export async function reconcileLibraryChapterCounts(novelIds = null) {
     return 0;
   }
 }
+
+/**
+ * Lấy thứ tự chương THẬT (1-based) và tổng số chương của truyện từ IndexedDB.
+ * Đếm theo order trong index 'novelId_order'.
+ * 
+ * @param {string} novelId 
+ * @param {string} chapterId 
+ * @returns {Promise<{ position: number, total: number } | null>}
+ */
+export async function getChapterPosition(novelId, chapterId) {
+  if (!novelId || !chapterId) return null;
+  try {
+    const db = await getDB();
+    const chapter = await db.get('chapters', chapterId);
+    if (!chapter || chapter.order === undefined || chapter.order === null) {
+      return null;
+    }
+    const targetNovelId = chapter.novelId || novelId;
+    const tx = db.transaction('chapters', 'readonly');
+    const store = tx.objectStore('chapters');
+    const orderIndex = store.index('novelId_order');
+    const novelIndex = store.index('novelId');
+
+    const [position, total] = await Promise.all([
+      orderIndex.count(IDBKeyRange.bound([targetNovelId, -Infinity], [targetNovelId, chapter.order], false, false)),
+      novelIndex.count(IDBKeyRange.only(targetNovelId)),
+    ]);
+
+    await tx.done;
+
+    if (position === 0) return null;
+    return {
+      position,
+      total: total || position,
+    };
+  } catch (err) {
+    console.warn('Lỗi khi getChapterPosition:', err);
+    return null;
+  }
+}
