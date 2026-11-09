@@ -21,7 +21,7 @@ import {
 } from '../../lib/cultivation';
 import ArtifactIcon from './ArtifactIcon';
 import { THAN_PHAM_AI_ICONS, LAMP_THAN_PHAM_AI_ICONS, getLampImageUrl, getArtifactImageUrl } from '../../lib/artifactIcons';
-import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhTransformConfig } from '../../lib/daoAnhData';
+import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhSvgTransform } from '../../lib/daoAnhData';
 import DaoAnhAvatarRenderer from './DaoAnhAvatarRenderer';
 import LinhTangVisualizer from './LinhTangVisualizer';
 import styles from './RealmPreviewVisualizer.module.css';
@@ -6201,7 +6201,6 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   const arch = { name: 'Đạo Anh', color: '#fbbf24' };
                   const daoAnhDef = findDaoAnhDefinition(daoAnh, cultivation);
                   const nodeScale = (pos.scale || 1.0) * 1.30;
-                  const transCfg = getDaoAnhTransformConfig(daoAnhDef, currentKiep);
                   
                   const isSelectedForSwap = isSwapMode && swapSelectedIdx !== null && swapSelectedIdx === idx;
 
@@ -6292,7 +6291,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             {/* 1. HIỂN THỊ ĐẠO ẢNH PHÁP THÂN HOÀNG KIM / CHIBI GEN AI (CHUẨN 144x144) */}
                             <g>
                               {daoAnhDef?.image ? (
-                                <g transform={`translate(${transCfg.x || 0}, ${transCfg.y || 0}) scale(${transCfg.scale || 1})`}>
+                                <g transform={getDaoAnhSvgTransform(daoAnhDef, currentKiep)}>
                                   <image
                                     href={getAssetUrl(getDaoAnhEvolutionImage(daoAnhDef, currentKiep, 'thumb'))}
                                     x="-72"
