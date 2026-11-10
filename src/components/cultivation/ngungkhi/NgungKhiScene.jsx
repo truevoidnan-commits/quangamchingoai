@@ -1,9 +1,8 @@
 import React from 'react';
 import Icon from '../../ui/Icon';
-import imgHuyetHoGod from '../../../assets/images/huyet_ho_god.webp';
-import imgLongKinhGod from '../../../assets/images/long_kinh_god.webp';
 import NgungKhiBackground from './NgungKhiBackground';
 import NgungKhiArrayRings from './NgungKhiArrayRings';
+import NgungKhiBeast from './NgungKhiBeast';
 import styles from './NgungKhiScene.module.css';
 
 export default function NgungKhiScene({
@@ -22,6 +21,10 @@ export default function NgungKhiScene({
 }) {
   const activePath = cultivation?.ngungKhiActivePath || cultivation?.ngungKhiPath || 'the';
   const isThe = viewMode === 'the';
+  const currentExp = isThe ? theExp : phapExp;
+  const currentLvl = isThe ? theLvl : phapLvl;
+  const maxExp = 4500;
+  const progressPct = Math.min(100, Math.max(0, (currentExp / maxExp) * 100));
 
   return (
     <div
@@ -36,22 +39,22 @@ export default function NgungKhiScene({
       <div className={styles.noiseOverlay} />
       <div className={styles.vignetteOverlay} />
 
-      {/* 1. BỘ CHUYỂN ĐỔI GÓC NHÌN TU LUYỆN & DẤU HIỆU ĐANG DỒN LINH LỰC */}
+      {/* 1. BỘ CHUYỂN ĐỔI GÓC NHÌN TU LUYỆN (GLASS SEGMENTED CONTROL) */}
       <div style={{
         position: 'absolute',
         top: 14,
         zIndex: 30,
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
-        padding: '6px 12px',
-        borderRadius: 24,
-        background: 'rgba(10, 16, 26, 0.94)',
-        border: '1px solid rgba(255, 255, 255, 0.15)',
-        backdropFilter: 'blur(12px)',
-        boxShadow: '0 6px 20px rgba(0, 0, 0, 0.6)'
+        gap: 6,
+        padding: '4px',
+        borderRadius: 20,
+        background: 'rgba(12, 16, 24, 0.85)',
+        border: '1px solid rgba(255, 255, 255, 0.12)',
+        backdropFilter: 'blur(16px)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.65)'
       }}>
-        {/* Nút Hải Sơn Quyết */}
+        {/* Nút Hải Sơn Quyết (Thể) */}
         <button
           onClick={() => {
             setViewMode('the');
@@ -62,59 +65,67 @@ export default function NgungKhiScene({
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            padding: '6px 14px',
-            borderRadius: 18,
-            border: viewMode === 'the'
-              ? '1px solid rgba(254, 202, 202, 0.6)'
+            padding: isMobile ? '5px 10px' : '6px 14px',
+            borderRadius: 16,
+            border: isThe
+              ? '1px solid rgba(217, 164, 65, 0.55)'
               : '1px solid transparent',
-            background: viewMode === 'the' ? 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)' : 'transparent',
-            color: viewMode === 'the' ? '#ffffff' : '#94a3b8',
-            fontWeight: 800,
-            fontSize: 12.5,
+            background: isThe ? 'rgba(155, 34, 38, 0.28)' : 'transparent',
+            color: isThe ? '#e9d8c4' : '#94a3b8',
+            fontWeight: 700,
+            fontSize: isMobile ? 11.5 : 12.5,
             cursor: 'pointer',
-            boxShadow: activePath === 'the'
-              ? '0 0 16px rgba(239, 68, 68, 0.75)'
-              : (viewMode === 'the' ? '0 0 12px rgba(239, 68, 68, 0.5)' : 'none'),
+            boxShadow: isThe ? '0 0 14px rgba(217, 164, 65, 0.15)' : 'none',
             transition: 'all 0.25s ease'
           }}
           title="Tập trung tu luyện và quan sát Thể Phách (Hải Sơn Quyết)"
         >
-          <span style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center' }}>
+          <span style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', color: isThe ? '#d9a441' : '#94a3b8' }}>
             <Icon name="Flame" size={13} />
           </span>
-          <span>Hải Sơn Quyết (Thể)</span>
+          <span style={{ fontFamily: 'serif', letterSpacing: '0.04em' }}>Hải Sơn Quyết</span>
           <span style={{
-            fontSize: 11,
-            padding: '1px 6px',
-            borderRadius: 10,
-            background: viewMode === 'the' ? 'rgba(0, 0, 0, 0.35)' : 'rgba(255, 255, 255, 0.08)',
-            color: viewMode === 'the' ? '#fef08a' : '#cbd5e1'
+            fontSize: 10.5,
+            padding: '1px 5px',
+            borderRadius: 8,
+            background: isThe ? 'rgba(217, 164, 65, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+            color: isThe ? '#d9a441' : '#cbd5e1',
+            border: isThe ? '1px solid rgba(217, 164, 65, 0.3)' : '1px solid transparent'
           }}>
             T{theLvl}
           </span>
           {activePath === 'the' && (
             <span style={{
               position: 'absolute',
-              top: -8,
+              top: -9,
               right: -6,
-              background: '#ef4444',
-              color: '#ffffff',
+              background: 'rgba(20, 8, 10, 0.94)',
+              color: '#d9a441',
               fontSize: 8.5,
-              fontWeight: 900,
+              fontWeight: 700,
               padding: '1px 5px',
-              borderRadius: 8,
-              border: '1px solid #ffffff',
-              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.5)',
-              textTransform: 'uppercase',
-              letterSpacing: 0.5,
-              animation: 'pulseCore 1.2s ease-in-out infinite alternate'
+              borderRadius: 6,
+              border: '1px solid rgba(217, 164, 65, 0.6)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.6)',
+              letterSpacing: '0.05em',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
+              whiteSpace: 'nowrap'
             }}>
+              <span style={{
+                width: 4,
+                height: 4,
+                borderRadius: '50%',
+                background: '#e8743b',
+                boxShadow: '0 0 6px #e8743b'
+              }} />
               Đang Nạp Tu Vi
             </span>
           )}
         </button>
 
-        {/* Nút Hóa Hải Kinh */}
+        {/* Nút Hóa Hải Kinh (Pháp) */}
         <button
           onClick={() => {
             setViewMode('phap');
@@ -125,53 +136,61 @@ export default function NgungKhiScene({
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            padding: '6px 14px',
-            borderRadius: 18,
-            border: viewMode === 'phap'
-              ? '1px solid rgba(186, 230, 253, 0.6)'
+            padding: isMobile ? '5px 10px' : '6px 14px',
+            borderRadius: 16,
+            border: !isThe
+              ? '1px solid rgba(95, 184, 196, 0.55)'
               : '1px solid transparent',
-            background: viewMode === 'phap' ? 'linear-gradient(135deg, #06b6d4 0%, #0369a1 100%)' : 'transparent',
-            color: viewMode === 'phap' ? '#ffffff' : '#94a3b8',
-            fontWeight: 800,
-            fontSize: 12.5,
+            background: !isThe ? 'rgba(28, 78, 107, 0.32)' : 'transparent',
+            color: !isThe ? '#cfe9ee' : '#94a3b8',
+            fontWeight: 700,
+            fontSize: isMobile ? 11.5 : 12.5,
             cursor: 'pointer',
-            boxShadow: activePath === 'phap'
-              ? '0 0 16px rgba(6, 182, 212, 0.75)'
-              : (viewMode === 'phap' ? '0 0 12px rgba(6, 182, 212, 0.5)' : 'none'),
+            boxShadow: !isThe ? '0 0 14px rgba(95, 184, 196, 0.15)' : 'none',
             transition: 'all 0.25s ease'
           }}
           title="Tập trung tu luyện và quan sát Pháp Lực (Hóa Hải Kinh)"
         >
-          <span style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center' }}>
+          <span style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', color: !isThe ? '#5fb8c4' : '#94a3b8' }}>
             <Icon name="Waves" size={13} />
           </span>
-          <span>Hóa Hải Kinh (Pháp)</span>
+          <span style={{ fontFamily: 'serif', letterSpacing: '0.04em' }}>Hóa Hải Kinh</span>
           <span style={{
-            fontSize: 11,
-            padding: '1px 6px',
-            borderRadius: 10,
-            background: viewMode === 'phap' ? 'rgba(0, 0, 0, 0.35)' : 'rgba(255, 255, 255, 0.08)',
-            color: viewMode === 'phap' ? '#a5f3fc' : '#cbd5e1'
+            fontSize: 10.5,
+            padding: '1px 5px',
+            borderRadius: 8,
+            background: !isThe ? 'rgba(95, 184, 196, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+            color: !isThe ? '#5fb8c4' : '#cbd5e1',
+            border: !isThe ? '1px solid rgba(95, 184, 196, 0.3)' : '1px solid transparent'
           }}>
             T{phapLvl}
           </span>
           {activePath === 'phap' && (
             <span style={{
               position: 'absolute',
-              top: -8,
+              top: -9,
               right: -6,
-              background: '#06b6d4',
-              color: '#ffffff',
+              background: 'rgba(5, 20, 28, 0.94)',
+              color: '#5fb8c4',
               fontSize: 8.5,
-              fontWeight: 900,
+              fontWeight: 700,
               padding: '1px 5px',
-              borderRadius: 8,
-              border: '1px solid #ffffff',
-              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.5)',
-              textTransform: 'uppercase',
-              letterSpacing: 0.5,
-              animation: 'pulseCore 1.2s ease-in-out infinite alternate'
+              borderRadius: 6,
+              border: '1px solid rgba(95, 184, 196, 0.6)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.6)',
+              letterSpacing: '0.05em',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
+              whiteSpace: 'nowrap'
             }}>
+              <span style={{
+                width: 4,
+                height: 4,
+                borderRadius: '50%',
+                background: '#5fb8c4',
+                boxShadow: '0 0 6px #5fb8c4'
+              }} />
               Đang Nạp Tu Vi
             </span>
           )}
@@ -199,21 +218,21 @@ export default function NgungKhiScene({
             </feMerge>
           </filter>
 
-          {/* Nền Chuyển Sắc Hải Sơn (Tông đỏ trầm ấm) */}
+          {/* Nền Chuyển Sắc Hải Sơn */}
           <radialGradient id="nkBgGradThe" cx="50%" cy="45%" r="65%">
             <stop offset="0%" stopColor="#1a0a0c" stopOpacity="0.95" />
             <stop offset="45%" stopColor="#120608" stopOpacity="0.98" />
             <stop offset="100%" stopColor="#0c0507" stopOpacity="1" />
           </radialGradient>
 
-          {/* Nền Chuyển Sắc Hóa Hải (Tông xanh dương thẳm) */}
+          {/* Nền Chuyển Sắc Hóa Hải */}
           <radialGradient id="nkBgGradPhap" cx="50%" cy="40%" r="65%">
             <stop offset="0%" stopColor="#07202c" stopOpacity="0.95" />
             <stop offset="45%" stopColor="#051822" stopOpacity="0.98" />
             <stop offset="100%" stopColor="#03121a" stopOpacity="1" />
           </radialGradient>
 
-          {/* Quầng Huyết Nhật Tán Sắc (Blood Sun Glow - không viền gắt) */}
+          {/* Quầng Huyết Nhật Tán Sắc */}
           <radialGradient id="nkBloodSunGlow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#e8743b" stopOpacity="0.22" />
             <stop offset="35%" stopColor="#9b2226" stopOpacity="0.14" />
@@ -221,7 +240,7 @@ export default function NgungKhiScene({
             <stop offset="100%" stopColor="#1a0a0c" stopOpacity="0" />
           </radialGradient>
 
-          {/* Quầng Vực Biển Thâm U (Abyss Ocean Glow) */}
+          {/* Quầng Vực Biển Thâm U */}
           <radialGradient id="nkAbyssOceanGlow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#5fb8c4" stopOpacity="0.18" />
             <stop offset="40%" stopColor="#1c4e6b" stopOpacity="0.12" />
@@ -229,14 +248,14 @@ export default function NgungKhiScene({
             <stop offset="100%" stopColor="#03121a" stopOpacity="0" />
           </radialGradient>
 
-          {/* Gradient Cho Vòng Linh Mạch Hải Sơn (Đỏ thẫm -> Hoả chu -> Kim sắc) */}
+          {/* Gradient Cho Vòng Linh Mạch Hải Sơn */}
           <linearGradient id="nkRingReachedThe" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#9b2226" />
             <stop offset="50%" stopColor="#e8743b" />
             <stop offset="100%" stopColor="#d9a441" />
           </linearGradient>
 
-          {/* Gradient Cho Vòng Linh Mạch Hóa Hải (Lam thẫm -> Ngọc bích -> Tinh hải) */}
+          {/* Gradient Cho Vòng Linh Mạch Hóa Hải */}
           <linearGradient id="nkRingReachedPhap" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#1c4e6b" />
             <stop offset="50%" stopColor="#5fb8c4" />
@@ -259,7 +278,7 @@ export default function NgungKhiScene({
             <stop offset="100%" stopColor="#03121a" stopOpacity="0.2" />
           </radialGradient>
 
-          {/* Tia sáng biển (Caustic Beams) */}
+          {/* Tia sáng biển */}
           <linearGradient id="nkCausticBeam1" x1="0%" y1="0%" x2="35%" y2="100%">
             <stop offset="0%" stopColor="#cfe9ee" stopOpacity="0.14" />
             <stop offset="50%" stopColor="#5fb8c4" stopOpacity="0.06" />
@@ -284,22 +303,35 @@ export default function NgungKhiScene({
             <stop offset="100%" stopColor="#03121a" stopOpacity="0" />
           </linearGradient>
 
-          {/* Thần Thú Aura Gradients */}
-          <radialGradient id="tigerAuraGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#d9a441" stopOpacity="0.32" />
-            <stop offset="40%" stopColor="#e8743b" stopOpacity="0.2" />
-            <stop offset="75%" stopColor="#9b2226" stopOpacity="0.08" />
+          {/* Thần Thú Soft Aura Gradients */}
+          <radialGradient id="nkTigerSoftAura" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#d9a441" stopOpacity="0.28" />
+            <stop offset="40%" stopColor="#e8743b" stopOpacity="0.16" />
+            <stop offset="75%" stopColor="#9b2226" stopOpacity="0.06" />
             <stop offset="100%" stopColor="#1a0a0c" stopOpacity="0" />
           </radialGradient>
 
-          <radialGradient id="whaleAuraGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#5fb8c4" stopOpacity="0.32" />
-            <stop offset="45%" stopColor="#1c4e6b" stopOpacity="0.2" />
+          <radialGradient id="nkWhaleSoftAura" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#5fb8c4" stopOpacity="0.28" />
+            <stop offset="45%" stopColor="#1c4e6b" stopOpacity="0.16" />
             <stop offset="80%" stopColor="#07202c" stopOpacity="0.06" />
             <stop offset="100%" stopColor="#03121a" stopOpacity="0" />
           </radialGradient>
 
-          {/* CSS Keyframes tinh tế, mượt mà 60fps */}
+          {/* Sương mù che chân hổ & kình */}
+          <radialGradient id="nkTigerMistFade" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(155, 34, 38, 0.35)" />
+            <stop offset="60%" stopColor="rgba(42, 14, 18, 0.18)" />
+            <stop offset="100%" stopColor="transparent" />
+          </radialGradient>
+
+          <radialGradient id="nkWhaleAbyssFade" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(28, 78, 107, 0.35)" />
+            <stop offset="60%" stopColor="rgba(12, 43, 61, 0.18)" />
+            <stop offset="100%" stopColor="transparent" />
+          </radialGradient>
+
+          {/* Keyframes */}
           <style>{`
             @keyframes nkTrigramRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
             @keyframes nkSpinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -355,8 +387,6 @@ export default function NgungKhiScene({
               75% { opacity: 0.55; }
               100% { transform: translate3d(8px, -130px, 0); opacity: 0; }
             }
-
-            /* Chuyển động lơ lửng uy dũng mượt mà */
             @keyframes nkTigerMajestic { 
               0% { transform: translate3d(0, 0px, 0) scale(1) rotate(0deg); } 
               25% { transform: translate3d(2px, -5px, 0) scale(1.01) rotate(-0.5deg); } 
@@ -370,6 +400,14 @@ export default function NgungKhiScene({
               50% { transform: translate3d(0, -11px, 0) rotate(0.4deg); } 
               75% { transform: translate3d(-8px, -6px, 0) rotate(1.4deg); } 
               100% { transform: translate3d(0, 0px, 0) rotate(0deg); } 
+            }
+            @keyframes nkClawShimmer {
+              0%, 100% { opacity: 0.45; }
+              50% { opacity: 0.85; }
+            }
+            @keyframes nkWaveRipple {
+              0%, 100% { opacity: 0.4; transform: scale(0.98); }
+              50% { opacity: 0.75; transform: scale(1.02); }
             }
           `}</style>
         </defs>
@@ -385,77 +423,17 @@ export default function NgungKhiScene({
           playStarChime={playStarChime}
         />
 
-        {/* 3. DỊ TƯỢNG THẦN THÚ HÓA HÌNH */}
-        <g transform="translate(460, 290)">
-          {/* THẦN THÚ HUYẾT HỔ */}
-          {isThe && hasTiger && (
-            <g
-              transform="translate(0, -25)"
-              style={{
-                animation: 'nkTigerMajestic 4.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite',
-                transformOrigin: '0px 0px',
-                willChange: 'transform'
-              }}
-            >
-              <circle cx="0" cy="0" r="195" fill="url(#tigerAuraGlow)" />
-              <image
-                href={imgHuyetHoGod}
-                x="-225"
-                y="-115"
-                width="450"
-                height="210"
-                preserveAspectRatio="xMidYMid meet"
-                style={{
-                  filter: 'drop-shadow(0 0 14px rgba(217, 164, 65, 0.45)) drop-shadow(0 0 24px rgba(155, 34, 38, 0.35))',
-                  pointerEvents: 'none',
-                  willChange: 'transform'
-                }}
-              />
-              <g transform="translate(0, 116)">
-                <rect x="-115" y="-14" width="230" height="28" rx="14" fill="rgba(26, 10, 12, 0.95)" stroke="#d9a441" strokeWidth="1.2" />
-                <text y="5" textAnchor="middle" fontSize="12" fontWeight="800" fill="#e9d8c4" letterSpacing="1">
-                  {theLvl >= 10 ? 'THẦN THÚ HUYẾT HỔ' : 'HUYẾT HỔ HÓA HÌNH'}
-                </text>
-              </g>
-            </g>
-          )}
-
-          {/* THẦN THÚ CẤM HẢI LONG KÌNH */}
-          {!isThe && hasWhale && (
-            <g
-              transform="translate(0, -22)"
-              style={{
-                animation: 'nkWhaleMajestic 5.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite',
-                transformOrigin: '0px 0px',
-                willChange: 'transform'
-              }}
-            >
-              <ellipse cx="0" cy="0" rx="220" ry="120" fill="url(#whaleAuraGlow)" />
-              <image
-                href={imgLongKinhGod}
-                x="-235"
-                y="-103"
-                width="470"
-                height="206"
-                preserveAspectRatio="xMidYMid meet"
-                style={{
-                  filter: 'drop-shadow(0 0 14px rgba(95, 184, 196, 0.45)) drop-shadow(0 0 24px rgba(28, 78, 107, 0.35))',
-                  pointerEvents: 'none',
-                  willChange: 'transform'
-                }}
-              />
-              <g transform="translate(0, 116)">
-                <rect x="-115" y="-14" width="230" height="28" rx="14" fill="rgba(7, 32, 44, 0.95)" stroke="#5fb8c4" strokeWidth="1.2" />
-                <text y="5" textAnchor="middle" fontSize="12" fontWeight="800" fill="#cfe9ee" letterSpacing="1">
-                  {phapLvl >= 10 ? 'THÁI CỔ LONG KÌNH' : 'CẤM HẢI LONG KÌNH'}
-                </text>
-              </g>
-            </g>
-          )}
-        </g>
+        {/* 3. DỊ TƯỢNG THẦN THÚ HÓA HÌNH & BIỂN HIỆU KHẮC KIM THẠCH */}
+        <NgungKhiBeast
+          viewMode={viewMode}
+          theLvl={theLvl}
+          phapLvl={phapLvl}
+          hasTiger={hasTiger}
+          hasWhale={hasWhale}
+        />
       </svg>
 
-      {/* 3. THANH THÔNG SỐ CẢNH GIỚI NGƯNG KHÍ */}
+      {/* 3. THANH THÔNG SỐ CẢNH GIỚI NGƯNG KHÍ (ENGRAVED GLASS STATUS BAR) */}
       <div style={{
         position: 'absolute',
         bottom: isMobile ? '80px' : '22px',
@@ -463,105 +441,110 @@ export default function NgungKhiScene({
         transform: 'translateX(-50%)',
         zIndex: 25,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: isMobile ? '5px 12px' : '7px 18px',
-        borderRadius: 24,
-        background: 'rgba(8, 14, 24, 0.95)',
-        border: viewMode === 'the' ? '1.2px solid rgba(239, 68, 68, 0.5)' : '1.2px solid rgba(56, 189, 248, 0.5)',
-        backdropFilter: 'blur(12px)',
-        boxShadow: viewMode === 'the' 
-          ? '0 6px 20px rgba(0, 0, 0, 0.7), 0 0 14px rgba(239, 68, 68, 0.25)' 
-          : '0 6px 20px rgba(0, 0, 0, 0.7), 0 0 14px rgba(56, 189, 248, 0.25)',
+        gap: 6,
+        padding: isMobile ? '6px 14px' : '8px 20px',
+        borderRadius: 16,
+        background: 'rgba(10, 14, 22, 0.88)',
+        border: isThe
+          ? '1px solid rgba(217, 164, 65, 0.38)'
+          : '1px solid rgba(95, 184, 196, 0.38)',
+        backdropFilter: 'blur(16px)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.75)',
         maxWidth: 'calc(100% - 24px)',
         width: 'max-content',
         boxSizing: 'border-box'
       }}>
-        {viewMode === 'the' ? (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: isMobile ? 6 : 8,
-            fontSize: isMobile ? 11.5 : 12.5,
-            fontWeight: 800,
-            color: '#f87171'
+        {/* Hàng thông tin chi tiết */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: isMobile ? 8 : 12,
+          fontSize: isMobile ? 11.5 : 12.5,
+          color: isThe ? '#e9d8c4' : '#cfe9ee'
+        }}>
+          <span style={{
+            fontFamily: 'serif',
+            fontWeight: 700,
+            fontSize: isMobile ? 12 : 13,
+            color: isThe ? '#d9a441' : '#5fb8c4',
+            letterSpacing: '0.04em',
+            whiteSpace: 'nowrap'
           }}>
-            <span style={{ fontSize: isMobile ? 11.5 : 13, whiteSpace: 'nowrap' }}>Hải Sơn:</span>
-            <span style={{ color: '#fca5a5', fontWeight: 900, whiteSpace: 'nowrap' }}>Tầng {theLvl}/10</span>
-            <span style={{ fontSize: isMobile ? 10 : 11, color: '#cbd5e1', whiteSpace: 'nowrap' }}>({theExp.toLocaleString()}/4.500)</span>
-            {activePath === 'the' && (
-              <span style={{
-                fontSize: 9,
-                fontWeight: 900,
-                color: '#fca5a5',
-                background: 'rgba(239, 68, 68, 0.2)',
-                padding: '2px 6px',
-                borderRadius: 8,
-                border: '1px solid rgba(239, 68, 68, 0.5)',
-                whiteSpace: 'nowrap'
-              }}>
-                Đang nạp
-              </span>
-            )}
-            {theLvl >= 10 && phapLvl >= 10 && (
-              <span style={{
-                fontSize: 9,
-                fontWeight: 900,
-                color: '#fde047',
-                background: 'rgba(245, 158, 11, 0.2)',
-                padding: '2px 6px',
-                borderRadius: 8,
-                border: '1px solid rgba(253, 224, 71, 0.5)',
-                whiteSpace: 'nowrap'
-              }}>
-                Viên Mãn
-              </span>
-            )}
-          </div>
-        ) : (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: isMobile ? 6 : 8,
-            fontSize: isMobile ? 11.5 : 12.5,
+            {isThe ? 'Hải Sơn Quyết:' : 'Hóa Hải Kinh:'}
+          </span>
+          <span style={{
+            fontFamily: 'serif',
             fontWeight: 800,
-            color: '#38bdf8'
+            color: isThe ? '#e9d8c4' : '#cfe9ee',
+            whiteSpace: 'nowrap'
           }}>
-            <span style={{ fontSize: isMobile ? 11.5 : 13, whiteSpace: 'nowrap' }}>Hóa Hải:</span>
-            <span style={{ color: '#bae6fd', fontWeight: 900, whiteSpace: 'nowrap' }}>Tầng {phapLvl}/10</span>
-            <span style={{ fontSize: isMobile ? 10 : 11, color: '#cbd5e1', whiteSpace: 'nowrap' }}>({phapExp.toLocaleString()}/4.500)</span>
-            {activePath === 'phap' && (
-              <span style={{
-                fontSize: 9,
-                fontWeight: 900,
-                color: '#7dd3fc',
-                background: 'rgba(56, 189, 248, 0.2)',
-                padding: '2px 6px',
-                borderRadius: 8,
-                border: '1px solid rgba(186, 230, 253, 0.5)',
-                whiteSpace: 'nowrap'
-              }}>
-                Đang nạp
-              </span>
-            )}
-            {theLvl >= 10 && phapLvl >= 10 && (
-              <span style={{
-                fontSize: 9,
-                fontWeight: 900,
-                color: '#fde047',
-                background: 'rgba(245, 158, 11, 0.2)',
-                padding: '2px 6px',
-                borderRadius: 8,
-                border: '1px solid rgba(253, 224, 71, 0.5)',
-                whiteSpace: 'nowrap'
-              }}>
-                Viên Mãn
-              </span>
-            )}
-          </div>
-        )}
+            Tầng {currentLvl}/10
+          </span>
+          <span style={{
+            fontSize: isMobile ? 10 : 11,
+            color: '#94a3b8',
+            whiteSpace: 'nowrap'
+          }}>
+            ({currentExp.toLocaleString()} / 4.500)
+          </span>
+
+          {activePath === viewMode && (
+            <span style={{
+              fontSize: 9,
+              fontWeight: 700,
+              color: isThe ? '#d9a441' : '#5fb8c4',
+              background: isThe ? 'rgba(217, 164, 65, 0.12)' : 'rgba(95, 184, 196, 0.12)',
+              padding: '2px 7px',
+              borderRadius: 6,
+              border: isThe ? '1px solid rgba(217, 164, 65, 0.4)' : '1px solid rgba(95, 184, 196, 0.4)',
+              whiteSpace: 'nowrap',
+              letterSpacing: '0.04em'
+            }}>
+              Đang nạp
+            </span>
+          )}
+
+          {theLvl >= 10 && phapLvl >= 10 && (
+            <span style={{
+              fontSize: 9,
+              fontWeight: 800,
+              color: '#d9a441',
+              background: 'rgba(217, 164, 65, 0.18)',
+              padding: '2px 7px',
+              borderRadius: 6,
+              border: '1px solid rgba(217, 164, 65, 0.6)',
+              whiteSpace: 'nowrap',
+              letterSpacing: '0.06em'
+            }}>
+              Viên Mãn
+            </span>
+          )}
+        </div>
+
+        {/* Thanh tiến độ mảnh mai 3px với 10 nấc phân tầng */}
+        <div style={{
+          position: 'relative',
+          width: isMobile ? 180 : 260,
+          height: 3.5,
+          background: 'rgba(255, 255, 255, 0.08)',
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            width: `${progressPct}%`,
+            height: '100%',
+            background: isThe
+              ? 'linear-gradient(90deg, #9b2226 0%, #e8743b 50%, #d9a441 100%)'
+              : 'linear-gradient(90deg, #1c4e6b 0%, #5fb8c4 50%, #cfe9ee 100%)',
+            boxShadow: isThe
+              ? '0 0 8px rgba(217, 164, 65, 0.4)'
+              : '0 0 8px rgba(95, 184, 196, 0.4)',
+            transition: 'width 0.4s ease-out'
+          }} />
+        </div>
       </div>
     </div>
   );
