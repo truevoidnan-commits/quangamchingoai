@@ -18,6 +18,11 @@ export default function BottomSheet({
   const touchStartY = useRef(0);
   const touchCurrentY = useRef(0);
   const isDragging = useRef(false);
+  // Chỉ coi là "kéo sheet" khi cử chỉ bắt đầu ở vùng không cuộn được (tay nắm/tiêu đề)
+  // hoặc ở nội dung đang nằm sát đỉnh VÀ nội dung chưa từng cuộn trong cử chỉ này.
+  const canDragSheet = useRef(false);
+  const sheetDragEngaged = useRef(false);
+  const startScrollTop = useRef(0);
 
   useEffect(() => {
     if (isOpen) {
@@ -45,15 +50,25 @@ export default function BottomSheet({
     touchStartY.current = e.touches[0].clientY;
     touchCurrentY.current = e.touches[0].clientY;
     isDragging.current = true;
+    sheetDragEngaged.current = false;
+    const contentEl = sheetRef.current?.querySelector('.' + styles.content);
+    const startedInContent = Boolean(contentEl && contentEl.contains(e.target));
+    startScrollTop.current = contentEl ? contentEl.scrollTop : 0;
+    canDragSheet.current = !startedInContent || startScrollTop.current <= 0;
   };
 
   const handleTouchMove = (e) => {
     if (!isDragging.current || !sheetRef.current) return;
     touchCurrentY.current = e.touches[0].clientY;
     const diff = touchCurrentY.current - touchStartY.current;
+    const contentEl = sheetRef.current.querySelector('.' + styles.content);
+    // Nội dung đã cuộn trong cử chỉ này => đây là thao tác lướt danh sách, huỷ khả năng kéo đóng sheet
+    if (contentEl && contentEl.scrollTop !== startScrollTop.current && !sheetDragEngaged.current) {
+      canDragSheet.current = false;
+    }
+    if (!canDragSheet.current) return;
     if (diff > 0) {
-      const contentEl = sheetRef.current.querySelector('.' + styles.content);
-      if (contentEl && contentEl.scrollTop > 0) return;
+      sheetDragEngaged.current = true;
       sheetRef.current.style.transform = `translateY(${diff}px)`;
     }
   };
@@ -62,7 +77,9 @@ export default function BottomSheet({
     if (!isDragging.current || !sheetRef.current) return;
     isDragging.current = false;
     const diff = touchCurrentY.current - touchStartY.current;
-    if (diff > 75) {
+    const engaged = sheetDragEngaged.current;
+    sheetDragEngaged.current = false;
+    if (engaged && diff > 75) {
       sheetRef.current.style.transition = 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)';
       sheetRef.current.style.transform = 'translateY(100%)';
       setTimeout(() => {
@@ -72,7 +89,7 @@ export default function BottomSheet({
         }
         onClose();
       }, 180);
-    } else {
+    } else if (engaged) {
       sheetRef.current.style.transition = 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)';
       sheetRef.current.style.transform = '';
       setTimeout(() => {
