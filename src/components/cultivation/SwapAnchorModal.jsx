@@ -12,6 +12,19 @@ import styles from './SwapAnchorModal.module.css';
 
 const TIER_ORDER = ['than_pham', 'tien_pham', 'cuc_pham', 'thuong_pham', 'trung_pham', 'ha_pham'];
 
+const FALLBACK_TIER_INFO = {
+  than_pham: { id: 'than_pham', name: 'Thần Phẩm', color: '#ef4444', border: '#fbbf24', bg: 'rgba(239, 68, 68, 0.18)' },
+  tien_pham: { id: 'tien_pham', name: 'Tiên Phẩm', color: '#eab308', border: '#fde68a', bg: 'rgba(234, 179, 8, 0.18)' },
+  cuc_pham: { id: 'cuc_pham', name: 'Cực Phẩm', color: '#c084fc', border: '#e9d5ff', bg: 'rgba(192, 132, 252, 0.18)' },
+  thuong_pham: { id: 'thuong_pham', name: 'Thượng Phẩm', color: '#38bdf8', border: '#bae6fd', bg: 'rgba(56, 189, 248, 0.18)' },
+  trung_pham: { id: 'trung_pham', name: 'Trung Phẩm', color: '#4ade80', border: '#bbf7d0', bg: 'rgba(74, 222, 128, 0.18)' },
+  ha_pham: { id: 'ha_pham', name: 'Hạ Phẩm', color: '#94a3b8', border: '#e2e8f0', bg: 'rgba(148, 163, 184, 0.18)' },
+};
+
+function getTierInfo(tierKey) {
+  return (tierKey && LAMP_TIERS[tierKey]) || FALLBACK_TIER_INFO[tierKey] || FALLBACK_TIER_INFO.ha_pham;
+}
+
 export default function SwapAnchorModal({
   isOpen,
   onClose,
@@ -71,7 +84,7 @@ export default function SwapAnchorModal({
     currentAnchor = { ...rawAnchor };
   }
 
-  const currentTierInfo = LAMP_TIERS[currentAnchor?.tier] || LAMP_TIERS.ha_pham;
+  const currentTierInfo = getTierInfo(currentAnchor?.tier);
   const oldArtifactId = currentAnchor?.id;
 
   // Find Dao Anh for this palace if in Giả Anh or Nguyên Anh
@@ -179,7 +192,7 @@ export default function SwapAnchorModal({
       name: newTitle,
       palaceName: newPalaceName,
       tier: selectedArt.tier,
-      tierInfo: LAMP_TIERS[selectedArt.tier] || LAMP_TIERS.ha_pham,
+      tierInfo: getTierInfo(selectedArt.tier),
       isDefaultFallback: !hasDedicatedDef,
       skillName: resolvedDef?.skillName || 'Thần Thông Chưa Rõ',
       skillDesc: resolvedDef?.skillDesc || 'Tăng cường linh lực và uy áp.',
@@ -401,7 +414,7 @@ export default function SwapAnchorModal({
                   Tất cả ({groupedInventory.length})
                 </button>
                 {TIER_ORDER.map((tk) => {
-                  const tInfo = LAMP_TIERS[tk];
+                  const tInfo = getTierInfo(tk);
                   const count = groupedInventory.filter((i) => i.tier === tk).length;
                   if (count === 0) return null;
                   return (
@@ -423,7 +436,7 @@ export default function SwapAnchorModal({
             {filteredInventory.length > 0 ? (
               <div className={styles.artifactGrid}>
                 {filteredInventory.map((item) => {
-                  const tInfo = LAMP_TIERS[item.tier] || LAMP_TIERS.ha_pham;
+                  const tInfo = getTierInfo(item.tier);
                   const isSelected = selectedArtId === item.id;
                   return (
                     <div

@@ -2355,6 +2355,18 @@ export function getDaoAnhDevTuneOverrides() {
   return devTuneOverrides;
 }
 
+// ============================================================================
+// HẰNG SỐ ĐỒNG NHẤT KÍCH THƯỚC ĐẠO ANH TOÀN CỤC (UNIFORM SIZING)
+// Khi enabled = true: toàn bộ nơi hiển thị Đạo Anh tự động chuẩn hóa kích thước theo DAO_ANH_BBOX.
+// Khi enabled = false: quay về hành vi cũ hoàn toàn (dùng DAO_ANH_CUSTOM_TRANSFORMS).
+// ============================================================================
+export const DAO_ANH_UNIFORM = {
+  enabled: true,
+  target: 1.0,
+  minScale: 0.6,
+  maxScale: 2.0,
+};
+
 export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {}) {
   if (!daoAnhDef) return { scale: 1, x: 0, y: 0, isAuto: false };
   const id = typeof daoAnhDef === 'string' ? daoAnhDef : (daoAnhDef.id || '');
@@ -2362,12 +2374,16 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
   const cleanId = id.replace(/^da_/, '');
   const daId = id.startsWith('da_') ? id : `da_${id}`;
 
-  // fit === 'contain': dùng cho Đồ Lục (khung có clip) — bỏ qua bảng chỉnh tay dành cho avatar tràn viền,
-  // luôn tự chuẩn hóa theo bbox để toàn bộ hình (kể cả hào quang) nằm gọn trong khung và đồng cỡ giữa các Đạo Anh.
-  const forceContain = options?.fit === 'contain';
+  // Chế độ đồng nhất (uniform auto-normalize theo BBox):
+  // BẬT khi DAO_ANH_UNIFORM.enabled = true, hoặc khi options.fit === 'contain', hoặc options.uniform === true.
+  // Nếu options.uniform === false hoặc (DAO_ANH_UNIFORM.enabled === false && options.fit !== 'contain') -> dùng bảng chỉnh tay (hành vi cũ).
+  const isUniform = options?.uniform !== undefined
+    ? Boolean(options.uniform)
+    : Boolean(DAO_ANH_UNIFORM.enabled);
+  const forceAuto = isUniform || options?.fit === 'contain';
 
-  // 0. Nếu đang có dev tune override cho id này & kiếp này
-  if (!forceContain && !options?.ignoreOverrides) {
+  // 0. Nếu đang có dev tune override cho id này & kiếp này (chỉ kích hoạt khi không chạy chế độ forceAuto)
+  if (!forceAuto && !options?.ignoreOverrides) {
     const tuneOvr = devTuneOverrides[id] || devTuneOverrides[sourceId] || devTuneOverrides[cleanId];
     if (tuneOvr && tuneOvr[currentKiep]) {
       const kCfg = tuneOvr[currentKiep];
@@ -2391,8 +2407,8 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
 
   const cfg = DAO_ANH_CUSTOM_TRANSFORMS[id] || DAO_ANH_CUSTOM_TRANSFORMS[sourceId] || DAO_ANH_CUSTOM_TRANSFORMS[cleanId] || DAO_ANH_CUSTOM_TRANSFORMS[daId];
 
-  // 1. Nếu có mục chỉnh tay (có cấu hình cho kiếp hiện tại hoặc kiếp 1 để fallback) -> THẮNG
-  if (!forceContain && cfg && (cfg[currentKiep] !== undefined || cfg[1] !== undefined)) {
+  // 1. Nếu có mục chỉnh tay (chỉ áp dụng khi forceAuto === false) -> THẮNG
+  if (!forceAuto && cfg && (cfg[currentKiep] !== undefined || cfg[1] !== undefined)) {
     const kCfg = cfg[currentKiep] || cfg[1] || { scale: 1, x: 0, y: 0 };
     const s = kCfg.scale ?? 1;
     let x = kCfg.x ?? 0;
@@ -2411,15 +2427,21 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
     };
   }
 
-  // 2. Tự chuẩn hóa theo DAO_ANH_BBOX khi CHƯA có chỉnh tay
+  // 2. Tự chuẩn hóa theo DAO_ANH_BBOX khi forceAuto === true HOẶC khi chưa có chỉnh tay
   const bb = getDaoAnhBBox(daoAnhDef, currentKiep);
   if (bb && typeof bb.w === 'number' && bb.w > 0 && typeof bb.h === 'number' && bb.h > 0) {
-    const TARGET = forceContain ? 1.0 : 0.80;
+    const TARGET = (typeof options?.target === 'number' && options.target > 0)
+      ? options.target
+      : (forceAuto ? (DAO_ANH_UNIFORM.target ?? 1.0) : 0.80);
+    const minScale = (typeof options?.minScale === 'number')
+      ? options.minScale
+      : (options?.fit === 'contain' ? 0.5 : (forceAuto ? (DAO_ANH_UNIFORM.minScale ?? 0.6) : 0.85));
+    const maxScale = (typeof options?.maxScale === 'number')
+      ? options.maxScale
+      : (options?.fit === 'contain' ? 2.2 : (forceAuto ? (DAO_ANH_UNIFORM.maxScale ?? 2.0) : 1.9));
     const maxDim = Math.max(bb.w, bb.h);
     const rawScale = TARGET / maxDim;
-    const scale = forceContain
-      ? Math.min(Math.max(rawScale, 0.5), 2.2)
-      : Math.min(Math.max(rawScale, 0.85), 1.9);
+    const scale = Math.min(Math.max(rawScale, minScale), maxScale);
     const roundedScale = Math.round(scale * 100) / 100;
 
     // Dịch theo % của phần tử: tx = (0.5 - bb.cx) * scale * 100 (%)
@@ -2451,5 +2473,56 @@ export function getDaoAnhTransformStyle(daoAnhDef, currentKiep = 1, options = {}
     return `translate(${tx}%, ${ty}%) scale(${cfg.scale})`;
   }
   return `translate3d(${cfg.x}px, ${cfg.y}px, 0) scale(${cfg.scale})`;
+}
+
+/**
+ * Helper tính toán chuỗi transform cho SVG của Đạo Anh (dùng trong RealmPreviewVisualizer và các component SVG).
+ * Áp dụng cho ảnh <image> kích thước box x box (mặc định 144x144, tâm danh định tại (0, offsetY) với offsetY=-4).
+ * Công thức chuẩn hóa tự động:
+ *   sc = clamp(target / max(bb.w, bb.h), minScale, maxScale);
+ *   x = -sc * (bb.cx - 0.5) * box;
+ *   y = offsetY - sc * ((bb.cy - 0.5) * box + offsetY);
+ * Khi enabled = false (hoặc uniform: false): quay về hành vi cũ dùng bảng chỉnh tay DAO_ANH_CUSTOM_TRANSFORMS.
+ */
+export function getDaoAnhSvgTransform(daoAnhDef, currentKiep = 1, options = {}) {
+  if (!daoAnhDef) return 'translate(0, 0) scale(1)';
+  const box = typeof options.box === 'number' ? options.box : 144;
+  const offsetY = typeof options.offsetY === 'number' ? options.offsetY : -4;
+  const isUniform = options?.uniform !== undefined
+    ? Boolean(options.uniform)
+    : Boolean(DAO_ANH_UNIFORM.enabled);
+
+  if (!isUniform) {
+    const cfg = getDaoAnhTransformConfig(daoAnhDef, currentKiep, { ...options, uniform: false });
+    const x = cfg.x || 0;
+    const y = cfg.y || 0;
+    const s = cfg.scale || 1;
+    return `translate(${x}, ${y}) scale(${s})`;
+  }
+
+  const bb = getDaoAnhBBox(daoAnhDef, currentKiep);
+  if (bb && typeof bb.w === 'number' && bb.w > 0 && typeof bb.h === 'number' && bb.h > 0) {
+    const target = (typeof options.target === 'number' && options.target > 0)
+      ? options.target
+      : (DAO_ANH_UNIFORM.target ?? 1.0);
+    const minScale = (typeof options.minScale === 'number')
+      ? options.minScale
+      : (DAO_ANH_UNIFORM.minScale ?? 0.6);
+    const maxScale = (typeof options.maxScale === 'number')
+      ? options.maxScale
+      : (DAO_ANH_UNIFORM.maxScale ?? 2.0);
+
+    const maxDim = Math.max(bb.w, bb.h);
+    const sc = Math.min(Math.max(target / maxDim, minScale), maxScale);
+    const x = -sc * (bb.cx - 0.5) * box;
+    const y = offsetY - sc * ((bb.cy - 0.5) * box + offsetY);
+
+    const roundedSc = Math.round(sc * 100) / 100;
+    const roundedX = Math.round(x * 10) / 10;
+    const roundedY = Math.round(y * 10) / 10;
+    return `translate(${roundedX}, ${roundedY}) scale(${roundedSc})`;
+  }
+
+  return 'translate(0, 0) scale(1)';
 }
 
