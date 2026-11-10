@@ -125,6 +125,7 @@ console.log(`✓ PASS: Toàn bộ ${containTested} lượt (42 Đạo Anh x 5 Ki
 // 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true)
 console.log('\n--- 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) ---');
 DAO_ANH_UNIFORM.enabled = true;
+assert.strictEqual(DAO_ANH_UNIFORM.mapBoost, 1.15, 'DAO_ANH_UNIFORM.mapBoost phải có giá trị 1.15');
 let totalUniformChecked = 0;
 const clampedCases = [];
 
@@ -148,10 +149,17 @@ for (const da of DAO_ANH_LIST) {
       }
     }
 
-    // Kiểm tra getDaoAnhSvgTransform
+    // Kiểm tra getDaoAnhSvgTransform (có nhân mapBoost mặc định 1.15)
     const svgStr = getDaoAnhSvgTransform(da, k);
     assert(svgStr.startsWith('translate(') && svgStr.includes('scale('), `${da.id} kiếp ${k} SVG transform không hợp lệ: ${svgStr}`);
     assert(!svgStr.includes('NaN') && !svgStr.includes('undefined'), `SVG transform chứa NaN/undefined: ${svgStr}`);
+
+    // Kiểm tra mapBoost được áp dụng vào scale của SVG
+    const svgUnboosted = getDaoAnhSvgTransform(da, k, { mapBoost: 1.0 });
+    const scBoosted = parseFloat(svgStr.match(/scale\(([^)]+)\)/)[1]);
+    const scUnboosted = parseFloat(svgUnboosted.match(/scale\(([^)]+)\)/)[1]);
+    const boostRatio = scBoosted / scUnboosted;
+    assert(Math.abs(boostRatio - 1.15) <= 0.02, `${da.id} kiếp ${k} scale boost (${boostRatio}) phải xấp xỉ 1.15`);
 
     totalUniformChecked++;
   }

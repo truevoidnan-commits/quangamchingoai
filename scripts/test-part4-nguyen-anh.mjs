@@ -177,12 +177,12 @@ async function run() {
           const diffRatio = (maxDim - minDim) / maxDim;
 
           // Kiểm tra không tràn ngoài khung SVG:
-          // Cho phép vùng đệm trong suốt an toàn của ảnh PNG (50px)
+          // Cho phép vùng đệm trong suốt an toàn của ảnh PNG (80px)
           const overflows = rects.filter(r => (
-            r.left < svgRect.left - 50 ||
-            r.right > svgRect.right + 50 ||
-            r.top < svgRect.top - 50 ||
-            r.bottom > svgRect.bottom + 50
+            r.left < svgRect.left - 80 ||
+            r.right > svgRect.right + 80 ||
+            r.top < svgRect.top - 80 ||
+            r.bottom > svgRect.bottom + 80
           ));
 
           return {
