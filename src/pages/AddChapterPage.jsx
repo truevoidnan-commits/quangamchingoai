@@ -1,6 +1,6 @@
 import Icon, { IconPen, IconUpload, IconFile } from '../components/ui/Icon';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { nanoid } from '../lib/nanoid';
 import { getNovel, getChapter, saveChapter, getChapters, saveChaptersBulk, saveNovel } from '../lib/db';
 import { updateLibraryItem, getLibrary } from '../lib/storage';
@@ -16,7 +16,26 @@ export default function AddChapterPage() {
   const { id, novelId: rawNovelId, chapterId } = useParams();
   const novelId = rawNovelId || id;
   const navigate = useNavigate();
+  const location = useLocation();
   const isEdit = Boolean(chapterId);
+
+  const returnTo = location.state?.returnTo;
+  const isValidReturnTo =
+    typeof returnTo === 'string' &&
+    returnTo.startsWith('/novel/') &&
+    (returnTo === `/novel/${novelId}` || returnTo.startsWith(`/novel/${novelId}/`));
+
+  const navigateAfterSave = useCallback(() => {
+    if (!isEdit && isValidReturnTo) {
+      if (typeof window !== 'undefined' && typeof window.history?.state?.idx === 'number' && window.history.state.idx > 0) {
+        navigate(-1);
+      } else {
+        navigate(returnTo, { replace: true });
+      }
+    } else {
+      navigate(`/novel/${novelId}`);
+    }
+  }, [isEdit, isValidReturnTo, returnTo, novelId, navigate]);
 
   // Novel & existing chapters context
   const [novel, setNovel] = useState(null);
@@ -163,7 +182,7 @@ export default function AddChapterPage() {
         }
       }
 
-      navigate(`/novel/${novelId}`);
+      navigateAfterSave();
     } catch (err) {
       alert('Lỗi khi lưu chương: ' + err.message);
     } finally {
@@ -317,7 +336,7 @@ export default function AddChapterPage() {
         updateLibraryItem(novelId, { chapterCount: totalCount });
       }
 
-      navigate(`/novel/${novelId}`);
+      navigateAfterSave();
     } catch (err) {
       alert('Lỗi khi lưu danh sách chương: ' + err.message);
     } finally {
