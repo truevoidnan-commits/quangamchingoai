@@ -439,6 +439,24 @@ export default function ReaderPage() {
     notifyReadingProgressChanged();
   }, [chapter, activeNovelId, location.key, pullProgressDone]);
 
+  const handleAddChapter = useCallback(() => {
+    if (chapter?.id) {
+      saveCurrentPositionImmediate();
+      if (canWriteProgress({
+        locationKey: effectiveLocationKey,
+        pullProgressDone,
+        hasEngaged: hasUserEngagedRef.current,
+      })) {
+        flushReadingProgress();
+      }
+      navigate(`/novel/${activeNovelId}/add-chapter`, {
+        state: { returnTo: `/novel/${activeNovelId}/read/${chapter.id}` }
+      });
+    } else {
+      navigate(`/novel/${activeNovelId}/add-chapter`);
+    }
+  }, [chapter?.id, saveCurrentPositionImmediate, effectiveLocationKey, pullProgressDone, navigate, activeNovelId]);
+
   const handleGoToCultivationFromReader = useCallback(() => {
     if (dismissPromptAllDaoAnhFull) dismissPromptAllDaoAnhFull();
     saveCurrentPositionImmediate();
@@ -1084,7 +1102,7 @@ export default function ReaderPage() {
             <button
               type="button"
               className={styles.topBtn}
-              onClick={() => navigate(`/novel/${activeNovelId}/add-chapter`)}
+              onClick={handleAddChapter}
               title="Thêm chương mới"
               aria-label="Thêm chương"
             >
