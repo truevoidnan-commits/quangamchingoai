@@ -345,10 +345,11 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
               gap: 6,
-              padding: 3,
-              borderRadius: 10,
-              background: 'rgba(10, 16, 26, 0.95)',
-              border: '1px solid rgba(255, 255, 255, 0.08)'
+              padding: 4,
+              borderRadius: 12,
+              background: 'rgba(12, 16, 24, 0.88)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(12px)'
             }}>
               <button
                 onClick={() => {
@@ -356,15 +357,18 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   if (setNgungKhiPath) setNgungKhiPath('the');
                 }}
                 style={{
-                  padding: '7px 6px',
+                  padding: '7px 8px',
                   borderRadius: 8,
-                  fontSize: 10.5,
-                  fontWeight: 800,
-                  border: 'none',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  fontFamily: 'serif',
+                  letterSpacing: '0.04em',
+                  border: ngungKhiPanelTab === 'the' ? '1px solid rgba(217, 164, 65, 0.55)' : '1px solid transparent',
                   cursor: 'pointer',
-                  background: ngungKhiPanelTab === 'the' ? 'linear-gradient(135deg, #ef4444, #b91c1c)' : 'transparent',
-                  color: ngungKhiPanelTab === 'the' ? '#ffffff' : '#94a3b8',
-                  boxShadow: ngungKhiPanelTab === 'the' ? '0 0 12px rgba(239, 68, 68, 0.6)' : 'none'
+                  background: ngungKhiPanelTab === 'the' ? 'rgba(155, 34, 38, 0.28)' : 'transparent',
+                  color: ngungKhiPanelTab === 'the' ? '#e9d8c4' : '#94a3b8',
+                  boxShadow: ngungKhiPanelTab === 'the' ? '0 0 12px rgba(217, 164, 65, 0.15)' : 'none',
+                  transition: 'all 0.2s ease'
                 }}
               >
                 Hải Sơn Quyết
@@ -376,15 +380,18 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   if (setNgungKhiPath) setNgungKhiPath('phap');
                 }}
                 style={{
-                  padding: '7px 6px',
+                  padding: '7px 8px',
                   borderRadius: 8,
-                  fontSize: 10.5,
-                  fontWeight: 800,
-                  border: 'none',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  fontFamily: 'serif',
+                  letterSpacing: '0.04em',
+                  border: ngungKhiPanelTab === 'phap' ? '1px solid rgba(95, 184, 196, 0.55)' : '1px solid transparent',
                   cursor: 'pointer',
-                  background: ngungKhiPanelTab === 'phap' ? 'linear-gradient(135deg, #06b6d4, #0369a1)' : 'transparent',
-                  color: ngungKhiPanelTab === 'phap' ? '#ffffff' : '#94a3b8',
-                  boxShadow: ngungKhiPanelTab === 'phap' ? '0 0 12px rgba(6, 182, 212, 0.6)' : 'none'
+                  background: ngungKhiPanelTab === 'phap' ? 'rgba(28, 78, 107, 0.32)' : 'transparent',
+                  color: ngungKhiPanelTab === 'phap' ? '#cfe9ee' : '#94a3b8',
+                  boxShadow: ngungKhiPanelTab === 'phap' ? '0 0 12px rgba(95, 184, 196, 0.15)' : 'none',
+                  transition: 'all 0.2s ease'
                 }}
               >
                 Hóa Hải Kinh
@@ -398,18 +405,26 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
               justifyContent: 'space-between',
               padding: '6px 12px',
               borderRadius: 8,
-              background: 'rgba(0, 0, 0, 0.35)',
-              border: `1px solid ${ngungKhiPanelTab === 'the' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(6, 182, 212, 0.2)'}`,
+              background: 'rgba(12, 16, 24, 0.75)',
+              border: `1px solid ${ngungKhiPanelTab === 'the' ? 'rgba(217, 164, 65, 0.25)' : 'rgba(95, 184, 196, 0.25)'}`,
               fontSize: 10.5
             }}>
               <span style={{ color: '#94a3b8' }}>Đang nạp tu vi khi đọc:</span>
               <span style={{
-                fontWeight: 800,
-                color: activePath === 'the' ? '#f87171' : '#38bdf8',
+                fontWeight: 700,
+                color: activePath === 'the' ? '#d9a441' : '#5fb8c4',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4
+                gap: 5,
+                fontFamily: 'serif'
               }}>
+                <span style={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: '50%',
+                  background: activePath === 'the' ? '#e8743b' : '#5fb8c4',
+                  boxShadow: `0 0 6px ${activePath === 'the' ? '#e8743b' : '#5fb8c4'}`
+                }} />
                 {activePath === 'the' ? 'Hải Sơn Quyết' : 'Hóa Hải Kinh'}
               </span>
             </div>
@@ -421,25 +436,26 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                 <div style={{
                   padding: '12px 14px',
                   borderRadius: 12,
-                  background: 'linear-gradient(135deg, rgba(30, 10, 10, 0.95) 0%, rgba(15, 6, 6, 0.98) 100%)',
-                  border: '1px solid rgba(239, 68, 68, 0.35)',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+                  background: 'linear-gradient(135deg, rgba(26, 10, 12, 0.94) 0%, rgba(14, 5, 7, 0.98) 100%)',
+                  border: '1px solid rgba(217, 164, 65, 0.35)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 8
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 800, color: '#f87171' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#d9a441', fontFamily: 'serif', letterSpacing: '0.06em' }}>
                       HẢI SƠN QUYẾT (LUYỆN THỂ)
                     </span>
                     <span style={{
-                      fontSize: 10,
-                      fontWeight: 800,
+                      fontSize: 9.5,
+                      fontWeight: 700,
                       padding: '2px 8px',
                       borderRadius: 6,
-                      background: isTheMax ? 'rgba(251, 191, 36, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                      border: `1px solid ${isTheMax ? '#fbbf24' : '#ef4444'}`,
-                      color: isTheMax ? '#fde047' : '#f87171'
+                      background: 'rgba(217, 164, 65, 0.15)',
+                      border: '1px solid rgba(217, 164, 65, 0.5)',
+                      color: '#d9a441',
+                      letterSpacing: '0.04em'
                     }}>
                       {isTheMax ? '10 TẦNG VIÊN MÃN' : `TẦNG ${theLvl}/10`}
                     </span>
@@ -449,19 +465,20 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     display: 'grid',
                     gridTemplateColumns: '1fr 1fr',
                     gap: 6,
-                    background: 'rgba(0, 0, 0, 0.35)',
+                    background: 'rgba(0, 0, 0, 0.4)',
                     padding: '7px 9px',
-                    borderRadius: 8
+                    borderRadius: 8,
+                    border: '1px solid rgba(255, 255, 255, 0.04)'
                   }}>
                     <div>
-                      <div style={{ fontSize: 9, color: '#94a3b8' }}>KHÍ HUYẾT</div>
-                      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#fca5a5', marginTop: 1 }}>
+                      <div style={{ fontSize: 8.5, color: '#94a3b8', letterSpacing: '0.04em' }}>KHÍ HUYẾT</div>
+                      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#e9d8c4', marginTop: 1, fontFamily: 'serif' }}>
                         {HAI_SON_QUYET_LAYERS[theLvl - 1]?.desc || '1 Hổ Khí Huyết'}
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 9, color: '#94a3b8' }}>EXP KHÍ HUYẾT</div>
-                      <div style={{ fontSize: 11.5, fontWeight: 800, color: '#fbbf24', marginTop: 1 }}>
+                      <div style={{ fontSize: 8.5, color: '#94a3b8', letterSpacing: '0.04em' }}>EXP KHÍ HUYẾT</div>
+                      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#d9a441', marginTop: 1 }}>
                         {theExp.toLocaleString()} / 4,500 EXP
                       </div>
                     </div>
@@ -471,22 +488,22 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#cbd5e1', marginBottom: 4 }}>
                       <span>Tiến độ Tầng {theLvl}:</span>
-                      <strong style={{ color: '#f87171' }}>
+                      <strong style={{ color: '#e8743b' }}>
                         {isTheMax ? '4,500/4,500 EXP (100%)' : `${theProg.toLocaleString()}/${theCost.toLocaleString()} EXP (${thePercent}%)`}
                       </strong>
                     </div>
-                    <div style={{ height: 6, background: 'rgba(0,0,0,0.5)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: 4, background: 'rgba(255, 255, 255, 0.08)', borderRadius: 2, overflow: 'hidden' }}>
                       <div style={{
                         height: '100%',
                         width: `${thePercent}%`,
-                        background: 'linear-gradient(90deg, #ef4444, #f97316)',
-                        boxShadow: '0 0 8px rgba(239, 68, 68, 0.8)',
+                        background: 'linear-gradient(90deg, #9b2226, #e8743b, #d9a441)',
+                        boxShadow: '0 0 8px rgba(217, 164, 65, 0.35)',
                         transition: 'width 0.3s ease'
                       }} />
                     </div>
                     {hasTiger && (
-                      <div style={{ fontSize: 9.5, color: '#fca5a5', marginTop: 4, fontWeight: 700 }}>
-                        Dị tượng đã mở: <strong>Huyết Hổ Hóa Hình (Khí Huyết Hóa Ảnh)</strong>
+                      <div style={{ fontSize: 9.5, color: '#e9d8c4', marginTop: 4, fontWeight: 600 }}>
+                        Dị tượng đã mở: <strong style={{ color: '#d9a441' }}>Huyết Hổ Hóa Hình (Khí Huyết Hóa Ảnh)</strong>
                       </div>
                     )}
                   </div>
@@ -494,7 +511,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
 
                 {/* BẢNG 10 TẦNG HẢI SƠN QUYẾT */}
                 <div className={styles.roadmapCard}>
-                  <div className={styles.roadmapHeader}>
+                  <div className={styles.roadmapHeader} style={{ color: '#d9a441', fontFamily: 'serif', letterSpacing: '0.06em' }}>
                     LỘ TRÌNH HẢI SƠN QUYẾT (1 HỔ ĐẾN 1 BẠT)
                   </div>
                   <div className={styles.roadmapGrid}>
@@ -517,7 +534,9 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                           <span
                             className={styles.tierBadge}
                             style={{
-                              background: isReached ? '#10b981' : isCurrent ? '#ef4444' : '#334155',
+                              background: isReached ? 'rgba(217, 164, 65, 0.2)' : isCurrent ? 'rgba(232, 116, 59, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                              color: isReached ? '#d9a441' : isCurrent ? '#e8743b' : '#64748b',
+                              border: isReached ? '1px solid rgba(217, 164, 65, 0.45)' : isCurrent ? '1px solid rgba(232, 116, 59, 0.5)' : '1px solid rgba(255, 255, 255, 0.06)'
                             }}
                           >
                             T{layer.level}
@@ -526,7 +545,8 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                             <div
                               className={styles.cellTitle}
                               style={{
-                                color: isReached ? '#a7f3d0' : isCurrent ? '#fca5a5' : '#64748b',
+                                color: isReached ? '#e9d8c4' : isCurrent ? '#d9a441' : '#64748b',
+                                fontFamily: isReached || isCurrent ? 'serif' : undefined
                               }}
                               title={layer.name}
                             >
@@ -540,9 +560,9 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                           </div>
                           <span className={styles.cellStatusIcon}>
                             {isReached ? (
-                              <Icon name="check" size={13} style={{ color: '#34d399' }} />
+                              <Icon name="check" size={13} style={{ color: '#d9a441' }} />
                             ) : isCurrent ? (
-                              <Icon name="bolt" size={13} style={{ color: '#ef4444' }} />
+                              <Icon name="bolt" size={13} style={{ color: '#e8743b' }} />
                             ) : (
                               <Icon name="lock" size={12} style={{ color: '#475569' }} />
                             )}
@@ -562,25 +582,26 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                 <div style={{
                   padding: '12px 14px',
                   borderRadius: 12,
-                  background: 'linear-gradient(135deg, rgba(6, 30, 48, 0.95) 0%, rgba(3, 15, 26, 0.98) 100%)',
-                  border: '1px solid rgba(6, 182, 212, 0.35)',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+                  background: 'linear-gradient(135deg, rgba(7, 32, 44, 0.94) 0%, rgba(3, 16, 24, 0.98) 100%)',
+                  border: '1px solid rgba(95, 184, 196, 0.35)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 8
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 800, color: '#38bdf8' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#5fb8c4', fontFamily: 'serif', letterSpacing: '0.06em' }}>
                       HÓA HẢI KINH (PHÁP TU)
                     </span>
                     <span style={{
-                      fontSize: 10,
-                      fontWeight: 800,
+                      fontSize: 9.5,
+                      fontWeight: 700,
                       padding: '2px 8px',
                       borderRadius: 6,
-                      background: isPhapMax ? 'rgba(251, 191, 36, 0.15)' : 'rgba(6, 182, 212, 0.15)',
-                      border: `1px solid ${isPhapMax ? '#fbbf24' : '#06b6d4'}`,
-                      color: isPhapMax ? '#fde047' : '#38bdf8'
+                      background: 'rgba(95, 184, 196, 0.15)',
+                      border: '1px solid rgba(95, 184, 196, 0.5)',
+                      color: '#5fb8c4',
+                      letterSpacing: '0.04em'
                     }}>
                       {isPhapMax ? '10 TẦNG VIÊN MÃN' : `TẦNG ${phapLvl}/10`}
                     </span>
@@ -590,19 +611,20 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                     display: 'grid',
                     gridTemplateColumns: '1fr 1fr',
                     gap: 6,
-                    background: 'rgba(0, 0, 0, 0.35)',
+                    background: 'rgba(0, 0, 0, 0.4)',
                     padding: '7px 9px',
-                    borderRadius: 8
+                    borderRadius: 8,
+                    border: '1px solid rgba(255, 255, 255, 0.04)'
                   }}>
                     <div>
-                      <div style={{ fontSize: 9, color: '#94a3b8' }}>LINH LỰC</div>
-                      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#7dd3fc', marginTop: 1 }}>
+                      <div style={{ fontSize: 8.5, color: '#94a3b8', letterSpacing: '0.04em' }}>LINH LỰC</div>
+                      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#cfe9ee', marginTop: 1, fontFamily: 'serif' }}>
                         {HOA_HAI_KINH_LAYERS[phapLvl - 1]?.desc || '1 Lãng Linh Khí'}
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 9, color: '#94a3b8' }}>EXP LINH LỰC</div>
-                      <div style={{ fontSize: 11.5, fontWeight: 800, color: '#fbbf24', marginTop: 1 }}>
+                      <div style={{ fontSize: 8.5, color: '#94a3b8', letterSpacing: '0.04em' }}>EXP LINH LỰC</div>
+                      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#5fb8c4', marginTop: 1 }}>
                         {phapExp.toLocaleString()} / 4,500 EXP
                       </div>
                     </div>
@@ -612,22 +634,22 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#cbd5e1', marginBottom: 4 }}>
                       <span>Tiến độ Tầng {phapLvl}:</span>
-                      <strong style={{ color: '#38bdf8' }}>
+                      <strong style={{ color: '#5fb8c4' }}>
                         {isPhapMax ? '4,500/4,500 EXP (100%)' : `${phapProg.toLocaleString()}/${phapCost.toLocaleString()} EXP (${phapPercent}%)`}
                       </strong>
                     </div>
-                    <div style={{ height: 6, background: 'rgba(0,0,0,0.5)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: 4, background: 'rgba(255, 255, 255, 0.08)', borderRadius: 2, overflow: 'hidden' }}>
                       <div style={{
                         height: '100%',
                         width: `${phapPercent}%`,
-                        background: 'linear-gradient(90deg, #06b6d4, #3b82f6)',
-                        boxShadow: '0 0 8px rgba(6, 182, 212, 0.8)',
+                        background: 'linear-gradient(90deg, #1c4e6b, #5fb8c4, #cfe9ee)',
+                        boxShadow: '0 0 8px rgba(95, 184, 196, 0.35)',
                         transition: 'width 0.3s ease'
                       }} />
                     </div>
                     {hasWhale && (
-                      <div style={{ fontSize: 9.5, color: '#7dd3fc', marginTop: 4, fontWeight: 700 }}>
-                        Dị tượng đã mở: <strong>Cấm Hải Long Kình (Linh Hải Hóa Kình)</strong>
+                      <div style={{ fontSize: 9.5, color: '#cfe9ee', marginTop: 4, fontWeight: 600 }}>
+                        Dị tượng đã mở: <strong style={{ color: '#5fb8c4' }}>Cấm Hải Long Kình (Linh Hải Hóa Kình)</strong>
                       </div>
                     )}
                   </div>
@@ -635,7 +657,7 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
 
                 {/* BẢNG 10 TẦNG HÓA HẢI KINH */}
                 <div className={styles.roadmapCard}>
-                  <div className={styles.roadmapHeader}>
+                  <div className={styles.roadmapHeader} style={{ color: '#5fb8c4', fontFamily: 'serif', letterSpacing: '0.06em' }}>
                     LỘ TRÌNH HÓA HẢI KINH (1 LÃNG ĐẾN 1 CẤM HẢI)
                   </div>
                   <div className={styles.roadmapGrid}>
@@ -658,7 +680,9 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                           <span
                             className={styles.tierBadge}
                             style={{
-                              background: isReached ? '#10b981' : isCurrent ? '#06b6d4' : '#334155',
+                              background: isReached ? 'rgba(95, 184, 196, 0.2)' : isCurrent ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                              color: isReached ? '#5fb8c4' : isCurrent ? '#38bdf8' : '#64748b',
+                              border: isReached ? '1px solid rgba(95, 184, 196, 0.45)' : isCurrent ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid rgba(255, 255, 255, 0.06)'
                             }}
                           >
                             T{layer.level}
@@ -667,7 +691,8 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                             <div
                               className={styles.cellTitle}
                               style={{
-                                color: isReached ? '#a7f3d0' : isCurrent ? '#7dd3fc' : '#64748b',
+                                color: isReached ? '#cfe9ee' : isCurrent ? '#5fb8c4' : '#64748b',
+                                fontFamily: isReached || isCurrent ? 'serif' : undefined
                               }}
                               title={layer.name}
                             >
@@ -681,9 +706,9 @@ export default function SidePanelInfo({ setTribulationModalData, setBreakthrough
                           </div>
                           <span className={styles.cellStatusIcon}>
                             {isReached ? (
-                              <Icon name="check" size={13} style={{ color: '#34d399' }} />
+                              <Icon name="check" size={13} style={{ color: '#5fb8c4' }} />
                             ) : isCurrent ? (
-                              <Icon name="bolt" size={13} style={{ color: '#06b6d4' }} />
+                              <Icon name="bolt" size={13} style={{ color: '#38bdf8' }} />
                             ) : (
                               <Icon name="lock" size={12} style={{ color: '#475569' }} />
                             )}
