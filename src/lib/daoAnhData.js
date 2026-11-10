@@ -2365,6 +2365,7 @@ export const DAO_ANH_UNIFORM = {
   target: 1.0,
   minScale: 0.6,
   maxScale: 2.0,
+  mapBoost: 1.15,
 };
 
 export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {}) {
@@ -2513,7 +2514,16 @@ export function getDaoAnhSvgTransform(daoAnhDef, currentKiep = 1, options = {}) 
       : (DAO_ANH_UNIFORM.maxScale ?? 2.0);
 
     const maxDim = Math.max(bb.w, bb.h);
-    const sc = Math.min(Math.max(target / maxDim, minScale), maxScale);
+    const clampedSc = Math.min(Math.max(target / maxDim, minScale), maxScale);
+
+    // mapBoost: tăng kích thước hiển thị ở sảnh Nguyên Anh (SVG), bù trừ vị trí để giữ tâm nội dung
+    const boost = typeof options.mapBoost === 'number' && options.mapBoost > 0
+      ? options.mapBoost
+      : (typeof DAO_ANH_UNIFORM.mapBoost === 'number' && DAO_ANH_UNIFORM.mapBoost > 0
+          ? DAO_ANH_UNIFORM.mapBoost
+          : 1.15);
+
+    const sc = clampedSc * boost;
     const x = -sc * (bb.cx - 0.5) * box;
     const y = offsetY - sc * ((bb.cy - 0.5) * box + offsetY);
 
