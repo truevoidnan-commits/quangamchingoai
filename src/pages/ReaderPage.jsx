@@ -478,13 +478,21 @@ export default function ReaderPage() {
 
     // Nếu vào từ thanh tìm kiếm có từ khoá thì cuộn đến từ khoá đầu tiên
     if (searchKeyword) {
+      // Mở từ kết quả tìm kiếm: phải mở lại cờ lưu tiến độ (nếu không tiến độ sẽ bị đóng băng vĩnh viễn)
+      isRestoringRef.current = true;
       const searchTimer = setTimeout(() => {
         const mark = document.querySelector(`.${styles.readerMark}`);
         if (mark) {
           mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 150);
-      return () => clearTimeout(searchTimer);
+      const searchDoneTimer = setTimeout(() => {
+        isRestoringRef.current = false;
+      }, 900);
+      return () => {
+        clearTimeout(searchTimer);
+        clearTimeout(searchDoneTimer);
+      };
     }
 
     isRestoringRef.current = true;
