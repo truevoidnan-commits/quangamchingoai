@@ -612,7 +612,7 @@ export default function ReaderPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [chapter?.id, loading, activeNovelId, gainReadingExp]);
+  }, [chapter?.id, loading, shouldWaitForPull, activeNovelId, gainReadingExp]);
 
   // Lưu lại vị trí cuộn (% đọc & đoạn văn đang đọc) real-time khi người đọc lướt trang
   useEffect(() => {
