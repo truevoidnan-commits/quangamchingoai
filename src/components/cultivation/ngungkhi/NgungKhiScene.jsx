@@ -43,158 +43,145 @@ export default function NgungKhiScene({
       <div style={{
         position: 'absolute',
         top: 14,
+        left: '50%',
+        transform: 'translateX(-50%)',
         zIndex: 30,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        gap: 6,
-        padding: '4px',
-        borderRadius: 20,
-        background: 'rgba(12, 16, 24, 0.85)',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
-        backdropFilter: 'blur(16px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.65)'
+        gap: 5
       }}>
-        {/* Nút Hải Sơn Quyết (Thể) */}
-        <button
-          onClick={() => {
-            setViewMode('the');
-            if (setNgungKhiPath) setNgungKhiPath('the');
-          }}
-          style={{
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: isMobile ? '5px 10px' : '6px 14px',
-            borderRadius: 16,
-            border: isThe
-              ? '1px solid rgba(217, 164, 65, 0.55)'
-              : '1px solid transparent',
-            background: isThe ? 'rgba(155, 34, 38, 0.28)' : 'transparent',
-            color: isThe ? '#e9d8c4' : '#94a3b8',
-            fontWeight: 700,
-            fontSize: isMobile ? 11.5 : 12.5,
-            cursor: 'pointer',
-            boxShadow: isThe ? '0 0 14px rgba(217, 164, 65, 0.15)' : 'none',
-            transition: 'all 0.25s ease'
-          }}
-          title="Tập trung tu luyện và quan sát Thể Phách (Hải Sơn Quyết)"
-        >
-          <span style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', color: isThe ? '#d9a441' : '#94a3b8' }}>
-            <Icon name="tiger" size={13} />
-          </span>
-          <span style={{ fontFamily: 'serif', letterSpacing: '0.04em' }}>Hải Sơn Quyết</span>
-          <span style={{
-            fontSize: 10.5,
-            padding: '1px 5px',
-            borderRadius: 8,
-            background: isThe ? 'rgba(217, 164, 65, 0.15)' : 'rgba(255, 255, 255, 0.06)',
-            color: isThe ? '#d9a441' : '#cbd5e1',
-            border: isThe ? '1px solid rgba(217, 164, 65, 0.3)' : '1px solid transparent'
-          }}>
-            T{theLvl}
-          </span>
-          {activePath === 'the' && (
-            <span style={{
-              position: 'absolute',
-              top: -9,
-              right: -6,
-              background: 'rgba(20, 8, 10, 0.94)',
-              color: '#d9a441',
-              fontSize: 8.5,
-              fontWeight: 700,
-              padding: '1px 5px',
-              borderRadius: 6,
-              border: '1px solid rgba(217, 164, 65, 0.6)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.6)',
-              letterSpacing: '0.05em',
+        {/* Thanh chuyển đổi bo tròn liền mạch, không bị đứt viền */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          padding: '3px 4px',
+          borderRadius: 20,
+          background: 'rgba(12, 16, 24, 0.88)',
+          border: '1px solid rgba(255, 255, 255, 0.14)',
+          backdropFilter: 'blur(16px)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.65)'
+        }}>
+          {/* Nút Hải Sơn Quyết (Thể) */}
+          <button
+            onClick={() => {
+              setViewMode('the');
+              if (setNgungKhiPath) setNgungKhiPath('the');
+            }}
+            style={{
+              position: 'relative',
               display: 'flex',
               alignItems: 'center',
-              gap: 3,
-              whiteSpace: 'nowrap'
-            }}>
-              <span style={{
-                width: 4,
-                height: 4,
-                borderRadius: '50%',
-                background: '#e8743b',
-                boxShadow: '0 0 6px #e8743b'
-              }} />
-              Đang Nạp Tu Vi
+              justifyContent: 'center',
+              gap: 5,
+              padding: isMobile ? '5px 8px' : '6px 12px',
+              width: isMobile ? 126 : 156,
+              boxSizing: 'border-box',
+              borderRadius: 16,
+              border: isThe
+                ? '1px solid rgba(217, 164, 65, 0.55)'
+                : '1px solid transparent',
+              background: isThe ? 'rgba(155, 34, 38, 0.28)' : 'transparent',
+              color: isThe ? '#e9d8c4' : '#94a3b8',
+              fontWeight: 700,
+              fontSize: isMobile ? 11.5 : 12.5,
+              cursor: 'pointer',
+              boxShadow: isThe ? '0 0 14px rgba(217, 164, 65, 0.15)' : 'none',
+              transition: 'all 0.25s ease'
+            }}
+            title="Tập trung tu luyện và quan sát Thể Phách (Hải Sơn Quyết)"
+          >
+            <span style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', color: isThe ? '#d9a441' : '#94a3b8' }}>
+              <Icon name="tiger" size={13} />
             </span>
-          )}
-        </button>
+            <span style={{ fontFamily: 'serif', letterSpacing: '0.04em' }}>Hải Sơn Quyết</span>
+            <span style={{
+              fontSize: 10.5,
+              padding: '1px 5px',
+              borderRadius: 8,
+              background: isThe ? 'rgba(217, 164, 65, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+              color: isThe ? '#d9a441' : '#cbd5e1',
+              border: isThe ? '1px solid rgba(217, 164, 65, 0.3)' : '1px solid transparent'
+            }}>
+              T{theLvl}
+            </span>
+          </button>
 
-        {/* Nút Hóa Hải Kinh (Pháp) */}
-        <button
-          onClick={() => {
-            setViewMode('phap');
-            if (setNgungKhiPath) setNgungKhiPath('phap');
-          }}
-          style={{
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: isMobile ? '5px 10px' : '6px 14px',
-            borderRadius: 16,
-            border: !isThe
-              ? '1px solid rgba(95, 184, 196, 0.55)'
-              : '1px solid transparent',
-            background: !isThe ? 'rgba(28, 78, 107, 0.32)' : 'transparent',
-            color: !isThe ? '#cfe9ee' : '#94a3b8',
-            fontWeight: 700,
-            fontSize: isMobile ? 11.5 : 12.5,
-            cursor: 'pointer',
-            boxShadow: !isThe ? '0 0 14px rgba(95, 184, 196, 0.15)' : 'none',
-            transition: 'all 0.25s ease'
-          }}
-          title="Tập trung tu luyện và quan sát Pháp Lực (Hóa Hải Kinh)"
-        >
-          <span style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', color: !isThe ? '#5fb8c4' : '#94a3b8' }}>
-            <Icon name="whale" size={13} />
-          </span>
-          <span style={{ fontFamily: 'serif', letterSpacing: '0.04em' }}>Hóa Hải Kinh</span>
-          <span style={{
-            fontSize: 10.5,
-            padding: '1px 5px',
-            borderRadius: 8,
-            background: !isThe ? 'rgba(95, 184, 196, 0.15)' : 'rgba(255, 255, 255, 0.06)',
-            color: !isThe ? '#5fb8c4' : '#cbd5e1',
-            border: !isThe ? '1px solid rgba(95, 184, 196, 0.3)' : '1px solid transparent'
-          }}>
-            T{phapLvl}
-          </span>
-          {activePath === 'phap' && (
-            <span style={{
-              position: 'absolute',
-              top: -9,
-              right: -6,
-              background: 'rgba(5, 20, 28, 0.94)',
-              color: '#5fb8c4',
-              fontSize: 8.5,
-              fontWeight: 700,
-              padding: '1px 5px',
-              borderRadius: 6,
-              border: '1px solid rgba(95, 184, 196, 0.6)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.6)',
-              letterSpacing: '0.05em',
+          {/* Nút Hóa Hải Kinh (Pháp) */}
+          <button
+            onClick={() => {
+              setViewMode('phap');
+              if (setNgungKhiPath) setNgungKhiPath('phap');
+            }}
+            style={{
+              position: 'relative',
               display: 'flex',
               alignItems: 'center',
-              gap: 3,
-              whiteSpace: 'nowrap'
-            }}>
-              <span style={{
-                width: 4,
-                height: 4,
-                borderRadius: '50%',
-                background: '#5fb8c4',
-                boxShadow: '0 0 6px #5fb8c4'
-              }} />
-              Đang Nạp Tu Vi
+              justifyContent: 'center',
+              gap: 5,
+              padding: isMobile ? '5px 8px' : '6px 12px',
+              width: isMobile ? 126 : 156,
+              boxSizing: 'border-box',
+              borderRadius: 16,
+              border: !isThe
+                ? '1px solid rgba(95, 184, 196, 0.55)'
+                : '1px solid transparent',
+              background: !isThe ? 'rgba(28, 78, 107, 0.32)' : 'transparent',
+              color: !isThe ? '#cfe9ee' : '#94a3b8',
+              fontWeight: 700,
+              fontSize: isMobile ? 11.5 : 12.5,
+              cursor: 'pointer',
+              boxShadow: !isThe ? '0 0 14px rgba(95, 184, 196, 0.15)' : 'none',
+              transition: 'all 0.25s ease'
+            }}
+            title="Tập trung tu luyện và quan sát Pháp Lực (Hóa Hải Kinh)"
+          >
+            <span style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', color: !isThe ? '#5fb8c4' : '#94a3b8' }}>
+              <Icon name="whale" size={13} />
             </span>
-          )}
-        </button>
+            <span style={{ fontFamily: 'serif', letterSpacing: '0.04em' }}>Hóa Hải Kinh</span>
+            <span style={{
+              fontSize: 10.5,
+              padding: '1px 5px',
+              borderRadius: 8,
+              background: !isThe ? 'rgba(95, 184, 196, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+              color: !isThe ? '#5fb8c4' : '#cbd5e1',
+              border: !isThe ? '1px solid rgba(95, 184, 196, 0.3)' : '1px solid transparent'
+            }}>
+              T{phapLvl}
+            </span>
+          </button>
+        </div>
+
+        {/* Dòng phụ báo hiệu lộ trình đang nạp tu vi (nằm phía dưới, không đè lên viền thanh chuyển) */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          fontSize: 9.5,
+          fontWeight: 700,
+          color: activePath === 'the' ? '#d9a441' : '#5fb8c4',
+          background: 'rgba(10, 14, 22, 0.85)',
+          border: activePath === 'the'
+            ? '1px solid rgba(217, 164, 65, 0.35)'
+            : '1px solid rgba(95, 184, 196, 0.35)',
+          padding: '2px 8px',
+          borderRadius: 10,
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
+          letterSpacing: '0.04em',
+          backdropFilter: 'blur(12px)',
+          transition: 'all 0.25s ease'
+        }}>
+          <span style={{
+            width: 5,
+            height: 5,
+            borderRadius: '50%',
+            background: activePath === 'the' ? '#e8743b' : '#38bdf8',
+            boxShadow: activePath === 'the' ? '0 0 6px #e8743b' : '0 0 6px #38bdf8'
+          }} />
+          <span>Đang Nạp Tu Vi: {activePath === 'the' ? 'Hải Sơn Quyết' : 'Hóa Hải Kinh'}</span>
+        </div>
       </div>
 
       {/* 2. KHUNG CANVAS SVG HOẠT ẢNH KHÍ HẢI THẦN THÚ CAO CẤP */}

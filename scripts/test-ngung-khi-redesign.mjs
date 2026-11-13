@@ -113,6 +113,41 @@ async function assertPlaqueNoOverflow(page, suiteName, totalErrors) {
   }
 }
 
+async function assertSwitchNoOverlapAndNoJitter(page, suiteName, totalErrors) {
+  const check = await page.evaluate(() => {
+    const theBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Hải Sơn Quyết'));
+    const phapBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Hóa Hải Kinh'));
+    if (!theBtn || !phapBtn) return { error: 'Buttons not found' };
+    const switchContainer = theBtn.parentElement;
+    const sRect = switchContainer.getBoundingClientRect();
+
+    const theRect = theBtn.getBoundingClientRect();
+    const phapRect = phapBtn.getBoundingClientRect();
+    const overflows = [];
+    if (theRect.top < sRect.top - 1.5 || theRect.bottom > sRect.bottom + 1.5) {
+      overflows.push({ btn: 'the', theRect, sRect });
+    }
+    if (phapRect.top < sRect.top - 1.5 || phapRect.bottom > sRect.bottom + 1.5) {
+      overflows.push({ btn: 'phap', phapRect, sRect });
+    }
+
+    return {
+      theWidth: Math.round(theRect.width),
+      phapWidth: Math.round(phapRect.width),
+      switchWidth: Math.round(sRect.width),
+      overflows
+    };
+  });
+
+  if (check.error) {
+    totalErrors.push(`[${suiteName}] ${check.error}`);
+  } else if (check.overflows.length > 0) {
+    totalErrors.push(`[${suiteName}] Switch buttons overlap container border! ${JSON.stringify(check.overflows)}`);
+  } else {
+    console.log(`  ✓ [${suiteName}] Switch border completely seamless (0 overlap, Thể: ${check.theWidth}px, Pháp: ${check.phapWidth}px).`);
+  }
+}
+
 async function run() {
   console.log('===========================================================');
   console.log('🧪 VERIFYING NGƯNG KHÍ REDESIGN (UI, BEASTS, DOM, SCREENSHOTS)');
@@ -145,6 +180,7 @@ async function run() {
     await pageT1.waitForTimeout(800);
     await assertNoHelpCircle(pageT1, 'T1 Desktop (The)', totalErrors);
     await assertPlaqueNoOverflow(pageT1, 'T1 Desktop (The)', totalErrors);
+    await assertSwitchNoOverlapAndNoJitter(pageT1, 'T1 Desktop (The)', totalErrors);
 
     // Kiểm tra không có ảnh thần thú xuất hiện ở Tầng 1
     const beastImagesT1 = await pageT1.locator('svg .ngung-khi-beast-layer image').count();
@@ -170,6 +206,7 @@ async function run() {
     await pageT1.waitForTimeout(400);
     await assertNoHelpCircle(pageT1, 'T1 Desktop (Phap)', totalErrors);
     await assertPlaqueNoOverflow(pageT1, 'T1 Desktop (Phap)', totalErrors);
+    await assertSwitchNoOverlapAndNoJitter(pageT1, 'T1 Desktop (Phap)', totalErrors);
     await saveScreenshot(pageT1, 'ngung-khi-phap-t1-desktop-1920.png');
     await ctxT1.close();
 
@@ -275,6 +312,7 @@ async function run() {
     await pageT10Mobile.waitForTimeout(800);
     await assertNoHelpCircle(pageT10Mobile, 'T10 Mobile (The)', totalErrors);
     await assertPlaqueNoOverflow(pageT10Mobile, 'T10 Mobile 390 (The)', totalErrors);
+    await assertSwitchNoOverlapAndNoJitter(pageT10Mobile, 'T10 Mobile 390 (The)', totalErrors);
 
     // Kiểm tra danh hiệu T10 Thể: "THẦN THÚ HUYẾT HỔ"
     const tigerMaxTitle = await pageT10Mobile.locator('svg .ngung-khi-beast-layer text:has-text("HUYẾT HỔ")').textContent();
@@ -292,6 +330,7 @@ async function run() {
     await pageT10Mobile.waitForTimeout(500);
     await assertNoHelpCircle(pageT10Mobile, 'T10 Mobile (Phap)', totalErrors);
     await assertPlaqueNoOverflow(pageT10Mobile, 'T10 Mobile 390 (Phap)', totalErrors);
+    await assertSwitchNoOverlapAndNoJitter(pageT10Mobile, 'T10 Mobile 390 (Phap)', totalErrors);
 
     // Kiểm tra không tràn ở 360px (màn hình nhỏ) và 430px (màn hình lớn)
     await pageT10Mobile.setViewportSize({ width: 360, height: 740 });
