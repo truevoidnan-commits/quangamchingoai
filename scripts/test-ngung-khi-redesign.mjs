@@ -57,6 +57,29 @@ async function saveScreenshot(page, filename) {
   console.log(`  📷 Captured screenshot: ${filename}`);
 }
 
+function attachPageMonitors(page, suiteName, totalErrors) {
+  page.on('pageerror', (err) => {
+    console.error(`❌ [PageError in ${suiteName}]:`, err.message);
+    totalErrors.push(`PageError in ${suiteName}: ${err.message}`);
+  });
+  page.on('console', (msg) => {
+    const text = msg.text();
+    if (/Unknown icon name/i.test(text)) {
+      console.error(`❌ [UnknownIconName in ${suiteName}]:`, text);
+      totalErrors.push(`UnknownIconName in ${suiteName}: ${text}`);
+    }
+  });
+}
+
+async function assertNoHelpCircle(page, suiteName, totalErrors) {
+  const count = await page.locator('svg.lucide-circle-help, svg.lucide-help-circle, svg[class*="circle-help"], svg[class*="help-circle"]').count();
+  if (count > 0) {
+    totalErrors.push(`Found ${count} fallback HelpCircle icon(s) in ${suiteName}!`);
+  } else {
+    console.log(`  ✓ [${suiteName}] Zero HelpCircle icon in DOM.`);
+  }
+}
+
 async function run() {
   console.log('===========================================================');
   console.log('🧪 VERIFYING NGƯNG KHÍ REDESIGN (UI, BEASTS, DOM, SCREENSHOTS)');
@@ -73,11 +96,7 @@ async function run() {
     console.log('\n--- 1. Testing Ngưng Khí Tầng 1 (Khởi đầu - Chưa hóa hình thần thú) ---');
     const ctxT1 = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
     const pageT1 = await ctxT1.newPage();
-
-    pageT1.on('pageerror', (err) => {
-      console.error('❌ [PageError]:', err.message);
-      totalErrors.push(`PageError: ${err.message}`);
-    });
+    attachPageMonitors(pageT1, 'T1 Desktop', totalErrors);
 
     await pageT1.addInitScript(() => {
       localStorage.clear();
@@ -91,6 +110,7 @@ async function run() {
 
     await pageT1.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'domcontentloaded' });
     await pageT1.waitForTimeout(800);
+    await assertNoHelpCircle(pageT1, 'T1 Desktop (The)', totalErrors);
 
     // Kiểm tra không có ảnh thần thú xuất hiện ở Tầng 1
     const beastImagesT1 = await pageT1.locator('svg .ngung-khi-beast-layer image').count();
@@ -114,6 +134,7 @@ async function run() {
     const hoaHaiBtnT1 = pageT1.locator('button:has-text("Hóa Hải Kinh")').first();
     await hoaHaiBtnT1.click();
     await pageT1.waitForTimeout(400);
+    await assertNoHelpCircle(pageT1, 'T1 Desktop (Phap)', totalErrors);
     await saveScreenshot(pageT1, 'ngung-khi-phap-t1-desktop-1920.png');
     await ctxT1.close();
 
@@ -123,6 +144,7 @@ async function run() {
     console.log('\n--- 2. Testing Ngưng Khí Tầng 8 (Đã hóa hình Thần Thú T7..T9) ---');
     const ctxT8 = await browser.newContext({ viewport: { width: 1366, height: 768 } });
     const pageT8 = await ctxT8.newPage();
+    attachPageMonitors(pageT8, 'T8 Laptop', totalErrors);
 
     await pageT8.addInitScript(() => {
       localStorage.clear();
@@ -136,6 +158,7 @@ async function run() {
 
     await pageT8.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'domcontentloaded' });
     await pageT8.waitForTimeout(800);
+    await assertNoHelpCircle(pageT8, 'T8 Laptop (The)', totalErrors);
 
     // Kiểm tra thần thú Huyết Hổ hiện diện
     const tigerImg = pageT8.locator('svg .ngung-khi-beast-layer image').first();
@@ -172,6 +195,7 @@ async function run() {
     const phapBtnT8 = pageT8.locator('button:has-text("Hóa Hải Kinh")').first();
     await phapBtnT8.click();
     await pageT8.waitForTimeout(500);
+    await assertNoHelpCircle(pageT8, 'T8 Laptop (Phap)', totalErrors);
 
     const whaleImg = pageT8.locator('svg .ngung-khi-beast-layer image').first();
     if (!(await whaleImg.isVisible())) {
@@ -198,6 +222,7 @@ async function run() {
       hasTouch: true
     });
     const pageT10Mobile = await ctxT10Mobile.newPage();
+    attachPageMonitors(pageT10Mobile, 'T10 Mobile', totalErrors);
 
     await pageT10Mobile.addInitScript(() => {
       localStorage.clear();
@@ -211,6 +236,7 @@ async function run() {
 
     await pageT10Mobile.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'domcontentloaded' });
     await pageT10Mobile.waitForTimeout(800);
+    await assertNoHelpCircle(pageT10Mobile, 'T10 Mobile (The)', totalErrors);
 
     // Kiểm tra danh hiệu T10 Thể: "THẦN THÚ HUYẾT HỔ"
     const tigerMaxTitle = await pageT10Mobile.locator('svg .ngung-khi-beast-layer text:has-text("HUYẾT HỔ")').textContent();
@@ -226,6 +252,7 @@ async function run() {
     const phapBtnT10 = pageT10Mobile.locator('button:has-text("Hóa Hải Kinh")').first();
     await phapBtnT10.click();
     await pageT10Mobile.waitForTimeout(500);
+    await assertNoHelpCircle(pageT10Mobile, 'T10 Mobile (Phap)', totalErrors);
 
     const whaleMaxTitle = await pageT10Mobile.locator('svg .ngung-khi-beast-layer text:has-text("LONG KÌNH")').textContent();
     if (!whaleMaxTitle.includes('THÁI CỔ LONG KÌNH')) {
@@ -235,11 +262,14 @@ async function run() {
     }
 
     await saveScreenshot(pageT10Mobile, 'ngung-khi-phap-t10-mobile-390.png');
+    await ctxT10Mobile.close();
 
     // Tablet Viewport (768x1024)
     console.log('\n--- 4. Testing Tablet Viewport (768x1024) ---');
     const ctxTablet = await browser.newContext({ viewport: { width: 768, height: 1024 } });
     const pageTablet = await ctxTablet.newPage();
+    attachPageMonitors(pageTablet, 'Tablet', totalErrors);
+
     await pageTablet.addInitScript(() => {
       localStorage.clear();
       localStorage.setItem('tcl_cultivation_state_v3', JSON.stringify({
@@ -251,6 +281,7 @@ async function run() {
     });
     await pageTablet.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'domcontentloaded' });
     await pageTablet.waitForTimeout(800);
+    await assertNoHelpCircle(pageTablet, 'Tablet (The)', totalErrors);
     await saveScreenshot(pageTablet, 'ngung-khi-the-t10-tablet-768.png');
     await ctxTablet.close();
 
@@ -260,6 +291,8 @@ async function run() {
     console.log('\n--- 5. Testing SidePanelInfo Audit for Ngưng Khí ---');
     const ctxPanel = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
     const pagePanel = await ctxPanel.newPage();
+    attachPageMonitors(pagePanel, 'SidePanel', totalErrors);
+
     await pagePanel.addInitScript(() => {
       localStorage.clear();
       localStorage.setItem('tcl_cultivation_state_v3', JSON.stringify({
@@ -271,6 +304,7 @@ async function run() {
     });
     await pagePanel.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'domcontentloaded' });
     await pagePanel.waitForTimeout(800);
+    await assertNoHelpCircle(pagePanel, 'SidePanel', totalErrors);
 
     // Mở hoặc tìm panel thông tin
     const sidePanelHtml = await pagePanel.evaluate(() => {
@@ -302,8 +336,6 @@ async function run() {
 
     await saveScreenshot(pagePanel, 'ngung-khi-sidepanel-desktop-1920.png');
     await ctxPanel.close();
-
-    await ctxT10Mobile.close();
 
   } catch (err) {
     console.error('❌ Exception during test:', err);

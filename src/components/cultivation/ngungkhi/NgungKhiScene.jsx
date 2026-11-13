@@ -81,7 +81,7 @@ export default function NgungKhiScene({
           title="Tập trung tu luyện và quan sát Thể Phách (Hải Sơn Quyết)"
         >
           <span style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', color: isThe ? '#d9a441' : '#94a3b8' }}>
-            <Icon name="Flame" size={13} />
+            <Icon name="tiger" size={13} />
           </span>
           <span style={{ fontFamily: 'serif', letterSpacing: '0.04em' }}>Hải Sơn Quyết</span>
           <span style={{
@@ -152,7 +152,7 @@ export default function NgungKhiScene({
           title="Tập trung tu luyện và quan sát Pháp Lực (Hóa Hải Kinh)"
         >
           <span style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', color: !isThe ? '#5fb8c4' : '#94a3b8' }}>
-            <Icon name="Waves" size={13} />
+            <Icon name="whale" size={13} />
           </span>
           <span style={{ fontFamily: 'serif', letterSpacing: '0.04em' }}>Hóa Hải Kinh</span>
           <span style={{
