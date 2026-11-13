@@ -16,6 +16,10 @@ const ALLOWLIST = [
   'src/components/cultivation/DaoAnhAvatarRenderer.jsx',
   'src/components/cultivation/TribulationModal.jsx',
   'src/components/cultivation/BreakthroughModal.jsx',
+  'src/components/cultivation/ngungkhi/NgungKhiScene.jsx',
+  'src/components/cultivation/ngungkhi/NgungKhiBackground.jsx',
+  'src/components/cultivation/ngungkhi/NgungKhiArrayRings.jsx',
+  'src/components/cultivation/ngungkhi/NgungKhiBeast.jsx',
 ];
 
 // Special allowed inline SVGs with specific class names/roles (e.g., dynamic data visualization progress ring)

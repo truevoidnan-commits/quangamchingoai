@@ -290,7 +290,8 @@ export default function Icon({
   ...props
 }) {
   const isAccessible = Boolean(ariaLabel);
-  const entry = ICON_REGISTRY[name];
+  const normalizedKey = typeof name === 'string' ? (ICON_REGISTRY[name] ? name : name.toLowerCase()) : name;
+  const entry = ICON_REGISTRY[normalizedKey];
 
   if (!entry) {
     if (import.meta.env?.DEV) {
