@@ -80,6 +80,39 @@ async function assertNoHelpCircle(page, suiteName, totalErrors) {
   }
 }
 
+async function assertPlaqueNoOverflow(page, suiteName, totalErrors) {
+  const result = await page.evaluate(() => {
+    const plaque = document.querySelector('[data-testid="ngung-khi-status-plaque"]');
+    if (!plaque) return { error: 'Status plaque not found' };
+    const pRect = plaque.getBoundingClientRect();
+    const children = Array.from(plaque.querySelectorAll('*'));
+    const overflows = [];
+    for (const child of children) {
+      const cRect = child.getBoundingClientRect();
+      if (cRect.width === 0 || cRect.height === 0) continue;
+      const leftDiff = pRect.left - cRect.left;
+      const rightDiff = cRect.right - pRect.right;
+      if (leftDiff > 1.5 || rightDiff > 1.5) {
+        overflows.push({
+          tag: child.tagName,
+          text: child.textContent?.slice(0, 30),
+          leftDiff,
+          rightDiff
+        });
+      }
+    }
+    return { plaqueWidth: Math.round(pRect.width), overflows };
+  });
+
+  if (result.error) {
+    totalErrors.push(`[${suiteName}] ${result.error}`);
+  } else if (result.overflows.length > 0) {
+    totalErrors.push(`[${suiteName}] Plaque content overflowed! Details: ${JSON.stringify(result.overflows)}`);
+  } else {
+    console.log(`  ✓ [${suiteName}] Status plaque fits cleanly (width: ${result.plaqueWidth}px, 0 overflow).`);
+  }
+}
+
 async function run() {
   console.log('===========================================================');
   console.log('🧪 VERIFYING NGƯNG KHÍ REDESIGN (UI, BEASTS, DOM, SCREENSHOTS)');
@@ -111,6 +144,7 @@ async function run() {
     await pageT1.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'domcontentloaded' });
     await pageT1.waitForTimeout(800);
     await assertNoHelpCircle(pageT1, 'T1 Desktop (The)', totalErrors);
+    await assertPlaqueNoOverflow(pageT1, 'T1 Desktop (The)', totalErrors);
 
     // Kiểm tra không có ảnh thần thú xuất hiện ở Tầng 1
     const beastImagesT1 = await pageT1.locator('svg .ngung-khi-beast-layer image').count();
@@ -135,6 +169,7 @@ async function run() {
     await hoaHaiBtnT1.click();
     await pageT1.waitForTimeout(400);
     await assertNoHelpCircle(pageT1, 'T1 Desktop (Phap)', totalErrors);
+    await assertPlaqueNoOverflow(pageT1, 'T1 Desktop (Phap)', totalErrors);
     await saveScreenshot(pageT1, 'ngung-khi-phap-t1-desktop-1920.png');
     await ctxT1.close();
 
@@ -159,6 +194,7 @@ async function run() {
     await pageT8.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'domcontentloaded' });
     await pageT8.waitForTimeout(800);
     await assertNoHelpCircle(pageT8, 'T8 Laptop (The)', totalErrors);
+    await assertPlaqueNoOverflow(pageT8, 'T8 Laptop (The)', totalErrors);
 
     // Kiểm tra thần thú Huyết Hổ hiện diện
     const tigerImg = pageT8.locator('svg .ngung-khi-beast-layer image').first();
@@ -196,6 +232,7 @@ async function run() {
     await phapBtnT8.click();
     await pageT8.waitForTimeout(500);
     await assertNoHelpCircle(pageT8, 'T8 Laptop (Phap)', totalErrors);
+    await assertPlaqueNoOverflow(pageT8, 'T8 Laptop (Phap)', totalErrors);
 
     const whaleImg = pageT8.locator('svg .ngung-khi-beast-layer image').first();
     if (!(await whaleImg.isVisible())) {
@@ -237,6 +274,7 @@ async function run() {
     await pageT10Mobile.goto(`${BASE_URL}/#/cultivation`, { waitUntil: 'domcontentloaded' });
     await pageT10Mobile.waitForTimeout(800);
     await assertNoHelpCircle(pageT10Mobile, 'T10 Mobile (The)', totalErrors);
+    await assertPlaqueNoOverflow(pageT10Mobile, 'T10 Mobile 390 (The)', totalErrors);
 
     // Kiểm tra danh hiệu T10 Thể: "THẦN THÚ HUYẾT HỔ"
     const tigerMaxTitle = await pageT10Mobile.locator('svg .ngung-khi-beast-layer text:has-text("HUYẾT HỔ")').textContent();
@@ -253,6 +291,19 @@ async function run() {
     await phapBtnT10.click();
     await pageT10Mobile.waitForTimeout(500);
     await assertNoHelpCircle(pageT10Mobile, 'T10 Mobile (Phap)', totalErrors);
+    await assertPlaqueNoOverflow(pageT10Mobile, 'T10 Mobile 390 (Phap)', totalErrors);
+
+    // Kiểm tra không tràn ở 360px (màn hình nhỏ) và 430px (màn hình lớn)
+    await pageT10Mobile.setViewportSize({ width: 360, height: 740 });
+    await pageT10Mobile.waitForTimeout(300);
+    await assertPlaqueNoOverflow(pageT10Mobile, 'T10 Mobile 360 (Phap)', totalErrors);
+
+    await pageT10Mobile.setViewportSize({ width: 430, height: 932 });
+    await pageT10Mobile.waitForTimeout(300);
+    await assertPlaqueNoOverflow(pageT10Mobile, 'T10 Mobile 430 (Phap)', totalErrors);
+
+    await pageT10Mobile.setViewportSize({ width: 390, height: 844 });
+    await pageT10Mobile.waitForTimeout(300);
 
     const whaleMaxTitle = await pageT10Mobile.locator('svg .ngung-khi-beast-layer text:has-text("LONG KÌNH")').textContent();
     if (!whaleMaxTitle.includes('THÁI CỔ LONG KÌNH')) {

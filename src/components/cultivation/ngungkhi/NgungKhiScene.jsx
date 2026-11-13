@@ -434,95 +434,184 @@ export default function NgungKhiScene({
       </svg>
 
       {/* 3. THANH THÔNG SỐ CẢNH GIỚI NGƯNG KHÍ (ENGRAVED GLASS STATUS BAR) */}
-      <div style={{
-        position: 'absolute',
-        bottom: isMobile ? '80px' : '22px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 25,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 6,
-        padding: isMobile ? '6px 14px' : '8px 20px',
-        borderRadius: 16,
-        background: 'rgba(10, 14, 22, 0.88)',
-        border: isThe
-          ? '1px solid rgba(217, 164, 65, 0.38)'
-          : '1px solid rgba(95, 184, 196, 0.38)',
-        backdropFilter: 'blur(16px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.75)',
-        maxWidth: 'calc(100% - 24px)',
-        width: 'max-content',
-        boxSizing: 'border-box'
-      }}>
-        {/* Hàng thông tin chi tiết */}
-        <div style={{
+      <div
+        data-testid="ngung-khi-status-plaque"
+        style={{
+          position: 'absolute',
+          bottom: isMobile ? '80px' : '22px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 25,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: isMobile ? 8 : 12,
-          fontSize: isMobile ? 11.5 : 12.5,
-          color: isThe ? '#e9d8c4' : '#cfe9ee'
-        }}>
-          <span style={{
-            fontFamily: 'serif',
-            fontWeight: 700,
-            fontSize: isMobile ? 12 : 13,
-            color: isThe ? '#d9a441' : '#5fb8c4',
-            letterSpacing: '0.04em',
-            whiteSpace: 'nowrap'
-          }}>
-            {isThe ? 'Hải Sơn Quyết:' : 'Hóa Hải Kinh:'}
-          </span>
-          <span style={{
-            fontFamily: 'serif',
-            fontWeight: 800,
+          gap: isMobile ? 4 : 6,
+          padding: isMobile ? '6px 14px' : '8px 20px',
+          borderRadius: 16,
+          background: 'rgba(10, 14, 22, 0.90)',
+          border: isThe
+            ? '1px solid rgba(217, 164, 65, 0.38)'
+            : '1px solid rgba(95, 184, 196, 0.38)',
+          backdropFilter: 'blur(16px)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.75)',
+          maxWidth: 'calc(100% - 24px)',
+          width: 'max-content',
+          boxSizing: 'border-box',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Hàng thông tin chi tiết */}
+        {isMobile ? (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 3,
             color: isThe ? '#e9d8c4' : '#cfe9ee',
-            whiteSpace: 'nowrap'
+            width: '100%',
+            boxSizing: 'border-box'
           }}>
-            Tầng {currentLvl}/10
-          </span>
-          <span style={{
-            fontSize: isMobile ? 10 : 11,
-            color: '#94a3b8',
-            whiteSpace: 'nowrap'
-          }}>
-            ({currentExp.toLocaleString()} / 4.500)
-          </span>
+            {/* Dòng 1: Tên quyết / kinh + Tầng */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              whiteSpace: 'nowrap'
+            }}>
+              <span style={{
+                fontFamily: 'serif',
+                fontWeight: 700,
+                fontSize: 12,
+                color: isThe ? '#d9a441' : '#5fb8c4',
+                letterSpacing: '0.04em'
+              }}>
+                {isThe ? 'Hải Sơn Quyết:' : 'Hóa Hải Kinh:'}
+              </span>
+              <span style={{
+                fontFamily: 'serif',
+                fontWeight: 800,
+                fontSize: 12,
+                color: isThe ? '#e9d8c4' : '#cfe9ee'
+              }}>
+                Tầng {currentLvl}/10
+              </span>
+            </div>
 
-          {activePath === viewMode && (
+            {/* Dòng 2: Điểm tu vi + Huy hiệu */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              whiteSpace: 'nowrap'
+            }}>
+              <span style={{
+                fontSize: 10,
+                color: '#94a3b8'
+              }}>
+                ({currentExp.toLocaleString()} / 4.500)
+              </span>
+
+              {activePath === viewMode && (
+                <span style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: isThe ? '#d9a441' : '#5fb8c4',
+                  background: isThe ? 'rgba(217, 164, 65, 0.12)' : 'rgba(95, 184, 196, 0.12)',
+                  padding: '1.5px 6px',
+                  borderRadius: 5,
+                  border: isThe ? '1px solid rgba(217, 164, 65, 0.4)' : '1px solid rgba(95, 184, 196, 0.4)',
+                  letterSpacing: '0.04em'
+                }}>
+                  Đang nạp
+                </span>
+              )}
+
+              {theLvl >= 10 && phapLvl >= 10 && (
+                <span style={{
+                  fontSize: 9,
+                  fontWeight: 800,
+                  color: '#d9a441',
+                  background: 'rgba(217, 164, 65, 0.18)',
+                  padding: '1.5px 6px',
+                  borderRadius: 5,
+                  border: '1px solid rgba(217, 164, 65, 0.6)',
+                  letterSpacing: '0.06em'
+                }}>
+                  Viên Mãn
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            fontSize: 12.5,
+            color: isThe ? '#e9d8c4' : '#cfe9ee'
+          }}>
             <span style={{
-              fontSize: 9,
+              fontFamily: 'serif',
               fontWeight: 700,
+              fontSize: 13,
               color: isThe ? '#d9a441' : '#5fb8c4',
-              background: isThe ? 'rgba(217, 164, 65, 0.12)' : 'rgba(95, 184, 196, 0.12)',
-              padding: '2px 7px',
-              borderRadius: 6,
-              border: isThe ? '1px solid rgba(217, 164, 65, 0.4)' : '1px solid rgba(95, 184, 196, 0.4)',
-              whiteSpace: 'nowrap',
-              letterSpacing: '0.04em'
+              letterSpacing: '0.04em',
+              whiteSpace: 'nowrap'
             }}>
-              Đang nạp
+              {isThe ? 'Hải Sơn Quyết:' : 'Hóa Hải Kinh:'}
             </span>
-          )}
-
-          {theLvl >= 10 && phapLvl >= 10 && (
             <span style={{
-              fontSize: 9,
+              fontFamily: 'serif',
               fontWeight: 800,
-              color: '#d9a441',
-              background: 'rgba(217, 164, 65, 0.18)',
-              padding: '2px 7px',
-              borderRadius: 6,
-              border: '1px solid rgba(217, 164, 65, 0.6)',
-              whiteSpace: 'nowrap',
-              letterSpacing: '0.06em'
+              color: isThe ? '#e9d8c4' : '#cfe9ee',
+              whiteSpace: 'nowrap'
             }}>
-              Viên Mãn
+              Tầng {currentLvl}/10
             </span>
-          )}
-        </div>
+            <span style={{
+              fontSize: 11,
+              color: '#94a3b8',
+              whiteSpace: 'nowrap'
+            }}>
+              ({currentExp.toLocaleString()} / 4.500)
+            </span>
+
+            {activePath === viewMode && (
+              <span style={{
+                fontSize: 9,
+                fontWeight: 700,
+                color: isThe ? '#d9a441' : '#5fb8c4',
+                background: isThe ? 'rgba(217, 164, 65, 0.12)' : 'rgba(95, 184, 196, 0.12)',
+                padding: '2px 7px',
+                borderRadius: 6,
+                border: isThe ? '1px solid rgba(217, 164, 65, 0.4)' : '1px solid rgba(95, 184, 196, 0.4)',
+                whiteSpace: 'nowrap',
+                letterSpacing: '0.04em'
+              }}>
+                Đang nạp
+              </span>
+            )}
+
+            {theLvl >= 10 && phapLvl >= 10 && (
+              <span style={{
+                fontSize: 9,
+                fontWeight: 800,
+                color: '#d9a441',
+                background: 'rgba(217, 164, 65, 0.18)',
+                padding: '2px 7px',
+                borderRadius: 6,
+                border: '1px solid rgba(217, 164, 65, 0.6)',
+                whiteSpace: 'nowrap',
+                letterSpacing: '0.06em'
+              }}>
+                Viên Mãn
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Thanh tiến độ mảnh mai 3px với 10 nấc phân tầng */}
         <div style={{
