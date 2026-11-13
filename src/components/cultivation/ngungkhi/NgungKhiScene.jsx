@@ -221,17 +221,17 @@ export default function NgungKhiScene({
 
           {/* Quầng Huyết Nhật Tán Sắc */}
           <radialGradient id="nkBloodSunGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#e8743b" stopOpacity="0.22" />
-            <stop offset="35%" stopColor="#9b2226" stopOpacity="0.14" />
-            <stop offset="70%" stopColor="#5c1316" stopOpacity="0.05" />
+            <stop offset="0%" stopColor="#e8743b" stopOpacity="0.30" />
+            <stop offset="35%" stopColor="#9b2226" stopOpacity="0.20" />
+            <stop offset="70%" stopColor="#5c1316" stopOpacity="0.08" />
             <stop offset="100%" stopColor="#1a0a0c" stopOpacity="0" />
           </radialGradient>
 
           {/* Quầng Vực Biển Thâm U */}
           <radialGradient id="nkAbyssOceanGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#5fb8c4" stopOpacity="0.18" />
-            <stop offset="40%" stopColor="#1c4e6b" stopOpacity="0.12" />
-            <stop offset="75%" stopColor="#0c2b3d" stopOpacity="0.05" />
+            <stop offset="0%" stopColor="#5fb8c4" stopOpacity="0.25" />
+            <stop offset="40%" stopColor="#1c4e6b" stopOpacity="0.17" />
+            <stop offset="75%" stopColor="#0c2b3d" stopOpacity="0.08" />
             <stop offset="100%" stopColor="#03121a" stopOpacity="0" />
           </radialGradient>
 
@@ -267,26 +267,26 @@ export default function NgungKhiScene({
 
           {/* Tia sáng biển */}
           <linearGradient id="nkCausticBeam1" x1="0%" y1="0%" x2="35%" y2="100%">
-            <stop offset="0%" stopColor="#cfe9ee" stopOpacity="0.14" />
-            <stop offset="50%" stopColor="#5fb8c4" stopOpacity="0.06" />
+            <stop offset="0%" stopColor="#cfe9ee" stopOpacity="0.22" />
+            <stop offset="50%" stopColor="#5fb8c4" stopOpacity="0.10" />
             <stop offset="100%" stopColor="#03121a" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="nkCausticBeam2" x1="0%" y1="0%" x2="20%" y2="100%">
-            <stop offset="0%" stopColor="#5fb8c4" stopOpacity="0.12" />
-            <stop offset="55%" stopColor="#1c4e6b" stopOpacity="0.04" />
+            <stop offset="0%" stopColor="#5fb8c4" stopOpacity="0.18" />
+            <stop offset="55%" stopColor="#1c4e6b" stopOpacity="0.07" />
             <stop offset="100%" stopColor="#03121a" stopOpacity="0" />
           </linearGradient>
 
           {/* Dải hải lưu mềm mại */}
           <linearGradient id="nkCurrentRibbon1" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#1c4e6b" stopOpacity="0.1" />
-            <stop offset="60%" stopColor="#5fb8c4" stopOpacity="0.22" />
+            <stop offset="0%" stopColor="#1c4e6b" stopOpacity="0.16" />
+            <stop offset="60%" stopColor="#5fb8c4" stopOpacity="0.32" />
             <stop offset="100%" stopColor="#1c4e6b" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="nkCurrentRibbon2" x1="100%" y1="0%" x2="0%" y2="0%">
-            <stop offset="0%" stopColor="#0c2b3d" stopOpacity="0.08" />
-            <stop offset="45%" stopColor="#5fb8c4" stopOpacity="0.18" />
-            <stop offset="85%" stopColor="#cfe9ee" stopOpacity="0.12" />
+            <stop offset="0%" stopColor="#0c2b3d" stopOpacity="0.14" />
+            <stop offset="45%" stopColor="#5fb8c4" stopOpacity="0.26" />
+            <stop offset="85%" stopColor="#cfe9ee" stopOpacity="0.18" />
             <stop offset="100%" stopColor="#03121a" stopOpacity="0" />
           </linearGradient>
 

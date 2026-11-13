@@ -58,19 +58,21 @@ export default function NgungKhiBackground({ viewMode, isMobile }) {
           {/* Tầng 1: Núi xa mờ ảo (Pale blood-slate) */}
           <polygon
             points="0,640 120,410 270,520 460,370 650,510 800,400 920,640"
-            fill="rgba(42, 14, 18, 0.45)"
+            fill="rgba(68, 22, 28, 0.68)"
+            stroke="rgba(155, 34, 38, 0.35)"
+            strokeWidth="1"
           />
           {/* Tầng 2: Núi giữa trầm mặc, viền kim sắc mảnh */}
           <polygon
             points="0,640 90,470 210,570 360,435 520,555 680,425 830,545 920,640"
-            fill="rgba(24, 7, 10, 0.78)"
-            stroke="rgba(217, 164, 65, 0.18)"
-            strokeWidth="1"
+            fill="rgba(38, 12, 16, 0.88)"
+            stroke="rgba(217, 164, 65, 0.38)"
+            strokeWidth="1.2"
           />
           {/* Tầng 3: Tiền cảnh đồi đá sắc nét thẫm màu */}
           <polygon
             points="0,640 140,530 280,600 450,490 620,580 770,510 920,640"
-            fill="rgba(12, 3, 5, 0.94)"
+            fill="rgba(14, 4, 6, 0.96)"
           />
 
           {/* Sương mù khí huyết lãng đãng (Mist layers) */}
@@ -79,7 +81,7 @@ export default function NgungKhiBackground({ viewMode, isMobile }) {
             cy="540"
             rx="480"
             ry="75"
-            fill="rgba(155, 34, 38, 0.08)"
+            fill="rgba(155, 34, 38, 0.13)"
             style={{ animation: 'nkMistDrift1 48s ease-in-out infinite' }}
           />
           <ellipse
@@ -87,7 +89,7 @@ export default function NgungKhiBackground({ viewMode, isMobile }) {
             cy="460"
             rx="360"
             ry="55"
-            fill="rgba(232, 116, 59, 0.06)"
+            fill="rgba(232, 116, 59, 0.10)"
             style={{ animation: 'nkMistDrift2 65s ease-in-out infinite' }}
           />
 
@@ -146,9 +148,9 @@ export default function NgungKhiBackground({ viewMode, isMobile }) {
               d="M -40,460 Q 230,420 460,470 T 960,430"
               fill="none"
               stroke="url(#nkCurrentRibbon1)"
-              strokeWidth="32"
+              strokeWidth="34"
               strokeLinecap="round"
-              opacity="0.55"
+              opacity="0.78"
             />
           </g>
           <g style={{ animation: 'nkCurrentDriftB 11s ease-in-out infinite', willChange: 'transform' }}>
@@ -156,9 +158,9 @@ export default function NgungKhiBackground({ viewMode, isMobile }) {
               d="M -40,520 Q 270,555 510,510 T 960,540"
               fill="none"
               stroke="url(#nkCurrentRibbon2)"
-              strokeWidth="38"
+              strokeWidth="40"
               strokeLinecap="round"
-              opacity="0.45"
+              opacity="0.68"
             />
           </g>
 
