@@ -21,8 +21,9 @@ import {
 } from '../../lib/cultivation';
 import ArtifactIcon from './ArtifactIcon';
 import { THAN_PHAM_AI_ICONS, LAMP_THAN_PHAM_AI_ICONS, getLampImageUrl, getArtifactImageUrl } from '../../lib/artifactIcons';
-import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhSvgTransform } from '../../lib/daoAnhData';
+import { DAO_ANH_LIST, findDaoAnhDefinition, getDaoAnhEvolutionImage, getDaoAnhSvgTransform, getDaoAnhTransformConfig } from '../../lib/daoAnhData';
 import DaoAnhAvatarRenderer from './DaoAnhAvatarRenderer';
+import { useDaoAnhContentBox, computeNormalizedTransform } from '../../lib/daoAnhContentBox';
 import LinhTangVisualizer from './LinhTangVisualizer';
 import styles from './RealmPreviewVisualizer.module.css';
 
@@ -32,6 +33,17 @@ import bgNguyenAnhThucHaiMobile from '../../assets/images/bg_nguyen_anh_thuc_hai
 import bgGodCosmicEye from '../../assets/images/bg_god_cosmic_eye.jpg';
 import NgungKhiScene from './ngungkhi/NgungKhiScene';
 import imgTuTuongWheelFlow from '../../assets/images/tu_tuong_wheel_flow.jpg';
+
+function NormalizedDaoAnhImage({ href, fallback, filter }) {
+  const box = useDaoAnhContentBox(href);
+  const cfg = computeNormalizedTransform(box, { scale: fallback?.scale || 1, x: fallback?.x || 0, y: fallback?.y || 0 });
+  return (
+    <g transform={`translate(${cfg.x}, ${cfg.y}) scale(${cfg.scale})`}>
+      <image href={href} x="-72" y="-76" width="144" height="144"
+        preserveAspectRatio="xMidYMid meet" style={{ filter }} />
+    </g>
+  );
+}
 
 /* ============================================================
    1. CẤU HÌNH TỨ ĐẠI LIÊN — 4 ĐÓA GÓC (12 PHẨM)
@@ -5395,6 +5407,7 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                   const arch = { name: 'Đạo Anh', color: '#fbbf24' };
                   const daoAnhDef = findDaoAnhDefinition(daoAnh, cultivation);
                   const nodeScale = (pos.scale || 1.0) * 1.30;
+                  const transCfg = getDaoAnhTransformConfig(daoAnhDef, currentKiep);
                   
                   const isSelectedForSwap = isSwapMode && swapSelectedIdx !== null && swapSelectedIdx === idx;
 
@@ -5485,25 +5498,17 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
                             {/* 1. HIỂN THỊ ĐẠO ẢNH PHÁP THÂN HOÀNG KIM / CHIBI GEN AI (CHUẨN 144x144) */}
                             <g>
                               {daoAnhDef?.image ? (
-                                <g transform={getDaoAnhSvgTransform(daoAnhDef, currentKiep)}>
-                                  <image
-                                    href={getAssetUrl(getDaoAnhEvolutionImage(daoAnhDef, currentKiep, 'thumb'))}
-                                    x="-72"
-                                    y="-76"
-                                    width="144"
-                                    height="144"
-                                    preserveAspectRatio="xMidYMid meet"
-                                    style={{
-                                      filter: isSelectedForSwap
-                                        ? 'drop-shadow(0 0 20px #fde047)'
-                                        : (isMaxKiep
-                                        ? 'drop-shadow(0 0 16px #fde047)'
-                                        : isReady80
-                                        ? 'drop-shadow(0 0 16px #f0abfc)'
-                                        : `drop-shadow(0 0 14px ${daoAnhDef.glowColor || arch.color || '#fbbf24'})`),
-                                    }}
-                                  />
-                                </g>
+                                <NormalizedDaoAnhImage
+                                  href={getAssetUrl(getDaoAnhEvolutionImage(daoAnhDef, currentKiep, 'thumb'))}
+                                  fallback={transCfg}
+                                  filter={isSelectedForSwap
+                                    ? 'drop-shadow(0 0 20px #fde047)'
+                                    : (isMaxKiep
+                                    ? 'drop-shadow(0 0 16px #fde047)'
+                                    : isReady80
+                                    ? 'drop-shadow(0 0 16px #f0abfc)'
+                                    : `drop-shadow(0 0 14px ${daoAnhDef.glowColor || arch.color || '#fbbf24'})`)}
+                                />
                               ) : (
                                 <g transform="scale(1.5)">
                                   {renderDetailedPrimordialAvatar(arch, currentKiep, isMaxKiep, isReady80, false)}
