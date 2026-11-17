@@ -32,6 +32,8 @@ async function computeBBoxes() {
     let maxX = -1;
     let minY = height;
     let maxY = -1;
+    let solidPixels = 0;
+    const totalPixels = width * height;
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -41,6 +43,9 @@ async function computeBBoxes() {
           if (x > maxX) maxX = x;
           if (y < minY) minY = y;
           if (y > maxY) maxY = y;
+        }
+        if (alpha > 128) {
+          solidPixels++;
         }
       }
     }
@@ -62,14 +67,16 @@ async function computeBBoxes() {
     const h = Number((y1 - y0).toFixed(4));
     const cx = Number(((x0 + x1) / 2).toFixed(4));
     const cy = Number(((y0 + y1) / 2).toFixed(4));
+    const m = Number((solidPixels / totalPixels).toFixed(4));
 
-    bboxMap[key] = { cx, cy, w, h };
+    bboxMap[key] = { cx, cy, w, h, m };
     statsList.push({
       key,
       cx,
       cy,
       w,
       h,
+      m,
       scale: Number((Math.min(1.6, Math.min(1 / w, 1 / h) * 0.92)).toFixed(3)),
     });
   }
@@ -88,7 +95,7 @@ async function computeBBoxes() {
   console.log('\nMột số mẫu bounding box tiêu biểu:');
   for (const k of sampleKeys) {
     if (bboxMap[k]) {
-      console.log(`  - ${k.padEnd(30)}: cx=${bboxMap[k].cx}, cy=${bboxMap[k].cy}, w=${bboxMap[k].w}, h=${bboxMap[k].h}`);
+      console.log(`  - ${k.padEnd(30)}: cx=${bboxMap[k].cx}, cy=${bboxMap[k].cy}, w=${bboxMap[k].w}, h=${bboxMap[k].h}, m=${bboxMap[k].m}`);
     }
   }
 
@@ -97,16 +104,17 @@ async function computeBBoxes() {
     '/**',
     ' * src/lib/daoAnhBBox.generated.js',
     ' * TỰ ĐỘNG SINH BỞI scripts/compute-daoanh-bbox.mjs. KHÔNG CHỈNH SỬA THỦ CÔNG.',
-    ' * Khung bao nội dung thực (alpha > 40) cho 205 ảnh Đạo Ảnh WebP.',
+    ' * Khung bao nội dung thực (alpha > 40) và khối lượng thân (alpha > 128) cho 210 ảnh Đạo Ảnh WebP.',
     ' * cx, cy: tâm khung bao (tỉ lệ 0..1)',
     ' * w, h: chiều rộng và cao khung bao (tỉ lệ 0..1)',
+    ' * m: tỉ lệ pixel đặc thân (alpha > 128) trên tổng diện tích ảnh (0..1)',
     ' */',
     '',
     'export const DAO_ANH_BBOX = {',
   ];
 
   for (const [key, val] of Object.entries(bboxMap)) {
-    fileLines.push(`  '${key}': { cx: ${val.cx}, cy: ${val.cy}, w: ${val.w}, h: ${val.h} },`);
+    fileLines.push(`  '${key}': { cx: ${val.cx}, cy: ${val.cy}, w: ${val.w}, h: ${val.h}, m: ${val.m} },`);
   }
 
   fileLines.push('};');

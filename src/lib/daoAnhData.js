@@ -2363,6 +2363,8 @@ export function getDaoAnhDevTuneOverrides() {
 export const DAO_ANH_UNIFORM = {
   enabled: true,
   target: 1.0,
+  bodyTarget: 0.62,
+  fitMax: 1.15,
   minScale: 0.6,
   maxScale: 2.0,
   mapBoost: 1.15,
@@ -2440,8 +2442,24 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
     const maxScale = (typeof options?.maxScale === 'number')
       ? options.maxScale
       : (options?.fit === 'contain' ? 2.2 : (forceAuto ? (DAO_ANH_UNIFORM.maxScale ?? 2.0) : 1.9));
-    const maxDim = Math.max(bb.w, bb.h);
-    const rawScale = TARGET / maxDim;
+
+    const BODY_TARGET = (typeof options?.bodyTarget === 'number' && options.bodyTarget > 0)
+      ? options.bodyTarget
+      : (DAO_ANH_UNIFORM.bodyTarget ?? 0.62);
+    const FIT_MAX = (typeof options?.fitMax === 'number' && options.fitMax > 0)
+      ? options.fitMax
+      : (options?.fit === 'contain' ? 1.0 : (DAO_ANH_UNIFORM.fitMax ?? 1.15));
+
+    let rawScale;
+    if (typeof bb.m === 'number' && bb.m > 0 && options?.fit !== 'contain') {
+      const scaleBody = BODY_TARGET / Math.sqrt(bb.m);
+      const scaleFit  = FIT_MAX / Math.max(bb.w, bb.h);
+      rawScale = Math.min(scaleBody, scaleFit);
+    } else {
+      const maxDim = Math.max(bb.w, bb.h);
+      rawScale = TARGET / maxDim;
+    }
+
     const scale = Math.min(Math.max(rawScale, minScale), maxScale);
     const roundedScale = Math.round(scale * 100) / 100;
 
@@ -2503,18 +2521,8 @@ export function getDaoAnhSvgTransform(daoAnhDef, currentKiep = 1, options = {}) 
 
   const bb = getDaoAnhBBox(daoAnhDef, currentKiep);
   if (bb && typeof bb.w === 'number' && bb.w > 0 && typeof bb.h === 'number' && bb.h > 0) {
-    const target = (typeof options.target === 'number' && options.target > 0)
-      ? options.target
-      : (DAO_ANH_UNIFORM.target ?? 1.0);
-    const minScale = (typeof options.minScale === 'number')
-      ? options.minScale
-      : (DAO_ANH_UNIFORM.minScale ?? 0.6);
-    const maxScale = (typeof options.maxScale === 'number')
-      ? options.maxScale
-      : (DAO_ANH_UNIFORM.maxScale ?? 2.0);
-
-    const maxDim = Math.max(bb.w, bb.h);
-    const clampedSc = Math.min(Math.max(target / maxDim, minScale), maxScale);
+    const cfg = getDaoAnhTransformConfig(daoAnhDef, currentKiep, { ...options, uniform: true });
+    const clampedSc = cfg.scale;
 
     // mapBoost: tăng kích thước hiển thị ở sảnh Nguyên Anh (SVG), bù trừ vị trí để giữ tâm nội dung
     const boost = typeof options.mapBoost === 'number' && options.mapBoost > 0
