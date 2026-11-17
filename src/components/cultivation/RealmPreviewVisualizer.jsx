@@ -3107,34 +3107,34 @@ export default function RealmPreviewVisualizer({ hideModalFrame, cultivation: pr
           const palaceCoordinates = (() => {
             const desktop13Positions = [
               { id: 'van_menh_hu_vo',      x: 646, y: 115, isTop: true, scale: 1.15, nw: 228 },
-              { id: 'dai_dao_tieu_dao',    x: 245, y: 180, scale: 1.12, nw: 224 },
-              { id: 'to_long_than_cung',   x: 440, y: 300, scale: 1.06, nw: 218 },
-              { id: 'hu_vo_ban_nguyen',    x: 1045, y: 180, scale: 1.12, nw: 224 },
-              { id: 'tuc_menh_nhan_qua',   x: 852, y: 300, scale: 1.06, nw: 226 },
-              { id: 'phat_thien_kiem',     x: 215, y: 444, scale: 1.12, nw: 220 },
-              { id: 'hong_mong_bat_diet',  x: 1077, y: 444, scale: 1.12, nw: 236 },
-              { id: 'luan_hoi_ban',        x: 440, y: 575, scale: 1.06, nw: 228 },
-              { id: 'ngoc_diep',           x: 852, y: 575, scale: 1.06, nw: 224 },
-              { id: 'hon_don_so_khai',    x: 245, y: 705, scale: 1.12, nw: 220 },
-              { id: 'khoi_nguyen_thoi_khong', x: 1020, y: 695, scale: 1.12, nw: 224 },
-              { id: 'sang_the_quang',      x: 505, y: 765, scale: 1.12, nw: 228 },
-              { id: 'cuu_chuyen_luan_hoi', x: 760, y: 765, scale: 1.12, nw: 230 },
+              { id: 'dai_dao_tieu_dao',    x: 245, y: 180, scale: 1.10, nw: 224 },
+              { id: 'to_long_than_cung',   x: 440, y: 300, scale: 1.10, nw: 218 },
+              { id: 'hu_vo_ban_nguyen',    x: 1045, y: 180, scale: 1.10, nw: 224 },
+              { id: 'tuc_menh_nhan_qua',   x: 852, y: 300, scale: 1.10, nw: 226 },
+              { id: 'phat_thien_kiem',     x: 215, y: 444, scale: 1.10, nw: 220 },
+              { id: 'hong_mong_bat_diet',  x: 1077, y: 444, scale: 1.10, nw: 236 },
+              { id: 'luan_hoi_ban',        x: 440, y: 575, scale: 1.10, nw: 228 },
+              { id: 'ngoc_diep',           x: 852, y: 575, scale: 1.10, nw: 224 },
+              { id: 'hon_don_so_khai',    x: 245, y: 705, scale: 1.10, nw: 220 },
+              { id: 'khoi_nguyen_thoi_khong', x: 1020, y: 695, scale: 1.10, nw: 224 },
+              { id: 'sang_the_quang',      x: 505, y: 765, scale: 1.10, nw: 228 },
+              { id: 'cuu_chuyen_luan_hoi', x: 760, y: 765, scale: 1.10, nw: 230 },
             ];
 
             const mobile13Positions = [
-              { id: 'van_menh_hu_vo',      x: 360, y: 125, isTop: true, scale: 1.14, nw: 175 }, // 12h Đỉnh Tối Cao
-              { id: 'dai_dao_tieu_dao',    x: 155, y: 235, scale: 1.06, nw: 160 },             // 10h30 Vành Ngoài
-              { id: 'to_long_than_cung',   x: 260, y: 375, scale: 1.06, nw: 155 },             // 11h Vành Trong
-              { id: 'hu_vo_ban_nguyen',    x: 565, y: 235, scale: 1.06, nw: 160 },             // 1h30 Vành Ngoài
-              { id: 'tuc_menh_nhan_qua',   x: 460, y: 375, scale: 1.06, nw: 155 },             // 1h Vành Trong
-              { id: 'phat_thien_kiem',     x: 115, y: 550, scale: 1.08, nw: 160 },             // 9h Tây Trục Ranh Giới
-              { id: 'hong_mong_bat_diet',  x: 605, y: 550, scale: 1.08, nw: 160 },             // 3h Đông Trục Ranh Giới
-              { id: 'luan_hoi_ban',        x: 260, y: 725, scale: 1.06, nw: 155 },             // 7h Vành Trong
-              { id: 'ngoc_diep',           x: 460, y: 725, scale: 1.06, nw: 155 },             // 5h Vành Trong
-              { id: 'hon_don_so_khai',    x: 155, y: 865, scale: 1.06, nw: 160 },             // 7h30 Vành Ngoài
-              { id: 'khoi_nguyen_thoi_khong', x: 565, y: 865, scale: 1.06, nw: 160 },         // 4h30 Vành Ngoài
-              { id: 'sang_the_quang',      x: 255, y: 995, scale: 1.08, nw: 160 },             // 6h30 Đáy Trái
-              { id: 'cuu_chuyen_luan_hoi', x: 465, y: 995, scale: 1.08, nw: 160 },             // 5h30 Đáy Phải
+              { id: 'van_menh_hu_vo',      x: 360, y: 125, isTop: true, scale: 1.15, nw: 175 }, // 12h Đỉnh Tối Cao
+              { id: 'dai_dao_tieu_dao',    x: 155, y: 235, scale: 1.10, nw: 160 },             // 10h30 Vành Ngoài
+              { id: 'to_long_than_cung',   x: 260, y: 375, scale: 1.10, nw: 155 },             // 11h Vành Trong
+              { id: 'hu_vo_ban_nguyen',    x: 565, y: 235, scale: 1.10, nw: 160 },             // 1h30 Vành Ngoài
+              { id: 'tuc_menh_nhan_qua',   x: 460, y: 375, scale: 1.10, nw: 155 },             // 1h Vành Trong
+              { id: 'phat_thien_kiem',     x: 115, y: 550, scale: 1.10, nw: 160 },             // 9h Tây Trục Ranh Giới
+              { id: 'hong_mong_bat_diet',  x: 605, y: 550, scale: 1.10, nw: 160 },             // 3h Đông Trục Ranh Giới
+              { id: 'luan_hoi_ban',        x: 260, y: 725, scale: 1.10, nw: 155 },             // 7h Vành Trong
+              { id: 'ngoc_diep',           x: 460, y: 725, scale: 1.10, nw: 155 },             // 5h Vành Trong
+              { id: 'hon_don_so_khai',    x: 155, y: 865, scale: 1.10, nw: 160 },             // 7h30 Vành Ngoài
+              { id: 'khoi_nguyen_thoi_khong', x: 565, y: 865, scale: 1.10, nw: 160 },         // 4h30 Vành Ngoài
+              { id: 'sang_the_quang',      x: 255, y: 995, scale: 1.10, nw: 160 },             // 6h30 Đáy Trái
+              { id: 'cuu_chuyen_luan_hoi', x: 465, y: 995, scale: 1.10, nw: 160 },             // 5h30 Đáy Phải
             ];
 
             const standardList = isMobile ? mobile13Positions : desktop13Positions;

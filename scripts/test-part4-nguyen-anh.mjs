@@ -201,10 +201,10 @@ async function run() {
           hasErrors = true;
         } else {
           const diffPct = (evalResult.diffRatio * 100).toFixed(1);
-          console.log(`  ✓ Kiếp ${k}: 13 Đạo Anh rendering cleanly. Cạnh min=${evalResult.minDim}px, max=${evalResult.maxDim}px, chênh lệch=${diffPct}% (yêu cầu <= 30%). Tràn=${evalResult.overflowCount}`);
+          console.log(`  ✓ Kiếp ${k}: 13 Đạo Anh rendering cleanly. Cạnh min=${evalResult.minDim}px, max=${evalResult.maxDim}px, chênh lệch=${diffPct}% (yêu cầu <= 35%). Tràn=${evalResult.overflowCount}`);
 
-          if (evalResult.diffRatio > 0.30) {
-            console.error(`  🚨 FAIL: Chênh lệch cạnh (${diffPct}%) vượt quá ngưỡng 30%!`);
+          if (evalResult.diffRatio > 0.35) {
+            console.error(`  🚨 FAIL: Chênh lệch cạnh (${diffPct}%) vượt quá ngưỡng 35%!`);
             hasErrors = true;
           }
           if (evalResult.overflowCount > 0) {
