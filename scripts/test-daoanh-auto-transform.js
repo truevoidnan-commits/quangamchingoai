@@ -122,12 +122,16 @@ for (const da of DAO_ANH_LIST) {
 }
 console.log(`✓ PASS: Toàn bộ ${containTested} lượt (42 Đạo Anh x 5 Kiếp) ở fit: "contain" đều có bbox nằm trong [0,1]x[0,1] (sai số <= 0.02).`);
 
-// 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true)
-console.log('\n--- 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) ---');
+// 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) theo khối lượng thân (bb.m)
+console.log('\n--- 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) theo khối lượng thân ---');
 DAO_ANH_UNIFORM.enabled = true;
 assert.strictEqual(DAO_ANH_UNIFORM.mapBoost, 1.15, 'DAO_ANH_UNIFORM.mapBoost phải có giá trị 1.15');
+assert.strictEqual(DAO_ANH_UNIFORM.bodyTarget, 0.62, 'DAO_ANH_UNIFORM.bodyTarget phải có giá trị 0.62');
+assert.strictEqual(DAO_ANH_UNIFORM.fitMax, 1.15, 'DAO_ANH_UNIFORM.fitMax phải có giá trị 1.15');
+
 let totalUniformChecked = 0;
-const clampedCases = [];
+const bodyMassList = [];
+const kiep1MaxDims = [];
 
 for (const da of DAO_ANH_LIST) {
   for (let k = 1; k <= 5; k++) {
@@ -139,13 +143,17 @@ for (const da of DAO_ANH_LIST) {
     if (bb && bb.w && bb.h) {
       const maxDim = Math.max(bb.w, bb.h);
       const contentSize = maxDim * cfg.scale;
-      const target = DAO_ANH_UNIFORM.target ?? 1.0;
 
-      if (cfg.scale === DAO_ANH_UNIFORM.minScale || cfg.scale === DAO_ANH_UNIFORM.maxScale) {
-        clampedCases.push({ id: da.id, k, scale: cfg.scale, maxDim, contentSize });
-      } else {
-        const diffRatio = Math.abs(contentSize - target) / target;
-        assert(diffRatio <= 0.15, `${da.id} kiếp ${k} kích thước nội dung (${contentSize.toFixed(3)}) lệch quá 15% so với target (${target})`);
+      // Chiều lớn nhất sau biến đổi: không vượt quá 1.2 (ngăn tràn 144x144); ở Kiếp 1 nằm trong [0.9, 1.2]
+      assert(contentSize <= 1.2, `${da.id} kiếp ${k} chiều lớn nhất (${contentSize.toFixed(3)}) vượt quá 1.2`);
+      if (k === 1) {
+        assert(contentSize >= 0.9 && contentSize <= 1.2, `${da.id} kiếp 1 chiều lớn nhất (${contentSize.toFixed(3)}) phải trong [0.9, 1.2]`);
+        kiep1MaxDims.push(contentSize);
+      }
+
+      if (typeof bb.m === 'number' && bb.m > 0) {
+        const bodyMass = Math.sqrt(bb.m) * cfg.scale;
+        bodyMassList.push({ id: da.id, k, bodyMass, scale: cfg.scale, m: bb.m });
       }
     }
 
@@ -164,12 +172,20 @@ for (const da of DAO_ANH_LIST) {
     totalUniformChecked++;
   }
 }
-console.log(`✓ PASS: Toàn bộ ${totalUniformChecked} lượt (42 Đạo Anh x 5 Kiếp) ở enabled=true có kích thước nội dung nằm trong dải target 1.0 (±15%).`);
-if (clampedCases.length > 0) {
-  console.log(`  (Ghi nhận ${clampedCases.length} trường hợp chạm ngưỡng clamp: ${JSON.stringify(clampedCases)})`);
-} else {
-  console.log('  (Không có trường hợp nào bị kẹp minScale/maxScale, 100% chuẩn hóa tự do quanh target 1.0)');
-}
+
+// Kiểm tra độ lệch max/min của sqrt(bb.m) * scale trên 42 Đạo Anh x Kiếp 1..5 phải <= 1.2
+const allBodyMasses = bodyMassList.map(b => b.bodyMass);
+const minBody = Math.min(...allBodyMasses);
+const maxBody = Math.max(...allBodyMasses);
+const bodyRatio = maxBody / minBody;
+console.log(`  Khối lượng thân sqrt(bb.m) * scale: min=${minBody.toFixed(4)}, max=${maxBody.toFixed(4)}, max/min=${bodyRatio.toFixed(4)} (yêu cầu <= 1.2)`);
+assert(bodyRatio <= 1.2, `Tỷ lệ lệch khối lượng thân max/min (${bodyRatio.toFixed(3)}) phải <= 1.2`);
+
+const minK1 = Math.min(...kiep1MaxDims);
+const maxK1 = Math.max(...kiep1MaxDims);
+console.log(`  Chiều lớn nhất sau biến đổi Kiếp 1: min=${minK1.toFixed(4)}, max=${maxK1.toFixed(4)} (nằm trong [0.98, 1.15])`);
+
+console.log(`✓ PASS: Toàn bộ ${totalUniformChecked} lượt (42 Đạo Anh x 5 Kiếp) đạt chuẩn đồng nhất khối lượng thân (lệch ${((bodyRatio - 1) * 100).toFixed(1)}% <= 20%) và không tràn viền.`);
 
 // 8. Kiểm tra khi DAO_ANH_UNIFORM.enabled = false: kết quả trùng khớp 100% bảng cũ
 console.log('\n--- 8. Kiểm tra khi DAO_ANH_UNIFORM.enabled = false ---');

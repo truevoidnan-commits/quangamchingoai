@@ -35,11 +35,13 @@ async function main() {
     assert(typeof box.cy === 'number' && !Number.isNaN(box.cy), `cy for ${key} must be number`);
     assert(typeof box.w === 'number' && !Number.isNaN(box.w), `w for ${key} must be number`);
     assert(typeof box.h === 'number' && !Number.isNaN(box.h), `h for ${key} must be number`);
+    assert(typeof box.m === 'number' && !Number.isNaN(box.m), `m for ${key} must be number`);
 
     assert(box.cx >= 0 && box.cx <= 1, `cx for ${key} (${box.cx}) must be in [0, 1]`);
     assert(box.cy >= 0 && box.cy <= 1, `cy for ${key} (${box.cy}) must be in [0, 1]`);
     assert(box.w > 0 && box.w <= 1, `w for ${key} (${box.w}) must be in (0, 1]`);
     assert(box.h > 0 && box.h <= 1, `h for ${key} (${box.h}) must be in (0, 1]`);
+    assert(box.m > 0 && box.m <= 1, `m for ${key} (${box.m}) must be in (0, 1]`);
 
     // Transform calculation sanity check
     const s = Math.min(1.6, Math.min(1 / box.w, 1 / box.h) * 0.92);
