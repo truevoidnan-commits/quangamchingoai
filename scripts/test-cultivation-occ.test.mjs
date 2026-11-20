@@ -365,6 +365,7 @@ const {
 const {
   syncCultivation,
   commitCultivationOCC,
+  reconcilePendingCultivationRequest,
 } = await import('../src/lib/sync/syncEngine.js');
 
 const {
@@ -1020,7 +1021,7 @@ describe('Nhiệm vụ 3B.2: Kiểm thử toàn diện cơ chế OCC trên môi 
       user_id: 'user_test_occ',
       idempotency_key: 'req_A1_replay_test',
       committed_rev: 11,
-      request_fingerprint: crypto.createHash('md5').update(`10:${JSON.stringify(pendingReq.payloadState)}`).digest('hex'),
+      request_fingerprint: crypto.createHash('md5').update(`10:${JSON.stringify({ ...pendingReq.payloadState, __meta: { pendingSeconds: 0 } })}`).digest('hex'),
       created_at: 2000
     });
 
@@ -1155,5 +1156,184 @@ describe('Nhiệm vụ 3B.2: Kiểm thử toàn diện cơ chế OCC trên môi 
     assert.equal(resB.data, null);
     assert.ok(resB.error);
     assert.equal(resB.error.code, '42501');
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 22: Quản lý pending_seconds - Chưa commit không được xóa và không được ghi vào lastSyncedPending
+  // --------------------------------------------------------------------------
+  test('Ca 22: Cloud rev tăng, Local chưa đổi _seq nhưng pending_seconds đã tăng -> pending_seconds không bị xóa và KHÔNG bị ghi vào lastSyncedPending', async () => {
+    // 1. Cloud rev 11, realm ngung_khi_2, totalExp 1000
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 11,
+      state: { realm: 'ngung_khi_2', totalExp: 1000, __meta: { pendingSeconds: 0 } },
+      updated_at: 2000,
+      device_id: 'dev_other'
+    });
+
+    // 2. Local: seq = 5, rev = 5, totalExp = 900.
+    // Local CHƯA đổi _seq (vẫn 5), nhưng pending_seconds đã tăng lên 120 (người dùng thiền offline)!
+    const local = getCultivationState();
+    local._seq = 5;
+    local._rev = 5;
+    local.totalExp = 900;
+    localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(local));
+    localStorage.setItem(getCultivationKey('pending_seconds', 'real'), '120');
+
+    const ledger = getSyncLedger();
+    ledger.cultivation = {
+      lastSyncedRev: 10,
+      lastSyncedLocalSeq: 5,
+      lastSyncedPending: 0, // Mốc sync trước đó là 0s
+      lastCloudUpdatedAt: 1000
+    };
+    saveSyncLedger(ledger);
+
+    // 3. Thiết bị khác tăng Cloud lên rev 12
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 12,
+      state: { realm: 'ngung_khi_3', totalExp: 1200, __meta: { pendingSeconds: 0 } },
+      updated_at: 3000,
+      device_id: 'dev_other_2'
+    });
+
+    // 4. Chạy pullCultivationBeforeMeditation()
+    const pullRes = await pullCultivationBeforeMeditation(mockEngine, { timeoutMs: 1000 });
+    assert.equal(pullRes.fastForwarded, true);
+
+    // KẾT QUẢ BẮT BUỘC THEO REVIEW:
+    // A. pending_seconds chưa commit (120s) KHÔNG ĐƯỢC BỊ XÓA khỏi localStorage
+    const localPendingAfterPull = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')), 10);
+    assert.equal(localPendingAfterPull, 120, 'pending_seconds 120s chưa commit không được bị xóa!');
+
+    // B. lastSyncedPending KHÔNG ĐƯỢC BỊ GHI 120s như thể đã đồng bộ thành công!
+    const ledgerAfterPull = getSyncLedger();
+    assert.equal(ledgerAfterPull.cultivation.lastSyncedPending, 0, 'lastSyncedPending phải giữ nguyên mốc 0, không được ghi 120s!');
+    assert.equal(ledgerAfterPull.cultivation.lastSyncedRev, 12, 'Cloud rev phải là 12');
+
+    // C. Cờ bẩn isLocalPendingChanged (120 !== 0) tiếp tục bật để push ở chu kỳ tiếp theo
+    const isPendingStillDirty = localPendingAfterPull !== ledgerAfterPull.cultivation.lastSyncedPending;
+    assert.equal(isPendingStillDirty, true, 'isLocalPendingChanged bắt buộc phải là true để không mất dữ liệu thiền!');
+
+    // D. Kiểm tra tương tự với runAutoSync() và syncCultivation()
+    // Giả lập Cloud tăng lên rev 13
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 13,
+      state: { realm: 'ngung_khi_4', totalExp: 1400, __meta: { pendingSeconds: 0 } },
+      updated_at: 4000,
+      device_id: 'dev_other_3'
+    });
+
+    const syncRes = await syncCultivation(mockEngine, 'user_test_occ');
+    const localPendingAfterSync = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')), 10);
+    const ledgerAfterSync = getSyncLedger();
+
+    assert.equal(localPendingAfterSync, 120, 'pending_seconds qua syncCultivation vẫn không bị xóa!');
+    assert.notEqual(ledgerAfterSync.cultivation.lastSyncedPending, 120, 'lastSyncedPending không được ghi 120s khi chưa push!');
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 23: Hòa giải pending request trước khi fast-forward khi có tcl_cultivation_pending_request
+  // --------------------------------------------------------------------------
+  test('Ca 23: Tình huống A commit -> mất ACK -> B commit -> A reload: Không kéo đè, ưu tiên hòa giải qua idempotency key', async () => {
+    // 1. Máy A gửi request req_A_lost commit thành công lên rev 11, nhưng mất gói tin ACK
+    const frozenPayload = { realm: 'ngung_khi_5', totalExp: 550 };
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 11,
+      state: frozenPayload,
+      updated_at: 2000,
+      device_id: 'dev_A'
+    });
+    mockEngine.idempotencyLogTable.set('user_test_occ:req_A_lost', {
+      user_id: 'user_test_occ',
+      idempotency_key: 'req_A_lost',
+      committed_rev: 11,
+      request_fingerprint: crypto.createHash('md5').update(`10:${JSON.stringify({ ...frozenPayload, __meta: { pendingSeconds: 0 } })}`).digest('hex'),
+      created_at: 2000
+    });
+
+    // 2. Thiết bị B commit đẩy Cloud lên rev 12
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 12,
+      state: { realm: 'ngung_khi_6', totalExp: 650 },
+      updated_at: 3000,
+      device_id: 'dev_B'
+    });
+
+    // 3. Máy A bị reload trang: Trong localStorage của A vẫn còn pending request dở dang
+    const pendingSnapshot = {
+      idempotencyKey: 'req_A_lost',
+      expectedRev: 10,
+      sentLocalSeq: 15,
+      sentPendingSeconds: 0,
+      payloadState: frozenPayload,
+      createdAt: 2000
+    };
+    savePendingCultivationRequest(pendingSnapshot);
+
+    const localState = getCultivationState();
+    localState._seq = 15;
+    localState._rev = 15;
+    localState.totalExp = 550;
+    localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(localState));
+
+    const ledger = getSyncLedger();
+    ledger.cultivation = { lastSyncedRev: 10, lastSyncedLocalSeq: 14, lastSyncedPending: 0, lastCloudUpdatedAt: 1000 };
+    saveSyncLedger(ledger);
+
+    // 4. Khi Máy A khởi động lại và chạy pullCultivationBeforeMeditation:
+    // Hệ thống hòa giải trước: xác định req_A_lost ĐÃ commit tại rev 11 -> cập nhật lastSyncedRev = 11, lastSyncedLocalSeq = 15, xóa pendingReq
+    // Sau đó thấy Cloud đã lên 12 (từ B) mà local không có mutation mới -> fast-forward an toàn lên 12
+    const pullRes = await pullCultivationBeforeMeditation(mockEngine, { timeoutMs: 1000 });
+
+    assert.equal(getPendingCultivationRequest(), null, 'Pending request phải được hòa giải và xóa sạch');
+    const ledgerAfterReconcile = getSyncLedger();
+    assert.equal(ledgerAfterReconcile.cultivation.lastSyncedRev, 12, 'Cloud rev 12 được fast-forward an toàn sau khi đã hòa giải');
+
+    // 5. TRƯỜNG HỢP A CÓ MUTATION MỚI TRƯỚC KHI HÒA GIẢI XONG:
+    // Tái lập: req_A_lost_2 commit rev 13, B commit rev 14, local A phát sinh mutation mới offline (seq = 18 > 17)
+    const pendingSnapshot2 = {
+      idempotencyKey: 'req_A_lost_2',
+      expectedRev: 12,
+      sentLocalSeq: 17,
+      sentPendingSeconds: 0,
+      payloadState: { realm: 'ngung_khi_7', totalExp: 750 },
+      createdAt: 4000
+    };
+    savePendingCultivationRequest(pendingSnapshot2);
+
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 14, // Cloud đã lên 14 do B commit
+      state: { realm: 'ngung_khi_8', totalExp: 850 },
+      updated_at: 5000,
+      device_id: 'dev_B'
+    });
+    mockEngine.idempotencyLogTable.set('user_test_occ:req_A_lost_2', {
+      user_id: 'user_test_occ',
+      idempotency_key: 'req_A_lost_2',
+      committed_rev: 13,
+      request_fingerprint: crypto.createHash('md5').update(`12:${JSON.stringify({ realm: 'ngung_khi_7', totalExp: 750, __meta: { pendingSeconds: 0 } })}`).digest('hex'),
+      created_at: 4000
+    });
+
+    // Local phát sinh thay đổi mới seq = 18
+    const localNew = getCultivationState();
+    localNew._seq = 18;
+    localNew._rev = 18;
+    localNew.totalExp = 780;
+    saveCultivationState(localNew);
+
+    // Khi chạy syncCultivation:
+    const syncRes = await syncCultivation(mockEngine, 'user_test_occ');
+
+    // BẮT BUỘC: Không được kéo đè Cloud 14 vào local! Phải báo CONFLICT để bảo toàn dữ liệu local!
+    assert.equal(syncRes.conflict, true);
+    assert.equal(syncRes.skipped, true);
+    assert.equal(getCultivationState().totalExp, 780, 'Dữ liệu local 780 EXP của A được bảo toàn 100%!');
   });
 });

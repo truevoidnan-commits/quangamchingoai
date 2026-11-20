@@ -23,17 +23,28 @@ CREATE INDEX IF NOT EXISTS idx_cultivation_user_id ON public.cultivation (user_i
 -- Bật Row Level Security (RLS)
 ALTER TABLE public.cultivation ENABLE ROW LEVEL SECURITY;
 
--- Chính sách đọc: Người dùng chỉ được SELECT dữ liệu của chính mình
-DROP POLICY IF EXISTS "Users can select own cultivation" ON public.cultivation;
-CREATE POLICY "Users can select own cultivation"
-ON public.cultivation
-FOR SELECT
-TO authenticated
-USING ((SELECT auth.uid()) = user_id);
+-- Đảm bảo có policy SELECT cho chính chủ nếu môi trường mới chưa có policy nào
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+          AND tablename = 'cultivation' 
+          AND policyname = 'Users can select own cultivation'
+    ) THEN
+        CREATE POLICY "Users can select own cultivation"
+        ON public.cultivation
+        FOR SELECT
+        TO authenticated
+        USING ((SELECT auth.uid()) = user_id);
+    END IF;
+END $$;
 
--- Trong Stage A: GIỮ NGUYÊN quyền SELECT, INSERT, UPDATE cho authenticated
--- để các client hiện tại không bị gián đoạn trước khi Cutover.
-GRANT SELECT, INSERT, UPDATE ON TABLE public.cultivation TO authenticated;
+-- LƯU Ý BẢO VỆ SCHEMA STAGE A:
+-- Tuyệt đối KHÔNG thay thế các policy đang có của production.
+-- Tuyệt đối KHÔNG cấp thêm GRANT ghi vượt quyền RLS trên bảng cultivation.
+-- Quyền đọc/ghi hiện hữu của client cũ trên cultivation được giữ nguyên trạng thái sẵn có
+-- cho đến khi thực thi Migration Stage B (Cutover Lockdown).
 
 -- ------------------------------------------------------------------------------
 -- 2. BẢNG NHẬT KÝ IDEMPOTENCY (REQUEST JOURNAL)
