@@ -1892,9 +1892,9 @@ describe('Nhiệm vụ 3B.2: Kiểm thử toàn diện cơ chế OCC trên môi 
   });
 
   // --------------------------------------------------------------------------
-  // TEST 34: Stage A hoàn toàn độc lập, không chứa file cutover Stage B trong migrations
+  // TEST 34: Stage A hoàn toàn độc lập, loại bỏ hoàn toàn rollback mở lại direct write
   // --------------------------------------------------------------------------
-  test('Ca 34: Kiểm tra cô lập Stage A - Chỉ có Stage A trong migrations, Stage B nằm ở operations', () => {
+  test('Ca 34: Kiểm tra cô lập Stage A & B - Loại bỏ hoàn toàn rollback mở blind upsert', () => {
     const migrationsDir = path.resolve('supabase/migrations');
     const operationsDir = path.resolve('supabase/operations');
 
@@ -1906,12 +1906,23 @@ describe('Nhiệm vụ 3B.2: Kiểm thử toàn diện cơ chế OCC trên môi 
 
     const operationFiles = fs.readdirSync(operationsDir);
     assert.ok(operationFiles.includes('20261120_cultivation_occ_stage_b_cutover.sql'), 'Stage B cutover phải nằm trong supabase/operations');
+
+    // Kiểm tra loại bỏ hoàn toàn rollback GRANT INSERT, UPDATE trong cả file guide và operations
+    const guidePath = path.resolve('docs/DEPLOY_OCC_STAGING_GUIDE.md');
+    const guideContent = fs.readFileSync(guidePath, 'utf-8');
+    assert.equal(guideContent.includes('GRANT INSERT, UPDATE ON TABLE public.cultivation TO authenticated'), false, 'Guide không được chứa rollback GRANT INSERT, UPDATE');
+    assert.ok(guideContent.includes('Safe Maintenance Mode'), 'Guide phải sử dụng Safe Maintenance Mode làm cơ chế dừng ghi');
+
+    const cutoverSqlPath = path.resolve('supabase/operations/20261120_cultivation_occ_stage_b_cutover.sql');
+    const cutoverContent = fs.readFileSync(cutoverSqlPath, 'utf-8');
+    assert.equal(cutoverContent.includes('GRANT INSERT, UPDATE ON TABLE public.cultivation TO authenticated'), false, 'Cutover SQL không được chứa rollback GRANT INSERT, UPDATE');
+    assert.ok(cutoverContent.includes('cultivation_maintenance'), 'Cutover SQL phải hướng dẫn dùng cờ cultivation_maintenance');
   });
 
   // --------------------------------------------------------------------------
-  // TEST 35: Script SQL Editor khớp schema, có RAISE EXCEPTION và bảo toàn cờ maintenance
+  // TEST 35: Script test an toàn: không tự thay đổi maintenance, kiểm tra môi trường cô lập
   // --------------------------------------------------------------------------
-  test('Ca 35: Script test-postgres-sql-editor.sql khớp schema thực tế và bảo toàn cờ maintenance', () => {
+  test('Ca 35: Script test an toàn - Không tự thay đổi maintenance, khớp schema và kiểm tra môi trường', () => {
     const sqlPath = path.resolve('scripts/test-postgres-sql-editor.sql');
     const sqlContent = fs.readFileSync(sqlPath, 'utf-8');
 
@@ -1926,5 +1937,20 @@ describe('Nhiệm vụ 3B.2: Kiểm thử toàn diện cơ chế OCC trên môi 
 
     // Phải có RAISE EXCEPTION thực sự khi assertion sai
     assert.ok(sqlContent.includes('RAISE EXCEPTION'), 'Phải dùng RAISE EXCEPTION cho assertion');
+
+    // Kiểm tra scripts/test-postgres-concurrent-psql.mjs tuân thủ P1:
+    const psqlPath = path.resolve('scripts/test-postgres-concurrent-psql.mjs');
+    const psqlContent = fs.readFileSync(psqlPath, 'utf-8');
+
+    // Không được tự ý UPDATE app_system_flags
+    assert.equal(psqlContent.includes('UPDATE public.app_system_flags'), false, 'Tuyệt đối không tự ý UPDATE app_system_flags');
+
+    // Phải có kiểm tra cờ cultivation_maintenance và dừng nếu đang bảo trì
+    assert.ok(psqlContent.includes('cultivation_maintenance'), 'Phải kiểm tra cờ cultivation_maintenance');
+    assert.ok(psqlContent.includes('maintRes.rows[0].value?.enabled === true'), 'Phải kiểm tra trạng thái enabled');
+
+    // Phải có kiểm tra định danh môi trường qua cấu hình database
+    assert.ok(psqlContent.includes('TEST_ENVIRONMENT_IDENTIFIER'), 'Phải yêu cầu TEST_ENVIRONMENT_IDENTIFIER');
+    assert.ok(psqlContent.includes("current_setting('app.environment'"), 'Phải truy vấn setting môi trường của database');
   });
 });

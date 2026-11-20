@@ -2,7 +2,7 @@
  * KỊCH BẢN KIỂM THỬ ĐỒNG THỜI ĐA KẾT NỐI (CONCURRENT CLIENTS) TRÊN POSTGRESQL THẬT
  * File: scripts/test-postgres-concurrent-psql.mjs
  * Áp dụng: Chạy qua Node.js kết nối đến PostgreSQL Staging / Supabase Local thật
- * Biến môi trường: DATABASE_URL hoặc SUPABASE_DB_URL
+ * Biến môi trường: DATABASE_URL hoặc SUPABASE_DB_URL, kết hợp TEST_ENVIRONMENT_IDENTIFIER
  *
  * TUYỆT ĐỐI KHÔNG CHẠY TRÊN DATABASE PRODUCTION!
  */
@@ -18,13 +18,14 @@ if (!DB_URL) {
   console.log('Script này dùng để nghiệm thu kiểm thử concurrency đa kết nối trên PostgreSQL thật:');
   console.log('Cách chạy khi có Staging / Supabase Local PostgreSQL:');
   console.log('  $env:DATABASE_URL="postgres://postgres:postgres@localhost:54322/postgres"');
+  console.log('  $env:TEST_ENVIRONMENT_IDENTIFIER="staging-isolated"');
   console.log('  node scripts/test-postgres-concurrent-psql.mjs');
   console.log('--------------------------------------------------------------------------');
   process.exit(0);
 }
 
 // ------------------------------------------------------------------------------
-// 1. KIỂM TRA BẢO VỆ AN TOÀN URL & ĐỊNH DANH MÔI TRƯỜNG THỬ NGHIỆM
+// 1. KIỂM TRA BẢO VỆ AN TOÀN URL & YÊU CẦU ĐỊNH DANH MÔI TRƯỜNG
 // ------------------------------------------------------------------------------
 let parsedUrl;
 try {
@@ -34,31 +35,23 @@ try {
   process.exit(1);
 }
 
-const bannedPatterns = ['pooler.supabase.com', 'aws-0', 'prod', 'production', 'live'];
-if (bannedPatterns.some(p => parsedUrl.hostname.toLowerCase().includes(p))) {
-  console.error('LỖI BẢO MẬT NGHIÊM NGẶT: Phát hiện host mang tiền tố Production. Dừng khẩn cấp!');
+const testEnvId = process.env.TEST_ENVIRONMENT_IDENTIFIER || process.env.STAGING_ENV_ID;
+
+if (!testEnvId) {
+  console.error('========================================================================');
+  console.error('LỖI AN TOÀN P1: Thiếu biến môi trường TEST_ENVIRONMENT_IDENTIFIER!');
+  console.error('Quy tắc an toàn: Không coi hostname hay tên database là bằng chứng xác thực');
+  console.error('môi trường production/staging. Bạn bắt buộc phải khai báo biến môi trường:');
+  console.error('  TEST_ENVIRONMENT_IDENTIFIER="<định_danh_môi_trường_thử_nghiệm>"');
+  console.error('Giá trị này phải khớp với định danh được cấu hình trong chính database.');
+  console.error('========================================================================');
   process.exit(1);
 }
 
-const safeHosts = ['localhost', '127.0.0.1', '::1', 'supabase_db', 'postgres'];
-const isLocalhost = safeHosts.includes(parsedUrl.hostname);
-const allowOverride = process.env.ALLOW_TEST_DB_OVERRIDE === 'true';
-const testEnvId = process.env.TEST_ENVIRONMENT_IDENTIFIER || process.env.STAGING_ENV_ID;
-
-if (!isLocalhost) {
-  // Không chỉ dựa vào ALLOW_TEST_DB_OVERRIDE, bắt buộc phải có TEST_ENVIRONMENT_IDENTIFIER
-  // xác nhận rõ môi trường đích là staging độc lập
-  if (!allowOverride || !testEnvId) {
-    console.error('========================================================================');
-    console.error('BẢO VỆ AN TOÀN: Database URL không trỏ về localhost / môi trường cô lập!');
-    console.error(`Host phát hiện: ${parsedUrl.hostname}`);
-    console.error('Để chạy trên staging remote, bạn phải cung cấp ĐỒNG THỜI 2 biến môi trường:');
-    console.error('  1. ALLOW_TEST_DB_OVERRIDE="true"');
-    console.error('  2. TEST_ENVIRONMENT_IDENTIFIER="<tên_môi_trường_staging_cô_lập>"');
-    console.error('Tuyệt đối KHÔNG cấu hình trỏ vào database Production!');
-    console.error('========================================================================');
-    process.exit(1);
-  }
+const bannedKeywords = ['prod', 'production', 'live', 'pooler.supabase.com', 'aws-0'];
+if (bannedKeywords.some(b => testEnvId.toLowerCase().includes(b))) {
+  console.error('LỖI BẢO MẬT: TEST_ENVIRONMENT_IDENTIFIER chứa từ khóa cấm (production/live). Dừng khẩn cấp!');
+  process.exit(1);
 }
 
 // ------------------------------------------------------------------------------
@@ -78,6 +71,7 @@ async function runConcurrentOccTests() {
   console.log('--------------------------------------------------------------------------');
   console.log('BẮT ĐẦU KIỂM THỬ CONCURRENCY ĐA KẾT NỐI TRÊN POSTGRESQL');
   console.log(`Database Host: ${parsedUrl.hostname}:${parsedUrl.port || 5432}`);
+  console.log(`Kỳ vọng định danh môi trường: "${testEnvId}"`);
   console.log('LƯU Ý: Script này chạy trực tiếp qua kết nối PostgreSQL và sử dụng set_config');
   console.log('để thiết lập session context role/jwt claim nhằm kiểm thử tính nguyên tử của');
   console.log('cơ chế khóa dòng FOR UPDATE và monotonic rev. Thao tác này KHÔNG tương đương');
@@ -103,49 +97,78 @@ async function runConcurrentOccTests() {
   }
 
   // ----------------------------------------------------------------------------
-  // 3. XÁC NHẬN ĐỊNH DANH DATABASE THỰC TẾ TRƯỚC KHI THỰC HIỆN BẤT KỲ THAO TÁC NÀO
+  // 3. XÁC NHẬN ĐỊNH DANH MÔI TRƯỜNG QUA CHÍNH CẤU HÌNH DATABASE ĐÍCH (P1)
+  // Tuyệt đối không thay đổi bất kỳ dữ liệu nào trước khi hoàn tất bước này!
   // ----------------------------------------------------------------------------
-  let origMaintenanceVal = null;
-  let didModifyMaintenance = false;
-
   try {
-    const dbInfo = await client1.query('SELECT current_database() AS dbname, current_user AS dbuser');
-    const currentDb = dbInfo.rows[0]?.dbname || '';
-    console.log(`Kết nối thành công đến database: "${currentDb}" dưới user: "${dbInfo.rows[0]?.dbuser}"`);
+    const envCheck = await client1.query(`
+      SELECT 
+        current_setting('app.environment', true) AS setting_env,
+        (SELECT value->>'identifier' FROM public.app_system_flags WHERE key = 'environment_identifier') AS flag_env_id,
+        (SELECT value->>'environment' FROM public.app_system_flags WHERE key = 'environment') AS flag_env_name
+    `);
 
-    // Chặn đứng nếu tên database có chứa ký tự định danh production
-    if (currentDb.toLowerCase().includes('prod') || currentDb.toLowerCase().includes('production')) {
-      throw new Error(`BẢO MẬT: Tên database "${currentDb}" chứa từ khóa production. Dừng khẩn cấp!`);
+    const dbConfiguredEnv = envCheck.rows[0]?.setting_env 
+      || envCheck.rows[0]?.flag_env_id 
+      || envCheck.rows[0]?.flag_env_name;
+
+    if (!dbConfiguredEnv) {
+      throw new Error(
+        'Không tìm thấy định danh môi trường trong cấu hình của chính database đích!\n' +
+        'Database thử nghiệm cô lập phải được cấu hình định danh môi trường qua:\n' +
+        '  1. Setting PostgreSQL: current_setting(\'app.environment\')\n' +
+        '  2. Hoặc bảng public.app_system_flags (key = \'environment_identifier\')\n' +
+        'Không thể xác minh tính cô lập của database. Dừng khẩn cấp trước khi thay đổi dữ liệu!'
+      );
     }
 
-    // Kiểm tra cờ bảo trì hiện tại của staging (KHÔNG tự tiện ghi đè cờ bảo trì dùng chung)
-    const maintRes = await client1.query("SELECT value FROM public.app_system_flags WHERE key = 'cultivation_maintenance'");
-    if (maintRes.rows.length > 0) {
-      origMaintenanceVal = maintRes.rows[0].value;
-      if (origMaintenanceVal && origMaintenanceVal.enabled === true) {
-        console.warn('CẢNH BÁO: Staging hiện đang ở chế độ bảo trì (cultivation_maintenance = true).');
-        console.warn('Tạm thời vô hiệu hóa cờ bảo trì cho bài test và sẽ KHÔI PHỤC trong finally.');
-        await client1.query(`
-          UPDATE public.app_system_flags 
-          SET value = '{"enabled": false, "message": "Test concurrency running"}'::jsonb, updated_at = NOW() 
-          WHERE key = 'cultivation_maintenance'
-        `);
-        didModifyMaintenance = true;
-      }
+    if (dbConfiguredEnv !== testEnvId) {
+      throw new Error(
+        `Định danh môi trường trong database ("${dbConfiguredEnv}") KHÔNG KHỚP với ` +
+        `TEST_ENVIRONMENT_IDENTIFIER ("${testEnvId}"). Dừng khẩn cấp!`
+      );
+    }
+
+    if (bannedKeywords.some(b => dbConfiguredEnv.toLowerCase().includes(b))) {
+      throw new Error(`Định danh cấu hình trong database ("${dbConfiguredEnv}") mang từ khóa production. Dừng khẩn cấp!`);
+    }
+
+    console.log(`✓ Đã xác thực thành công định danh môi trường thử nghiệm cô lập: "${dbConfiguredEnv}"`);
+
+    // --------------------------------------------------------------------------
+    // 4. KIỂM TRA CỜ MAINTENANCE DÙNG CHUNG CỦA STAGING (P1)
+    // Nếu cờ đang bật, dừng kiểm thử với thông báo rõ ràng; tuyệt đối không tự ý tắt!
+    // --------------------------------------------------------------------------
+    const maintRes = await client1.query(
+      "SELECT value FROM public.app_system_flags WHERE key = 'cultivation_maintenance'"
+    );
+
+    if (maintRes.rows.length > 0 && maintRes.rows[0].value?.enabled === true) {
+      console.log('--------------------------------------------------------------------------');
+      console.log('THÔNG BÁO DỪNG KIỂM THỬ: Hệ thống Staging đang ở chế độ bảo trì!');
+      console.log(`Chi tiết cờ cultivation_maintenance: ${JSON.stringify(maintRes.rows[0].value)}`);
+      console.log('Theo quy tắc an toàn P1: Tuyệt đối KHÔNG tự ý tắt hoặc ghi đè cờ bảo trì dùng chung của môi trường staging.');
+      console.log('Dừng kiểm thử an toàn mà không làm gián đoạn trạng thái môi trường.');
+      console.log('--------------------------------------------------------------------------');
+      await client1.end().catch(() => {});
+      await client2.end().catch(() => {});
+      process.exit(0);
     }
   } catch (checkErr) {
-    console.error('Lỗi kiểm tra định danh database:', checkErr.message);
+    console.error('LỖI XÁC THỰC MÔI TRƯỜNG TRƯỚC KHI TEST:', checkErr.message);
     await client1.end().catch(() => {});
     await client2.end().catch(() => {});
     process.exit(1);
   }
 
-  // Dùng UUID ngẫu nhiên cô lập tuyệt đối không trùng dữ liệu
+  // ----------------------------------------------------------------------------
+  // 5. CHUẨN BỊ TEST DATA: CHỈ THAO TÁC TRÊN UUID NGẪU NHIÊN DO LƯỢT TEST TẠO RA
+  // ----------------------------------------------------------------------------
   const testUserId = crypto.randomUUID();
-  console.log(`Tạo người dùng thử nghiệm ngẫu nhiên: ${testUserId}`);
+  console.log(`Tạo người dùng thử nghiệm ngẫu nhiên cô lập: ${testUserId}`);
 
   try {
-    // 1. Chuẩn bị dữ liệu ban đầu dưới quyền quản trị (chỉ xóa đúng testUserId ngẫu nhiên)
+    // Chỉ xóa dữ liệu liên quan đến đúng testUserId ngẫu nhiên này
     await client1.query('RESET ROLE');
     await client2.query('RESET ROLE');
     await client1.query('DELETE FROM public.cultivation_idempotency_log WHERE user_id = $1', [testUserId]);
@@ -201,20 +224,12 @@ async function runConcurrentOccTests() {
 
     console.log('=== TOÀN BỘ KIỂM THỬ ĐA KẾT NỐI THẬT ĐÃ HOÀN TẤT THÀNH CÔNG ===');
   } finally {
-    // Luôn dọn dẹp an toàn trong mọi trường hợp (kể cả assertion fail hay lỗi kết nối)
+    // Luôn dọn dẹp an toàn: CHỈ XÓA ĐÚNG DỮ LIỆU CỦA testUserId ngẫu nhiên này
     try {
       await client1.query('RESET ROLE');
       await client1.query('DELETE FROM public.cultivation_idempotency_log WHERE user_id = $1', [testUserId]);
       await client1.query('DELETE FROM public.cultivation WHERE user_id = $1', [testUserId]);
-
-      // Khôi phục cờ maintenance nếu đã bị tạm thay đổi
-      if (didModifyMaintenance && origMaintenanceVal) {
-        await client1.query(
-          'UPDATE public.app_system_flags SET value = $1, updated_at = NOW() WHERE key = $2',
-          [origMaintenanceVal, 'cultivation_maintenance']
-        );
-        console.log('✓ Đã khôi phục cờ maintenance về trạng thái ban đầu của staging');
-      }
+      console.log(`✓ Đã dọn dẹp sạch sẽ test data của người dùng ngẫu nhiên: ${testUserId}`);
     } catch (cleanupErr) {
       console.warn('Lỗi dọn dẹp dữ liệu test:', cleanupErr.message);
     }
