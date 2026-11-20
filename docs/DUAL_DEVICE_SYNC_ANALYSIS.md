@@ -45,7 +45,7 @@
 | :---: | :--- | :--- | :---: |
 | **Ca 1** | **Offline Divergence** (EXP/Cảnh giới) | Cả hai thiết bị cùng tăng EXP / đổi cảnh giới khi offline, rồi lần lượt sync | **PASS** *(An toàn: phát hiện `cultivation_conflict`, không tự ghi đè)* |
 | **Ca 2** | **Race Condition / Concurrent Upsert** (Mục 5) | Hai thiết bị cùng đọc 1 revision rồi lần lượt upsert lên Supabase | **PASS** *(Tái hiện thành công lỗi **Lost Update** do thiếu OCC)* |
-| **Ca 3** | **Tab Hide Blind Upsert** (`quickPushProgressAndCultivation`) | Tab hide trên thiết bị mang rev cũ (11) ghi đè mù Cloud có rev mới (50) | **PASS** *(Tái hiện thành công lỗi **Catastrophic Regression**)* |
+| **Ca 3** | **Bảo vệ Quick Push Tab Hide** (Đã sửa tại PR #3) | Tab hide trên thiết bị mang rev cũ (11) KHÔNG ghi đè Cloud có rev mới (50) | **PASS** *(Đã bảo vệ an toàn: Quick Push bypass, Cloud rev 50 được bảo toàn)* |
 | **Ca 4** | **Tuần tự tiến độ đọc** (Chương khác nhau) | Thiết bị A đọc Ch 5 -> B nhận Ch 5 và đọc tiếp Ch 10 -> A nhận Ch 10 | **PASS** *(An toàn: hoạt động chuẩn xác)* |
 | **Ca 5** | **Đọc 2 truyện khác nhau** | Thiết bị A đọc Truyện 1, Thiết bị B đọc Truyện 2 | **PASS** *(An toàn: phân tách theo khóa `user_id, novel_id`)* |
 | **Ca 6** | **Clock Skew trong Tiến độ đọc** (Mục 6) | Thiết bị A đồng hồ nhanh 1 giờ ghi đè làm mất tiến độ mới đọc trên Thiết bị B | **PASS** *(Tái hiện thành công lỗi **Lost Reading Progress**)* |
@@ -70,29 +70,11 @@
   - Ở lần sync tiếp theo của Thiết bị A: `cloudRev (N+1) === lastSyncedRev (N+1)` và `localRev (N+1) === lastSyncedRev (N+1)` -> Thiết bị A coi là không có thay đổi (`noop`).
   - Thiết bị A **vĩnh viễn không biết** dữ liệu của mình đã bị mất trên Cloud, và **vĩnh viễn không nhận được** cập nhật của Thiết bị B.
 
-#### 🔴 Lỗi 2: Lỗ hổng `quickPushProgressAndCultivation` (Tab Hide / Page Hide) giật lùi dữ liệu Cloud
-- **Cơ chế gây lỗi:**
-  - Trong `src/lib/sync/autoSync.js` dòng 1344-1355:
-    ```javascript
-    const revChanged = localRev > lastSyncedRev;
-    if (revChanged || pendingChanged) {
-      await client.from('cultivation').upsert({
-        user_id: userId,
-        state: { ...localState, __meta: { pendingSeconds: localPending } },
-        rev: localRev,
-        updated_at: nowTime,
-        device_id: getDeviceId(),
-      }, { onConflict: 'user_id' });
-    ```
-  - Hàm này được kích hoạt khi sự kiện `pagehide` hoặc `visibilitychange=hidden` xảy ra.
-  - **LỖI:** Hàm chỉ so sánh `localRev > lastSyncedRev` dựa trên ledger cục bộ cũ của thiết bị đó mà **hoàn toàn KHÔNG đọc Cloud** trước khi upsert!
-- **Hậu quả:**
-  - Thiết bị B đã dùng 1 tuần đạt Kim Đan, Cloud đang ở `rev: 50`.
-  - Thiết bị A mở lên (ledger cũ `lastSyncedRev: 10`, Ngưng Khí), người dùng đọc vài câu khiến tu vi tăng nhẹ thành `localRev: 11`.
-  - Người dùng chuyển tab -> `quickPushProgressAndCultivation` gửi `upsert` với `rev: 11`.
-  - Toàn bộ tu vi Kim Đan trên Cloud bị **giật lùi vĩnh viễn** về Ngưng Khí (`rev: 11`), mất sạch 50,000 EXP!
+#### 🟢 Lỗi đã được khắc phục tại PR #3: Chặn Quick Push giật lùi dữ liệu Cloud (Nhiệm vụ 3A)
+- **Vấn đề ban đầu:** `quickPushProgressAndCultivation` trước đây gọi blind upsert khi đóng tab khiến máy mang rev cũ giật lùi dữ liệu Cloud của máy khác.
+- **Trạng thái:** **ĐÃ ĐƯỢC BẢO VỆ HOÀN TOÀN TẠI PR #3.** Quick Push tự động bypass việc ghi đè mù, bảo toàn Cloud rev 50 (Kim Đan, 50,000 EXP) và giữ nguyên toàn bộ dữ liệu cục bộ để luồng đồng bộ chính xử lý an toàn khi mở lại app.
 
-#### 🔴 Lỗi 3: Clock Skew làm đảo lộn thứ tự tiến độ đọc (Mục 6)
+#### 🔴 Lỗi 2: Clock Skew làm đảo lộn thứ tự tiến độ đọc (Mục 6)
 - **Cơ chế gây lỗi:**
   - Bảng `progress` dùng `updatedAt` từ client (`Date.now()`).
   - Nếu Thiết bị A đồng hồ chạy nhanh 1 giờ (+3600s), khi đọc Chương 5 nó gán `updatedAt = T + 3600s`.

@@ -611,9 +611,9 @@ describe('Đồng bộ hai thiết bị (Thiết bị A - Laptop vs Thiết bị
   });
 
   // =========================================================================
-  // CA 3: LỖ HỔNG quickPushProgressAndCultivation (Tab hide / Page hide) GHI ĐÈ MÙ CLOUD REV CAO
+  // CA 3: BẢO VỆ DỮ LIỆU - Quick Push (Tab hide / Page hide) KHÔNG ĐƯỢC ghi đè Cloud rev cao (Đã fix ở PR #3)
   // =========================================================================
-  test('Ca 3: LỖ HỔNG CỰC KỲ NGUY HIỂM - Tab hide trên thiết bị cũ ghi đè mù Cloud có revision cao hơn', async () => {
+  test('Ca 3 (Đã fix 3A): BẢO VỆ DỮ LIỆU - Tab hide trên thiết bị mang rev cũ KHÔNG ghi đè Cloud có revision cao hơn', async () => {
     // Thiết bị B đã dùng 1 tuần, đạt Kim Đan, rev 50 trên Cloud
     supabaseMock.tables.cultivation.set('user_123', {
       user_id: 'user_123',
@@ -646,16 +646,19 @@ describe('Đồng bộ hai thiết bị (Thiết bị A - Laptop vs Thiết bị
     // Chờ microtasks hoàn thành
     await new Promise(r => setTimeout(r, 100));
 
-    // KẾT QUẢ TÁI HIỆN LỖI:
-    // quickPushProgressAndCultivation chỉ kiểm tra: localRev (11) > lastSyncedRev (10)
-    // mà KHÔNG đọc Cloud trước khi upsert!
-    const cloudCorrupted = supabaseMock.tables.cultivation.get('user_123');
+    // KẾT QUẢ KỲ VỌNG SAU KHI SỬA NHIỆM VỤ 3A:
+    // Quick Push phát hiện rủi ro và bỏ qua việc ghi đè (bypassed).
+    // Cloud rev 50 (Kim Đan) TUYỆT ĐỐI KHÔNG BỊ GHI ĐÈ lùi về rev 11!
+    const cloudProtected = supabaseMock.tables.cultivation.get('user_123');
 
-    // XÁC NHẬN LỖ HỔNG TÁI HIỆN:
-    // Cloud từ rev 50 (Kim Đan) bị giật lùi về rev 11 (Ngưng Khí)!
-    assert.strictEqual(cloudCorrupted.rev, 11, 'Cloud rev bị giật lùi từ 50 về 11 do blind upsert!');
-    assert.strictEqual(cloudCorrupted.state.realm, 'ngung_khi_1', 'Cảnh giới Kim Đan của B trên Cloud bị xóa sạch!');
-    assert.strictEqual(cloudCorrupted.state.totalExp, 1005, 'EXP trên Cloud bị mất từ 50,000 xuống 1,005!');
+    assert.strictEqual(cloudProtected.rev, 50, 'Cloud rev 50 phải được bảo vệ an toàn, không bị lùi về 11');
+    assert.strictEqual(cloudProtected.state.realm, 'kim_dan', 'Cảnh giới Kim Đan trên Cloud phải được bảo toàn');
+    assert.strictEqual(cloudProtected.state.totalExp, 50000, 'EXP 50,000 trên Cloud phải được bảo toàn');
+
+    // Dữ liệu cục bộ trên Thiết bị A vẫn giữ nguyên
+    const localA = getCultivationState();
+    assert.strictEqual(localA._rev, 11, 'Local _rev 11 vẫn được lưu giữ bền vững trên máy A');
+    assert.strictEqual(localA.totalExp, 1005, 'Local EXP 1005 vẫn được giữ nguyên');
   });
 
   // =========================================================================
