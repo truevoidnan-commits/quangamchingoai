@@ -1,20 +1,21 @@
 # THIẾT KẾ KIẾN TRÚC OPTIMISTIC CONCURRENCY CONTROL (OCC) CHO HỆ THỐNG ĐỒNG BỘ TU VI
-## (Cập nhật sau Review Nhiệm vụ 3B.1)
+## (Cập nhật hoàn thiện sau Review Vòng 2 — Nhiệm vụ 3B.1)
 
 **Dự án:** Thiên Cơ Lâu  
 **Repository:** `https://github.com/truevoidnan-commits/quangamchingoai`  
 **Nhánh thiết kế:** `design/cultivation-occ`  
 **Trạng thái Pull Request:** Draft PR #4 (`https://github.com/truevoidnan-commits/quangamchingoai/pull/4`)  
 **Ngày cập nhật:** 20/11/2026  
-**Mục đích:** TÀI LIỆU THIẾT KẾ KIẾN TRÚC CHÍNH THỨC (CHƯA THỰC THI SQL TRÊN SUPABASE / CHƯA SỬA LOGIC PRODUCTION)  
+**Mục đích:** TÀI LIỆU THIẾT KẾ KIẾN TRÚC CHÍNH THỨC (CHƯA THỰC THI SQL TRÊN SUPABASE PRODUCTION / CHƯA SỬA CODE PRODUCTION)  
 
 ---
 
 > [!IMPORTANT]
-> **Cam kết an toàn tuyệt đối:**
-> - Tài liệu này **CHỈ** phục vụ mục đích phân tích kỹ thuật, mô hình hóa dữ liệu và thiết kế kiến trúc chuẩn bị cho giai đoạn triển khai.
+> **Tuyên bố trạng thái an toàn & Phạm vi kỹ thuật:**
+> - Hệ thống hiện tại **đang ở giai đoạn thiết kế kiến trúc**. Môi trường Production hiện tại **VẪN ĐANG ĐƯỢC BẢO VỆ TẠM THỜI** bởi cơ chế chặn ghi đè mù của Quick Push (đã hoàn thành ở Nhiệm vụ 3A / PR #3).
+> - **Tuyệt đối KHÔNG tuyên bố OCC đã bảo vệ production** khi chưa hoàn tất cutover phân quyền và chưa vượt qua toàn bộ integration tests trên môi trường Staging.
 > - **Tuyệt đối KHÔNG** chạy SQL migration trên Supabase production, không tự ý thay đổi quyền RLS/GRANT, không can thiệp API keys, Supabase Auth hoặc Cloudflare R2.
-> - **Tuyệt đối KHÔNG** sửa đổi mã nguồn production trong PR này. Mọi đoạn mã SQL hoặc RPC trong tài liệu này được trình bày dưới dạng đặc tả kỹ thuật mẫu (Technical Specification & Pseudocode) phục vụ thẩm định.
+> - Mọi đoạn mã SQL/RPC trong tài liệu này là **đặc tả kỹ thuật mẫu (Technical Specification & Pseudocode)** phục vụ thẩm định và chuẩn bị cho Nhiệm vụ 3B.2.
 
 ---
 
@@ -28,7 +29,7 @@ flowchart TD
     subgraph Client ["Client (Trình duyệt Máy tính / Điện thoại)"]
         UI["Giao diện Tu Vi & Đọc Truyện"] --> Context["CultivationContext.jsx"]
         Context --> CultLib["src/lib/cultivation.js"]
-        CultLib --> LocalStorage["localStorage:\n- tcl_cultivation_state_real (Snapshot)\n- cultivation_pending_seconds (Bộ đếm đọc)\n- tcl_sync_ledger (Sổ cái đồng bộ)\n- tcl_cultivation_conflict_state (Xung đột bền vững)\n- tcl_cultivation_backup_* (3 bản xoay vòng)"]
+        CultLib --> LocalStorage["localStorage:\n- tcl_cultivation_state_real (Snapshot Tu Vi)\n- cultivation_pending_seconds (Bộ đếm đọc truyện)\n- tcl_sync_ledger (Sổ cái đồng bộ)\n- tcl_cultivation_conflict_state (Xung đột bền vững)\n- tcl_cultivation_backup_* (3 bản sao lưu xoay vòng)"]
         
         SyncEngine["src/lib/sync/syncEngine.js"] --> LocalStorage
         AutoSync["src/lib/sync/autoSync.js"] --> LocalStorage
@@ -37,19 +38,22 @@ flowchart TD
 
     subgraph Supabase ["Cloud (Supabase PostgreSQL)"]
         RPC["RPC Function: sync_cultivation_occ()\n(Atomic Transaction & Row Lock)"]
-        TableCult["Bảng public.cultivation:\n(user_id, rev, state, updated_at, device_id,\nlast_idempotency_key, last_request_at)"]
+        TableCult["Bảng public.cultivation:\n(user_id, rev, state, updated_at, device_id)"]
+        TableIdem["Bảng public.cultivation_idempotency_log:\n(user_id, idempotency_key, committed_rev, created_at)"]
+        
         RPC --> TableCult
+        RPC --> TableIdem
     end
 
     AutoSync -- "1. runAutoSync() gọi RPC" --> RPC
     SyncEngine -- "2. syncCultivation() gọi RPC" --> RPC
     TableCult -- "3. SELECT (Pull / Read-only)" --> AutoSync
-    TableCult -. "4. REST Direct Upsert (BỊ CHẶN BỞI REVOKE)" .-x TableCult
+    TableCult -. "4. REST Direct Upsert (BỊ CHẶN TUYỆT ĐỐI BỞI REVOKE)" .-x TableCult
 ```
 
 ### 1.2. Thiết Kế Tách Biệt Hoàn Toàn Giữa Local Revision và Cloud Revision (Quyết định 1A & Yêu cầu B)
 
-Trong kiến trúc cũ, `saveCultivationState()` tự tăng `state._rev = (state._rev || 0) + 1` mỗi khi lưu vào `localStorage`. Việc này khiến revision cục bộ bị phụ thuộc vào số lần người dùng thao tác trên máy đó thay vì phản ánh phiên bản dữ liệu trên Cloud, dẫn đến xung đột giả tạo hoặc nhảy cóc revision khi một máy offline nhiều ngày.
+Trong kiến trúc cũ, hàm `saveCultivationState()` tự tăng `state._rev = (state._rev || 0) + 1` mỗi khi lưu vào `localStorage`. Việc này khiến revision cục bộ bị phụ thuộc vào số lần người dùng thao tác trên máy đó thay vì phản ánh phiên bản dữ liệu trên Cloud, dẫn đến xung đột giả tạo hoặc nhảy cóc revision khi một máy offline nhiều ngày.
 
 Để triển khai **Server-managed Monotonic Revision (Quyết định 1A)** một cách chuẩn mực, hệ thống thiết kế lại toàn bộ mối quan hệ giữa các biến trạng thái:
 
@@ -92,10 +96,60 @@ sequenceDiagram
 
     Note over User, Local: 🌐 CÓ MẠNG TRỞ LẠI (ONLINE)
     Local->>Cloud: Gọi RPC sync_cultivation_occ(expected_rev = 10, state, idempotency_key)
-    Note over Cloud: Server kiểm tra: current_rev (10) == expected_rev (10) -> KHỚP!<br/>Server tăng đơn điệu Cloud rev = 11.<br/>Ghi nhận state mới nhất và last_idempotency_key.
+    Note over Cloud: Server kiểm tra: current_rev (10) == expected_rev (10) -> KHỚP!<br/>Server tăng đơn điệu Cloud rev = 11.<br/>Ghi nhận state mới nhất và ghi nhật ký idempotency_log.
     Cloud-->>Local: Trả về { status: 'SUCCESS', rev: 11 }
     
     Note over Local: Cập nhật sổ đồng bộ:<br/>lastSyncedCloudRev = 11<br/>lastSyncedLocalSeq = 25<br/>isDirty = false.<br/>Toàn bộ 20 thay đổi offline được gom thành 1 commit duy nhất!
+```
+
+### 1.4. Xử Lý Biến Đổi Cục Bộ Trong Lúc Request RPC Đang Xử Lý (In-Flight Local Mutation)
+
+Một lỗ hổng tinh vi trong các hệ thống phân tán là: **Người dùng tiếp tục thao tác trên máy trong lúc gói tin RPC đang bay trên đường truyền mạng.**
+
+- **Tình huống xảy ra:**
+  1. Lúc $T_0$: Client chuẩn bị gửi RPC với `localSequenceNumber = 25`, `expectedRevision = 10`.
+  2. Gói tin mạng mất từ 500ms đến 2000ms để hoàn tất round-trip.
+  3. Lúc $T_1$ (RPC đang chạy): Người dùng đọc xong 1 chương truyện, bấm "Đột phá Cảnh Giới". Hàm `saveCultivationState()` kích hoạt, làm tăng `localSequenceNumber` từ $25 \to 26$ và $26 \to 27$ trong `localStorage`.
+  4. Lúc $T_2$: RPC phản hồi `SUCCESS` với `new_cloud_rev = 11`.
+- **Rủi ro nếu thiết kế sai:** Nếu client vô tư cập nhật `lastSyncedLocalSeq = currentLocalSeq` (lúc này là 27), thì các thao tác 26 và 27 phát sinh ở $T_1$ sẽ bị đánh dấu nhầm là "đã đồng bộ", dẫn đến việc chúng không bao giờ được gửi lên Cloud (mất dữ liệu đột phá)!
+- **Thiết kế giải pháp (Immutable In-Flight Snapshot):**
+  1. Tại thời điểm bắt đầu dispatch request, client tạo một **bản chụp bất biến (In-Flight Snapshot)**:
+     ```javascript
+     const inFlightSnapshot = {
+       sentLocalSeq: localSequenceNumber, // Giá trị cố định tại thời điểm gửi (ví dụ: 25)
+       expectedRev: lastSyncedCloudRev,   // rev 10
+       idempotencyKey: crypto.randomUUID(),
+       payloadState: JSON.parse(JSON.stringify(localState)),
+       sentPending: localPending
+     };
+     ```
+  2. Khi nhận phản hồi `SUCCESS (new_rev: 11)`:
+     - Client **CHỈ** cập nhật: `lastSyncedLocalSeq = inFlightSnapshot.sentLocalSeq` (tức là 25).
+     - Cập nhật: `lastSyncedCloudRev = 11`.
+  3. Đánh giá lại cờ dirty ngay lập tức:
+     $$\text{isDirty} = (\text{localSequenceNumber } (27) > \text{lastSyncedLocalSeq } (25)) \implies \mathbf{TRUE}!$$
+  4. **Kết quả:** Thao tác đột phá (seq 26, 27) diễn ra trong lúc gửi request vẫn tiếp tục được đánh dấu là "CHƯA ĐỒNG BỘ", và sẽ được tự động kích hoạt đẩy lên Cloud ở chu kỳ sync kế tiếp. Không một thao tác nào bị bỏ sót hay thất lạc!
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Người dùng
+    participant Local as Local State (localStorage)
+    participant Sync as Sync Worker
+    participant Cloud as Supabase RPC
+
+    Note over Local: localSeq = 25, isDirty = true
+    Sync->>Local: Tạo In-Flight Snapshot: sentLocalSeq = 25, key = req_1
+    Sync->>Cloud: Gửi sync_cultivation_occ(expected_rev=10, state_25, req_1)
+    
+    Note over Cloud: ⏳ Đang xử lý trên đường truyền (500ms)...
+    User->>Local: Đột phá Cảnh giới trong lúc chờ!<br/>saveCultivationState() -> localSeq = 27
+    Note over Local: localSeq hiện tại là 27!
+    
+    Cloud-->>Sync: Trả về SUCCESS: rev = 11
+    Sync->>Local: Áp dụng kết quả:<br/>lastSyncedCloudRev = 11<br/>lastSyncedLocalSeq = sentLocalSeq (25)
+    
+    Note over Local: Kiểm tra dirty:<br/>localSeq (27) > lastSyncedLocalSeq (25) -> VẪN DIRTY!<br/>Thao tác đột phá 26, 27 được bảo toàn để sync tiếp.
 ```
 
 ---
@@ -112,8 +166,8 @@ Bảng kiểm kê 9 đường ghi và thao tác truy cập dữ liệu tu vi tro
 | **4** | `quickPushProgressAndCultivation()` | [autoSync.js:1336-1385](file:///d:/Downloads/dat-antigravity/Thiên%20Cơ%20Lâu/src/lib/sync/autoSync.js#L1336-L1385) | **LOCAL LOG ONLY** *(Trước đây là REMOTE WRITE)* | Khi tab bị ẩn (`visibilitychange=hidden`), trình duyệt đóng (`pagehide`, `beforeunload`). | Không gửi payload lên Cloud. Chỉ ghi log sự kiện `cultivation_quick_push_bypassed`. | Giữ nguyên `localRev`, không tăng `lastSyncedRev`. | **Đã bảo vệ an toàn ở Nhiệm vụ 3A (PR #3):** Không còn rủi ro ghi đè mù Cloud khi đóng tab/ẩn trình duyệt. Giữ nguyên local state và dirty flag để luồng chính xử lý. | **Đã bảo vệ an toàn (Tạm thời)** |
 | **5** | `pullCultivationBeforeMeditation()` | [autoSync.js:238-330](file:///d:/Downloads/dat-antigravity/Thiên%20Cơ%20Lâu/src/lib/sync/autoSync.js#L238-L330) | **READ-ONLY** (Cloud) / **LOCAL WRITE** (`localStorage`) | Trước khi mở giao diện Tu Luyện / Thiền Định. | Đọc `cultivation.select()`. Nếu `cloudRev > lastSyncedRev` và `localRev <= lastSyncedRev`, fast-forward ghi đè `localStorage`. | Cập nhật `lastSyncedRev = cloudRev`. | **An toàn:** Hàm chỉ đọc từ Cloud, không phát sinh bất kỳ lệnh ghi nào lên Supabase. Có backup cục bộ trước khi ghi đè. | **Đang hoạt động (An toàn)** |
 | **6** | `applyCloudCultivation()` | [syncEngine.js:564](file:///d:/Downloads/dat-antigravity/Thiên%20Cơ%20Lâu/src/lib/sync/syncEngine.js#L564) & [autoSync.js:614](file:///d:/Downloads/dat-antigravity/Thiên%20Cơ%20Lâu/src/lib/sync/autoSync.js#L614) | **LOCAL WRITE ONLY** (`localStorage` & `syncLedger`) | Khi Cloud có revision mới hơn và Local không thay đổi, hoặc khi người dùng chọn nhận Cloud. | Backup local -> Ghi `cloudState` vào `tcl_cultivation_state_real` -> Cập nhật `ledger.cultivation.lastSyncedRev`. | Ghi nhận `cloudRev`. | **An toàn:** Chỉ ghi dữ liệu cục bộ, không gửi lệnh lên Supabase. Tự động backup 3 bản gần nhất. | **Đang hoạt động (An toàn)** |
-| **7** | `saveCultivationState()` | [cultivation.js:1241](file:///d:/Downloads/dat-antigravity/Thiên%20Cơ%20Lâu/src/lib/cultivation.js#L1241) | **LOCAL WRITE ONLY** (`localStorage`) | Mọi thao tác tu luyện trong ứng dụng (tăng exp, đột phá, dùng đan dược). | Ghi chuỗi JSON vào `tcl_cultivation_state_real`. | Tăng `localMutationSeq`. | **Không rủi ro Cloud:** Chỉ thao tác trên bộ nhớ client. | **Đang hoạt động** |
-| **8** | `performRestore()` | [backupEngine.js:935-960](file:///d:/Downloads/dat-antigravity/Thiên%20Cơ%20Lâu/src/lib/backup/backupEngine.js#L935-L960) | **LOCAL WRITE ONLY** (`localStorage`) | Người dùng chủ động khôi phục dữ liệu từ tệp sao lưu `.json`. | Ghi đè `tcl_cultivation_state_v3` và `cultivation_pending_seconds`. | Tăng `localMutationSeq`. | **Xung đột tiềm ẩn:** Không ghi trực tiếp lên Supabase, nhưng lần `runAutoSync` kế tiếp sẽ kích hoạt OCC và đối chiếu với Cloud. | **Đang hoạt động** |
+| **7** | `saveCultivationState()` | [cultivation.js:1241](file:///d:/Downloads/dat-antigravity/Thiên%20Cơ%20Lâu/src/lib/cultivation.js#L1241) | **LOCAL WRITE ONLY** (`localStorage`) | Mọi thao tác tu luyện trong ứng dụng (tăng exp, đột phá, dùng đan dược). | Ghi chuỗi JSON vào `tcl_cultivation_state_real`. | Tăng `localSequenceNumber`. | **Không rủi ro Cloud:** Chỉ thao tác trên bộ nhớ client. | **Đang hoạt động** |
+| **8** | `performRestore()` | [backupEngine.js:935-960](file:///d:/Downloads/dat-antigravity/Thiên%20Cơ%20Lâu/src/lib/backup/backupEngine.js#L935-L960) | **LOCAL WRITE ONLY** (`localStorage`) | Người dùng chủ động khôi phục dữ liệu từ tệp sao lưu `.json`. | Ghi đè `tcl_cultivation_state_v3` và `cultivation_pending_seconds`. | Tăng `localSequenceNumber`. | **Xung đột tiềm ẩn:** Không ghi trực tiếp lên Supabase, nhưng lần `runAutoSync` kế tiếp sẽ kích hoạt OCC và đối chiếu với Cloud. | **Đang hoạt động** |
 | **9** | Giải quyết xung đột (`onConflictCultivation`) | [syncEngine.js:664-694](file:///d:/Downloads/dat-antigravity/Thiên%20Cơ%20Lâu/src/lib/sync/syncEngine.js#L664-L694) | **REMOTE WRITE** (nếu chọn `'local'`) | Khi phát hiện xung đột giữa Local và Cloud. | Nếu chọn `'cloud'`: gọi `applyCloudCultivation()`. Nếu chọn `'local'`: gọi force-commit có OCC. | Dùng `conflict_cloud_snapshot.rev` làm `expectedRevision`. | **Cần bảo vệ bằng OCC:** Nếu chọn `'local'`, bắt buộc phải dùng RPC kèm expected revision của Cloud snapshot vừa xem. Tuyệt đối không dùng blind upsert. | **Cần thiết kế lại theo Mục 8** |
 
 ---
@@ -144,9 +198,9 @@ Repository hiện tại **KHÔNG chứa tệp DDL migration (`.sql`) tạo bản
 3. **Cấu hình RLS Policies hiện có:**
    - Bảng `cultivation` đã được `ALTER TABLE cultivation ENABLE ROW LEVEL SECURITY;` hay chưa?
    - Các chính sách SELECT/INSERT/UPDATE hiện hữu đang được viết như thế nào?
-4. **Quyền hạn của role `authenticated` trên schema `public`:**
-   - Role `authenticated` có quyền tạo bảng/trigger không (thường là không)?
-   - Role `authenticated` có quyền `EXECUTE` trên các function mới tạo trong schema `public` không?
+4. **Quyền hạn toàn diện của các SQL Roles trên database:**
+   - Kiểm tra quyền của các role: `anon`, `authenticated`, `authenticator` (role PostgREST proxy), `service_role`.
+   - Kiểm tra `DEFAULT PRIVILEGES` trong schema `public` để đảm bảo bảng không bị tự động cấp quyền ghi lại cho các role khác.
 5. **Dung lượng trung bình bản ghi `state` JSONB:**
    - Kích thước snapshot hiện tại của người dùng là bao nhiêu KB để định hình giới hạn validation đầu vào (`max_bytes`).
 
@@ -196,55 +250,90 @@ sequenceDiagram
 
 ---
 
-## 5. Giải Pháp Ngăn Chặn Client Cũ Bypass OCC (Yêu Cầu A)
+## 5. Giải Pháp Ngăn Chặn Client Cũ Bypass OCC & Kế Hoạch Cutover Dứt Điểm
 
-### 5.1. Nguy Cơ Client Cũ Ghi Đè Mù (The Legacy Client Bypass Threat)
-Khi triển khai cơ chế OCC mới qua RPC, một rủi ro chí mạng phát sinh:
-- Người dùng có một thiết bị (ví dụ tab trình duyệt trên điện thoại) đang mở mã nguồn cũ chưa tải lại bundle mới.
-- Thiết bị cũ này không biết đến RPC `sync_cultivation_occ`. Nó tiếp tục chạy mã nguồn cũ và gọi trực tiếp:
+### 5.1. Bác Bỏ Ngưỡng Adoption 98% — Thiết Kế Cutover Dứt Điểm (Definitive Cutover)
+Người dùng chỉ đạo chính xác: **Không sử dụng ngưỡng 98% RPC adoption làm bằng chứng an toàn.**
+
+- **Lý do bác bỏ ngưỡng 98%:** Dù 99% client đã cập nhật mã mới, chỉ cần 1 client cũ (chiếm 1%) chạy ngầm trên một tab điện thoại bị bỏ quên cũng đủ để phát lệnh `upsert` vô điều kiện và xóa sạch tiến độ tu vi mà client mới đã bảo vệ qua OCC.
+- **Thiết kế Cutover Dứt Điểm (Definitive Cutover Architecture):**
+  Ngay tại thời điểm OCC chính thức có hiệu lực trên database, **mọi đường ghi trực tiếp không có OCC bắt buộc phải bị từ chối 100% ngay lập tức**:
+  1. Toàn bộ quyền `INSERT, UPDATE, DELETE` trên bảng `cultivation` bị thu hồi vĩnh viễn khỏi các role client.
+  2. Không có bất kỳ khoảng thời gian chuyển tiếp nào cho phép "chạy song song cả hai đường ghi".
+  3. Mọi client cũ khi phát lệnh `upsert()` trực tiếp sẽ nhận ngay mã lỗi PostgreSQL `42501 (permission denied)`.
+
+### 5.2. Đảm Bảo Client Cũ Giữ Nguyên Dữ Liệu Local Khi Bị Từ Chối
+Khi lệnh direct `upsert` của client cũ bị database từ chối với lỗi `42501`:
+- Trong mã nguồn hiện tại của client cũ ([autoSync.js:672](file:///d:/Downloads/dat-antigravity/Thiên%20Cơ%20Lâu/src/lib/sync/autoSync.js#L672)):
   ```javascript
-  supabase.from('cultivation').upsert({ user_id, state, rev, updated_at, device_id }, { onConflict: 'user_id' });
+  if (!cultUpsertErr) {
+    pushedScopes.add('cultivation');
+    ledger.cultivation = { lastSyncedRev: localRev, ... };
+  } else {
+    console.warn('Lỗi upsert tu vi lên cloud:', cultUpsertErr.message);
+    errors.push(`Lỗi cập nhật tu vi lên cloud: ${cultUpsertErr.message}`);
+  }
   ```
-- Nếu Database vẫn mở quyền ghi trực tiếp cho role `authenticated`, câu lệnh `upsert` này sẽ **bỏ qua hoàn toàn cơ chế OCC**, thực hiện ghi đè mù và phá hủy toàn bộ dữ liệu đã được bảo vệ bởi thiết bị mới!
+- **Hành vi an toàn tuyệt đối:** Client cũ kiểm tra `if (!cultUpsertErr)`. Do có lỗi, client cũ **KHÔNG BAO GIỜ** cập nhật `lastSyncedRev`, **KHÔNG XÓA** `localStorage`, và **KHÔNG XÓA** `pending_seconds`. Dữ liệu tu vi trên máy cũ được bảo lưu nguyên vẹn 100%. Khi người dùng reload trang để nhận bản build mới, dữ liệu đó sẽ được đồng bộ an toàn qua RPC OCC.
 
-### 5.2. So Sánh Các Phương Án Bảo Vệ Tầng Database
+### 5.3. Kiểm Tra Toàn Bộ Quyền Ghi SQL & Phân Quyền Kế Thừa (All-Role SQL Security Audit)
+Không chỉ giới hạn ở 2 role `authenticated` và `anon`, hệ thống kiểm tra toàn diện cây phân quyền trong PostgreSQL:
 
-| Tiêu Chí | Phương Án 1: Phân Quyền GRANT/REVOKE (Khuyến nghị chuẩn mực) ⭐ | Phương Án 2: Database Trigger Chặn Direct Writes |
-|:---|:---|:---|
-| **Cơ chế** | Thu hồi quyền `INSERT, UPDATE, DELETE` trên bảng `cultivation` đối với role `authenticated` và `anon`. Chỉ giữ quyền `SELECT`. Chỉ cấp quyền `EXECUTE` function RPC cho `authenticated`. | Tạo Trigger `BEFORE INSERT OR UPDATE` kiểm tra cờ session (ví dụ `current_setting('app.via_occ_rpc', true)`). Nếu không có cờ, ném `RAISE EXCEPTION`. |
-| **Tính triệt để** | **100% Triệt để:** Được thực thi ở tầng nhân PostgreSQL (Kernel permission check). Không một câu lệnh REST API nào có thể lách qua. | Triệt để, nhưng phụ thuộc vào việc hàm RPC phải set cờ session trước khi ghi. |
-| **Hiệu năng** | **Tối ưu:** Kiểm tra quyền một lần khi lập kế hoạch truy vấn, 0% overhead CPU lúc thực thi. | Tốn thêm chi phí CPU chạy hàm trigger trên từng dòng dữ liệu được ghi. |
-| **Phản hồi cho Client cũ** | PostgREST trả về HTTP 403 Forbidden với mã lỗi PostgreSQL `42501 permission denied for table cultivation`. Code client cũ sẽ bắt lỗi an toàn qua `catch` block, không xóa dữ liệu cục bộ. | PostgREST trả về HTTP 400 Bad Request kèm message lỗi từ trigger. |
+```mermaid
+flowchart TD
+    subgraph PostgREST ["PostgREST HTTP Engine"]
+        ConnRole["Role kết nối: authenticator"]
+    end
 
-### 5.3. Thiết Kế Phương Án Khuyến Nghị (GRANT/REVOKE Encasulation)
+    subgraph Roles ["Cây Phân Quyền PostgreSQL"]
+        Anon["Role: anon (Khách vãng lai)"]
+        Auth["Role: authenticated (Người dùng đã login)"]
+        Public["Role: public (Mặc định kế thừa)"]
+        Service["Role: service_role (Admin API nội bộ)"]
+        Super["Role: postgres (Superuser / Function Owner)"]
+    end
 
-> [!NOTE]
-> Đoạn mã dưới đây là đặc tả phân quyền mẫu phục vụ thiết kế, **CHƯA ĐƯỢC CHẠY TRÊN DATABASE PRODUCTION**.
+    ConnRole -- "Chuyển role (SET ROLE)" --> Anon
+    ConnRole -- "Chuyển role (SET ROLE)" --> Auth
 
-```sql
--- ĐẶC TẢ PHÂN QUYỀN KHÓA CHẶT ĐƯỜNG GHI TRỰC TIẾP (PSEUDOCODE)
--- 1. Cho phép client đọc dữ liệu tu vi qua PostgREST SELECT thông thường
-GRANT SELECT ON TABLE public.cultivation TO authenticated;
+    Anon -. "Kế thừa" .-> Public
+    Auth -. "Kế thừa" .-> Public
 
--- 2. TƯỚC BỎ TOÀN BỘ QUYỀN GHI TRỰC TIẾP CỦA CLIENT TRÊN BẢNG
-REVOKE INSERT, UPDATE, DELETE ON TABLE public.cultivation FROM anon, authenticated;
+    subgraph Perms ["Bảng public.cultivation"]
+        SelectOk["SELECT: Cho phép authenticated"]
+        WriteDenied["INSERT / UPDATE / DELETE: THU HỒI TẤT CẢ (REVOKE)"]
+    end
 
--- 3. CHỈ CHO PHÉP GHI DỮ LIỆU DUY NHẤT THÔNG QUA HÀM RPC OCC ĐƯỢC ỦY QUYỀN
-GRANT EXECUTE ON FUNCTION public.sync_cultivation_occ TO authenticated;
+    Auth --> SelectOk
+    Auth -. "BỊ CHẶN" .-x WriteDenied
+    Anon -. "BỊ CHẶN" .-x WriteDenied
+    Public -. "BỊ CHẶN" .-x WriteDenied
 ```
 
-**Cơ chế Fail-Safe của Client cũ:**
-Khi client cũ gọi `.from('cultivation').upsert()`, Supabase PostgREST sẽ từ chối với lỗi `42501`. Trong mã nguồn client cũ ([autoSync.js:672](file:///d:/Downloads/dat-antigravity/Thiên%20Cơ%20Lâu/src/lib/sync/autoSync.js#L672)):
-```javascript
-if (!cultUpsertErr) {
-  // Chỉ cập nhật ledger nếu ghi thành công
-  ledger.cultivation = { lastSyncedRev: localRev, ... };
-} else {
-  console.warn('Lỗi upsert tu vi lên cloud:', cultUpsertErr.message);
-  errors.push(`Lỗi cập nhật tu vi lên cloud: ${cultUpsertErr.message}`);
-}
-```
-Client cũ bắt được lỗi, ghi nhận cảnh báo và **KHÔNG cập nhật `lastSyncedRev`**, **KHÔNG xóa dữ liệu cục bộ**. Dữ liệu Cloud được bảo vệ nguyên vẹn 100% khỏi việc bị ghi đè mù.
+1. **Thu hồi quyền trực tiếp trên Bảng:**
+   ```sql
+   -- TƯỚC BỎ TOÀN BỘ QUYỀN GHI TRÊN BẢNG CHO MỌI ROLE CỦA CLIENT
+   REVOKE INSERT, UPDATE, DELETE ON TABLE public.cultivation FROM anon, authenticated, public;
+   -- Chỉ giữ lại quyền SELECT cho người dùng đã đăng nhập đọc dữ liệu
+   GRANT SELECT ON TABLE public.cultivation TO authenticated;
+   ```
+2. **Kiểm tra Role `authenticator`:**
+   - PostgREST kết nối tới PostgreSQL dưới vai trò `authenticator`, sau đó thực hiện `SET ROLE authenticated` hoặc `SET ROLE anon`. Đảm bảo rằng role `authenticator` không được cấp quyền `BYPASSRLS` hay quyền ghi trực tiếp trên `cultivation`.
+3. **Kiểm tra `DEFAULT PRIVILEGES`:**
+   - Đảm bảo trong schema `public` không có lệnh `ALTER DEFAULT PRIVILEGES ... GRANT ALL ON TABLES TO authenticated;` làm vô hiệu hóa chính sách bảo mật trong tương lai.
+4. **Cấp quyền thực thi duy nhất cho RPC:**
+   ```sql
+   REVOKE EXECUTE ON FUNCTION public.sync_cultivation_occ FROM PUBLIC, anon;
+   GRANT EXECUTE ON FUNCTION public.sync_cultivation_occ TO authenticated;
+   ```
+
+### 5.4. Kế Hoạch Staging Kiểm Tra Quyền & Khả Năng Bypass
+Trước khi chạy migration trên Production, môi trường Staging phải vượt qua 5 bài test phân quyền:
+- **Test P1 (Anon Bypass Test):** Gọi PostgREST `POST/PATCH /rest/v1/cultivation` với Anon Key -> Phải nhận HTTP 401 Unauthorized hoặc 403 Forbidden.
+- **Test P2 (Direct REST Write Lockout):** Dùng JWT User hợp lệ gọi `POST /rest/v1/cultivation` (Upsert trực tiếp) -> Phải nhận HTTP 403 Forbidden với mã lỗi PostgreSQL `42501 permission denied for table cultivation`.
+- **Test P3 (RPC Access Test):** Dùng JWT User hợp lệ gọi `POST /rest/v1/rpc/sync_cultivation_occ` -> Phải thực thi thành công (HTTP 200).
+- **Test P4 (Role Inheritance Audit):** Truy vấn `information_schema.role_table_grants` và `pg_roles` để xác minh không có quyền ghi nào bị rò rỉ qua role `public` hoặc kế thừa nhóm.
+- **Test P5 (Service Role Integrity):** Xác nhận `service_role` (chỉ dùng cho backend admin/backup) vẫn truy cập được bình thường để phục vụ công tác backup dữ liệu.
 
 ---
 
@@ -267,45 +356,71 @@ flowchart TD
     
     CheckExist -- "Chưa tồn tại (First Insert)" --> CheckFirstRev{"expected_rev có là 0 hoặc NULL?"}
     CheckFirstRev -- "Sai (expected > 0)" --> ReturnConflictNotFound["Trả về CONFLICT: ROW_NOT_FOUND"]
-    CheckFirstRev -- "Đúng (First Onboarding)" --> DoInsert["INSERT INTO cultivation (\nuser_id, rev=1, state, updated_at,\ndevice_id, last_idempotency_key, last_request_at\n) VALUES (...) ON CONFLICT (user_id) DO NOTHING"]
+    CheckFirstRev -- "Đúng (First Onboarding)" --> DoInsert["INSERT INTO cultivation (\nuser_id, rev=1, state, updated_at,\ndevice_id\n) VALUES (...) ON CONFLICT (user_id) DO NOTHING"]
     DoInsert --> CheckInsertSuccess{"Insert thành công?"}
-    CheckInsertSuccess -- "Có (Thắng First Insert)" --> ReturnSuccessFirst["Trả về SUCCESS: rev = 1"]
+    CheckInsertSuccess -- "Có (Thắng First Insert)" --> LogFirstIdem["Ghi nhật ký idempotency_log (rev=1)"]
+    LogFirstIdem --> ReturnSuccessFirst["Trả về SUCCESS: rev = 1"]
     CheckInsertSuccess -- "Không (Máy khác vừa chèn trước)" --> FetchNewRow["SELECT lại dòng vừa được chèn"]
     FetchNewRow --> ReturnConflictConcurrent["Trả về CONFLICT: CONCURRENT_FIRST_INSERT\nkèm current_cloud để so sánh"]
     
-    CheckExist -- "Đã tồn tại" --> CheckIdempotent{"v_row.last_idempotency_key == p_idempotency_key?"}
-    CheckIdempotent -- "Trùng Idempotency Key" --> ReturnIdempotentReplay["Trả về SUCCESS: rev = v_row.rev\n(IDEMPOTENT_REPLAY, không ghi lại)"]
+    CheckExist -- "Đã tồn tại" --> CheckIdemLog{"Tìm idempotency_key trong\nbảng cultivation_idempotency_log?"}
+    CheckIdemLog -- "ĐÃ TỒN TẠI TRONG NHẬT KÝ" --> ReturnIdempotentReplay["Trả về SUCCESS (IDEMPOTENT_REPLAY):\nrev = log.committed_rev,\ncurrent_cloud_rev = v_row.rev"]
     
-    CheckIdempotent -- "Key mới" --> CheckRevMatch{"v_row.rev == p_expected_rev?"}
+    CheckIdemLog -- "Chưa có trong nhật ký" --> CheckRevMatch{"v_row.rev == p_expected_rev?"}
     CheckRevMatch -- "Lệch Revision (Mismatch)" --> ReturnConflictRev["Trả về CONFLICT: REV_MISMATCH\nkèm current_cloud snapshot để đối chiếu"]
     
-    CheckRevMatch -- "Khớp Revision" --> DoUpdate["UPDATE cultivation SET\nrev = v_row.rev + 1,\nstate = p_payload_state,\nupdated_at = p_updated_at,\ndevice_id = p_device_id,\nlast_idempotency_key = p_idempotency_key,\nlast_request_at = p_updated_at\nWHERE user_id = auth.uid()"]
-    DoUpdate --> ReturnSuccessUpdate["Trả về SUCCESS: rev = v_row.rev + 1"]
+    CheckRevMatch -- "Khớp Revision" --> DoUpdate["UPDATE cultivation SET\nrev = v_row.rev + 1,\nstate = p_payload_state,\nupdated_at = p_updated_at,\ndevice_id = p_device_id\nWHERE user_id = auth.uid()"]
+    DoUpdate --> LogIdemUpdate["INSERT INTO cultivation_idempotency_log\n(user_id, idempotency_key, committed_rev)"]
+    LogIdemUpdate --> ReturnSuccessUpdate["Trả về SUCCESS: rev = v_row.rev + 1"]
 ```
 
-### 6.2. Cơ Chế Idempotency & Request ID (Yêu Cầu D)
-Theo yêu cầu nghiêm ngặt của Người dùng: **Tuyệt đối không được xem cùng `device_id` hoặc cùng `rev` là bằng chứng chắc chắn một request đã commit thành công.**
+### 6.2. Cơ Chế Idempotency & Bảng Nhật Ký Lịch Sử Request (Yêu Cầu 2)
 
-Hệ thống thiết kế cơ chế **Idempotency Key độc lập (UUID v4 do client sinh cho mỗi lượt sync)**:
-- Mỗi khi client chuẩn bị gửi một request đồng bộ, client sinh ra một `idempotency_key = crypto.randomUUID()`.
-- Cơ sở dữ liệu lưu trữ `last_idempotency_key` và `last_request_at` trực tiếp trên bản ghi `cultivation`.
+#### 6.2.1. Giới Hạn Của Cột Đơn `last_idempotency_key`
+Phân tích kỹ thuật chỉ rõ: **Nếu chỉ lưu 1 cột `last_idempotency_key` trên dòng `cultivation`, hệ thống sẽ thất bại khi có request khác xen vào giữa hai lần retry:**
+1. $T_0$: Client A gửi `req_A1` với `expected_rev = 10`. DB commit thành công, tăng rev lên 11, ghi `last_idempotency_key = req_A1`.
+2. $T_1$: Mạng bị đứt, gói tin HTTP response bị mất. Client A rơi vào trạng thái chờ (timeout).
+3. $T_2$: Trong lúc Client A đang chờ timeout để retry, Thiết bị B gửi request `req_B1` với `expected_rev = 11`. DB commit thành công, tăng rev lên 12, và **ghi đè** `last_idempotency_key = req_B1`!
+4. $T_3$: Client A hết timeout và retry gửi lại `req_A1` (với `expected_rev = 10`).
+5. **Hậu quả nếu chỉ kiểm tra 1 cột:** Database đọc thấy `current_rev = 12` và `last_idempotency_key == req_B1` (khác `req_A1`). Database kết luận: *"Request req_A1 chưa bao giờ được commit"* và trả về `CONFLICT (REV_MISMATCH)`!
+6. Lúc này Client A tưởng rằng `req_A1` thất bại hoàn toàn và tải bản Cloud rev 12 về đè lên local, trong khi thực tế dữ liệu của `req_A1` **đã nằm trong Cloud ở rev 11**!
 
-#### Phân Tích Kịch Bản Sự Cố Mạng 4 Bước:
-1. **Bước 1:** Database commit thành công dữ liệu của Client A, tăng Cloud rev từ $10 \to 11$, lưu `last_idempotency_key = req_A_123`.
-2. **Bước 2:** Mạng kết nối bị ngắt đột ngột (Network drop / Timeout) ngay sau khi commit nhưng trước khi Client A nhận được gói tin phản hồi HTTP.
-3. **Bước 3:** Client A rơi vào timeout, tự động retry gửi lại request với cùng `expected_rev = 10` và cùng `idempotency_key = req_A_123`.
-4. **Bước 4 (Đối chiếu tại Database):**
-   - **Trường hợp 4.1 (Không có thiết bị khác xen vào):**
-     - Database thấy `current_rev = 11` (khác `expected_rev = 10`), NHƯNG kiểm tra thấy `last_idempotency_key === req_A_123`.
-     - Database nhận diện đây chính xác là request vừa được thực hiện thành công của chính Client A bị mất gói tin phản hồi!
-     - Database trả về ngay: `{ status: 'SUCCESS', rev: 11, updated_at, idempotent_replay: true }`.
-     - Client A nhận được kết quả thành công, cập nhật `lastSyncedCloudRev = 11`, xóa cờ dirty. Hệ thống phục hồi hoàn hảo mà không sinh lỗi giả!
-   - **Trường hợp 4.2 (Có Thiết bị B đã xen vào commit thành công giữa lúc A retry):**
-     - Thiết bị B đã commit làm Cloud rev tăng lên 12, và ghi đè `last_idempotency_key = req_B_456`.
-     - Khi Client A retry gửi `expected_rev = 10` và `idempotency_key = req_A_123`:
-     - Database kiểm tra thấy `current_rev = 12 != 10` VÀ `last_idempotency_key (req_B_456) != req_A_123`.
-     - Database **TỪ CHỐI** yêu cầu của A, trả về: `{ status: 'CONFLICT', reason: 'REV_MISMATCH', current_cloud: { rev: 12, ... } }`.
-     - Client A không thể vô tình ghi đè dữ liệu của B! Client A nhận diện được Cloud đã có thay đổi mới từ B và kích hoạt giao diện so sánh xung đột cho người dùng.
+#### 6.2.2. Giải Pháp: Bảng Nhật Ký Request Đã Commit (`cultivation_idempotency_log`)
+Để giải quyết triệt để vấn đề này, kiến trúc bổ sung bảng nhật ký lịch sử request:
+
+```sql
+CREATE TABLE IF NOT EXISTS public.cultivation_idempotency_log (
+    user_id UUID NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    committed_rev BIGINT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, idempotency_key)
+);
+-- Tự động dọn dẹp các key cũ hơn 7 ngày bằng pg_cron hoặc scheduled job
+```
+
+- **Xử lý retry an toàn tuyệt đối:**
+  Khi Client A retry với `req_A1`:
+  1. Hàm RPC kiểm tra `SELECT committed_rev FROM cultivation_idempotency_log WHERE user_id = auth.uid() AND idempotency_key = p_idempotency_key`.
+  2. Dù Thiết bị B đã commit thêm rev 12 hay rev 50, dòng log của `req_A1` với `committed_rev = 11` **vẫn tồn tại nguyên vẹn trong nhật ký**!
+  3. Database lập tức nhận diện: *"Request req_A1 này đã từng commit thành công ở rev 11"*.
+  4. Database trả về phản hồi chuẩn xác:
+     ```json
+     {
+       "status": "SUCCESS",
+       "idempotent_replay": true,
+       "committed_rev": 11,
+       "current_cloud_rev": 12,
+       "message": "Request đã được ghi nhận thành công trước đó."
+     }
+     ```
+  5. Client A nhận được bằng chứng xác thực rằng thao tác của mình đã được lưu vào Cloud (ở rev 11), yên tâm cập nhật `lastSyncedCloudRev = 11` và sau đó fast-forward kéo tiếp rev 12 của B về mà không hề sợ mất dữ liệu!
+
+#### 6.2.3. Ba Quy Tắc Cấm Tuyệt Đối Phía Client
+Để đảm bảo tính nhất quán dữ liệu, mã nguồn Client phải tuân thủ nghiêm ngặt 3 quy tắc:
+1. **TUYỆT ĐỐI KHÔNG** tự động đánh dấu local là đã đồng bộ chỉ vì `device_id` trên Cloud trùng với `getDeviceId()` của máy mình. (Một thao tác khác trên cùng máy có thể đã ghi đè trước đó).
+2. **TUYỆT ĐỐI KHÔNG** tự động đánh dấu local là đã đồng bộ chỉ vì số revision trên Cloud bằng hoặc lớn hơn revision cục bộ.
+3. **TUYỆT ĐỐI KHÔNG** tự động đánh dấu local là đã đồng bộ khi gặp lỗi mạng timeout hoặc khi nhận mã `CONFLICT` sau timeout, trừ khi có xác nhận tường minh qua Idempotent Replay từ bảng nhật ký.
 
 ### 6.3. An Toàn Thực Thi RPC & RLS (Yêu Cầu E)
 Mô hình bảo vệ Defense-in-Depth cho RPC:
@@ -349,6 +464,7 @@ DECLARE
     v_user_id UUID;
     v_current_row public.cultivation%ROWTYPE;
     v_new_rev BIGINT;
+    v_existing_log_rev BIGINT;
 BEGIN
     -- 1. Xác thực người dùng qua Supabase Auth session token
     v_user_id := auth.uid();
@@ -383,8 +499,24 @@ BEGIN
     WHERE user_id = v_user_id
     FOR UPDATE;
 
-    -- 4. Trường hợp 1: Bản ghi chưa tồn tại trên Cloud (First-time Onboarding)
-    IF NOT FOUND THEN
+    -- 4. Kiểm tra trong bảng nhật ký Idempotency Log xem request này đã từng commit chưa
+    SELECT committed_rev INTO v_existing_log_rev
+    FROM public.cultivation_idempotency_log
+    WHERE user_id = v_user_id AND idempotency_key = p_idempotency_key;
+
+    IF FOUND THEN
+        -- Request này đã được commit thành công trước đó (bảo vệ khi response bị drop mạng)
+        RETURN jsonb_build_object(
+            'status', 'SUCCESS',
+            'idempotent_replay', true,
+            'committed_rev', v_existing_log_rev,
+            'current_cloud_rev', COALESCE(v_current_row.rev, v_existing_log_rev),
+            'updated_at', p_updated_at
+        );
+    END IF;
+
+    -- 5. Trường hợp 1: Bản ghi chưa tồn tại trên Cloud (First-time Onboarding)
+    IF NOT FOUND AND v_current_row.user_id IS NULL THEN
         IF p_expected_rev > 0 THEN
             RETURN jsonb_build_object(
                 'status', 'CONFLICT',
@@ -395,13 +527,18 @@ BEGIN
 
         -- Khởi tạo bản ghi đầu tiên với rev = 1 (Quyết định 4A: Máy đến trước thắng)
         INSERT INTO public.cultivation (
-            user_id, rev, state, updated_at, device_id, last_idempotency_key, last_request_at
+            user_id, rev, state, updated_at, device_id
         ) VALUES (
-            v_user_id, 1, p_state, p_updated_at, p_device_id, p_idempotency_key, p_updated_at
+            v_user_id, 1, p_state, p_updated_at, p_device_id
         )
         ON CONFLICT (user_id) DO NOTHING;
 
         IF FOUND THEN
+            -- Ghi nhận vào nhật ký idempotency
+            INSERT INTO public.cultivation_idempotency_log (user_id, idempotency_key, committed_rev)
+            VALUES (v_user_id, p_idempotency_key, 1)
+            ON CONFLICT DO NOTHING;
+
             RETURN jsonb_build_object(
                 'status', 'SUCCESS',
                 'rev', 1,
@@ -424,17 +561,7 @@ BEGIN
         END IF;
     END IF;
 
-    -- 5. Trường hợp 2: Kiểm tra Idempotency Replay (Mất kết nối mạng ở client)
-    IF v_current_row.last_idempotency_key IS NOT NULL AND v_current_row.last_idempotency_key = p_idempotency_key THEN
-        RETURN jsonb_build_object(
-            'status', 'SUCCESS',
-            'rev', v_current_row.rev,
-            'updated_at', v_current_row.updated_at,
-            'idempotent_replay', true
-        );
-    END IF;
-
-    -- 6. Trường hợp 3: Kiểm tra Expected Revision (Cốt lõi OCC)
+    -- 6. Trường hợp 2: Kiểm tra Expected Revision (Cốt lõi OCC)
     IF v_current_row.rev != p_expected_rev THEN
         RETURN jsonb_build_object(
             'status', 'CONFLICT',
@@ -449,17 +576,20 @@ BEGIN
         );
     END IF;
 
-    -- 7. Trường hợp 4: Revision hoàn toàn khớp -> Tăng đơn điệu rev và cập nhật nguyên tử
+    -- 7. Trường hợp 3: Revision hoàn toàn khớp -> Tăng đơn điệu rev và cập nhật nguyên tử
     v_new_rev := v_current_row.rev + 1;
 
     UPDATE public.cultivation
     SET rev = v_new_rev,
         state = p_state,
         updated_at = p_updated_at,
-        device_id = p_device_id,
-        last_idempotency_key = p_idempotency_key,
-        last_request_at = p_updated_at
+        device_id = p_device_id
     WHERE user_id = v_user_id;
+
+    -- Ghi nhận vào nhật ký idempotency trong cùng transaction nguyên tử
+    INSERT INTO public.cultivation_idempotency_log (user_id, idempotency_key, committed_rev)
+    VALUES (v_user_id, p_idempotency_key, v_new_rev)
+    ON CONFLICT (user_id, idempotency_key) DO NOTHING;
 
     RETURN jsonb_build_object(
         'status', 'SUCCESS',
@@ -542,18 +672,18 @@ Quy trình giải quyết xung đột khi người dùng chọn "Giữ bản tr�
 - Kết quả: Toàn bộ hệ thống đồng bộ tu vi của người dùng sẽ bị sụp đổ (hard failure), sinh ra hàng loạt báo lỗi trên giao diện.
 - Trình duyệt người dùng cache mã nguồn JavaScript (Vite bundle). Dù có sửa code frontend, các tab đang mở vẫn tiếp tục gọi RPC cũ cho đến khi người dùng reload trang.
 
-### 9.2. Kế Hoạch Rollout 3 Giai Đoạn (Phased Rollout)
-1. **Giai đoạn 1 (Database Migration):**
-   - Triển khai function `sync_cultivation_occ` trên Supabase PostgreSQL.
-   - Vẫn giữ nguyên quyền `GRANT INSERT, UPDATE` trên bảng `cultivation` (chưa thu hồi) để các client cũ chưa kịp cập nhật vẫn hoạt động tạm thời.
+### 9.2. Kế Hoạch Rollout Dứt Điểm (Definitive Cutover Rollout)
+1. **Giai đoạn 1 (Database Migration & Staging Verification):**
+   - Triển khai function `sync_cultivation_occ` và bảng `cultivation_idempotency_log` trên Supabase PostgreSQL.
+   - Chạy toàn bộ 5 bài test phân quyền (Mục 5.4) trên Staging để xác minh quyền hạn role `authenticated`, `anon`, `authenticator`.
 2. **Giai đoạn 2 (Frontend Deployment với Graceful Degradation):**
-   - Triển khai mã nguồn Frontend mới hỗ trợ gọi RPC `sync_cultivation_occ`.
-   - Nếu RPC gặp lỗi hệ thống (mạng đứt, lỗi cú pháp): Client rơi vào chế độ **Safe Degraded Mode (CHỈ ĐỌC, giữ dirty state cục bộ, tuyệt đối KHÔNG fallback sang blind upsert)**.
-3. **Giai đoạn 3 (Khóa Chặt Quyền Ghi Trực Tiếp - Hardening):**
-   - Sau khi theo dõi log thấy 98%+ lượng request đã chuyển sang dùng RPC, thực hiện lệnh `REVOKE INSERT, UPDATE ON cultivation FROM authenticated`.
-   - Chấm dứt vĩnh viễn nguy cơ ghi đè mù từ client cũ.
+   - Triển khai mã nguồn Frontend mới hỗ trợ gọi RPC `sync_cultivation_occ` và cơ chế In-Flight Snapshot.
+   - Nếu RPC gặp lỗi hệ thống (mạng đứt, lỗi 500): Client rơi vào chế độ **Safe Degraded Mode (CHỈ ĐỌC, giữ dirty state cục bộ, tuyệt đối KHÔNG fallback sang blind upsert)**.
+3. **Giai đoạn 3 (Thực Thi Cutover Khóa Chặt Direct Write):**
+   - Thực thi dứt điểm lệnh `REVOKE INSERT, UPDATE ON cultivation FROM anon, authenticated, public;`.
+   - Mọi nỗ lực ghi trực tiếp không qua OCC bị chặn đứng hoàn toàn.
 
-### 9.3. Kế Hoạch Rollback Khẩn Cấp (Circuit Breaker / Safe Maintenance)
+### 9.3. Kế Hoạch Rollback Khẩn Cấp Bằng Circuit Breaker (Safe Maintenance)
 Nếu phát hiện hàm RPC phát sinh lỗi logic nghiêm trọng trên Production:
 - **Tuyệt đối KHÔNG chạy DROP FUNCTION.**
 - Thay vào đó, áp dụng cơ chế **Circuit Breaker** bằng cách cập nhật nội dung hàm RPC sang chế độ bảo trì an toàn:
@@ -571,16 +701,24 @@ Nếu phát hiện hàm RPC phát sinh lỗi logic nghiêm trọng trên Product
   $$ LANGUAGE plpgsql;
   ```
 - **Tác dụng:** Mọi client gọi RPC đều nhận được phản hồi lịch sự `MAINTENANCE`. Client sẽ giữ nguyên dữ liệu trong `localStorage`, không xóa dirty flag, không báo lỗi đỏ màn hình, và tự động thử lại sau. Cloud không bị thay đổi bất kỳ byte nào.
-- Khi sự cố được sửa chữa xong, chạy script cập nhật lại logic RPC chuẩn và hệ thống tự động hoạt động bình thường trở lại.
+- Khi sự cố được sửa chữa xong, chạy script cập nhật lại logic RPC chuẩn và client sẽ tự động đồng bộ tiếp mà không mất bất kỳ dữ liệu nào.
 
-### 9.4. Kế Hoạch Backup Dữ Liệu Trước Khi Migration
+### 9.4. Kế Hoạch Backup Dữ Liệu & Kiểm Thử Restore Trước Khi Migration
 Trước khi thực hiện bất kỳ lệnh DDL nào trên Supabase production:
-1. Thực hiện xuất toàn bộ dữ liệu bảng `cultivation` ra tệp sao lưu:
-   ```bash
-   # Sao lưu toàn bộ bảng cultivation trước migration
-   supabase db dump --table cultivation > backup_cultivation_pre_occ_$(date +%Y%m%d).sql
-   ```
-2. Lưu bản sao lưu an toàn tại kho lưu trữ độc lập để có thể khôi phục trong tình huống xấu nhất.
+1. **Xác minh cú pháp Supabase CLI & pg_dump:**
+   - Tùy thuộc vào phiên bản Supabase CLI cài đặt, sử dụng lệnh:
+     ```bash
+     # Cách 1: Sử dụng Supabase CLI chuẩn
+     supabase db dump --data-only -f backup_cultivation_pre_occ_$(date +%Y%m%d).sql
+     # Cách 2: Sử dụng pg_dump trực tiếp qua chuỗi kết nối bảo mật (Direct Connection String)
+     pg_dump -h <db_host> -U postgres -d postgres -t public.cultivation -t public.cultivation_idempotency_log --data-only -f backup_cultivation.sql
+     ```
+2. **Bắt buộc thử nghiệm Restore trên Staging:**
+   - Lấy tệp backup vừa xuất, thực hiện restore vào một database Staging/Local:
+     ```bash
+     psql -h <staging_host> -U postgres -d postgres -f backup_cultivation.sql
+     ```
+   - Xác minh số lượng dòng (`SELECT COUNT(*) FROM cultivation`) và cấu trúc JSONB hoàn toàn khớp 100% với Production trước khi được phép chạy migration.
 
 ---
 
@@ -616,13 +754,14 @@ Bảng tổng hợp toàn diện ma trận rủi ro của hệ thống đồng b
 | Phân Nhóm Rủi Ro | Rủi Ro Cụ Thể | Rủi Ro Đã Có Thiết Kế Xử Lý | Rủi Ro Chưa Giải Quyết / Cần Theo Dõi | Thông Tin Schema Cần Xác Minh & Điều Kiện Bắt Buộc Trước Migration |
 |:---|:---|:---|:---|:---|
 | **1. Concurrency & Lost Update** | Hai thiết bị cùng đọc một revision và cùng ghi đè lên Cloud. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Khóa dòng nguyên tử `FOR UPDATE` trong RPC `sync_cultivation_occ`. Máy đến sau bị từ chối với mã `CONFLICT` rõ ràng. | Cần theo dõi trải nghiệm người dùng khi tần suất xung đột tăng cao nếu họ dùng 2 máy liên tục. | **Bắt buộc:** Bảng `cultivation` phải có Unique Index hoặc Primary Key trên cột `user_id`. |
-| **2. Legacy Client Bypass** | Thiết bị chạy frontend cũ tiếp tục gọi direct `upsert` ghi đè mù Cloud. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Thu hồi quyền ghi trực tiếp `REVOKE INSERT, UPDATE ON cultivation FROM authenticated;` chỉ cho phép ghi qua RPC. | Client cũ sẽ bị lỗi 403 khi cố ghi trực tiếp (nhưng an toàn, không mất dữ liệu local). | **Bắt buộc:** Kiểm tra quyền sở hữu bảng và quyền hạn cấp phát GRANT/REVOKE trên Supabase project. |
-| **3. Mất Gói Tin Mạng & Retry (Network Drop)** | Mạng ngắt sau khi DB commit nhưng trước khi Client nhận ACK. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Thiết kế `idempotency_key` độc lập (UUID v4) kết hợp lưu `last_idempotency_key` tại DB. Xử lý phân nhánh kịch bản có/không có thiết bị khác xen vào. | Nếu client đóng trình duyệt vĩnh viễn trước khi kịp retry, lần sau mở lại sẽ đối chiếu lại từ đầu. | **Bắt buộc:** Bổ sung 2 cột `last_idempotency_key TEXT` và `last_request_at BIGINT` vào bảng `cultivation`. |
-| **4. Lệch Revision Giữa Local & Cloud** | Thiết bị offline thực hiện 20 thay đổi làm local rev tăng vọt. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Tách biệt `localSequenceNumber` (nội bộ client) và `cloudRevision` (server-managed monotonic). Offline 20 lần vẫn chỉ commit 1 lần với expected_rev cũ. | Cần điều chỉnh lại logic lưu trữ trong `cultivation.js` ở Nhiệm vụ 3B.2. | **Bắt buộc:** Xác định kiểu dữ liệu của cột `rev` trên DB là `BIGINT` để tránh tràn số sau nhiều năm sử dụng. |
-| **5. Bảo Mật & Phân Quyền RPC** | Kẻ xấu gọi RPC giả mạo để sửa tu vi của tài khoản khác hoặc gửi payload khổng lồ. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Ép buộc lấy `auth.uid()` từ Supabase JWT session, `SET search_path = public, pg_temp;`, kiểm tra giới hạn kích thước payload $\le 512\text{KB}$. | Chưa tích hợp rate-limit ở tầng API Gateway (Kong/Cloudflare) chống spam gọi RPC liên tục. | **Bắt buộc:** Supabase Auth phải hoạt động ổn định và token JWT chứa `sub` (user_id) hợp lệ. |
-| **6. First-time Onboarding Race** | Hai thiết bị cùng khởi tạo bản ghi Cloud rỗng đồng thời. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Sử dụng `INSERT ... ON CONFLICT (user_id) DO NOTHING`. Thiết bị đến trước tạo rev 1, thiết bị sau nhận CONFLICT và được thông báo đối chiếu dữ liệu (Quyết định 4A). | Người dùng cần xem hộp thoại chọn nếu 2 máy có tiến độ offline ban đầu khác nhau. | **Bắt buộc:** Ràng buộc `UNIQUE (user_id)` phải tồn tại trên bảng để `ON CONFLICT` hoạt động. |
-| **7. Quản Lý Pending Seconds** | Mất thời gian đọc truyện tích lũy khi 2 máy cùng đọc song song. | **ĐÃ XỬ LÝ:** Quản lý chung concurrency control (Quyết định 2B), áp dụng rate-limit 60s cho các lần đẩy chỉ có pending, hiển thị cả 2 bên khi có xung đột. | Chưa có cơ chế tự động tách sub-revision độc lập (để dành cho giai đoạn tối ưu sau). | **Bắt buộc:** Client phải đóng gói đúng trường `pendingSeconds` vào snapshot hoặc cột dữ liệu. |
-| **8. Rollback & Vận Hành Khẩn Cấp** | RPC gặp sự cố logic sau khi deploy trên Production. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Bác bỏ quan điểm `DROP FUNCTION`. Thay bằng cơ chế Circuit Breaker (cập nhật RPC trả về `MAINTENANCE` an toàn). Dump backup DB trước khi chạy. | Phụ thuộc vào việc người vận hành có quyền truy cập Supabase SQL Editor khi có sự cố. | **Bắt buộc:** Phải chạy thử nghiệm kịch bản rollback trên môi trường Staging trước khi lên Production. |
+| **2. Legacy Client Bypass** | Thiết bị chạy frontend cũ tiếp tục gọi direct `upsert` ghi đè mù Cloud. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Thiết kế Cutover Dứt Điểm: Thu hồi toàn bộ quyền ghi `REVOKE INSERT, UPDATE ON cultivation FROM anon, authenticated, public;` chỉ cho phép ghi qua RPC. Client cũ nhận lỗi 403 / 42501 an toàn và giữ nguyên local data. | Cần truyền thông người dùng F5 reload ứng dụng để nhận tính năng sync mới nhất. | **Bắt buộc:** Kiểm tra quyền sở hữu bảng và quyền hạn cấp phát GRANT/REVOKE trên Supabase project (bao gồm role `authenticator`). |
+| **3. Mất Gói Tin Mạng & Retry (Network Drop)** | Mạng ngắt sau khi DB commit nhưng trước khi Client nhận ACK; có request khác xen vào giữa 2 lần retry. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Bảng nhật ký `cultivation_idempotency_log` ghi nhận mọi request đã commit. Dù thiết bị khác có xen vào tăng rev tiếp, request retry vẫn được tra cứu thấy và trả về kết quả thành công chính xác. | Cần thiết lập scheduled job (cron) tự động dọn dẹp các dòng log cũ hơn 7 ngày để tránh đầy bảng. | **Bắt buộc:** Tạo bảng `public.cultivation_idempotency_log` trong migration script. |
+| **4. In-Flight Local Mutation** | Người dùng tiếp tục tu luyện/đột phá trong lúc request RPC đang bay trên đường truyền. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Thiết kế **Immutable In-Flight Snapshot**. Khi nhận SUCCESS, chỉ cập nhật `lastSyncedLocalSeq = sentLocalSeq`. Các thao tác mới phát sinh vẫn giữ nguyên cờ dirty và sẽ được sync ở lượt sau. | Không còn rủi ro thất lạc thao tác. | **Bắt buộc:** Refactor mã nguồn frontend đồng bộ trong Nhiệm vụ 3B.2 để tách biệt `sentLocalSeq` và `currentLocalSeq`. |
+| **5. Lệch Revision Giữa Local & Cloud** | Thiết bị offline thực hiện 20 thay đổi làm local rev tăng vọt. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Tách biệt `localSequenceNumber` (nội bộ client) và `cloudRevision` (server-managed monotonic). Offline 20 lần vẫn chỉ commit 1 lần với expected_rev cũ. | Cần điều chỉnh lại logic lưu trữ trong `cultivation.js` ở Nhiệm vụ 3B.2. | **Bắt buộc:** Xác định kiểu dữ liệu của cột `rev` trên DB là `BIGINT` để tránh tràn số sau nhiều năm sử dụng. |
+| **6. Bảo Mật & Phân Quyền RPC** | Kẻ xấu gọi RPC giả mạo để sửa tu vi của tài khoản khác hoặc gửi payload khổng lồ. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Ép buộc lấy `auth.uid()` từ Supabase JWT session, `SET search_path = public, pg_temp;`, kiểm tra giới hạn kích thước payload $\le 512\text{KB}$. | Chưa tích hợp rate-limit ở tầng API Gateway (Kong/Cloudflare) chống spam gọi RPC liên tục. | **Bắt buộc:** Supabase Auth phải hoạt động ổn định và token JWT chứa `sub` (user_id) hợp lệ. |
+| **7. First-time Onboarding Race** | Hai thiết bị cùng khởi tạo bản ghi Cloud rỗng đồng thời. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Sử dụng `INSERT ... ON CONFLICT (user_id) DO NOTHING`. Thiết bị đến trước tạo rev 1, thiết bị sau nhận CONFLICT và được thông báo đối chiếu dữ liệu (Quyết định 4A). | Người dùng cần xem hộp thoại chọn nếu 2 máy có tiến độ offline ban đầu khác nhau. | **Bắt buộc:** Ràng buộc `UNIQUE (user_id)` phải tồn tại trên bảng để `ON CONFLICT` hoạt động. |
+| **8. Quản Lý Pending Seconds** | Mất thời gian đọc truyện tích lũy khi 2 máy cùng đọc song song. | **ĐÃ XỬ LÝ:** Quản lý chung concurrency control (Quyết định 2B), áp dụng rate-limit 60s cho các lần đẩy chỉ có pending, hiển thị cả 2 bên khi có xung đột. | Chưa có cơ chế tự động tách sub-revision độc lập (để dành cho giai đoạn tối ưu sau). | **Bắt buộc:** Client phải đóng gói đúng trường `pendingSeconds` vào snapshot hoặc cột dữ liệu. |
+| **9. Rollback & Vận Hành Khẩn Cấp** | RPC gặp sự cố logic sau khi deploy trên Production. | **ĐÃ XỬ LÝ TRIỆT ĐỂ:** Bác bỏ quan điểm `DROP FUNCTION`. Thay bằng cơ chế Circuit Breaker (cập nhật RPC trả về `MAINTENANCE` an toàn). Dump backup DB và test restore staging trước khi chạy. | Phụ thuộc vào việc người vận hành có quyền truy cập Supabase SQL Editor khi có sự cố. | **Bắt buộc:** Phải chạy thử nghiệm kịch bản rollback và restore trên môi trường Staging trước khi lên Production. |
 
 ---
 
@@ -633,25 +772,29 @@ Trước khi tiến hành Nhiệm vụ 3B.2 (viết code production và migratio
 ### 12.1. Kiểm Thử Mock (Unit & Component Test - Node.js Test Runner)
 - [ ] **Test Case 1:** Kiểm tra logic `localSequenceNumber` tăng độc lập khi offline mà không làm sai lệch `lastSyncedCloudRev`.
 - [ ] **Test Case 2:** Kiểm tra cơ chế sinh `idempotency_key` duy nhất cho mỗi lượt sync và giữ nguyên khi retry cùng một request.
-- [ ] **Test Case 3:** Giả lập Mock RPC xử lý thành công Idempotent Replay khi mạng bị ngắt ở bước nhận phản hồi.
-- [ ] **Test Case 4:** Giả lập Mock RPC từ chối Stale Write (Cloud rev 50 vs Local rev 11).
-- [ ] **Test Case 5:** Giả lập First Insert Race giữa 2 thiết bị cùng online lần đầu.
-- [ ] **Test Case 6:** Kiểm tra lưu trữ trạng thái xung đột bền vững trong `localStorage` và hiển thị Banner cảnh báo nhẹ (Quyết định 3A).
+- [ ] **Test Case 3 (In-Flight Mutation Test):** Giả lập người dùng tiếp tục gọi `saveCultivationState()` (tăng `localSequenceNumber` từ 25 lên 27) trong lúc mock RPC đang trễ mạng 500ms -> Xác nhận sau khi RPC trả về SUCCESS (rev 11), `lastSyncedLocalSeq` chỉ dừng ở 25, `isDirty` vẫn bằng `true`, và các thao tác 26, 27 tiếp tục được đồng bộ ở lượt tiếp theo.
+- [ ] **Test Case 4 (Idempotency Intervening Request Test):** Giả lập Request A1 bị mất response, Request B1 xen vào commit thành công rev 12, Request A1 retry -> Xác nhận mock server tra cứu thấy A1 trong nhật ký và trả về SUCCESS với `committed_rev = 11`, không bị biến thành xung đột mất dữ liệu.
+- [ ] **Test Case 5:** Giả lập Mock RPC từ chối Stale Write (Cloud rev 50 vs Local rev 11).
+- [ ] **Test Case 6:** Giả lập First Insert Race giữa 2 thiết bị cùng online lần đầu.
+- [ ] **Test Case 7:** Kiểm tra lưu trữ trạng thái xung đột bền vững trong `localStorage` và hiển thị Banner cảnh báo nhẹ (Quyết định 3A).
 
 ### 12.2. Kiểm Thử Tích Hợp Trên PostgreSQL Staging (Integration Test)
-- [ ] **Test Case 7:** Cài đặt migration SQL trên Supabase Local CLI (Docker) hoặc Staging instance.
-- [ ] **Test Case 8:** Dùng script Node.js kích hoạt 50 worker đồng thời gọi RPC `sync_cultivation_occ` với cùng `expected_rev` -> Xác minh chỉ đúng 1 worker thành công, 49 worker còn lại nhận mã `CONFLICT` chính xác.
-- [ ] **Test Case 9:** Thử nghiệm gọi direct `.from('cultivation').upsert()` bằng tài khoản `authenticated` -> Xác nhận nhận lỗi `42501 permission denied`.
-- [ ] **Test Case 10:** Đo lường thời gian thực thi p50/p95 qua `pg_stat_statements` để kiểm chứng giả thuyết hiệu năng.
+- [ ] **Test Case 8:** Cài đặt migration SQL trên Supabase Local CLI (Docker) hoặc Staging instance (bảng `cultivation`, bảng `cultivation_idempotency_log`, hàm RPC và lệnh REVOKE).
+- [ ] **Test Case 9:** Chạy 5 bài test phân quyền (Test P1 đến P5 trong Mục 5.4) để xác minh direct write bị từ chối 100% đối với mọi role client.
+- [ ] **Test Case 10:** Dùng script Node.js kích hoạt 50 worker đồng thời gọi RPC `sync_cultivation_occ` với cùng `expected_rev` -> Xác minh chỉ đúng 1 worker thành công, 49 worker còn lại nhận mã `CONFLICT` chính xác.
+- [ ] **Test Case 11:** Thử nghiệm xuất dump backup và restore trên database Staging để chứng minh quy trình khôi phục dữ liệu hoạt động hoàn hảo.
+- [ ] **Test Case 12:** Đo lường thời gian thực thi p50/p95 qua `pg_stat_statements` để kiểm chứng giả thuyết hiệu năng.
 
 ---
 
 ## 13. Kết Luận
 
-Tài liệu thiết kế kiến trúc OCC đã được cập nhật toàn diện theo đúng toàn bộ ý kiến chỉ đạo và phê duyệt từ Người dùng:
-- **Đã chọn và áp dụng trọn vẹn 4 quyết định:** 1A (Server monotonic revision), 2B (quản lý pending trong cùng OCC), 3A (Banner cảnh báo nhẹ & trạng thái bền vững), 4A (máy ghi trước thắng first-insert).
-- **Đã giải quyết triệt để 8 vấn đề cốt tử:** Ngăn chặn client cũ bypass qua REVOKE phân quyền, Tách bạch Local Seq và Cloud Rev, Cơ chế Request ID / Idempotency độc lập chống rủi ro rớt mạng, An toàn RPC & RLS theo chiều sâu, Xử lý conflict có kiểm tra revision mới, Bác bỏ sai lầm DROP FUNCTION và thay bằng Circuit Breaker Rollback, Loại bỏ các nhận định chủ quan chưa kiểm chứng.
-- **Bổ sung đầy đủ:** Sơ đồ chuyển đổi trạng thái (Mermaid), Sơ đồ luồng nguyên tử trong RPC, Sơ đồ giải quyết kịch bản mạng rớt, và Ma trận đánh giá rủi ro còn lại.
+Tài liệu thiết kế kiến trúc OCC đã được cập nhật toàn diện theo đúng toàn bộ ý kiến chỉ đạo review vòng 2 từ Người dùng:
+1. **Thiết kế Cutover dứt điểm:** Bác bỏ ngưỡng 98% adoption; khóa chặt 100% direct write ngay khi OCC có hiệu lực; đảm bảo client cũ giữ nguyên dữ liệu khi bị từ chối; lập kế hoạch staging kiểm tra toàn bộ cây quyền SQL (`authenticated`, `anon`, `authenticator`, `public`, `DEFAULT PRIVILEGES`).
+2. **Xử lý Idempotency triệt để với Bảng Nhật Ký:** Giải quyết tận gốc bài toán request khác xen vào giữa 2 lần retry; thiết lập 3 quy tắc cấm tự động đánh dấu sync phía client.
+3. **Bảo vệ biến đổi cục bộ trong lúc RPC đang xử lý (In-Flight Local Mutation):** Thiết kế Immutable In-Flight Snapshot đảm bảo các thao tác phát sinh trong lúc gửi request vẫn giữ nguyên trạng thái dirty và không bị mất.
+4. **Quy trình Backup CLI & Test Restore:** Xác minh lệnh CLI và bắt buộc diễn tập restore trên Staging.
+5. **Chuẩn mực ngôn ngữ kỹ thuật:** Khẳng định rõ production hiện tại vẫn đang được bảo vệ tạm thời bởi Quick Push Guard (Nhiệm vụ 3A), và chỉ thực sự được OCC bảo vệ sau khi hoàn thành cutover và integration test ở Nhiệm vụ 3B.2.
 
 **Trạng thái hiện tại:**
 - Toàn bộ thiết kế đã sẵn sàng trên branch `design/cultivation-occ`.
