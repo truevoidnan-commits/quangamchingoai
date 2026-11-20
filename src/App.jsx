@@ -95,12 +95,6 @@ class ErrorBoundary extends React.Component {
             >
               <Icon name="refresh" size={14} /> Tải lại trang
             </button>
-            <button 
-              onClick={() => { localStorage.clear(); window.location.reload(); }}
-              style={{ padding: '10px 20px', background: '#334155', color: '#cbd5e1', border: 'none', borderRadius: 6, cursor: 'pointer' }}
-            >
-              Xóa Cache & Tải lại
-            </button>
           </div>
         </div>
       );
