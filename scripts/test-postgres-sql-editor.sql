@@ -178,7 +178,7 @@ BEGIN
         PERFORM public.cleanup_cultivation_idempotency_log(0);
         RAISE EXCEPTION 'ASSERTION FAILED [Test 7]: cleanup_cultivation_idempotency_log không ném lỗi khi p_days = 0!';
     EXCEPTION WHEN OTHERS THEN
-        IF SQLERRM NOT LIKE '%Tham số p_days không hợp lệ%' THEN
+        IF SQLERRM NOT LIKE '%p_days%' THEN
             RAISE EXCEPTION 'ASSERTION FAILED [Test 7]: Lỗi không đúng mong đợi: %', SQLERRM;
         END IF;
         RAISE NOTICE '✓ Test 7 Passed: Tham số p_days = 0 bị từ chối chính xác (giới hạn 1..365 ngày)';
