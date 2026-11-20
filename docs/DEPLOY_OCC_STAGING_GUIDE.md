@@ -40,14 +40,18 @@ Hệ thống Optimistic Concurrency Control (OCC) được phân tách thành 2 
   - Tự động kiểm tra tính nhất quán trước khi đẩy lên remote staging.
 
 > [!CAUTION]
-> **Tác động khi áp dụng trực tiếp qua `psql` hoặc Supabase SQL Editor:**
-> - Nếu chạy trực tiếp file SQL bằng `psql` hoặc SQL Editor mà không qua Supabase CLI, các đối tượng schema sẽ được tạo trong database nhưng **bảng `supabase_migrations.schema_migrations` sẽ KHÔNG có bản ghi tương ứng**.
-> - **Hậu quả:** Khi pipeline CI/CD hoặc người vận hành khác chạy `supabase db push`, Supabase CLI sẽ phát hiện file `20261120_cultivation_occ_stage_a.sql` chưa có trong lịch sử và sẽ cố gắng áp dụng lại (re-apply). Dù migration đã có `IF NOT EXISTS` / `CREATE OR REPLACE`, việc tái thực thi ngoài dự kiến có thể gây cảnh báo hoặc lỗi không đáng có.
-> - **Cách xử lý nếu buộc phải chạy qua `psql`:** Phải đồng bộ thủ công vào bảng lịch sử:
->   ```sql
->   INSERT INTO supabase_migrations.schema_migrations (version, name)
->   VALUES ('20261120', 'cultivation_occ_stage_a')
->   ON CONFLICT (version) DO NOTHING;
+> **Tuyệt đối KHÔNG INSERT trực tiếp vào bảng `supabase_migrations.schema_migrations`:**
+> - Nếu chạy trực tiếp file SQL bằng `psql` hoặc SQL Editor mà không qua Supabase CLI, các đối tượng schema sẽ được tạo trong database nhưng bảng theo dõi lịch sử migration sẽ không được cập nhật.
+> - **Quy tắc an toàn:** Tuyệt đối không can thiệp bằng các câu lệnh `INSERT` thủ công vào bảng hệ thống `supabase_migrations.schema_migrations` vì dễ gây sai lệch định dạng version, checksum và trạng thái migration.
+> - **Quy trình chuẩn thức:** Nếu migration đã được áp dụng ngoài luồng hoặc cần chuẩn hóa trạng thái đồng bộ, người vận hành bắt buộc sử dụng công cụ chính thức **`supabase migration repair`** của Supabase CLI:
+>   ```bash
+>   # Đánh dấu migration đã áp dụng thành công mà không chạy lại SQL:
+>   supabase migration repair --status applied 20261120
+>   ```
+> - **Quy tắc khớp Version Migration:** Tham số version (`20261120`) **phải khớp chính xác 100% với tiền tố timestamp trước dấu gạch dưới đầu tiên** của tên file migration (`supabase/migrations/20261120_cultivation_occ_stage_a.sql`).
+> - Sau khi chuẩn hóa trạng thái, kiểm tra lại danh sách migration:
+>   ```bash
+>   supabase migration list
 >   ```
 
 ### Bước 2.2: Tiền kiểm Schema và RLS thực tế (Pre-flight Verification)

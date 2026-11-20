@@ -1913,6 +1913,10 @@ describe('Nhiệm vụ 3B.2: Kiểm thử toàn diện cơ chế OCC trên môi 
     assert.equal(guideContent.includes('GRANT INSERT, UPDATE ON TABLE public.cultivation TO authenticated'), false, 'Guide không được chứa rollback GRANT INSERT, UPDATE');
     assert.ok(guideContent.includes('Safe Maintenance Mode'), 'Guide phải sử dụng Safe Maintenance Mode làm cơ chế dừng ghi');
 
+    // Không được chứa hướng dẫn INSERT trực tiếp vào supabase_migrations.schema_migrations
+    assert.equal(guideContent.includes('INSERT INTO supabase_migrations.schema_migrations'), false, 'Tuyệt đối không hướng dẫn INSERT trực tiếp vào schema_migrations');
+    assert.ok(guideContent.includes('supabase migration repair'), 'Phải hướng dẫn dùng supabase migration repair chính thức');
+
     const cutoverSqlPath = path.resolve('supabase/operations/20261120_cultivation_occ_stage_b_cutover.sql');
     const cutoverContent = fs.readFileSync(cutoverSqlPath, 'utf-8');
     assert.equal(cutoverContent.includes('GRANT INSERT, UPDATE ON TABLE public.cultivation TO authenticated'), false, 'Cutover SQL không được chứa rollback GRANT INSERT, UPDATE');
@@ -1945,11 +1949,16 @@ describe('Nhiệm vụ 3B.2: Kiểm thử toàn diện cơ chế OCC trên môi 
     // Không được tự ý UPDATE app_system_flags
     assert.equal(psqlContent.includes('UPDATE public.app_system_flags'), false, 'Tuyệt đối không tự ý UPDATE app_system_flags');
 
+    // Phải báo cáo rõ [SKIPPED] khi thiếu DATABASE_URL hoặc khi staging bật maintenance
+    assert.ok(psqlContent.includes('[SKIPPED]'), 'Phải báo cáo SKIPPED rõ ràng, không báo PASS giả');
+    assert.ok(psqlContent.includes('TUYỆT ĐỐI KHÔNG TÍNH LÀ PASS'), 'Phải nêu rõ không tính là PASS');
+
     // Phải có kiểm tra cờ cultivation_maintenance và dừng nếu đang bảo trì
     assert.ok(psqlContent.includes('cultivation_maintenance'), 'Phải kiểm tra cờ cultivation_maintenance');
     assert.ok(psqlContent.includes('maintRes.rows[0].value?.enabled === true'), 'Phải kiểm tra trạng thái enabled');
 
-    // Phải có kiểm tra định danh môi trường qua cấu hình database
+    // Phải có kiểm tra độc lập danh tính database trước mọi thao tác thay đổi dữ liệu
+    assert.ok(psqlContent.includes('SELECT current_database() AS dbname'), 'Phải kiểm tra độc lập danh tính database');
     assert.ok(psqlContent.includes('TEST_ENVIRONMENT_IDENTIFIER'), 'Phải yêu cầu TEST_ENVIRONMENT_IDENTIFIER');
     assert.ok(psqlContent.includes("current_setting('app.environment'"), 'Phải truy vấn setting môi trường của database');
   });
