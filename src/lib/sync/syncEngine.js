@@ -26,6 +26,9 @@ import {
   recordContentPushed,
   setCultivationConflictState,
   clearCultivationConflictState,
+  getPendingCultivationRequest,
+  savePendingCultivationRequest,
+  clearPendingCultivationRequest,
 } from './syncLedger.js';
 import {
   getNovel,
@@ -658,26 +661,40 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
   };
 
   const pushLocalCultivation = async (overrideExpectedRev = null) => {
-    const pendingSeconds = getLocalPendingSeconds();
-    const sentLocalSeq = typeof localState._seq === 'number' ? localState._seq : (localState._rev || 0);
-    const expectedRev = overrideExpectedRev !== null ? overrideExpectedRev : lastSyncedRev;
+    let pendingReq = getPendingCultivationRequest();
 
-    const inFlightSnapshot = {
-      sentLocalSeq,
-      expectedRev,
-      sentPendingSeconds: pendingSeconds,
-      idempotencyKey: 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9),
-    };
+    // Nếu đã có pendingReq từ trước và không bị override thì tái sử dụng nguyên vẹn:
+    // cùng idempotencyKey, cùng expectedRev, cùng sentLocalSeq, cùng sentPendingSeconds, cùng payloadState
+    let inFlightSnapshot;
+    if (pendingReq && overrideExpectedRev === null) {
+      inFlightSnapshot = pendingReq;
+    } else {
+      const pendingSeconds = getLocalPendingSeconds();
+      const sentLocalSeq = typeof localState._seq === 'number' ? localState._seq : (localState._rev || 0);
+      const expectedRev = overrideExpectedRev !== null ? overrideExpectedRev : lastSyncedRev;
+
+      inFlightSnapshot = {
+        idempotencyKey: 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9),
+        expectedRev,
+        sentLocalSeq,
+        sentPendingSeconds: pendingSeconds,
+        // Đóng băng bất biến payloadState
+        payloadState: JSON.parse(JSON.stringify(localState)),
+        createdAt: Date.now(),
+      };
+      savePendingCultivationRequest(inFlightSnapshot);
+    }
 
     const occRes = await commitCultivationOCC(supabase, userId, {
       expectedRev: inFlightSnapshot.expectedRev,
-      state: localState,
+      state: inFlightSnapshot.payloadState,
       pendingSeconds: inFlightSnapshot.sentPendingSeconds,
       deviceId: getDeviceId(),
       idempotencyKey: inFlightSnapshot.idempotencyKey,
     });
 
     if (occRes.status === 'SUCCESS') {
+      clearPendingCultivationRequest();
       const committedRev = occRes.rev || occRes.committed_rev;
       const now = Date.now();
       ledger.cultivation = {
@@ -691,8 +708,30 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
       };
       saveSyncLedger(ledger);
       clearCultivationConflictState();
+
+      // Kiểm tra: nếu là Idempotent Replay và Cloud đã có revision mới hơn từ thiết bị khác:
+      if (occRes.idempotent_replay && occRes.current_cloud_rev && occRes.current_cloud_rev > committedRev) {
+        const currentLocal = getCultivationState();
+        const currentSeq = typeof currentLocal?._seq === 'number' ? currentLocal._seq : (currentLocal?._rev || 0);
+        if (currentSeq > inFlightSnapshot.sentLocalSeq) {
+          // Local có thay đổi mới phát sinh, đồng thời Cloud đã tiến lên revision mới hơn -> XUNG ĐỘT
+          if (!ledger.cultivation) ledger.cultivation = {};
+          ledger.cultivation.conflictPending = true;
+          saveSyncLedger(ledger);
+          backupCultivationState(currentLocal);
+          setCultivationConflictState({
+            local: currentLocal,
+            cloud: { rev: occRes.current_cloud_rev },
+            detectedAt: Date.now(),
+            reason: 'CONCURRENT_CLOUD_ADVANCE_AFTER_IDEMPOTENT_REPLAY',
+          });
+          return { conflict: true, skipped: true, currentCloudRev: occRes.current_cloud_rev };
+        }
+      }
+
       return { pushedToCloud: true, rev: committedRev, idempotentReplay: Boolean(occRes.idempotent_replay) };
     } else if (occRes.status === 'CONFLICT') {
+      clearPendingCultivationRequest();
       backupCultivationState(localState);
       if (!ledger.cultivation) ledger.cultivation = {};
       ledger.cultivation.conflictPending = true;
@@ -707,6 +746,7 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
       console.warn('Đồng bộ tu vi đang tạm bảo trì:', occRes.message);
       return { maintenance: true, skipped: true };
     } else {
+      // Giữ pending request trong localStorage để lần retry tiếp theo dùng đúng idempotency key
       throw new Error(occRes.message || occRes.error || 'Lỗi OCC không xác định');
     }
   };

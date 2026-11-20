@@ -24,6 +24,9 @@ import {
   recordContentPushed,
   setCultivationConflictState,
   clearCultivationConflictState,
+  getPendingCultivationRequest,
+  savePendingCultivationRequest,
+  clearPendingCultivationRequest,
 } from './syncLedger.js';
 import {
   getActiveProfile,
@@ -289,12 +292,13 @@ export async function pullCultivationBeforeMeditation(customSupabase = null, { t
     const isLocalUnchanged = localSeq <= lastSyncedLocalSeq;
     const isOwnDevice = Boolean(cloudCult.device_id && cloudCult.device_id === getDeviceId());
 
-    if (isOwnDevice && cloudRev <= localRev) {
-      return { skipped: true, reason: 'own_device_not_newer' };
+    // Nếu Cloud không mới hơn mốc đã đồng bộ, bỏ qua
+    if (!isCloudNewer) {
+      return { skipped: true, reason: 'cloud_not_newer' };
     }
 
-    // Fast-forward
-    if (isCloudNewer && isLocalUnchanged && cloudCult.state) {
+    // Fast-forward an toàn khi local không có thay đổi bẩn chưa đồng bộ
+    if (isLocalUnchanged && cloudCult.state) {
       backupCultivationState(localState);
       const cloudState = { ...cloudCult.state };
       cloudState._rev = cloudRev;
@@ -634,84 +638,109 @@ export async function runAutoSync(customSupabase = null, options = {}) {
         detectedAt: Date.now(),
       });
     } else if (isCloudChanged && !isLocalRevChanged && cloudCultivation?.state) {
-      if (isOwnCultDevice && cloudRev <= localRev) {
-        if (!ledger.cultivation) ledger.cultivation = {};
-        ledger.cultivation.lastSyncedRev = Math.max(ledger.cultivation.lastSyncedRev || 0, cloudRev, localRev);
-        ledger.cultivation.lastSyncedLocalSeq = Math.max(ledger.cultivation.lastSyncedLocalSeq || 0, localSeq);
-        ledger.cultivation.lastCloudUpdatedAt = cloudCultivation.updated_at || Date.now();
-      } else {
-        backupCultivationState(localState);
-        const cloudState = { ...cloudCultivation.state };
-        cloudState._rev = cloudRev;
-        cloudState._seq = cloudRev;
-        cloudState._updatedAt = cloudCultivation.updated_at || Date.now();
-        const cloudPending = cloudState.__meta?.pendingSeconds ?? 0;
-        delete cloudState.__meta;
+      // Cloud có thay đổi mới và local chưa phát sinh mutation mới -> Fast-forward an toàn
+      backupCultivationState(localState);
+      const cloudState = { ...cloudCultivation.state };
+      cloudState._rev = cloudRev;
+      cloudState._seq = cloudRev;
+      cloudState._updatedAt = cloudCultivation.updated_at || Date.now();
+      const cloudPending = cloudState.__meta?.pendingSeconds ?? 0;
+      delete cloudState.__meta;
 
-        let targetPending = localPending;
-        if (localPending === lastSyncedPending) {
-          targetPending = cloudPending;
-          try {
-            localStorage.setItem(getCultivationKey('pending_seconds', 'real'), String(cloudPending));
-          } catch {}
-        }
-
+      let targetPending = localPending;
+      if (localPending === lastSyncedPending) {
+        targetPending = cloudPending;
         try {
-          localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cloudState));
+          localStorage.setItem(getCultivationKey('pending_seconds', 'real'), String(cloudPending));
         } catch {}
+      }
 
-        clearCultivationConflictState();
+      try {
+        localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cloudState));
+      } catch {}
 
-        ledger.cultivation = {
-          lastSyncedRev: cloudRev,
-          lastSyncedLocalSeq: cloudState._seq,
-          lastSyncedPending: targetPending,
-          lastCloudUpdatedAt: cloudCultivation.updated_at || Date.now(),
-          conflictPending: false,
-        };
+      clearCultivationConflictState();
 
-        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-          window.dispatchEvent(new CustomEvent('cultivation_updated', { detail: cloudState }));
-          if (!isOwnCultDevice && cloudCultivation?.device_id) {
-            window.dispatchEvent(new CustomEvent('cultivation_cloud_applied', {
-              detail: { rev: cloudRev, fromDeviceId: cloudCultivation.device_id }
-            }));
-          }
+      ledger.cultivation = {
+        lastSyncedRev: cloudRev,
+        lastSyncedLocalSeq: cloudState._seq,
+        lastSyncedPending: targetPending,
+        lastCloudUpdatedAt: cloudCultivation.updated_at || Date.now(),
+        conflictPending: false,
+      };
+
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('cultivation_updated', { detail: cloudState }));
+        if (!isOwnCultDevice && cloudCultivation?.device_id) {
+          window.dispatchEvent(new CustomEvent('cultivation_cloud_applied', {
+            detail: { rev: cloudRev, fromDeviceId: cloudCultivation.device_id }
+          }));
         }
       }
     } else if (!isCloudChanged && isLocalChanged) {
       const lastPendingPushAt = ledger.cultivation?.lastPendingPushAt || 0;
       const canPush = isLocalRevChanged || (now - lastPendingPushAt >= 60000) || options.force;
       if (canPush) {
-        const inFlightSnapshot = {
-          sentLocalSeq: localSeq,
-          expectedRev: lastSyncedRev,
-          sentPending: localPending,
-          idempotencyKey: 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9),
-        };
+        let pendingReq = getPendingCultivationRequest();
+        let inFlightSnapshot;
+        if (pendingReq) {
+          inFlightSnapshot = pendingReq;
+        } else {
+          inFlightSnapshot = {
+            idempotencyKey: 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9),
+            expectedRev: lastSyncedRev,
+            sentLocalSeq: localSeq,
+            sentPendingSeconds: localPending,
+            payloadState: JSON.parse(JSON.stringify(localState)),
+            createdAt: Date.now(),
+          };
+          savePendingCultivationRequest(inFlightSnapshot);
+        }
 
         const occRes = await commitCultivationOCC(client, userId, {
           expectedRev: inFlightSnapshot.expectedRev,
-          state: localState,
-          pendingSeconds: inFlightSnapshot.sentPending,
+          state: inFlightSnapshot.payloadState,
+          pendingSeconds: inFlightSnapshot.sentPendingSeconds,
           deviceId: getDeviceId(),
           idempotencyKey: inFlightSnapshot.idempotencyKey,
         });
 
         if (occRes.status === 'SUCCESS') {
+          clearPendingCultivationRequest();
           const committedRev = occRes.rev || occRes.committed_rev;
           const nowTime = Date.now();
           pushedScopes.add('cultivation');
           ledger.cultivation = {
             lastSyncedRev: committedRev,
             lastSyncedLocalSeq: inFlightSnapshot.sentLocalSeq,
-            lastSyncedPending: inFlightSnapshot.sentPending,
+            lastSyncedPending: inFlightSnapshot.sentPendingSeconds,
             lastCloudUpdatedAt: nowTime,
             lastPendingPushAt: nowTime,
             conflictPending: false,
           };
           clearCultivationConflictState();
+
+          // Kiểm tra nếu là Idempotent Replay và Cloud đã có revision mới hơn từ thiết bị khác
+          if (occRes.idempotent_replay && occRes.current_cloud_rev && occRes.current_cloud_rev > committedRev) {
+            const currentLocal = getCultivationState();
+            const currentSeq = typeof currentLocal?._seq === 'number' ? currentLocal._seq : (currentLocal?._rev || 0);
+            if (currentSeq > inFlightSnapshot.sentLocalSeq) {
+              hasAttention = true;
+              attentionReason = 'cultivation_conflict';
+              logSyncEvent({ level: 'warn', src: syncSource, evt: 'cultivation_conflict' });
+              if (!ledger.cultivation) ledger.cultivation = {};
+              ledger.cultivation.conflictPending = true;
+              backupCultivationState(currentLocal);
+              setCultivationConflictState({
+                local: currentLocal,
+                cloud: { rev: occRes.current_cloud_rev },
+                detectedAt: Date.now(),
+                reason: 'CONCURRENT_CLOUD_ADVANCE_AFTER_IDEMPOTENT_REPLAY',
+              });
+            }
+          }
         } else if (occRes.status === 'CONFLICT') {
+          clearPendingCultivationRequest();
           hasAttention = true;
           attentionReason = 'cultivation_conflict';
           logSyncEvent({ level: 'warn', src: syncSource, evt: 'cultivation_conflict' });

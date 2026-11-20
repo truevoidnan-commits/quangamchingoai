@@ -1,12 +1,12 @@
 -- ==============================================================================
--- SUPABASE POSTGRESQL MIGRATION: OPTIMISTIC CONCURRENCY CONTROL (OCC) FOR CULTIVATION
+-- SUPABASE POSTGRESQL MIGRATION: OCC SCHEMA & RPC (STAGE A)
 -- Môi trường áp dụng: Supabase Local / Staging (TUYỆT ĐỐI CHƯA CHẠY TRÊN PRODUCTION)
--- Phiên bản: 20261120_cultivation_occ_staging
--- Tham chiếu thiết kế: docs/CULTIVATION_OCC_DESIGN.md (Commit 2c2e83c / PR #4)
+-- Phiên bản: 20261120_cultivation_occ_stage_a
+-- Tham chiếu thiết kế: docs/CULTIVATION_OCC_DESIGN.md (Commit 2c2e83c / PR #4 & PR #5)
 -- ==============================================================================
 
 -- ------------------------------------------------------------------------------
--- 1. BẢNG DỮ LIỆU TU VI THỬ NGHIỆM (NẾU MÔI TRƯỜNG CHƯA CÓ BẢNG CULTIVATION)
+-- 1. BẢNG DỮ LIỆU TU VI (CULTIVATION TABLE SCHEMA)
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.cultivation (
     user_id UUID PRIMARY KEY,
@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS public.cultivation (
     device_id TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Chỉ mục hỗ trợ tối ưu tìm kiếm theo user_id
+CREATE INDEX IF NOT EXISTS idx_cultivation_user_id ON public.cultivation (user_id);
 
 -- Bật Row Level Security (RLS)
 ALTER TABLE public.cultivation ENABLE ROW LEVEL SECURITY;
@@ -27,6 +30,10 @@ ON public.cultivation
 FOR SELECT
 TO authenticated
 USING ((SELECT auth.uid()) = user_id);
+
+-- Trong Stage A: GIỮ NGUYÊN quyền SELECT, INSERT, UPDATE cho authenticated
+-- để các client hiện tại không bị gián đoạn trước khi Cutover.
+GRANT SELECT, INSERT, UPDATE ON TABLE public.cultivation TO authenticated;
 
 -- ------------------------------------------------------------------------------
 -- 2. BẢNG NHẬT KÝ IDEMPOTENCY (REQUEST JOURNAL)
@@ -48,7 +55,7 @@ ON public.cultivation_idempotency_log (created_at);
 -- Bật RLS cho bảng nhật ký
 ALTER TABLE public.cultivation_idempotency_log ENABLE ROW LEVEL SECURITY;
 
--- Thu hồi toàn bộ quyền đọc/ghi trực tiếp từ client trên bảng nhật ký (chỉ RPC được truy cập)
+-- Thu hồi toàn bộ quyền đọc/ghi trực tiếp từ client trên bảng nhật ký (chỉ RPC/service_role được truy cập)
 REVOKE ALL ON TABLE public.cultivation_idempotency_log FROM anon, authenticated, public;
 
 -- Hàm hỗ trợ dọn dẹp các key cũ hơn N ngày (chạy qua pg_cron hoặc job quản trị)
@@ -61,12 +68,22 @@ AS $$
 DECLARE
     v_deleted_count INTEGER;
 BEGIN
+    -- Kiểm tra giới hạn tham số p_days
+    IF p_days IS NULL OR p_days < 1 OR p_days > 365 THEN
+        RAISE EXCEPTION 'Tham số p_days không hợp lệ, phải nằm trong khoảng từ 1 đến 365 ngày.';
+    END IF;
+
     DELETE FROM public.cultivation_idempotency_log
     WHERE created_at < NOW() - (p_days || ' days')::INTERVAL;
     GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
     RETURN v_deleted_count;
 END;
 $$;
+
+-- BẢO MẬT HÀM CLEANUP: Thu hồi EXECUTE khỏi PUBLIC, anon và authenticated.
+-- Chỉ cấp quyền cho vai trò quản trị (service_role, postgres)
+REVOKE EXECUTE ON FUNCTION public.cleanup_cultivation_idempotency_log(INTEGER) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.cleanup_cultivation_idempotency_log(INTEGER) TO service_role;
 
 -- ------------------------------------------------------------------------------
 -- 3. BẢNG CẤU HÌNH HỆ THỐNG / CIRCUIT BREAKER (MAINTENANCE MODE)
@@ -108,7 +125,7 @@ DECLARE
     v_current_row public.cultivation%ROWTYPE;
     v_new_rev BIGINT;
     v_existing_log public.cultivation_idempotency_log%ROWTYPE;
-    v_fingerprint TEXT;
+    v_server_fingerprint TEXT;
     v_maintenance JSONB;
 BEGIN
     -- 1. Xác thực người dùng qua Supabase Auth session token
@@ -151,11 +168,19 @@ BEGIN
         );
     END IF;
 
-    -- Tính toán hoặc gán fingerprint bất biến của request
-    v_fingerprint := COALESCE(
-        p_request_fingerprint,
-        md5(p_expected_rev::text || ':' || p_state::text)
-    );
+    -- Server TỰ TÍNH fingerprint để không tin một fingerprint tùy ý từ client
+    v_server_fingerprint := md5(p_expected_rev::text || ':' || p_state::text);
+
+    -- Nếu client có gửi kèm fingerprint, server xác minh tính trùng khớp
+    IF p_request_fingerprint IS NOT NULL AND length(trim(p_request_fingerprint)) > 0 THEN
+        IF p_request_fingerprint <> v_server_fingerprint THEN
+            RETURN jsonb_build_object(
+                'status', 'ERROR',
+                'code', 'INVALID_FINGERPRINT',
+                'message', 'Request fingerprint client cung cấp không khớp với dữ liệu tính toán từ server.'
+            );
+        END IF;
+    END IF;
 
     -- 4. Khóa dòng dữ liệu của user để kiểm tra và cập nhật nguyên tử (Row-Level Lock)
     SELECT * INTO v_current_row
@@ -170,7 +195,7 @@ BEGIN
 
     IF FOUND THEN
         -- Đã có request với cùng idempotency_key
-        IF v_existing_log.request_fingerprint = v_fingerprint THEN
+        IF v_existing_log.request_fingerprint = v_server_fingerprint THEN
             -- Cùng key và cùng payload -> Replay kết quả thành công hợp lệ
             RETURN jsonb_build_object(
                 'status', 'SUCCESS',
@@ -212,7 +237,7 @@ BEGIN
             INSERT INTO public.cultivation_idempotency_log (
                 user_id, idempotency_key, committed_rev, request_fingerprint
             ) VALUES (
-                v_user_id, p_idempotency_key, 1, v_fingerprint
+                v_user_id, p_idempotency_key, 1, v_server_fingerprint
             )
             ON CONFLICT (user_id, idempotency_key) DO NOTHING;
 
@@ -266,7 +291,7 @@ BEGIN
     INSERT INTO public.cultivation_idempotency_log (
         user_id, idempotency_key, committed_rev, request_fingerprint
     ) VALUES (
-        v_user_id, p_idempotency_key, v_new_rev, v_fingerprint
+        v_user_id, p_idempotency_key, v_new_rev, v_server_fingerprint
     )
     ON CONFLICT (user_id, idempotency_key) DO NOTHING;
 
@@ -279,15 +304,8 @@ END;
 $$;
 
 -- ------------------------------------------------------------------------------
--- 5. CUTOVER PHÂN QUYỀN: KHÓA CHẶT 100% ĐƯỜNG GHI TRỰC TIẾP (DIRECT WRITES)
--- Ngăn chặn hoàn toàn việc client cũ bypass OCC bằng lệnh REST upsert
+-- 5. PHÂN QUYỀN RPC CHO STAGE A
 -- ------------------------------------------------------------------------------
--- Thu hồi toàn bộ quyền INSERT, UPDATE, DELETE trên bảng cultivation từ mọi role client
-REVOKE INSERT, UPDATE, DELETE ON TABLE public.cultivation FROM anon, authenticated, public;
-
--- Cho phép client đọc qua SELECT thông thường
-GRANT SELECT ON TABLE public.cultivation TO authenticated;
-
 -- Cấp quyền thực thi function RPC duy nhất cho authenticated
-REVOKE EXECUTE ON FUNCTION public.sync_cultivation_occ FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.sync_cultivation_occ TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.sync_cultivation_occ(BIGINT, JSONB, BIGINT, TEXT, TEXT, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.sync_cultivation_occ(BIGINT, JSONB, BIGINT, TEXT, TEXT, TEXT) TO authenticated;

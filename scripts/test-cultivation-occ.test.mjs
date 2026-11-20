@@ -89,6 +89,7 @@ class MockSupabaseOCCEngine {
     this.systemFlags = new Map(); // key -> value
     this.systemFlags.set('cultivation_maintenance', { enabled: false });
     this.currentUserId = 'user_12345';
+    this.currentRole = 'authenticated'; // 'authenticated' | 'anon' | 'service_role'
     this.isRevokedDirectWrite = true; // Sau cutover: REVOKE INSERT, UPDATE ON cultivation
     this.simulateNetworkDropOnNextRpc = false;
   }
@@ -103,6 +104,26 @@ class MockSupabaseOCCEngine {
 
   // Giả lập RPC sync_cultivation_occ nguyên tử chuẩn PostgreSQL
   async rpc(funcName, params) {
+    if (funcName === 'cleanup_cultivation_idempotency_log') {
+      const role = this.currentRole || 'authenticated';
+      if (role !== 'service_role' && role !== 'postgres') {
+        return { data: null, error: { message: 'permission denied for function cleanup_cultivation_idempotency_log', code: '42501' } };
+      }
+      const p_days = params?.p_days;
+      if (typeof p_days !== 'number' || p_days < 1 || p_days > 365) {
+        return { data: null, error: { message: 'Tham số p_days không hợp lệ, phải nằm trong khoảng từ 1 đến 365 ngày.', code: '22023' } };
+      }
+      let deleted = 0;
+      const cutoff = Date.now() - (p_days * 24 * 60 * 60 * 1000);
+      for (const [key, log] of this.idempotencyLogTable.entries()) {
+        if (log.created_at < cutoff) {
+          this.idempotencyLogTable.delete(key);
+          deleted++;
+        }
+      }
+      return { data: deleted, error: null };
+    }
+
     if (funcName !== 'sync_cultivation_occ') {
       return { data: null, error: { message: `Function ${funcName} not found`, code: 'PGRST202' } };
     }
@@ -145,7 +166,16 @@ class MockSupabaseOCCEngine {
       return { status: 'ERROR', code: 'INVALID_INPUT', message: 'Tham số đầu vào không hợp lệ.' };
     }
 
-    const fingerprint = p_request_fingerprint || crypto.createHash('md5').update(`${p_expected_rev}:${JSON.stringify(p_state)}`).digest('hex');
+    // Server tự tính fingerprint độc lập từ payload
+    const serverFingerprint = crypto.createHash('md5').update(`${p_expected_rev}:${JSON.stringify(p_state)}`).digest('hex');
+    if (p_request_fingerprint && p_request_fingerprint !== serverFingerprint) {
+      return {
+        status: 'ERROR',
+        code: 'INVALID_FINGERPRINT',
+        message: 'Request fingerprint client cung cấp không khớp với dữ liệu tính toán từ server.'
+      };
+    }
+    const fingerprint = serverFingerprint;
 
     // 4. Kiểm tra Idempotency Log
     const logKey = `${userId}:${p_idempotency_key}`;
@@ -326,6 +356,9 @@ const {
   getCultivationConflictState,
   setCultivationConflictState,
   clearCultivationConflictState,
+  getPendingCultivationRequest,
+  savePendingCultivationRequest,
+  clearPendingCultivationRequest,
   getDeviceId,
 } = await import('../src/lib/sync/syncLedger.js');
 
@@ -815,5 +848,312 @@ describe('Nhiệm vụ 3B.2: Kiểm thử toàn diện cơ chế OCC trên môi 
     assert.equal(res.status, 'SUCCESS');
     assert.equal(res.rev, 21);
     assert.equal(mockEngine.cultivationTable.get('user_test_occ').rev, 21);
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 16: Bảo mật SECURITY DEFINER - cleanup function
+  // --------------------------------------------------------------------------
+  test('Ca 16: Bảo mật SECURITY DEFINER - User thông thường bị từ chối gọi cleanup; chỉ service_role được gọi; p_days ngoài 1-365 bị ném exception', async () => {
+    // 1. User thông thường (authenticated) cố gọi cleanup -> Bị từ chối 42501 permission denied
+    mockEngine.currentRole = 'authenticated';
+    const resAuth = await mockEngine.rpc('cleanup_cultivation_idempotency_log', { p_days: 7 });
+    assert.equal(resAuth.data, null);
+    assert.ok(resAuth.error);
+    assert.equal(resAuth.error.code, '42501');
+    assert.match(resAuth.error.message, /permission denied/);
+
+    // 2. Vai trò quản trị (service_role) gọi với p_days không hợp lệ (ví dụ p_days = 0 hoặc negative)
+    mockEngine.currentRole = 'service_role';
+    const resInvalid = await mockEngine.rpc('cleanup_cultivation_idempotency_log', { p_days: 0 });
+    assert.equal(resInvalid.data, null);
+    assert.ok(resInvalid.error);
+    assert.equal(resInvalid.error.code, '22023');
+    assert.match(resInvalid.error.message, /Tham số p_days không hợp lệ/);
+
+    // 3. service_role gọi với p_days hợp lệ -> Dọn dẹp thành công
+    mockEngine.idempotencyLogTable.set('user_test_occ:old_req', {
+      user_id: 'user_test_occ',
+      idempotency_key: 'old_req',
+      committed_rev: 1,
+      request_fingerprint: 'fp',
+      created_at: Date.now() - (10 * 24 * 60 * 60 * 1000) // 10 ngày trước
+    });
+    mockEngine.idempotencyLogTable.set('user_test_occ:recent_req', {
+      user_id: 'user_test_occ',
+      idempotency_key: 'recent_req',
+      committed_rev: 2,
+      request_fingerprint: 'fp',
+      created_at: Date.now() - (1 * 24 * 60 * 60 * 1000) // 1 ngày trước
+    });
+
+    const resValid = await mockEngine.rpc('cleanup_cultivation_idempotency_log', { p_days: 7 });
+    assert.equal(resValid.error, null);
+    assert.equal(resValid.data, 1); // Xóa đúng 1 bản ghi cũ
+    assert.equal(mockEngine.idempotencyLogTable.has('user_test_occ:old_req'), false);
+    assert.equal(mockEngine.idempotencyLogTable.has('user_test_occ:recent_req'), true);
+
+    mockEngine.currentRole = 'authenticated';
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 17: Server-Authoritative Fingerprint
+  // --------------------------------------------------------------------------
+  test('Ca 17: Server-Authoritative Fingerprint - Client gửi fingerprint sai lệch bị từ chối; server tự tính toán authoritative fingerprint', async () => {
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 5,
+      state: { realm: 'ngung_khi_5', totalExp: 500 },
+      updated_at: 1000,
+      device_id: 'dev_A'
+    });
+
+    // Client gửi fingerprint bịa đặt sai lệch so với payload
+    const resBadFp = await commitCultivationOCC(mockEngine, 'user_test_occ', {
+      expectedRev: 5,
+      state: { realm: 'ngung_khi_6', totalExp: 600 },
+      deviceId: 'dev_A',
+      idempotencyKey: 'req_fp_test_1',
+      requestFingerprint: 'invalid_client_supplied_hash_12345'
+    });
+
+    assert.equal(resBadFp.status, 'ERROR');
+    assert.equal(resBadFp.code, 'INVALID_FINGERPRINT');
+    assert.match(resBadFp.message, /không khớp/);
+
+    // Không truyền fingerprint -> Server tự tính từ payload và commit thành công
+    const resValid = await commitCultivationOCC(mockEngine, 'user_test_occ', {
+      expectedRev: 5,
+      state: { realm: 'ngung_khi_6', totalExp: 600 },
+      deviceId: 'dev_A',
+      idempotencyKey: 'req_fp_test_2'
+    });
+
+    assert.equal(resValid.status, 'SUCCESS');
+    assert.equal(resValid.rev, 6);
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 18: Phá bỏ logic revision kế thừa - Không dùng localRev hay isOwnCultDevice
+  // --------------------------------------------------------------------------
+  test('Ca 18: Không dùng localRev để xác nhận Cloud rev - Fast-forward nhận Cloud rev 20 chính xác; khi cả 2 cùng sửa, báo XUNG ĐỘT dù device_id trùng', async () => {
+    // 1. Máy trùng device_id: Cloud đã lên rev 20, local có seq = 5, lastSyncedRev = 10, lastSyncedLocalSeq = 5 (local không đổi)
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 20,
+      state: { realm: 'truc_co_1', totalExp: 2000 },
+      updated_at: 5000,
+      device_id: getDeviceId() // Trùng device_id
+    });
+
+    const localState = getCultivationState();
+    localState._seq = 5;
+    localState._rev = 5;
+    localState.totalExp = 1000;
+    localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(localState));
+
+    const ledger = getSyncLedger();
+    ledger.cultivation = {
+      lastSyncedRev: 10,
+      lastSyncedLocalSeq: 5,
+      lastCloudUpdatedAt: 2000
+    };
+    saveSyncLedger(ledger);
+
+    // Khi chạy pullCultivationBeforeMeditation: Fast-forward thành công lên rev 20
+    const pullRes = await pullCultivationBeforeMeditation(mockEngine, { timeoutMs: 1000 });
+    assert.equal(pullRes.fastForwarded, true);
+    assert.equal(pullRes.state._rev, 20);
+
+    const ledgerAfterPull = getSyncLedger();
+    assert.equal(ledgerAfterPull.cultivation.lastSyncedRev, 20); // Phải là 20, KHÔNG phải Math.max(10, 20, 5)
+
+    // 2. Tình huống cả 2 cùng sửa: Cloud có rev 25, local sửa tiếp lên seq = 22 (> 20)
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 25,
+      state: { realm: 'truc_co_5', totalExp: 2500 },
+      updated_at: 6000,
+      device_id: getDeviceId() // Cùng device_id
+    });
+
+    const localMutated = getCultivationState();
+    localMutated._seq = 22;
+    localMutated._rev = 22;
+    localMutated.totalExp = 2200;
+    saveCultivationState(localMutated);
+
+    // Khi chạy syncCultivation: Phải báo CONFLICT, KHÔNG được tự đánh dấu đã đồng bộ chỉ vì device_id trùng!
+    const syncRes = await syncCultivation(mockEngine, 'user_test_occ');
+    assert.equal(syncRes.conflict, true);
+    assert.equal(syncRes.skipped, true);
+
+    const conflictState = getCultivationConflictState();
+    assert.ok(conflictState);
+    assert.equal(conflictState.cloud.rev, 25);
+    assert.equal(conflictState.local.totalExp, 2200);
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 19: Idempotent Replay khi Cloud có revision mới hơn và local có mutation mới
+  // --------------------------------------------------------------------------
+  test('Ca 19: Idempotent Replay khi Cloud có revision mới hơn và Local có mutation mới -> Đánh dấu XUNG ĐỘT, bảo toàn local', async () => {
+    // 1. Client A tạo persistent request req_A1 với expectedRev = 10, sentLocalSeq = 15
+    const pendingReq = {
+      idempotencyKey: 'req_A1_replay_test',
+      expectedRev: 10,
+      sentLocalSeq: 15,
+      sentPendingSeconds: 0,
+      payloadState: { realm: 'ngung_khi_5', totalExp: 500 },
+      createdAt: Date.now()
+    };
+    savePendingCultivationRequest(pendingReq);
+
+    // 2. Giả lập Cloud: req_A1 đã được commit tại rev 11, nhưng ngay sau đó Thiết bị B đã đẩy Cloud lên rev 12
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 12,
+      state: { realm: 'ngung_khi_7', totalExp: 700 },
+      updated_at: 3000,
+      device_id: 'dev_B'
+    });
+    mockEngine.idempotencyLogTable.set('user_test_occ:req_A1_replay_test', {
+      user_id: 'user_test_occ',
+      idempotency_key: 'req_A1_replay_test',
+      committed_rev: 11,
+      request_fingerprint: crypto.createHash('md5').update(`10:${JSON.stringify(pendingReq.payloadState)}`).digest('hex'),
+      created_at: 2000
+    });
+
+    // 3. Local phát sinh mutation mới offline sau sentLocalSeq 15 -> seq = 16
+    const localState = getCultivationState();
+    localState._seq = 16;
+    localState._rev = 16;
+    localState.totalExp = 550;
+    localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(localState));
+
+    const ledger = getSyncLedger();
+    ledger.cultivation = { lastSyncedRev: 10, lastSyncedLocalSeq: 15, lastCloudUpdatedAt: 1000 };
+    saveSyncLedger(ledger);
+
+    // 4. Client A chạy syncCultivation (retry request pendingReq)
+    const res = await syncCultivation(mockEngine, 'user_test_occ');
+
+    // Phải phát hiện XUNG ĐỘT vì Cloud đã tiến lên rev 12 mà local lại có mutation mới ở seq 16
+    assert.equal(res.conflict, true);
+    assert.equal(res.skipped, true);
+
+    const conflictState = getCultivationConflictState();
+    assert.ok(conflictState);
+    assert.equal(conflictState.cloud.rev, 12);
+
+    // Local data của A ở seq 16 được bảo toàn nguyên vẹn
+    assert.equal(getCultivationState().totalExp, 550);
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 20: Pending seconds thay đổi và quy đổi thành EXP trong lúc request đang bay
+  // --------------------------------------------------------------------------
+  test('Ca 20: Pending seconds thay đổi và quy đổi thành EXP trong lúc request đang bay -> Dữ liệu được bảo toàn và dirty tiếp tục', async () => {
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 5,
+      state: { realm: 'ngung_khi_5', totalExp: 500, __meta: { pendingSeconds: 0 } },
+      updated_at: 1000,
+      device_id: 'dev_A'
+    });
+
+    // Local bắt đầu: seq = 10, totalExp = 500, pending = 120
+    const local = getCultivationState();
+    local._seq = 10;
+    local._rev = 10;
+    local.totalExp = 500;
+    localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(local));
+    localStorage.setItem(getCultivationKey('pending_seconds', 'real'), '120');
+
+    const ledger = getSyncLedger();
+    ledger.cultivation = { lastSyncedRev: 5, lastSyncedLocalSeq: 10, lastSyncedPending: 0, lastCloudUpdatedAt: 1000 };
+    saveSyncLedger(ledger);
+
+    // Bắt đầu tạo snapshot in-flight
+    const inFlightSnapshot = {
+      idempotencyKey: 'req_pending_race_test',
+      expectedRev: 5,
+      sentLocalSeq: 10,
+      sentPendingSeconds: 120,
+      payloadState: { ...local },
+      createdAt: Date.now()
+    };
+    savePendingCultivationRequest(inFlightSnapshot);
+
+    // Trong lúc request đang bay: User click "Thu hoạch" EXP từ pending seconds!
+    // -> totalExp tăng lên 620, pending_seconds về 0, _seq tăng lên 11!
+    local.totalExp = 620;
+    saveCultivationState(local); // Tăng _seq = 11
+    localStorage.setItem(getCultivationKey('pending_seconds', 'real'), '0');
+
+    // Giả lập RPC trả về SUCCESS (rev 6) cho request cũ
+    const occRes = await commitCultivationOCC(mockEngine, 'user_test_occ', {
+      expectedRev: inFlightSnapshot.expectedRev,
+      state: inFlightSnapshot.payloadState,
+      pendingSeconds: inFlightSnapshot.sentPendingSeconds,
+      deviceId: 'dev_A',
+      idempotencyKey: inFlightSnapshot.idempotencyKey
+    });
+    assert.equal(occRes.status, 'SUCCESS');
+    assert.equal(occRes.rev, 6);
+
+    // Cập nhật ledger theo snapshot in-flight
+    ledger.cultivation = {
+      lastSyncedRev: 6,
+      lastSyncedLocalSeq: inFlightSnapshot.sentLocalSeq, // 10
+      lastSyncedPending: inFlightSnapshot.sentPendingSeconds, // 120
+      lastCloudUpdatedAt: Date.now()
+    };
+    saveSyncLedger(ledger);
+    clearPendingCultivationRequest();
+
+    // KIỂM TRA TRẠNG THÁI DIRTY CỦA CLIENT:
+    const currentState = getCultivationState();
+    const currentSeq = currentState._seq;
+    const currentPending = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')), 10);
+    const updatedLedger = getSyncLedger();
+
+    // 1. localSeq (11) > lastSyncedLocalSeq (10) -> isLocalRevChanged là TRUE
+    assert.equal(currentSeq > updatedLedger.cultivation.lastSyncedLocalSeq, true);
+
+    // 2. localPending (0) !== lastSyncedPending (120) -> isLocalPendingChanged là TRUE
+    assert.equal(currentPending !== updatedLedger.cultivation.lastSyncedPending, true);
+
+    // 3. EXP thu hoạch mới (620) không bị mất hay bị ghi đè lùi
+    assert.equal(currentState.totalExp, 620);
+    assert.equal(currentPending, 0);
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 21: Migration A độc lập với Migration B
+  // --------------------------------------------------------------------------
+  test('Ca 21: Migration A độc lập với Migration B - Giai đoạn A cho phép direct write; Giai đoạn B (Cutover) chặn direct write', async () => {
+    // 1. Giai đoạn A (chưa cutover): direct write vẫn được phép
+    mockEngine.setDirectWritePermission(true);
+    const resA = await mockEngine.from('cultivation').upsert({
+      user_id: 'user_test_occ',
+      rev: 1,
+      state: { totalExp: 10 },
+      updated_at: Date.now()
+    });
+    assert.equal(resA.error, null);
+    assert.ok(resA.data);
+
+    // 2. Giai đoạn B (sau cutover): direct write bị từ chối 42501
+    mockEngine.setDirectWritePermission(false);
+    const resB = await mockEngine.from('cultivation').upsert({
+      user_id: 'user_test_occ',
+      rev: 2,
+      state: { totalExp: 20 },
+      updated_at: Date.now()
+    });
+    assert.equal(resB.data, null);
+    assert.ok(resB.error);
+    assert.equal(resB.error.code, '42501');
   });
 });

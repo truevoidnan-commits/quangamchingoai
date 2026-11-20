@@ -8,6 +8,7 @@ export const DIRTY_KEY = 'tcl_sync_dirty';
 export const TOMBSTONES_KEY = 'tcl_sync_tombstones';
 export const DEVICE_ID_KEY = 'tcl_device_id';
 export const CULTIVATION_CONFLICT_KEY = 'tcl_cultivation_conflict_state';
+export const PENDING_CULTIVATION_REQUEST_KEY = 'tcl_cultivation_pending_request';
 
 let _syncBypassDirty = false;
 
@@ -274,6 +275,33 @@ export function setCultivationConflictState(data) {
 export function clearCultivationConflictState() {
   try {
     localStorage.removeItem(CULTIVATION_CONFLICT_KEY);
+  } catch {}
+}
+
+export function getPendingCultivationRequest() {
+  try {
+    const raw = localStorage.getItem(PENDING_CULTIVATION_REQUEST_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function savePendingCultivationRequest(req) {
+  try {
+    if (req) {
+      localStorage.setItem(PENDING_CULTIVATION_REQUEST_KEY, JSON.stringify(req));
+    } else {
+      localStorage.removeItem(PENDING_CULTIVATION_REQUEST_KEY);
+    }
+  } catch (e) {
+    console.warn('Lỗi lưu pending cultivation request:', e);
+  }
+}
+
+export function clearPendingCultivationRequest() {
+  try {
+    localStorage.removeItem(PENDING_CULTIVATION_REQUEST_KEY);
   } catch {}
 }
 
