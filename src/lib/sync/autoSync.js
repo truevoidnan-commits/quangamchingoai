@@ -1317,19 +1317,33 @@ export function notifyReadingProgressChanged(customSupabase = null) {
 }
 
 /**
- * Đẩy nhanh tiến độ và tu vi khi tab ẩn / pagehide (best effort)
+ * Đẩy nhanh tiến độ và tu vi khi tab ẩn / pagehide (best effort).
+ * 
+ * BẢO VỆ AN TOÀN TU VI (Nhiệm vụ 3A):
+ * Tạm thời loại bỏ khả năng Quick Push ghi trực tiếp snapshot tu vi lên Supabase bằng upsert vô điều kiện.
+ * Lý do: Quick Push chạy trong sự kiện pagehide / visibilitychange=hidden với thời gian thực thi rất ngắn,
+ * không thể kiểm tra Cloud revision hoặc xử lý xung đột, gây nguy cơ giật lùi dữ liệu nghiêm trọng nếu
+ * thiết bị khác đã đồng bộ revision mới hơn (ví dụ: Cloud ở rev 50 Kim Đan, máy này mở lên với rev 10
+ * và nhích lên rev 11 thì khi đóng tab sẽ ghi đè mù Cloud về rev 11).
+ * 
+ * Quy tắc bảo vệ:
+ * 1. KHÔNG gọi upsert snapshot tu vi lên Supabase trong luồng Quick Push.
+ * 2. GIỮ NGUYÊN toàn bộ dữ liệu tu vi cục bộ (EXP, cảnh giới, tài nguyên, pending_seconds).
+ * 3. KHÔNG tăng/cập nhật lastSyncedRev để luồng đồng bộ chính (runAutoSync / performSync)
+ *    phát hiện đầy đủ dữ liệu chưa đồng bộ khi người dùng mở lại ứng dụng.
+ * 4. Ghi log sự kiện 'cultivation_quick_push_bypassed' phục vụ giám sát.
  */
-async function quickPushProgressAndCultivation(customSupabase = null) {
-  if (!isProductionHost() || !isAutoSyncEnabled()) return;
-  if (getActiveProfile() !== 'real') return;
+export async function quickPushProgressAndCultivation(customSupabase = null) {
+  if (!isProductionHost() || !isAutoSyncEnabled()) return { skipped: true, reason: 'disabled' };
+  if (getActiveProfile() !== 'real') return { skipped: true, reason: 'sandbox_profile' };
   const client = customSupabase || supabase;
-  if (!client?.auth) return;
+  if (!client?.auth) return { skipped: true, reason: 'no_client' };
 
   try {
     let userId = _cachedUserId;
     if (!userId) {
       const { data: { session } } = await client.auth.getSession();
-      if (!session?.user) return;
+      if (!session?.user) return { skipped: true, reason: 'not_logged_in' };
       userId = session.user.id;
       _cachedUserId = userId;
     }
@@ -1345,30 +1359,31 @@ async function quickPushProgressAndCultivation(customSupabase = null) {
     const pendingChanged = localPending !== lastSyncedPending;
 
     if (revChanged || pendingChanged) {
-      const nowTime = Date.now();
-      const { error: cultErr } = await client.from('cultivation').upsert({
-        user_id: userId,
-        state: { ...localState, __meta: { pendingSeconds: localPending } },
-        rev: localRev,
-        updated_at: nowTime,
-        device_id: getDeviceId(),
-      }, { onConflict: 'user_id' });
+      try {
+        logSyncEvent({
+          level: 'info',
+          src: 'quick_push',
+          evt: 'cultivation_quick_push_bypassed',
+          msg: 'Bảo vệ an toàn: Bỏ qua Quick Push tu vi vô điều kiện; giữ nguyên cục bộ để luồng đồng bộ chính xử lý an toàn',
+          localRev,
+          lastSyncedRev,
+          pendingSeconds: localPending,
+        });
+      } catch {}
 
-      if (!cultErr) {
-        ledger.cultivation = {
-          ...ledger.cultivation,
-          lastSyncedRev: localRev,
-          lastSyncedPending: localPending,
-          lastCloudUpdatedAt: nowTime,
-        };
-        saveSyncLedger(ledger);
-        notifyOtherDevices(['cultivation']);
-      } else {
-        console.warn('Lỗi quick push tu vi:', cultErr.message);
-      }
+      return {
+        bypassed: true,
+        reason: 'guard_against_blind_upsert',
+        localRev,
+        lastSyncedRev,
+        pendingSeconds: localPending,
+      };
     }
+
+    return { skipped: true, reason: 'no_changes' };
   } catch (err) {
     console.warn('Lỗi quickPushProgressAndCultivation:', err.message);
+    return { error: err.message };
   }
 }
 
