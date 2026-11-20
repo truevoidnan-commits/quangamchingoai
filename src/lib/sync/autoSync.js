@@ -22,6 +22,8 @@ import {
   getContentSyncPoint,
   recordContentPulled,
   recordContentPushed,
+  setCultivationConflictState,
+  clearCultivationConflictState,
 } from './syncLedger.js';
 import {
   getActiveProfile,
@@ -53,6 +55,7 @@ import {
   mergeNovelWithCloud,
   pushNovelToCloud,
   syncNovelMetadata,
+  commitCultivationOCC,
 } from './syncEngine.js';
 import {
   startRealtime,
@@ -252,8 +255,14 @@ export async function pullCultivationBeforeMeditation(customSupabase = null, { t
   const userId = session.user.id;
   const ledger = getSyncLedger();
   const localState = getCultivationState();
-  const localRev = typeof localState?._rev === 'number' ? localState._rev : 0;
+  const localSeq = typeof localState?._seq === 'number' && !isNaN(localState._seq)
+    ? localState._seq
+    : (typeof localState?._rev === 'number' ? localState._rev : 0);
+  const localRev = localSeq;
   const lastSyncedRev = ledger.cultivation?.lastSyncedRev || 0;
+  const lastSyncedLocalSeq = typeof ledger.cultivation?.lastSyncedLocalSeq === 'number'
+    ? ledger.cultivation.lastSyncedLocalSeq
+    : lastSyncedRev;
   const lastSyncedPending = ledger.cultivation?.lastSyncedPending ?? 0;
   const localPending = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')) || '0', 10) || 0;
 
@@ -277,7 +286,7 @@ export async function pullCultivationBeforeMeditation(customSupabase = null, { t
 
     const cloudRev = cloudCult.rev || 0;
     const isCloudNewer = cloudRev > lastSyncedRev;
-    const isLocalUnchanged = localRev <= lastSyncedRev;
+    const isLocalUnchanged = localSeq <= lastSyncedLocalSeq;
     const isOwnDevice = Boolean(cloudCult.device_id && cloudCult.device_id === getDeviceId());
 
     if (isOwnDevice && cloudRev <= localRev) {
@@ -289,6 +298,7 @@ export async function pullCultivationBeforeMeditation(customSupabase = null, { t
       backupCultivationState(localState);
       const cloudState = { ...cloudCult.state };
       cloudState._rev = cloudRev;
+      cloudState._seq = cloudRev;
       cloudState._updatedAt = cloudCult.updated_at || Date.now();
       const cloudPending = cloudState.__meta?.pendingSeconds ?? 0;
       delete cloudState.__meta;
@@ -305,10 +315,14 @@ export async function pullCultivationBeforeMeditation(customSupabase = null, { t
         localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cloudState));
       } catch {}
 
+      clearCultivationConflictState();
+
       ledger.cultivation = {
         lastSyncedRev: cloudRev,
+        lastSyncedLocalSeq: cloudState._seq,
         lastSyncedPending: targetPending,
         lastCloudUpdatedAt: cloudCult.updated_at || Date.now(),
+        conflictPending: false,
       };
       saveSyncLedger(ledger);
 
@@ -583,8 +597,14 @@ export async function runAutoSync(customSupabase = null, options = {}) {
 
     // D. Đồng bộ Tu Vi (Cultivation - chỉ hồ sơ Thật)
     const localState = getCultivationState();
-    let localRev = typeof localState?._rev === 'number' ? localState._rev : 0;
-    const lastSyncedRev = ledger.cultivation?.lastSyncedRev || 0;
+    let localSeq = typeof localState?._seq === 'number' && !isNaN(localState._seq)
+      ? localState._seq
+      : (typeof localState?._rev === 'number' ? localState._rev : 0);
+    let localRev = localSeq;
+    const lastSyncedRev = ledger.cultivation?.lastSyncedRev || 0; // lastSyncedCloudRev
+    const lastSyncedLocalSeq = typeof ledger.cultivation?.lastSyncedLocalSeq === 'number'
+      ? ledger.cultivation.lastSyncedLocalSeq
+      : lastSyncedRev;
     const lastSyncedPending = ledger.cultivation?.lastSyncedPending ?? 0;
     const cloudRev = cloudCultivation?.rev || 0;
     const localPending = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')) || '0', 10) || 0;
@@ -594,7 +614,7 @@ export async function runAutoSync(customSupabase = null, options = {}) {
     const isCloudPendingChanged = cloudRev === lastSyncedRev && (cloudCultivation?.updated_at || 0) > (ledger.cultivation?.lastCloudUpdatedAt || 0) && cloudPending !== lastSyncedPending;
     const isCloudChanged = isCloudRevChanged || isCloudPendingChanged;
 
-    const isLocalRevChanged = localRev > lastSyncedRev;
+    const isLocalRevChanged = localSeq > lastSyncedLocalSeq;
     const isLocalPendingChanged = localPending !== lastSyncedPending;
     const isLocalChanged = isLocalRevChanged || isLocalPendingChanged;
 
@@ -605,15 +625,25 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       hasAttention = true;
       attentionReason = 'cultivation_conflict';
       logSyncEvent({ level: 'warn', src: syncSource, evt: 'cultivation_conflict' });
+      if (!ledger.cultivation) ledger.cultivation = {};
+      ledger.cultivation.conflictPending = true;
+      backupCultivationState(localState);
+      setCultivationConflictState({
+        local: localState,
+        cloud: cloudCultivation,
+        detectedAt: Date.now(),
+      });
     } else if (isCloudChanged && !isLocalRevChanged && cloudCultivation?.state) {
       if (isOwnCultDevice && cloudRev <= localRev) {
         if (!ledger.cultivation) ledger.cultivation = {};
         ledger.cultivation.lastSyncedRev = Math.max(ledger.cultivation.lastSyncedRev || 0, cloudRev, localRev);
+        ledger.cultivation.lastSyncedLocalSeq = Math.max(ledger.cultivation.lastSyncedLocalSeq || 0, localSeq);
         ledger.cultivation.lastCloudUpdatedAt = cloudCultivation.updated_at || Date.now();
       } else {
         backupCultivationState(localState);
         const cloudState = { ...cloudCultivation.state };
         cloudState._rev = cloudRev;
+        cloudState._seq = cloudRev;
         cloudState._updatedAt = cloudCultivation.updated_at || Date.now();
         const cloudPending = cloudState.__meta?.pendingSeconds ?? 0;
         delete cloudState.__meta;
@@ -630,10 +660,14 @@ export async function runAutoSync(customSupabase = null, options = {}) {
           localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cloudState));
         } catch {}
 
+        clearCultivationConflictState();
+
         ledger.cultivation = {
           lastSyncedRev: cloudRev,
+          lastSyncedLocalSeq: cloudState._seq,
           lastSyncedPending: targetPending,
           lastCloudUpdatedAt: cloudCultivation.updated_at || Date.now(),
+          conflictPending: false,
         };
 
         if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
@@ -649,28 +683,51 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       const lastPendingPushAt = ledger.cultivation?.lastPendingPushAt || 0;
       const canPush = isLocalRevChanged || (now - lastPendingPushAt >= 60000) || options.force;
       if (canPush) {
-        const payloadState = { ...localState, __meta: { pendingSeconds: localPending } };
-        const nowTime = Date.now();
+        const inFlightSnapshot = {
+          sentLocalSeq: localSeq,
+          expectedRev: lastSyncedRev,
+          sentPending: localPending,
+          idempotencyKey: 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9),
+        };
 
-        const { error: cultUpsertErr } = await client.from('cultivation').upsert({
-          user_id: userId,
-          state: payloadState,
-          rev: localRev,
-          updated_at: nowTime,
-          device_id: getDeviceId(),
-        }, { onConflict: 'user_id' });
+        const occRes = await commitCultivationOCC(client, userId, {
+          expectedRev: inFlightSnapshot.expectedRev,
+          state: localState,
+          pendingSeconds: inFlightSnapshot.sentPending,
+          deviceId: getDeviceId(),
+          idempotencyKey: inFlightSnapshot.idempotencyKey,
+        });
 
-        if (!cultUpsertErr) {
+        if (occRes.status === 'SUCCESS') {
+          const committedRev = occRes.rev || occRes.committed_rev;
+          const nowTime = Date.now();
           pushedScopes.add('cultivation');
           ledger.cultivation = {
-            lastSyncedRev: localRev,
-            lastSyncedPending: localPending,
+            lastSyncedRev: committedRev,
+            lastSyncedLocalSeq: inFlightSnapshot.sentLocalSeq,
+            lastSyncedPending: inFlightSnapshot.sentPending,
             lastCloudUpdatedAt: nowTime,
             lastPendingPushAt: nowTime,
+            conflictPending: false,
           };
+          clearCultivationConflictState();
+        } else if (occRes.status === 'CONFLICT') {
+          hasAttention = true;
+          attentionReason = 'cultivation_conflict';
+          logSyncEvent({ level: 'warn', src: syncSource, evt: 'cultivation_conflict' });
+          if (!ledger.cultivation) ledger.cultivation = {};
+          ledger.cultivation.conflictPending = true;
+          backupCultivationState(localState);
+          setCultivationConflictState({
+            local: localState,
+            cloud: occRes.current_cloud,
+            detectedAt: Date.now(),
+          });
+        } else if (occRes.status === 'MAINTENANCE') {
+          console.warn('Đồng bộ tu vi đang tạm bảo trì:', occRes.message);
         } else {
-          console.warn('Lỗi upsert tu vi lên cloud:', cultUpsertErr.message);
-          errors.push(`Lỗi cập nhật tu vi lên cloud: ${cultUpsertErr.message}`);
+          console.warn('Lỗi OCC tu vi lên cloud:', occRes.message || occRes.error);
+          errors.push(`Lỗi cập nhật tu vi lên cloud: ${occRes.message || occRes.error}`);
         }
       }
     }

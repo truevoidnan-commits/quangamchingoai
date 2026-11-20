@@ -24,6 +24,8 @@ import {
   getContentSyncPoint,
   recordContentPulled,
   recordContentPushed,
+  setCultivationConflictState,
+  clearCultivationConflictState,
 } from './syncLedger.js';
 import {
   getNovel,
@@ -515,6 +517,52 @@ export async function syncReadingProgress(supabase, userId, activeNovelIds = [],
 }
 
 /**
+ * Gọi RPC sync_cultivation_occ nguyên tử trên Supabase (Optimistic Concurrency Control)
+ */
+export async function commitCultivationOCC(supabase, userId, {
+  expectedRev = 0,
+  state,
+  pendingSeconds = 0,
+  deviceId,
+  idempotencyKey,
+  requestFingerprint = null,
+} = {}) {
+  if (!supabase) return { status: 'ERROR', code: 'NO_CLIENT', message: 'Thiếu Supabase client' };
+
+  const key = idempotencyKey || ('req_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9));
+  const payloadState = { ...state, __meta: { pendingSeconds: pendingSeconds || 0 } };
+  const now = Date.now();
+
+  try {
+    const { data, error } = await supabase.rpc('sync_cultivation_occ', {
+      p_expected_rev: typeof expectedRev === 'number' ? expectedRev : 0,
+      p_state: payloadState,
+      p_updated_at: now,
+      p_device_id: deviceId || getDeviceId(),
+      p_idempotency_key: key,
+      p_request_fingerprint: requestFingerprint,
+    });
+
+    if (error) {
+      return {
+        status: 'ERROR',
+        code: error.code || 'RPC_ERROR',
+        message: error.message || 'Lỗi khi gọi RPC sync_cultivation_occ',
+        details: error,
+      };
+    }
+
+    return data || { status: 'ERROR', code: 'EMPTY_RESPONSE', message: 'RPC không trả về dữ liệu' };
+  } catch (err) {
+    return {
+      status: 'ERROR',
+      code: 'NETWORK_OR_EXCEPTION',
+      message: err.message,
+    };
+  }
+}
+
+/**
  * Đồng bộ Tu Vi (cultivation table) - CHỈ HỒ SƠ THẬT (REAL)
  */
 export async function syncCultivation(supabase, userId, { onConflictCultivation, mode = 'normal', ledger: passedLedger = null } = {}) {
@@ -532,16 +580,26 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
 
   const ledger = passedLedger || getSyncLedger();
   const localState = getCultivationState();
-  let localRev = typeof localState?._rev === 'number' && !isNaN(localState._rev) ? localState._rev : 0;
+  let localSeq = typeof localState?._seq === 'number' && !isNaN(localState._seq)
+    ? localState._seq
+    : (typeof localState?._rev === 'number' && !isNaN(localState._rev) ? localState._rev : 0);
+  let localRev = localSeq;
+
   if (localRev === 0 && localState && (localState.totalExp || 0) > 0) {
     localRev = 1;
+    localSeq = 1;
+    localState._seq = 1;
     localState._rev = 1;
     localState._updatedAt = localState._updatedAt || Date.now();
     try {
       localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(localState));
     } catch {}
   }
-  const lastSyncedRev = ledger.cultivation?.lastSyncedRev || 0;
+
+  const lastSyncedRev = ledger.cultivation?.lastSyncedRev || 0; // lastSyncedCloudRev
+  const lastSyncedLocalSeq = typeof ledger.cultivation?.lastSyncedLocalSeq === 'number'
+    ? ledger.cultivation.lastSyncedLocalSeq
+    : lastSyncedRev;
   const lastSyncedPending = ledger.cultivation?.lastSyncedPending ?? 0;
   const cloudRev = cloudCultivation?.rev || 0;
 
@@ -565,6 +623,7 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
     backupCultivationState(localState);
     const cloudState = { ...(cloudItem.state || {}) };
     cloudState._rev = cloudItem.rev || cloudState._rev || 0;
+    cloudState._seq = cloudState._rev;
     cloudState._updatedAt = cloudItem.updated_at || Date.now();
     const cloudPending = cloudState.__meta?.pendingSeconds ?? 0;
     delete cloudState.__meta;
@@ -577,11 +636,14 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
     }
 
     localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cloudState));
+    clearCultivationConflictState();
 
     ledger.cultivation = {
       lastSyncedRev: cloudItem.rev || 0,
+      lastSyncedLocalSeq: cloudState._seq,
       lastSyncedPending: targetPending,
       lastCloudUpdatedAt: cloudItem.updated_at || Date.now(),
+      conflictPending: false,
     };
     saveSyncLedger(ledger);
 
@@ -595,30 +657,58 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
     }
   };
 
-  const pushLocalCultivation = async () => {
+  const pushLocalCultivation = async (overrideExpectedRev = null) => {
     const pendingSeconds = getLocalPendingSeconds();
-    const payloadState = { ...localState, __meta: { pendingSeconds } };
-    const now = Date.now();
+    const sentLocalSeq = typeof localState._seq === 'number' ? localState._seq : (localState._rev || 0);
+    const expectedRev = overrideExpectedRev !== null ? overrideExpectedRev : lastSyncedRev;
 
-    const { error: upsertErr } = await supabase.from('cultivation').upsert({
-      user_id: userId,
-      state: payloadState,
-      rev: localRev,
-      updated_at: now,
-      device_id: getDeviceId(),
-    }, { onConflict: 'user_id' });
-
-    if (upsertErr) {
-      throw new Error(`Lỗi lưu tu vi lên cloud: ${upsertErr.message}`);
-    }
-
-    ledger.cultivation = {
-      lastSyncedRev: localRev,
-      lastSyncedPending: pendingSeconds,
-      lastCloudUpdatedAt: now,
-      lastPendingPushAt: now,
+    const inFlightSnapshot = {
+      sentLocalSeq,
+      expectedRev,
+      sentPendingSeconds: pendingSeconds,
+      idempotencyKey: 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9),
     };
-    saveSyncLedger(ledger);
+
+    const occRes = await commitCultivationOCC(supabase, userId, {
+      expectedRev: inFlightSnapshot.expectedRev,
+      state: localState,
+      pendingSeconds: inFlightSnapshot.sentPendingSeconds,
+      deviceId: getDeviceId(),
+      idempotencyKey: inFlightSnapshot.idempotencyKey,
+    });
+
+    if (occRes.status === 'SUCCESS') {
+      const committedRev = occRes.rev || occRes.committed_rev;
+      const now = Date.now();
+      ledger.cultivation = {
+        ...ledger.cultivation,
+        lastSyncedRev: committedRev,
+        lastSyncedLocalSeq: inFlightSnapshot.sentLocalSeq,
+        lastSyncedPending: inFlightSnapshot.sentPendingSeconds,
+        lastCloudUpdatedAt: now,
+        lastPendingPushAt: now,
+        conflictPending: false,
+      };
+      saveSyncLedger(ledger);
+      clearCultivationConflictState();
+      return { pushedToCloud: true, rev: committedRev, idempotentReplay: Boolean(occRes.idempotent_replay) };
+    } else if (occRes.status === 'CONFLICT') {
+      backupCultivationState(localState);
+      if (!ledger.cultivation) ledger.cultivation = {};
+      ledger.cultivation.conflictPending = true;
+      saveSyncLedger(ledger);
+      setCultivationConflictState({
+        local: localState,
+        cloud: occRes.current_cloud,
+        detectedAt: Date.now(),
+      });
+      return { conflict: true, skipped: true, currentCloud: occRes.current_cloud };
+    } else if (occRes.status === 'MAINTENANCE') {
+      console.warn('Đồng bộ tu vi đang tạm bảo trì:', occRes.message);
+      return { maintenance: true, skipped: true };
+    } else {
+      throw new Error(occRes.message || occRes.error || 'Lỗi OCC không xác định');
+    }
   };
 
   if (mode === 'cloud_master') {
@@ -630,8 +720,8 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
   }
 
   if (mode === 'local_master') {
-    await pushLocalCultivation();
-    return { pushedToCloud: true };
+    const res = await pushLocalCultivation(cloudRev);
+    return { pushedToCloud: true, ...res };
   }
 
   // Máy hoàn toàn trống mà cloud có -> lấy cloud
@@ -643,8 +733,8 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
 
   // Cloud chưa có gì mà máy có -> đẩy lên cloud
   if (!cloudCultivation && !isLocalEmpty) {
-    await pushLocalCultivation();
-    return { pushedToCloud: true };
+    const res = await pushLocalCultivation(0);
+    return { pushedToCloud: true, ...res };
   }
 
   if (!cloudCultivation) {
@@ -656,7 +746,7 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
   const isCloudPendingChanged = cloudRev === lastSyncedRev && (cloudCultivation?.updated_at || 0) > (ledger.cultivation?.lastCloudUpdatedAt || 0) && cloudPending !== lastSyncedPending;
   const isCloudChanged = isCloudRevChanged || isCloudPendingChanged;
 
-  const isLocalRevChanged = localRev > lastSyncedRev;
+  const isLocalRevChanged = localSeq > lastSyncedLocalSeq;
   const isLocalPendingChanged = localPending !== lastSyncedPending;
   const isLocalChanged = isLocalRevChanged || isLocalPendingChanged;
 
@@ -670,7 +760,7 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
           totalExp: localState.totalExp,
           readChapterCount: getReadChaptersCount(localState),
           updatedAt: localState._updatedAt || 0,
-          rev: localRev,
+          rev: localSeq,
         },
         cloud: {
           realm: cloudCultivation.state?.realm,
@@ -686,10 +776,20 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
       applyCloudCultivation(cloudCultivation);
       return { updatedFromCloud: true, conflictResolved: true };
     } else if (choice === 'local') {
-      await pushLocalCultivation();
-      return { pushedToCloud: true, conflictResolved: true };
+      // Người dùng chọn "Giữ bản trên máy này": Gửi expected_rev = cloudRev (Cloud rev mới nhất vừa hiển thị)!
+      const res = await pushLocalCultivation(cloudRev);
+      return { pushedToCloud: true, conflictResolved: true, ...res };
     } else {
-      // Mặc định 'skip', không tự ý ghi đè
+      // Mặc định 'skip', lưu conflict state
+      backupCultivationState(localState);
+      if (!ledger.cultivation) ledger.cultivation = {};
+      ledger.cultivation.conflictPending = true;
+      saveSyncLedger(ledger);
+      setCultivationConflictState({
+        local: localState,
+        cloud: cloudCultivation,
+        detectedAt: Date.now(),
+      });
       return { skipped: true, conflict: true };
     }
   }
@@ -708,8 +808,8 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
         return { noop: true, throttledPending: true };
       }
     }
-    await pushLocalCultivation();
-    return { pushedToCloud: true };
+    const res = await pushLocalCultivation();
+    return { pushedToCloud: true, ...res };
   }
 
   return { noop: true };
