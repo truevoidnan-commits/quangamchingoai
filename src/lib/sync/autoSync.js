@@ -676,18 +676,38 @@ export async function runAutoSync(customSupabase = null, options = {}) {
         };
 
         // 2. Đọc lại Cloud cultivation mới nhất từ Supabase vì revision trên Cloud vừa tăng
+        // NGUYÊN TẮC FAIL-CLOSED:
+        // Nếu đọc lại từ Cloud bị lỗi, trả dữ liệu thiếu, hoặc không xác minh được revision >= committedRev,
+        // BẮT BUỘC skip cultivation để bảo vệ dữ liệu, TUYỆT ĐỐI không dùng snapshot Cloud cũ!
+        const committedRev = recRes.rev || recRes.committed_rev || 0;
+        let freshCloudCult = null;
+        let freshCultErr = null;
+
         try {
-          const { data: freshCloudCult, error: freshCultErr } = await client
+          const res = await client
             .from('cultivation')
             .select('rev, updated_at, device_id, state')
             .eq('user_id', userId)
             .single();
-
-          if (!freshCultErr && freshCloudCult) {
-            cloudCultivation = freshCloudCult;
-          }
+          freshCloudCult = res?.data;
+          freshCultErr = res?.error;
         } catch (fetchFreshErr) {
-          console.warn('Lỗi đọc lại cloud cultivation sau reconcile:', fetchFreshErr.message);
+          freshCultErr = fetchFreshErr;
+        }
+
+        if (freshCultErr || !freshCloudCult || typeof freshCloudCult.rev !== 'number' || (committedRev > 0 && freshCloudCult.rev < committedRev)) {
+          skipCultivation = true;
+          logSyncEvent({
+            level: 'warn',
+            src: syncSource,
+            evt: 'cultivation_cloud_refresh_failed',
+            reason: freshCultErr ? (freshCultErr.message || 'fetch_error') : (!freshCloudCult ? 'missing_cloud_row' : 'stale_cloud_revision'),
+          });
+          console.warn('Tạm dừng phạm vi cultivation (Fail-closed): Không đọc lại được Cloud snapshot mới nhất sau reconcile:',
+            freshCultErr?.message || (!freshCloudCult ? 'Dữ liệu Cloud trống' : `Cloud rev (${freshCloudCult.rev}) < committedRev (${committedRev})`)
+          );
+        } else {
+          cloudCultivation = freshCloudCult;
         }
       }
     }

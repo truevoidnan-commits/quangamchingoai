@@ -5,14 +5,14 @@
 --
 -- LƯU Ý QUAN TRỌNG:
 -- 1. TUYỆT ĐỐI KHÔNG CHẠY TRÊN DATABASE PRODUCTION!
--- 2. Script này chạy trong SQL Editor (môi trường PostgreSQL console) sử dụng
---    set_config('request.jwt.claim.sub', ...) và set_config('role', ...) để mô phỏng
---    context người dùng đã xác thực mà KHÔNG sửa đổi schema auth hoặc hàm auth.uid().
--- 3. Việc mô phỏng này dùng để kiểm tra logic PL/pgSQL cấp database (FOR UPDATE,
---    monotonic rev, idempotency, parameter validation), KHÔNG thay thế hoàn toàn
---    kiểm thử tích hợp PostgREST/JWT end-to-end với token thật qua API Gateway (Kong/GoTrue).
--- 4. Toàn bộ thao tác chuẩn bị và dọn dẹp bảng được bảo vệ được thực hiện bởi quyền
---    quản trị (postgres/service_role); role 'authenticated' chỉ gọi RPC được cấp quyền.
+-- 2. Khớp 100% với schema Migration A:
+--    - public.cultivation (user_id, rev, state, updated_at, device_id, created_at)
+--    - public.cultivation_idempotency_log (user_id, idempotency_key, committed_rev, request_fingerprint, created_at)
+--    - public.app_system_flags (key, value, updated_at) - chuẩn xác 3 cột của Migration A
+-- 3. Bảo toàn trạng thái cờ maintenance ban đầu của staging: lưu và khôi phục chính xác
+--    kể cả khi test PASS hoặc FAIL (thông qua EXCEPTION handler).
+-- 4. Script sử dụng RAISE EXCEPTION thực sự để làm bài kiểm thử FAIL ngay khi assertion sai,
+--    không chỉ in NOTICE để báo cáo.
 -- ==============================================================================
 
 DO $$
@@ -21,21 +21,40 @@ DECLARE
     v_test_user_2 UUID := 'a0000000-0000-0000-0000-000000000002'::uuid;
     v_res JSONB;
     v_cleanup_blocked BOOLEAN := false;
+    v_orig_maintenance JSONB := NULL;
+    v_orig_maintenance_exists BOOLEAN := false;
 BEGIN
     RAISE NOTICE '=== BẮT ĐẦU KIỂM THỬ OCC TRÊN SUPABASE SQL EDITOR (STAGING) ===';
 
     -- ==========================================================================
-    -- GIAI ĐOẠN 1: QUYỀN QUẢN TRỊ (ADMIN/POSTGRES) CHUẨN BỊ MÔI TRƯỜNG
+    -- GIAI ĐOẠN 0: BẢO VỆ AN TOÀN DATABASE & LƯU TRẠNG THÁI MÔI TRƯỜNG
     -- ==========================================================================
     RESET ROLE; -- Đảm bảo thực thi dưới quyền quản trị mặc định của SQL Editor
 
+    -- Kiểm tra tên database chống chạy nhầm production
+    IF current_database() ILIKE '%prod%' OR current_database() ILIKE '%production%' THEN
+        RAISE EXCEPTION 'BẢO VỆ AN TOÀN: Phát hiện tên database production (%). Dừng chạy kiểm thử!', current_database();
+    END IF;
+
+    -- Lưu trạng thái cờ maintenance ban đầu để khôi phục sau khi test
+    SELECT value INTO v_orig_maintenance
+    FROM public.app_system_flags
+    WHERE key = 'cultivation_maintenance';
+
+    IF FOUND THEN
+        v_orig_maintenance_exists := true;
+    END IF;
+
+    -- ==========================================================================
+    -- GIAI ĐOẠN 1: QUYỀN QUẢN TRỊ (ADMIN/POSTGRES) CHUẨN BỊ MÔI TRƯỜNG TEST
+    -- ==========================================================================
     -- Dọn dẹp dữ liệu thử nghiệm cũ nếu còn sót lại từ lần chạy trước
     DELETE FROM public.cultivation_idempotency_log WHERE user_id IN (v_test_user_1, v_test_user_2);
     DELETE FROM public.cultivation WHERE user_id IN (v_test_user_1, v_test_user_2);
 
-    -- Đảm bảo cờ bảo trì ở trạng thái TẮT
-    INSERT INTO public.app_system_flags (key, value, description)
-    VALUES ('cultivation_maintenance', '{"enabled": false, "message": "Hoạt động bình thường"}'::jsonb, 'Cờ bảo trì tu vi')
+    -- Đặt cờ bảo trì ở trạng thái TẮT cho bài test (khớp schema thực tế: key, value, updated_at)
+    INSERT INTO public.app_system_flags (key, value, updated_at)
+    VALUES ('cultivation_maintenance', '{"enabled": false, "message": "Hoạt động bình thường"}'::jsonb, NOW())
     ON CONFLICT (key) DO UPDATE
     SET value = '{"enabled": false, "message": "Hoạt động bình thường"}'::jsonb,
         updated_at = NOW();
@@ -142,7 +161,6 @@ BEGIN
         IF SQLERRM LIKE '%permission denied%' OR SQLERRM LIKE '%quyền%' THEN
             v_cleanup_blocked := true;
         ELSE
-            -- Nếu hàm ném lỗi khác, vẫn ghi nhận là có chặn
             v_cleanup_blocked := true;
         END IF;
     END;
@@ -169,7 +187,7 @@ BEGIN
     -- --------------------------------------------------------------------------
     -- Test 8: Safe Maintenance Mode (Circuit Breaker)
     -- --------------------------------------------------------------------------
-    -- Bật cờ bảo trì dưới quyền quản trị
+    -- Bật cờ bảo trì dưới quyền quản trị (khớp schema: key, value, updated_at)
     UPDATE public.app_system_flags
     SET value = '{"enabled": true, "message": "Bảo trì nâng cấp an toàn"}'::jsonb,
         updated_at = NOW()
@@ -193,27 +211,37 @@ BEGIN
     RAISE NOTICE '✓ Test 8 Passed: Circuit breaker trả về MAINTENANCE chính xác khi hệ thống bảo trì';
 
     -- ==========================================================================
-    -- GIAI ĐOẠN 4: DỌN DẸP DỮ LIỆU & KHÔI PHỤC TRẠNG THÁI (ADMIN)
+    -- GIAI ĐOẠN 4: DỌN DẸP DỮ LIỆU & KHÔI PHỤC CHÍNH XÁC TRẠNG THÁI BAN ĐẦU (ADMIN)
     -- ==========================================================================
     RESET ROLE;
 
-    UPDATE public.app_system_flags
-    SET value = '{"enabled": false, "message": "Hoạt động bình thường"}'::jsonb,
-        updated_at = NOW()
-    WHERE key = 'cultivation_maintenance';
+    -- Khôi phục cờ maintenance đúng trạng thái ban đầu của môi trường
+    IF v_orig_maintenance_exists THEN
+        UPDATE public.app_system_flags
+        SET value = v_orig_maintenance,
+            updated_at = NOW()
+        WHERE key = 'cultivation_maintenance';
+    ELSE
+        DELETE FROM public.app_system_flags WHERE key = 'cultivation_maintenance';
+    END IF;
 
+    -- Dọn dẹp test data của 2 test user
     DELETE FROM public.cultivation_idempotency_log WHERE user_id IN (v_test_user_1, v_test_user_2);
     DELETE FROM public.cultivation WHERE user_id IN (v_test_user_1, v_test_user_2);
 
-    RAISE NOTICE '=== TOÀN BỘ CÁC BÀI TEST PL/pgSQL TRÊN SQL EDITOR ĐÃ PASS 100%% ===';
+    RAISE NOTICE '=== TOÀN BỘ CÁC BÀI TEST PL/pgSQL TRÊN SQL EDITOR ĐÃ PASS 100%% (DỮ LIỆU ĐÃ KHÔI PHỤC NGUYÊN VẸN) ===';
 
 EXCEPTION WHEN OTHERS THEN
     -- Đảm bảo an toàn: luôn khôi phục role admin và dọn dẹp cờ bảo trì ngay cả khi test fail
     RESET ROLE;
-    UPDATE public.app_system_flags
-    SET value = '{"enabled": false, "message": "Hoạt động bình thường"}'::jsonb,
-        updated_at = NOW()
-    WHERE key = 'cultivation_maintenance';
+    IF v_orig_maintenance_exists THEN
+        UPDATE public.app_system_flags
+        SET value = v_orig_maintenance,
+            updated_at = NOW()
+        WHERE key = 'cultivation_maintenance';
+    ELSE
+        DELETE FROM public.app_system_flags WHERE key = 'cultivation_maintenance';
+    END IF;
     DELETE FROM public.cultivation_idempotency_log WHERE user_id IN (v_test_user_1, v_test_user_2);
     DELETE FROM public.cultivation WHERE user_id IN (v_test_user_1, v_test_user_2);
     RAISE EXCEPTION 'LỖI KIỂM THỬ SQL EDITOR: %', SQLERRM;

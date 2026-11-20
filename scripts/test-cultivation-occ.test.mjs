@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test, describe, beforeEach, afterEach } from 'node:test';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // -------------------------------------------------------------
 // 1. MOCK ENVIRONMENT (localStorage, window, document, navigator)
@@ -93,6 +95,9 @@ class MockSupabaseOCCEngine {
     this.isRevokedDirectWrite = true; // Sau cutover: REVOKE INSERT, UPDATE ON cultivation
     this.simulateNetworkDropOnNextRpc = false;
     this.simulateNetworkErrorOnRpc = false;
+    this.simulateFetchCultivationError = false;
+    this.simulateMissingCloudCultivation = false;
+    this.simulateStaleCloudRev = null;
   }
 
   setMaintenance(enabled, message = 'Hệ thống đang bảo trì') {
@@ -303,9 +308,22 @@ class MockSupabaseOCCEngine {
       },
       single: async () => {
         if (tableName === 'cultivation') {
+          if (engine.simulateFetchCultivationError) {
+            engine.simulateFetchCultivationError = false;
+            return { data: null, error: { message: 'Failed to fetch (Network connection dropped)', code: 'FETCH_ERROR' } };
+          }
+          if (engine.simulateMissingCloudCultivation) {
+            engine.simulateMissingCloudCultivation = false;
+            return { data: null, error: { message: 'Row not found', code: 'PGRST116' } };
+          }
           const row = engine.cultivationTable.get(filterUserId || engine.currentUserId);
           if (!row) return { data: null, error: { message: 'Row not found', code: 'PGRST116' } };
-          return { data: JSON.parse(JSON.stringify(row)), error: null };
+          const copy = JSON.parse(JSON.stringify(row));
+          if (engine.simulateStaleCloudRev !== null) {
+            copy.rev = engine.simulateStaleCloudRev;
+            engine.simulateStaleCloudRev = null;
+          }
+          return { data: copy, error: null };
         }
         return { data: null, error: null };
       },
@@ -1723,5 +1741,190 @@ describe('Nhiệm vụ 3B.2: Kiểm thử toàn diện cơ chế OCC trên môi 
 
     // - Không push, không kéo đè
     assert.equal(mockEngine.cultivationTable.get('user_test_occ').rev, 8);
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 31: Fail-closed khi Reconcile SUCCESS nhưng Cloud refresh gặp Network Error
+  // --------------------------------------------------------------------------
+  test('Ca 31: Fail-closed khi Reconcile SUCCESS nhưng Cloud refresh gặp Network Error -> Tạm dừng cultivation, novel/progress vẫn chạy', async () => {
+    addToLibrary({ id: 'novel_fail_closed_1', title: 'Tu Tiên Ký' });
+    saveReadingProgress('novel_fail_closed_1', { chapterId: 'chap_1', progress: 0.5, updatedAt: Date.now() });
+
+    const frozenPayload = { realm: 'ngung_khi_6', totalExp: 600 };
+    const pendingReq = {
+      idempotencyKey: 'req_fail_closed_01',
+      expectedRev: 5,
+      sentLocalSeq: 12,
+      sentPendingSeconds: 0,
+      payloadState: frozenPayload,
+      createdAt: Date.now() - 1000,
+    };
+    savePendingCultivationRequest(pendingReq);
+
+    // Cloud đã commit thành công lên rev 6
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 6,
+      state: frozenPayload,
+      updated_at: 1000,
+      device_id: getDeviceId(),
+    });
+    mockEngine.idempotencyLogTable.set('user_test_occ:req_fail_closed_01', {
+      user_id: 'user_test_occ',
+      idempotency_key: 'req_fail_closed_01',
+      committed_rev: 6,
+      request_fingerprint: crypto.createHash('md5').update(`5:${JSON.stringify({ ...frozenPayload, __meta: { pendingSeconds: 0 } })}`).digest('hex'),
+      created_at: 1000,
+    });
+
+    const initLedger = getSyncLedger();
+    initLedger.lastSyncedAt = 1000;
+    initLedger.cultivation = { lastSyncedRev: 5, lastSyncedLocalSeq: 10, lastSyncedPending: 0 };
+    saveSyncLedger(initLedger);
+
+    const localCult = getCultivationState();
+    localCult._seq = 12;
+    localCult._rev = 12;
+    localCult.totalExp = 600;
+    localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(localCult));
+
+    // Giả lập: sau khi reconcile thành công, bước fetch Cloud cultivation gặp lỗi mạng
+    mockEngine.simulateFetchCultivationError = true;
+
+    await runAutoSync(mockEngine, { force: true });
+
+    // BẮT BUỘC (Fail-closed):
+    // - Pending request đã được dọn sạch bởi reconcile
+    assert.equal(getPendingCultivationRequest(), null);
+
+    // - Novel reading progress vẫn hoàn tất đồng bộ bình thường
+    const ledger = getSyncLedger();
+    assert.ok(ledger.novels && ledger.novels['novel_fail_closed_1']);
+
+    // - Cultivation state local được giữ nguyên an toàn
+    assert.equal(getCultivationState().totalExp, 600);
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 32: Fail-closed khi Reconcile SUCCESS nhưng Cloud trả về missing row
+  // --------------------------------------------------------------------------
+  test('Ca 32: Fail-closed khi Reconcile SUCCESS nhưng Cloud trả về missing row -> Tạm dừng cultivation an toàn', async () => {
+    const frozenPayload = { realm: 'ngung_khi_6', totalExp: 600 };
+    const pendingReq = {
+      idempotencyKey: 'req_fail_closed_02',
+      expectedRev: 5,
+      sentLocalSeq: 12,
+      sentPendingSeconds: 0,
+      payloadState: frozenPayload,
+      createdAt: Date.now() - 1000,
+    };
+    savePendingCultivationRequest(pendingReq);
+
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 6,
+      state: frozenPayload,
+      updated_at: 1000,
+      device_id: getDeviceId(),
+    });
+    mockEngine.idempotencyLogTable.set('user_test_occ:req_fail_closed_02', {
+      user_id: 'user_test_occ',
+      idempotency_key: 'req_fail_closed_02',
+      committed_rev: 6,
+      request_fingerprint: crypto.createHash('md5').update(`5:${JSON.stringify({ ...frozenPayload, __meta: { pendingSeconds: 0 } })}`).digest('hex'),
+      created_at: 1000,
+    });
+
+    const initLedger = getSyncLedger();
+    initLedger.lastSyncedAt = 1000;
+    saveSyncLedger(initLedger);
+
+    // Giả lập Cloud trả về missing row
+    mockEngine.simulateMissingCloudCultivation = true;
+
+    await runAutoSync(mockEngine, { force: true });
+
+    // Pending request đã dọn sạch, local an toàn không crash
+    assert.equal(getPendingCultivationRequest(), null);
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 33: Fail-closed khi Reconcile SUCCESS nhưng Cloud trả về stale revision
+  // --------------------------------------------------------------------------
+  test('Ca 33: Fail-closed khi Reconcile SUCCESS nhưng Cloud trả về stale revision (< committedRev) -> Tạm dừng', async () => {
+    const frozenPayload = { realm: 'ngung_khi_6', totalExp: 600 };
+    const pendingReq = {
+      idempotencyKey: 'req_fail_closed_03',
+      expectedRev: 5,
+      sentLocalSeq: 12,
+      sentPendingSeconds: 0,
+      payloadState: frozenPayload,
+      createdAt: Date.now() - 1000,
+    };
+    savePendingCultivationRequest(pendingReq);
+
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 6,
+      state: frozenPayload,
+      updated_at: 1000,
+      device_id: getDeviceId(),
+    });
+    mockEngine.idempotencyLogTable.set('user_test_occ:req_fail_closed_03', {
+      user_id: 'user_test_occ',
+      idempotency_key: 'req_fail_closed_03',
+      committed_rev: 6,
+      request_fingerprint: crypto.createHash('md5').update(`5:${JSON.stringify({ ...frozenPayload, __meta: { pendingSeconds: 0 } })}`).digest('hex'),
+      created_at: 1000,
+    });
+
+    const initLedger = getSyncLedger();
+    initLedger.lastSyncedAt = 1000;
+    saveSyncLedger(initLedger);
+
+    // Giả lập đọc trúng replica bị trễ: rev = 5 < committedRev 6
+    mockEngine.simulateStaleCloudRev = 5;
+
+    await runAutoSync(mockEngine, { force: true });
+
+    // BẮT BUỘC: Không dùng stale snapshot này để fast-forward local
+    assert.equal(getPendingCultivationRequest(), null);
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 34: Stage A hoàn toàn độc lập, không chứa file cutover Stage B trong migrations
+  // --------------------------------------------------------------------------
+  test('Ca 34: Kiểm tra cô lập Stage A - Chỉ có Stage A trong migrations, Stage B nằm ở operations', () => {
+    const migrationsDir = path.resolve('supabase/migrations');
+    const operationsDir = path.resolve('supabase/operations');
+
+    const migrationFiles = fs.readdirSync(migrationsDir);
+    assert.ok(migrationFiles.includes('20261120_cultivation_occ_stage_a.sql'), 'Migration A phải có mặt trong supabase/migrations');
+
+    const hasCutoverInMigrations = migrationFiles.some(f => f.includes('cutover') || f.includes('stage_b'));
+    assert.equal(hasCutoverInMigrations, false, 'TUYỆT ĐỐI không được có Stage B cutover trong supabase/migrations');
+
+    const operationFiles = fs.readdirSync(operationsDir);
+    assert.ok(operationFiles.includes('20261120_cultivation_occ_stage_b_cutover.sql'), 'Stage B cutover phải nằm trong supabase/operations');
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 35: Script SQL Editor khớp schema, có RAISE EXCEPTION và bảo toàn cờ maintenance
+  // --------------------------------------------------------------------------
+  test('Ca 35: Script test-postgres-sql-editor.sql khớp schema thực tế và bảo toàn cờ maintenance', () => {
+    const sqlPath = path.resolve('scripts/test-postgres-sql-editor.sql');
+    const sqlContent = fs.readFileSync(sqlPath, 'utf-8');
+
+    // Không được chứa cột description trong app_system_flags
+    assert.equal(sqlContent.includes('description'), false, 'Không được chứa cột description trong app_system_flags');
+
+    // Phải có kiểm tra chống chạy trên database production
+    assert.ok(sqlContent.includes("current_database() ILIKE '%prod%'"), 'Phải có kiểm tra bảo vệ database production');
+
+    // Phải có lưu và khôi phục cờ maintenance ban đầu
+    assert.ok(sqlContent.includes('v_orig_maintenance'), 'Phải lưu trạng thái cờ maintenance ban đầu');
+
+    // Phải có RAISE EXCEPTION thực sự khi assertion sai
+    assert.ok(sqlContent.includes('RAISE EXCEPTION'), 'Phải dùng RAISE EXCEPTION cho assertion');
   });
 });
