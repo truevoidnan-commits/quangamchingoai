@@ -92,6 +92,7 @@ class MockSupabaseOCCEngine {
     this.currentRole = 'authenticated'; // 'authenticated' | 'anon' | 'service_role'
     this.isRevokedDirectWrite = true; // Sau cutover: REVOKE INSERT, UPDATE ON cultivation
     this.simulateNetworkDropOnNextRpc = false;
+    this.simulateNetworkErrorOnRpc = false;
   }
 
   setMaintenance(enabled, message = 'Hệ thống đang bảo trì') {
@@ -102,8 +103,21 @@ class MockSupabaseOCCEngine {
     this.isRevokedDirectWrite = !allow;
   }
 
+  get storage() {
+    return {
+      from: () => ({
+        remove: async () => ({ error: null }),
+        upload: async () => ({ error: null }),
+      }),
+    };
+  }
+
   // Giả lập RPC sync_cultivation_occ nguyên tử chuẩn PostgreSQL
   async rpc(funcName, params) {
+    if (this.simulateNetworkErrorOnRpc) {
+      this.simulateNetworkErrorOnRpc = false;
+      throw new Error('Network error: Connection timeout / server unreachable');
+    }
     if (funcName === 'cleanup_cultivation_idempotency_log') {
       const role = this.currentRole || 'authenticated';
       if (role !== 'service_role' && role !== 'postgres') {
@@ -280,6 +294,13 @@ class MockSupabaseOCCEngine {
         if (col === 'user_id') filterUserId = val;
         return builder;
       },
+      update: () => builder,
+      then: (resolve) => {
+        if (tableName === 'novels') {
+          return resolve({ data: [], error: null });
+        }
+        return resolve({ data: null, error: null });
+      },
       single: async () => {
         if (tableName === 'cultivation') {
           const row = engine.cultivationTable.get(filterUserId || engine.currentUserId);
@@ -374,6 +395,9 @@ const {
   quickPushProgressAndCultivation,
 } = await import('../src/lib/sync/autoSync.js');
 
+const { setHostOverrideForTesting } = await import('../src/lib/sync/envProtection.js');
+const { getLibrary, addToLibrary, getReadingProgress, saveReadingProgress } = await import('../src/lib/storage.js');
+
 // -------------------------------------------------------------
 // BỘ KIỂM THỬ 15 KỊCH BẢN BẮT BUỘC CHO NHIỆM VỤ 3B.2
 // -------------------------------------------------------------
@@ -383,6 +407,8 @@ describe('Nhiệm vụ 3B.2: Kiểm thử toàn diện cơ chế OCC trên môi 
 
   beforeEach(() => {
     global.localStorage.clear();
+    setHostOverrideForTesting('truevoidnan-commits.github.io');
+    global.localStorage.setItem('sync_auto_enabled', 'true');
     mockEngine = new MockSupabaseOCCEngine();
     mockEngine.currentUserId = 'user_test_occ';
   });
@@ -1335,5 +1361,367 @@ describe('Nhiệm vụ 3B.2: Kiểm thử toàn diện cơ chế OCC trên môi 
     assert.equal(syncRes.conflict, true);
     assert.equal(syncRes.skipped, true);
     assert.equal(getCultivationState().totalExp, 780, 'Dữ liệu local 780 EXP của A được bảo toàn 100%!');
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 24: Reconcile NETWORK ERROR -> cultivation bị tạm dừng, novel/progress vẫn chạy
+  // --------------------------------------------------------------------------
+  test('Ca 24: Reconcile gặp NETWORK ERROR -> Tạm dừng cultivation, novel/progress vẫn đồng bộ bình thường', async () => {
+    // 1. Tạo truyện và tiến độ đọc ở local
+    addToLibrary({ id: 'novel_net_err', title: 'Thí Luyện Tu Tiên' });
+    saveReadingProgress('novel_net_err', { chapterId: 'chap_10', progress: 0.8, updatedAt: Date.now() });
+
+    // 2. Tạo pending request dở dang cho tu vi
+    const pendingReq = {
+      idempotencyKey: 'req_net_err_01',
+      expectedRev: 5,
+      sentLocalSeq: 10,
+      sentPendingSeconds: 0,
+      payloadState: { realm: 'ngung_khi_5', totalExp: 500 },
+      createdAt: Date.now() - 1000,
+    };
+    savePendingCultivationRequest(pendingReq);
+
+    const localCult = getCultivationState();
+    localCult._seq = 10;
+    localCult.totalExp = 500;
+    saveCultivationState(localCult);
+
+    // 3. Giả lập lỗi mạng khi gọi RPC reconcile
+    mockEngine.simulateNetworkErrorOnRpc = true;
+
+    // 4. Chạy runAutoSync
+    await runAutoSync(mockEngine, { force: true });
+
+    // BẮT BUỘC:
+    // - Pending request VẪN NGUYÊN VẸN, không bị xóa vì chưa rõ kết quả commit
+    assert.notEqual(getPendingCultivationRequest(), null, 'Pending request phải được bảo lưu khi gặp lỗi mạng');
+    assert.equal(getPendingCultivationRequest().idempotencyKey, 'req_net_err_01');
+
+    // - Local cultivation không bị thay đổi hay ghi đè
+    assert.equal(getCultivationState().totalExp, 500);
+
+    // - Tiến độ đọc truyện vẫn được đồng bộ và ghi nhận vào ledger
+    const ledger = getSyncLedger();
+    assert.ok(ledger.novels && ledger.novels['novel_net_err'], 'Phạm vi progress vẫn được đồng bộ khi cultivation bị tạm dừng');
+    assert.ok(ledger.novels['novel_net_err'].lastSyncedProgressAt > 0);
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 25: Reconcile MAINTENANCE -> Local và pending request nguyên vẹn
+  // --------------------------------------------------------------------------
+  test('Ca 25: Reconcile gặp MAINTENANCE -> Local và pending request nguyên vẹn, không push', async () => {
+    const pendingReq = {
+      idempotencyKey: 'req_maint_01',
+      expectedRev: 5,
+      sentLocalSeq: 10,
+      sentPendingSeconds: 0,
+      payloadState: { realm: 'ngung_khi_5', totalExp: 500 },
+      createdAt: Date.now() - 1000,
+    };
+    savePendingCultivationRequest(pendingReq);
+
+    const localCult = getCultivationState();
+    localCult._seq = 10;
+    localCult.totalExp = 500;
+    saveCultivationState(localCult);
+
+    // Bật chế độ bảo trì máy chủ
+    mockEngine.setMaintenance(true, 'Máy chủ Supabase đang bảo trì nâng cấp OCC');
+
+    await runAutoSync(mockEngine, { force: true });
+
+    // BẮT BUỘC:
+    // - Pending request vẫn còn nguyên
+    assert.notEqual(getPendingCultivationRequest(), null);
+    assert.equal(getPendingCultivationRequest().idempotencyKey, 'req_maint_01');
+
+    // - Local state nguyên vẹn
+    assert.equal(getCultivationState().totalExp, 500);
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 26: Reconcile CONFLICT -> Không push cultivation mới, lưu conflict state
+  // --------------------------------------------------------------------------
+  test('Ca 26: Reconcile gặp CONFLICT -> Không push tu vi mới, lưu và bảo toàn conflict state', async () => {
+    // Cloud đã lên rev 8 từ thiết bị khác
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 8,
+      state: { realm: 'ngung_khi_8', totalExp: 800 },
+      updated_at: Date.now(),
+      device_id: 'dev_other',
+    });
+
+    // Client gửi expectedRev = 5 (không khớp)
+    const pendingReq = {
+      idempotencyKey: 'req_conflict_uncommitted',
+      expectedRev: 5,
+      sentLocalSeq: 10,
+      sentPendingSeconds: 0,
+      payloadState: { realm: 'ngung_khi_5', totalExp: 500 },
+      createdAt: Date.now() - 2000,
+    };
+    savePendingCultivationRequest(pendingReq);
+
+    const initLedger = getSyncLedger();
+    initLedger.lastSyncedAt = 1000;
+    initLedger.cultivation = { lastSyncedRev: 5, lastSyncedLocalSeq: 10, lastSyncedPending: 0 };
+    saveSyncLedger(initLedger);
+
+    const localCult = getCultivationState();
+    localCult._seq = 10;
+    localCult._rev = 10;
+    localCult.totalExp = 500;
+    localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(localCult));
+
+    await runAutoSync(mockEngine, { force: true });
+
+    // BẮT BUỘC:
+    // - Xung đột được phát hiện và lưu bền vững
+    const conflictState = getCultivationConflictState();
+    assert.notEqual(conflictState, null, 'Conflict state phải được ghi nhận');
+    assert.equal(getSyncLedger().cultivation.conflictPending, true, 'conflictPending phải bật');
+
+    // - Không push mới làm sai lệch Cloud rev 8
+    const cloudRow = mockEngine.cultivationTable.get('user_test_occ');
+    assert.equal(cloudRow.rev, 8, 'Cloud rev phải giữ nguyên 8');
+
+    // - Local state 500 EXP không bị mất
+    assert.equal(getCultivationState().totalExp, 500);
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 27: Reconcile SUCCESS -> Ledger nạp lại từ getSyncLedger(), không bị ledger cũ ghi đè
+  // --------------------------------------------------------------------------
+  test('Ca 27: Reconcile SUCCESS -> Ledger nạp lại chính xác, không bị ledger cũ từ đầu runAutoSync ghi đè', async () => {
+    // Thiết lập ledger cũ ban đầu với lastSyncedRev = 5
+    const initLedger = getSyncLedger();
+    initLedger.cultivation = { lastSyncedRev: 5, lastSyncedLocalSeq: 10, lastSyncedPending: 0 };
+    saveSyncLedger(initLedger);
+
+    const frozenPayload = { realm: 'ngung_khi_6', totalExp: 600 };
+    const pendingReq = {
+      idempotencyKey: 'req_success_01',
+      expectedRev: 5,
+      sentLocalSeq: 12,
+      sentPendingSeconds: 0,
+      payloadState: frozenPayload,
+      createdAt: Date.now() - 1000,
+    };
+    savePendingCultivationRequest(pendingReq);
+
+    // Trên Cloud, request này ĐÃ được commit thành công lên rev 6 (mất ACK)
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 6,
+      state: frozenPayload,
+      updated_at: 1000,
+      device_id: getDeviceId(),
+    });
+    mockEngine.idempotencyLogTable.set('user_test_occ:req_success_01', {
+      user_id: 'user_test_occ',
+      idempotency_key: 'req_success_01',
+      committed_rev: 6,
+      request_fingerprint: crypto.createHash('md5').update(`5:${JSON.stringify({ ...frozenPayload, __meta: { pendingSeconds: 0 } })}`).digest('hex'),
+      created_at: 1000,
+    });
+
+    const localCult = getCultivationState();
+    localCult._seq = 12;
+    localCult._rev = 12;
+    localCult.totalExp = 600;
+    localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(localCult));
+
+    await runAutoSync(mockEngine, { force: true });
+
+    // BẮT BUỘC:
+    // - Pending request đã được hòa giải và xóa sạch
+    assert.equal(getPendingCultivationRequest(), null);
+
+    // - Ledger sau khi runAutoSync kết thúc phải chứa lastSyncedRev = 6 và lastSyncedLocalSeq = 12
+    // KHÔNG được bị ledger cũ (lastSyncedRev = 5) ở đầu hàm ghi đè lại!
+    const finalLedger = getSyncLedger();
+    assert.equal(finalLedger.cultivation.lastSyncedRev, 6, 'lastSyncedRev phải là 6 từ reconcile SUCCESS');
+    assert.equal(finalLedger.cultivation.lastSyncedLocalSeq, 12, 'lastSyncedLocalSeq phải là 12');
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 28: A commit -> mất ACK -> B commit -> A reload -> Reconcile SUCCESS -> Không ghi đè local/Cloud
+  // --------------------------------------------------------------------------
+  test('Ca 28: Kịch bản A commit -> mất ACK -> B commit -> A reload -> Reconcile SUCCESS -> Đọc lại Cloud mới nhất', async () => {
+    // 1. A gửi req_A_lost lên Cloud (expectedRev = 10, sentLocalSeq = 15). Cloud commit lên rev 11. A mất ACK.
+    const payloadA = { realm: 'ngung_khi_5', totalExp: 500 };
+    mockEngine.idempotencyLogTable.set('user_test_occ:req_A_lost', {
+      user_id: 'user_test_occ',
+      idempotency_key: 'req_A_lost',
+      committed_rev: 11,
+      request_fingerprint: crypto.createHash('md5').update(`10:${JSON.stringify({ ...payloadA, __meta: { pendingSeconds: 0 } })}`).digest('hex'),
+      created_at: 2000,
+    });
+
+    // 2. B commit tiếp theo đẩy Cloud lên rev 12
+    const payloadB = { realm: 'ngung_khi_6', totalExp: 650 };
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 12,
+      state: payloadB,
+      updated_at: 3000,
+      device_id: 'dev_B',
+    });
+
+    // 3. Máy A mở lại trang: Trong localStorage của A vẫn còn pending request dở dang
+    const pendingSnapshot = {
+      idempotencyKey: 'req_A_lost',
+      expectedRev: 10,
+      sentLocalSeq: 15,
+      sentPendingSeconds: 0,
+      payloadState: payloadA,
+      createdAt: 2000,
+    };
+    savePendingCultivationRequest(pendingSnapshot);
+
+    const localA = getCultivationState();
+    localA._seq = 15;
+    localA._rev = 15;
+    localA.totalExp = 500;
+    localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(localA));
+
+    const ledgerA = getSyncLedger();
+    ledgerA.lastSyncedAt = 1000;
+    ledgerA.cultivation = { lastSyncedRev: 10, lastSyncedLocalSeq: 14, lastSyncedPending: 0, lastCloudUpdatedAt: 1000 };
+    saveSyncLedger(ledgerA);
+
+    // 4. Chạy runAutoSync trên máy A:
+    await runAutoSync(mockEngine, { force: true });
+
+    // BẮT BUỘC:
+    // - Pending request đã hòa giải thành công và dọn sạch
+    assert.equal(getPendingCultivationRequest(), null);
+
+    // - A đọc lại Cloud cultivation mới nhất (rev 12 của B)
+    // - Do A không có mutation mới sau snapshot (seq = 15 <= 15), A fast-forward an toàn lên rev 12
+    const finalLedgerA = getSyncLedger();
+    assert.equal(finalLedgerA.cultivation.lastSyncedRev, 12, 'A nhận diện Cloud rev 12 sau reconcile');
+    assert.equal(getCultivationState().totalExp, 650, 'A fast-forward nhận dữ liệu 650 EXP của B an toàn');
+
+    // 5. NẾU A CÓ MUTATION MỚI TRƯỚC KHI HÒA GIẢI (seq = 16 > 15):
+    // Tái lập tình huống: A có mutation mới seq = 16
+    const pendingSnapshot2 = {
+      idempotencyKey: 'req_A_lost_mutated',
+      expectedRev: 12,
+      sentLocalSeq: 15,
+      sentPendingSeconds: 0,
+      payloadState: payloadB,
+      createdAt: 4000,
+    };
+    savePendingCultivationRequest(pendingSnapshot2);
+
+    mockEngine.idempotencyLogTable.set('user_test_occ:req_A_lost_mutated', {
+      user_id: 'user_test_occ',
+      idempotency_key: 'req_A_lost_mutated',
+      committed_rev: 13,
+      request_fingerprint: crypto.createHash('md5').update(`12:${JSON.stringify({ ...payloadB, __meta: { pendingSeconds: 0 } })}`).digest('hex'),
+      created_at: 4000,
+    });
+
+    // Cloud lên rev 14 do B commit
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 14,
+      state: { realm: 'ngung_khi_7', totalExp: 800 },
+      updated_at: 5000,
+      device_id: 'dev_B',
+    });
+
+    // Local A có thay đổi mới seq = 16 (700 EXP)
+    const localNewA = getCultivationState();
+    localNewA._seq = 16;
+    localNewA._rev = 16;
+    localNewA.totalExp = 700;
+    localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(localNewA));
+
+    await runAutoSync(mockEngine, { force: true });
+
+    // BẮT BUỘC: Phát hiện xung đột, KHÔNG ghi đè local 700 EXP hay Cloud 800 EXP!
+    assert.equal(getSyncLedger().cultivation.conflictPending, true);
+    assert.equal(getCultivationState().totalExp, 700, 'Dữ liệu local 700 EXP của A được bảo toàn 100%!');
+    assert.equal(mockEngine.cultivationTable.get('user_test_occ').rev, 14, 'Cloud rev 14 của B được bảo toàn 100%!');
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 29: Pending_seconds chưa commit không bị đánh dấu đã đồng bộ
+  // --------------------------------------------------------------------------
+  test('Ca 29: Pending_seconds chưa commit không bị đánh dấu đã đồng bộ khi fast-forward', async () => {
+    // Local có 180 giây chưa sync (lastSyncedPending = 0)
+    localStorage.setItem(getCultivationKey('pending_seconds', 'real'), '180');
+
+    const localCult = getCultivationState();
+    localCult._seq = 10;
+    saveCultivationState(localCult);
+
+    const initLedger = getSyncLedger();
+    initLedger.cultivation = { lastSyncedRev: 4, lastSyncedLocalSeq: 10, lastSyncedPending: 0 };
+    saveSyncLedger(initLedger);
+
+    // Cloud có rev 5 mới hơn từ thiết bị khác (pendingSeconds = 0)
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 5,
+      state: { realm: 'ngung_khi_5', totalExp: 500, __meta: { pendingSeconds: 0 } },
+      updated_at: Date.now(),
+      device_id: 'dev_other',
+    });
+
+    await runAutoSync(mockEngine, { force: true });
+
+    // BẮT BUỘC:
+    // - Local pending_seconds vẫn là 180 giây (không bị xóa hay reset)
+    const localPendingAfter = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')) || '0', 10);
+    assert.equal(localPendingAfter, 180, '180 giây tu luyện chưa commit phải được bảo lưu');
+
+    // - lastSyncedPending trong ledger VẪN PHẢI LÀ 0 để cờ bẩn tiếp tục bật
+    const finalLedger = getSyncLedger();
+    assert.equal(finalLedger.cultivation.lastSyncedPending, 0, 'lastSyncedPending không được ghi nhận khi chưa commit');
+  });
+
+  // --------------------------------------------------------------------------
+  // TEST 30: Trạng thái conflict đã lưu không bị xóa bởi lượt autoSync tiếp theo
+  // --------------------------------------------------------------------------
+  test('Ca 30: Trạng thái conflict đã lưu không bị xóa bởi một lượt autoSync tiếp theo chưa giải quyết', async () => {
+    // 1. Tạo trạng thái conflict từ trước
+    const conflictData = {
+      local: { realm: 'ngung_khi_5', totalExp: 500 },
+      cloud: { rev: 8, state: { realm: 'ngung_khi_6', totalExp: 600 } },
+      detectedAt: Date.now() - 5000,
+    };
+    setCultivationConflictState(conflictData);
+
+    const ledger = getSyncLedger();
+    ledger.cultivation = { lastSyncedRev: 5, lastSyncedLocalSeq: 10, conflictPending: true };
+    saveSyncLedger(ledger);
+
+    mockEngine.cultivationTable.set('user_test_occ', {
+      user_id: 'user_test_occ',
+      rev: 8,
+      state: conflictData.cloud.state,
+      updated_at: Date.now(),
+      device_id: 'dev_other',
+    });
+
+    // 2. Chạy autoSync định kỳ tiếp theo khi user chưa giải quyết conflict
+    await runAutoSync(mockEngine, { force: true });
+
+    // BẮT BUỘC:
+    // - getCultivationConflictState() KHÔNG bị xóa
+    const conflictAfter = getCultivationConflictState();
+    assert.notEqual(conflictAfter, null, 'Trạng thái xung đột không được tự xóa');
+    assert.equal(conflictAfter.local.totalExp, 500);
+
+    // - ledger.cultivation.conflictPending vẫn là true
+    assert.equal(getSyncLedger().cultivation.conflictPending, true);
+
+    // - Không push, không kéo đè
+    assert.equal(mockEngine.cultivationTable.get('user_test_occ').rev, 8);
   });
 });

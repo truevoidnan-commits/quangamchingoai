@@ -3,10 +3,12 @@
  * File: scripts/test-postgres-concurrent-psql.mjs
  * Áp dụng: Chạy qua Node.js kết nối đến PostgreSQL Staging / Supabase Local thật
  * Biến môi trường: DATABASE_URL hoặc SUPABASE_DB_URL
+ *
  * TUYỆT ĐỐI KHÔNG CHẠY TRÊN DATABASE PRODUCTION!
  */
 
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 
 const DB_URL = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
 
@@ -14,14 +16,47 @@ if (!DB_URL) {
   console.log('--------------------------------------------------------------------------');
   console.log('THÔNG BÁO: Chưa cấu hình biến môi trường DATABASE_URL hoặc SUPABASE_DB_URL.');
   console.log('Script này dùng để nghiệm thu kiểm thử concurrency đa kết nối trên PostgreSQL thật:');
-  console.log('Cách chạy khi có Staging PostgreSQL:');
-  console.log('  $env:DATABASE_URL="postgres://postgres:password@localhost:54322/postgres"');
+  console.log('Cách chạy khi có Staging / Supabase Local PostgreSQL:');
+  console.log('  $env:DATABASE_URL="postgres://postgres:postgres@localhost:54322/postgres"');
   console.log('  node scripts/test-postgres-concurrent-psql.mjs');
   console.log('--------------------------------------------------------------------------');
   process.exit(0);
 }
 
-// Nếu có DB_URL, sử dụng dynamic import('pg') để kết nối đa client
+// ------------------------------------------------------------------------------
+// 1. KIỂM TRA BẢO VỆ AN TOÀN DATABASE ĐÍCH (CHỐNG CHẠY NHẦM PRODUCTION)
+// ------------------------------------------------------------------------------
+let parsedUrl;
+try {
+  parsedUrl = new URL(DB_URL);
+} catch {
+  console.error('LỖI: DATABASE_URL không phải là URL hợp lệ.');
+  process.exit(1);
+}
+
+const safeHosts = ['localhost', '127.0.0.1', '::1', 'supabase_db', 'postgres'];
+const isLocalhost = safeHosts.includes(parsedUrl.hostname);
+const allowOverride = process.env.ALLOW_TEST_DB_OVERRIDE === 'true';
+
+if (!isLocalhost && !allowOverride) {
+  console.error('========================================================================');
+  console.error('BẢO VỆ AN TOÀN: Database URL không trỏ về localhost / môi trường cô lập!');
+  console.error(`Host phát hiện: ${parsedUrl.hostname}`);
+  console.error('Để chạy trên staging remote, bạn phải thiết lập ALLOW_TEST_DB_OVERRIDE=true');
+  console.error('và tuyệt đối KHÔNG trỏ vào production!');
+  console.error('========================================================================');
+  process.exit(1);
+}
+
+const bannedPatterns = ['pooler.supabase.com', 'aws-0', 'prod'];
+if (bannedPatterns.some(p => parsedUrl.hostname.toLowerCase().includes(p))) {
+  console.error('LỖI BẢO MẬT: Phát hiện host mang tiền tố Production. Dừng khẩn cấp!');
+  process.exit(1);
+}
+
+// ------------------------------------------------------------------------------
+// 2. KHỞI TẠO CLIENT POSTGRESQL
+// ------------------------------------------------------------------------------
 let pg;
 try {
   pg = await import('pg');
@@ -33,22 +68,52 @@ try {
 const { Client } = pg.default || pg;
 
 async function runConcurrentOccTests() {
-  console.log('Bắt đầu kiểm thử Concurrency đa kết nối trên PostgreSQL:', DB_URL.split('@')[1] || 'localhost');
+  console.log('--------------------------------------------------------------------------');
+  console.log('BẮT ĐẦU KIỂM THỬ CONCURRENCY ĐA KẾT NỐI TRÊN POSTGRESQL');
+  console.log(`Database Host: ${parsedUrl.hostname}:${parsedUrl.port || 5432}`);
+  console.log('LƯU Ý: Script này chạy trực tiếp qua kết nối PostgreSQL và sử dụng set_config');
+  console.log('để thiết lập session context role/jwt claim nhằm kiểm thử tính nguyên tử của');
+  console.log('cơ chế khóa dòng FOR UPDATE và monotonic rev. Thao tác này không thay thế hoàn toàn');
+  console.log('việc kiểm thử JWT token thật qua Supabase Auth Gateway (GoTrue).');
+  console.log('--------------------------------------------------------------------------');
 
   const client1 = new Client({ connectionString: DB_URL });
   const client2 = new Client({ connectionString: DB_URL });
 
-  await client1.connect();
-  await client2.connect();
-
-  const testUserId = 'b0000000-0000-0000-0000-000000000001';
+  try {
+    await client1.connect();
+  } catch (err) {
+    console.error('Lỗi kết nối client 1 đến PostgreSQL:', err.message);
+    process.exit(1);
+  }
 
   try {
-    // Dọn dẹp dữ liệu test cũ
+    await client2.connect();
+  } catch (err) {
+    console.error('Lỗi kết nối client 2 đến PostgreSQL:', err.message);
+    await client1.end().catch(() => {});
+    process.exit(1);
+  }
+
+  // Dùng UUID ngẫu nhiên tuyệt đối không trùng dữ liệu
+  const testUserId = crypto.randomUUID();
+  console.log(`Tạo người dùng thử nghiệm ngẫu nhiên: ${testUserId}`);
+
+  try {
+    // 1. Chuẩn bị dữ liệu ban đầu dưới quyền quản trị
+    await client1.query('RESET ROLE');
+    await client2.query('RESET ROLE');
     await client1.query('DELETE FROM public.cultivation_idempotency_log WHERE user_id = $1', [testUserId]);
     await client1.query('DELETE FROM public.cultivation WHERE user_id = $1', [testUserId]);
 
-    // Thiết lập session auth cho cả 2 client
+    // Đảm bảo cờ bảo trì tắt
+    await client1.query(`
+      INSERT INTO public.app_system_flags (key, value)
+      VALUES ('cultivation_maintenance', '{"enabled": false}'::jsonb)
+      ON CONFLICT (key) DO UPDATE SET value = '{"enabled": false}'::jsonb
+    `);
+
+    // Thiết lập session auth cho cả 2 client độc lập
     await client1.query(`SELECT set_config('request.jwt.claim.sub', $1, false), set_config('role', 'authenticated', false)`, [testUserId]);
     await client2.query(`SELECT set_config('request.jwt.claim.sub', $1, false), set_config('role', 'authenticated', false)`, [testUserId]);
 
@@ -90,19 +155,24 @@ async function runConcurrentOccTests() {
     assert.ok(upStatuses.includes('SUCCESS'), 'Phải có đúng 1 client thành công lên rev 2');
     assert.ok(upStatuses.includes('CONFLICT'), 'Client thứ 2 phải nhận CONFLICT');
 
+    // Kiểm tra bản ghi cuối cùng trong database
+    await client1.query('RESET ROLE');
     const checkFinal = await client1.query('SELECT rev FROM public.cultivation WHERE user_id = $1', [testUserId]);
     assert.equal(checkFinal.rows[0].rev, '2', 'Cloud rev phải là 2');
     console.log('✓ Test 2 Passed: Lock FOR UPDATE bảo vệ thành công: đúng 1 máy lên rev 2, máy kia bị từ chối.');
 
     console.log('=== TOÀN BỘ KIỂM THỬ ĐA KẾT NỐI THẬT ĐÃ HOÀN TẤT THÀNH CÔNG ===');
   } finally {
-    // Dọn dẹp dữ liệu test
+    // Dọn dẹp dữ liệu test dưới quyền admin
     try {
+      await client1.query('RESET ROLE');
       await client1.query('DELETE FROM public.cultivation_idempotency_log WHERE user_id = $1', [testUserId]);
       await client1.query('DELETE FROM public.cultivation WHERE user_id = $1', [testUserId]);
-    } catch {}
-    await client1.end();
-    await client2.end();
+    } catch (cleanupErr) {
+      console.warn('Lỗi dọn dẹp dữ liệu test:', cleanupErr.message);
+    }
+    await client1.end().catch(() => {});
+    await client2.end().catch(() => {});
   }
 }
 
