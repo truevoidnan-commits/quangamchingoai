@@ -53,6 +53,22 @@ if (bannedKeywords.some(b => parsedSupabaseUrl.hostname.toLowerCase().includes(b
   process.exit(1);
 }
 
+async function getDatabasePrivilegesSnapshot(pgClient) {
+  const privRes = await pgClient.query(`
+    SELECT grantee, privilege_type 
+    FROM information_schema.table_privileges 
+    WHERE table_schema = 'public' AND table_name = 'cultivation' AND grantee IN ('authenticated', 'anon')
+    ORDER BY grantee, privilege_type;
+  `);
+  const maintRes = await pgClient.query(`
+    SELECT value FROM public.app_system_flags WHERE key = 'cultivation_maintenance';
+  `);
+  return {
+    privileges: privRes.rows,
+    maintenance: maintRes.rows[0]?.value || { enabled: false, message: 'Hoạt động bình thường' },
+  };
+}
+
 async function runLocalE2ETests() {
   console.log('==========================================================================');
   console.log('BẮT ĐẦU KIỂM THỬ SUPABASE LOCAL E2E VỚI JWT THẬT & POSTGREST API');
@@ -65,6 +81,8 @@ async function runLocalE2ETests() {
 
   let testUserId = null;
   let authToken = null;
+  let preTestSnapshot = null;
+  const cleanupErrors = [];
 
   try {
     // --------------------------------------------------------------------------
@@ -93,8 +111,13 @@ async function runLocalE2ETests() {
     console.log(`  - Database: "${currentDb}" | User: "${currentUser}" | Environment: "${dbEnv || 'local'}"`);
 
     // --------------------------------------------------------------------------
-    // 1.2. THIẾT LẬP BASELINE STAGE A TRƯỚC KHI BẮT ĐẦU TEST
+    // 1.2. GHI NHẬN SNAPSHOT QUYỀN VÀ TRẠNG THÁI BASELINE TRƯỚC TEST
     // --------------------------------------------------------------------------
+    preTestSnapshot = await getDatabasePrivilegesSnapshot(pgClient);
+    console.log(`✓ Đã ghi nhận snapshot quyền ban đầu từ database (${preTestSnapshot.privileges.length} quyền).`);
+
+    // Thiết lập môi trường thử nghiệm cho Stage A (Direct write & Legacy Client)
+    // Sẽ được khôi phục đối chiếu 100% về preTestSnapshot trong khối finally
     await pgClient.query(`
       GRANT INSERT, UPDATE, DELETE, SELECT ON TABLE public.cultivation TO authenticated;
       GRANT INSERT, UPDATE, DELETE, SELECT ON TABLE public.cultivation TO anon;
@@ -430,37 +453,84 @@ async function runLocalE2ETests() {
     console.log('==========================================================================');
   } finally {
     // --------------------------------------------------------------------------
-    // 8. KHÔI PHỤC HOÀN TOÀN TRẠNG THÁI BASELINE STAGE A & DỌN DẸP AN TOÀN (IDEMPOTENT)
+    // 8. KHÔI PHỤC HOÀN TOÀN TRẠNG THÁI BASELINE PRE-TEST & DỌN DẸP AN TOÀN (IDEMPOTENT)
     // --------------------------------------------------------------------------
-    try {
-      // 1. Dọn dẹp dữ liệu của test user trên local database
-      if (testUserId) {
+    // 1. Dọn dẹp dữ liệu của test user trên local database
+    if (testUserId) {
+      try {
         await pgClient.query('DELETE FROM public.cultivation_idempotency_log WHERE user_id = $1', [testUserId]);
         await pgClient.query('DELETE FROM public.cultivation WHERE user_id = $1', [testUserId]);
         await pgClient.query('DELETE FROM auth.users WHERE id = $1', [testUserId]);
         console.log(`✓ Dọn dẹp thành công test user: ${testUserId}`);
+      } catch (err) {
+        cleanupErrors.push(`Lỗi dọn dẹp test user: ${err.message}`);
       }
+    }
 
-      // 2. Khôi phục cờ bảo trì về trạng thái bình thường
-      await pgClient.query(`
-        UPDATE public.app_system_flags 
-        SET value = '{"enabled": false, "message": "Hoạt động bình thường"}'::jsonb, updated_at = NOW() 
-        WHERE key = 'cultivation_maintenance';
-      `);
+    // 2. Khôi phục cờ bảo trì về giá trị pre-test
+    if (preTestSnapshot?.maintenance) {
+      try {
+        await pgClient.query(`
+          UPDATE public.app_system_flags 
+          SET value = $1::jsonb, updated_at = NOW() 
+          WHERE key = 'cultivation_maintenance';
+        `, [JSON.stringify(preTestSnapshot.maintenance)]);
+        console.log('✓ Đã khôi phục cờ bảo trì cultivation_maintenance về giá trị pre-test.');
+      } catch (err) {
+        cleanupErrors.push(`Lỗi khôi phục maintenance flag: ${err.message}`);
+      }
+    }
 
-      // 3. Khôi phục quyền Stage A baseline trên database Local để các lượt test tiếp theo không bị lỗi
+    // 3. Xóa các test policy tạm thời
+    try {
       await pgClient.query(`
         DROP POLICY IF EXISTS "Test legacy insert" ON public.cultivation;
         DROP POLICY IF EXISTS "Test legacy update" ON public.cultivation;
-        GRANT INSERT, UPDATE, DELETE, SELECT ON TABLE public.cultivation TO authenticated;
-        GRANT INSERT, UPDATE, DELETE, SELECT ON TABLE public.cultivation TO anon;
       `);
-      console.log('✓ Đã khôi phục hoàn toàn trạng thái Stage A baseline trên database Local (sẵn sàng cho lượt test tiếp theo)');
-    } catch (cleanupErr) {
-      console.warn('Cảnh báo dọn dẹp hoặc khôi phục baseline:', cleanupErr.message);
+      console.log('✓ Đã xóa các policy test tạm thời.');
+    } catch (err) {
+      cleanupErrors.push(`Lỗi xóa policy test tạm thời: ${err.message}`);
+    }
+
+    // 4. Khôi phục quyền bảng cultivation chính xác theo preTestSnapshot.privileges
+    if (preTestSnapshot?.privileges) {
+      try {
+        // Thu hồi toàn bộ quyền direct write/read của authenticated và anon để tái lập sạch sẽ
+        await pgClient.query(`
+          REVOKE ALL PRIVILEGES ON TABLE public.cultivation FROM authenticated, anon;
+        `);
+
+        // Tái cấp chính xác các quyền theo snapshot ban đầu
+        for (const priv of preTestSnapshot.privileges) {
+          const grantee = priv.grantee === 'authenticated' ? 'authenticated' : (priv.grantee === 'anon' ? 'anon' : null);
+          const privType = priv.privilege_type.toUpperCase();
+          if (grantee && ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'].includes(privType)) {
+            await pgClient.query(`GRANT ${privType} ON TABLE public.cultivation TO ${grantee};`);
+          }
+        }
+
+        // Xác minh post-test privileges khớp 100% với pre-test snapshot
+        const postTestSnapshot = await getDatabasePrivilegesSnapshot(pgClient);
+        assert.deepStrictEqual(
+          postTestSnapshot.privileges,
+          preTestSnapshot.privileges,
+          'Danh sách quyền bảng cultivation sau dọn dẹp phải khớp 100% với snapshot ban đầu!'
+        );
+        console.log(`✓ Đã xác minh khôi phục 100% quyền bảng cultivation (${postTestSnapshot.privileges.length} quyền).`);
+      } catch (err) {
+        cleanupErrors.push(`Lỗi khôi phục quyền bảng cultivation: ${err.message}`);
+      }
     }
 
     await pgClient.end().catch(() => {});
+
+    if (cleanupErrors.length > 0) {
+      console.error('\nCẢNH BÁO / LỖI DỌN DẸP BASELINE:');
+      for (const err of cleanupErrors) {
+        console.error(`  - ${err}`);
+      }
+      throw new Error(`Quá trình dọn dẹp baseline thất bại với ${cleanupErrors.length} lỗi.`);
+    }
   }
 }
 
