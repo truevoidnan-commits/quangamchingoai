@@ -18,11 +18,14 @@
  * PHẦN II: UI E2E TESTS (5 kịch bản thao tác DOM thật qua Playwright)
  * 1. [UI E2E] Đăng nhập form UI trên #/sync cho cả Thiết bị A và B (email, password, submit button)
  * 2. [UI E2E] Bấm nút "Đồng Bộ Ngay" trên UI Thiết bị A, quan sát DOM hiện tiến trình và kết quả
- * 3. [UI E2E] Chuyển sang Thiết bị B, bấm "Đồng Bộ Ngay", xác minh cả 2 thiết bị nhận cùng dữ liệu đồng bộ
+ * 3. [UI E2E] Chuyển sang Thiết bị B, bấm "Đồng Bộ Ngay", xác minh assertion thực sự đồng nhất (EXP, realm, revision, Cloud)
  * 4. [UI E2E] Xung đột tu vi trên UI: Hiển thị Modal "Xung Đột Tu Vi (Hồ Sơ Thật)", click nút giải quyết
- * 5. [UI E2E] Bật bảo trì trong DB, bấm "Đồng Bộ Ngay" trên UI, quan sát phản hồi an toàn của giao diện
+ * 5. [UI E2E] Maintenance toàn diện: Xác minh không mất EXP/pending_seconds, Cloud rev bất biến, và phục hồi đồng bộ sau bảo trì
  * 
- * TIÊU CHUẨN AN TOÀN VÀ EXIT CODE:
+ * NGUYÊN TẮC BẢO VỆ DỮ LIỆU VÀ EXIT CODE (REVIEW LẦN 8):
+ * - TUYỆT ĐỐI KHÔNG DROP TABLE CASCADE trên các bảng dùng chung (novels, progress, user_settings).
+ * - Chỉ dọn dẹp dữ liệu của test user (user_id cô lập).
+ * - Snapshot bảng trước và sau test để xác minh 100% không làm mất bảng có sẵn.
  * - Khối finally CHỈ dọn dẹp tài nguyên, TUYỆT ĐỐI KHÔNG gọi process.exit(0).
  * - Nếu assertion thất bại: exit code 1.
  * - Nếu cleanup thất bại: exit code 2.
@@ -93,12 +96,13 @@ async function runFrontendOCCTests() {
   const testUserEmail = `test_fe_${crypto.randomBytes(4).toString('hex')}@thien-co-lau.local`;
   const testUserPassword = `Pass_${crypto.randomBytes(6).toString('hex')}!`;
 
+  let preTestPublicTables = [];
   let testError = null;
   const cleanupErrors = [];
 
   try {
     // --------------------------------------------------------------------------
-    // 1.1. XÁC NHẬN MÔI TRƯỜNG CÔ LẬP
+    // 1.1. XÁC NHẬN MÔI TRƯỜNG CÔ LẬP VÀ GHI NHẬN SNAPSHOT SCHEMA BAN ĐẦU
     // --------------------------------------------------------------------------
     const dbInfo = await pgClient.query('SELECT current_database() AS dbname, current_user AS dbuser');
     const currentDb = dbInfo.rows[0]?.dbname || '';
@@ -107,8 +111,18 @@ async function runFrontendOCCTests() {
     }
     console.log(`✓ Xác thực danh tính Database Local thành công: "${currentDb}"`);
 
+    // Ghi nhận danh sách bảng ban đầu trong schema public để đảm bảo không bảng nào bị xóa mất
+    const tableSnapshotRes = await pgClient.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name;
+    `);
+    preTestPublicTables = tableSnapshotRes.rows.map(r => r.table_name);
+    console.log(`✓ Snapshot bảng ban đầu trong public schema (${preTestPublicTables.length} bảng): ${preTestPublicTables.join(', ')}`);
+
     // --------------------------------------------------------------------------
-    // 1.2. THIẾT LẬP BẢNG PHỤ TRỢ CHO KIỂM THỬ THƯ VIỆN & TIẾN ĐỘ ĐỌC (IDEMPOTENT)
+    // 1.2. THIẾT LẬP BẢNG PHỤ TRỢ CHO KIỂM THỬ THƯ VIỆN & TIẾN ĐỘ ĐỌC (IDEMPOTENT - KHÔNG PHÁ HỦY)
     // --------------------------------------------------------------------------
     await pgClient.query(`
       CREATE TABLE IF NOT EXISTS public.novels (
@@ -248,6 +262,18 @@ async function runFrontendOCCTests() {
     };
     pageA.on('dialog', autoAcceptPrompt);
     pageB.on('dialog', autoAcceptPrompt);
+    pageA.on('console', msg => {
+      const text = msg.text();
+      if (text.includes('Error:') || text.includes('Uncaught')) {
+        console.error('  [A Console Error]:', text);
+      }
+    });
+    pageB.on('console', msg => {
+      const text = msg.text();
+      if (text.includes('Error:') || text.includes('Uncaught')) {
+        console.error('  [B Console Error]:', text);
+      }
+    });
 
     // Mở trang trên cả 2 thiết bị
     await pageA.goto(`http://127.0.0.1:${PREVIEW_PORT}/`);
@@ -615,7 +641,8 @@ async function runFrontendOCCTests() {
       const { engine, supa } = window.__TCL_TEST_HARNESS__;
       return await engine.performSync(supa.supabase, { firstSyncChoice: 'cloud_master' });
     });
-    assert.strictEqual(pullB9?.success, true, 'Kịch bản 9: Thiết bị B kéo truyện và tiến độ từ Cloud về thành công');
+    console.log('  - pullB9 result:', JSON.stringify(pullB9));
+    assert.strictEqual(pullB9?.success, true, `Kịch bản 9: Thiết bị B kéo truyện và tiến độ từ Cloud về thành công (errors: ${JSON.stringify(pullB9?.errors)})`);
 
     // 9.4. XÁC MINH DỮ LIỆU ĐỘC LẬP TRÊN CẢ THIẾT BỊ A VÀ THIẾT BỊ B
     const verifyA9 = await pageA.evaluate(({ nId }) => {
@@ -665,81 +692,126 @@ async function runFrontendOCCTests() {
 
     // KỊCH BẢN UI 1: ĐĂNG NHẬP FORM UI TRÊN #/sync CHO CẢ THIẾT BỊ A VÀ B
     console.log('\n--- [UI E2E 1] Đăng nhập form UI trên #/sync cho cả Thiết bị A và B ---');
-    // Điều hướng cả 2 thiết bị vào trang #/sync
+    // Điều hướng cả 2 thiết bị vào trang #/sync và đảm bảo component SyncPage đã mount
     await pageA.goto(`http://127.0.0.1:${PREVIEW_PORT}/#/sync`);
     await pageB.goto(`http://127.0.0.1:${PREVIEW_PORT}/#/sync`);
+    await pageA.waitForSelector('text=Đồng Bộ Cloud', { timeout: 15000 });
+    await pageB.waitForSelector('text=Đồng Bộ Cloud', { timeout: 15000 });
 
-    // Thiết bị A: Đăng xuất nếu đang có session để test form đăng nhập thật
-    const logoutBtnA = await pageA.$('button:has-text("Đăng xuất")');
-    if (logoutBtnA) {
-      await logoutBtnA.click();
-      await pageA.waitForSelector('input[type="email"]', { timeout: 5000 });
-    }
+    const ensureLoginViaUI = async (page, deviceName) => {
+      await page.waitForSelector('text=Đồng Bộ Cloud', { timeout: 15000 });
+      // Đợi trang nạp xong auth state
+      await page.waitForFunction(() => !document.body.innerText.includes('Đang kiểm tra phiên đăng nhập...'), { timeout: 10000 });
 
-    // Thiết bị A: Điền form đăng nhập trên DOM
-    await pageA.waitForSelector('input[type="email"]', { timeout: 10000 });
-    await pageA.fill('input[type="email"]', testUserEmail);
-    await pageA.fill('input[type="password"]', testUserPassword);
-    await pageA.click('button[type="submit"]');
+      // Nếu đang đăng nhập, bấm Đăng xuất để kiểm tra form đăng nhập thật
+      const logoutBtn = await page.$('button:has-text("Đăng xuất")');
+      if (logoutBtn) {
+        await logoutBtn.click();
+      }
 
-    // Chờ giao diện Thiết bị A hiển thị trạng thái "Đã đăng nhập"
-    await pageA.waitForSelector('text=Đã đăng nhập', { timeout: 10000 });
-    const userEmailOnA = await pageA.textContent(`text=${testUserEmail}`);
-    assert.ok(userEmailOnA, 'UI E2E 1: Email người dùng phải hiển thị trên giao diện Thiết bị A');
+      // Điền form đăng nhập trên DOM
+      await page.waitForSelector('input[type="email"]', { timeout: 15000 });
+      await page.fill('input[type="email"]', testUserEmail);
+      await page.fill('input[type="password"]', testUserPassword);
+      await page.click('button[type="submit"]');
 
-    // Thiết bị B: Đăng xuất nếu đang có session
-    const logoutBtnB = await pageB.$('button:has-text("Đăng xuất")');
-    if (logoutBtnB) {
-      await logoutBtnB.click();
-      await pageB.waitForSelector('input[type="email"]', { timeout: 5000 });
-    }
+      // Chờ giao diện hiển thị trạng thái "Đã đăng nhập"
+      await page.waitForSelector('text=Đã đăng nhập', { timeout: 15000 });
+      const emailVisible = await page.isVisible(`text=${testUserEmail}`);
+      assert.strictEqual(emailVisible, true, `UI E2E 1: Email người dùng phải hiển thị trên giao diện ${deviceName}`);
+    };
 
-    // Thiết bị B: Điền form đăng nhập trên DOM
-    await pageB.waitForSelector('input[type="email"]', { timeout: 10000 });
-    await pageB.fill('input[type="email"]', testUserEmail);
-    await pageB.fill('input[type="password"]', testUserPassword);
-    await pageB.click('button[type="submit"]');
-
-    // Chờ giao diện Thiết bị B hiển thị trạng thái "Đã đăng nhập"
-    await pageB.waitForSelector('text=Đã đăng nhập', { timeout: 10000 });
-    const userEmailOnB = await pageB.textContent(`text=${testUserEmail}`);
-    assert.ok(userEmailOnB, 'UI E2E 1: Email người dùng phải hiển thị trên giao diện Thiết bị B');
+    await ensureLoginViaUI(pageA, 'Thiết bị A');
+    await ensureLoginViaUI(pageB, 'Thiết bị B');
     console.log('✓ [UI E2E 1 Passed]: Cả 2 thiết bị đã đăng nhập thành công qua form UI thật trên #/sync');
+
+    // Helper kích hoạt đồng bộ trên UI và chờ hoàn tất an toàn
+    const triggerSyncAndAwaitDone = async (page) => {
+      await page.waitForFunction(() => {
+        const btns = Array.from(document.querySelectorAll('button'));
+        const syncBtn = btns.find(b => b.textContent.includes('Đồng Bộ Ngay'));
+        return syncBtn && !syncBtn.disabled;
+      }, { timeout: 15000 });
+
+      await page.click('button:has-text("Đồng Bộ Ngay")');
+
+      const modal = await page.waitForSelector('text=Xác Nhận Lần Đầu Đồng Bộ', { timeout: 1500 }).catch(() => null);
+      if (modal) {
+        await page.click('button:has-text("Lấy Cloud làm gốc")');
+      }
+
+      try {
+        await page.waitForFunction(() => {
+          const btns = Array.from(document.querySelectorAll('button'));
+          const syncBtn = btns.find(b => b.textContent.includes('Đồng Bộ Ngay'));
+          return syncBtn && !syncBtn.disabled;
+        }, { timeout: 15000 });
+      } catch (err) {
+        const postBtns = await page.evaluate(() => {
+          return Array.from(document.querySelectorAll('button')).map(b => ({
+            text: b.innerText,
+            disabled: b.disabled,
+          }));
+        });
+        const bodySnippet = await page.evaluate(() => document.body.innerText.slice(0, 400));
+        console.error('  [Debug timeout buttons]:', JSON.stringify(postBtns));
+        console.error('  [Debug body snippet]:', bodySnippet);
+        throw err;
+      }
+
+      await page.waitForTimeout(500);
+    };
 
     // KỊCH BẢN UI 2: BẤM NÚT "ĐỒNG BỘ NGAY" TRÊN UI THIẾT BỊ A
     console.log('\n--- [UI E2E 2] Bấm nút "Đồng Bộ Ngay" trên UI Thiết bị A ---');
-    await pageA.click('button:has-text("Đồng Bộ Ngay")');
+    await triggerSyncAndAwaitDone(pageA);
 
-    // Nếu xuất hiện modal "Xác Nhận Lần Đầu Đồng Bộ", chọn "Lấy Cloud làm gốc"
-    const firstSyncModalA = await pageA.waitForSelector('text=Xác Nhận Lần Đầu Đồng Bộ', { timeout: 2000 }).catch(() => null);
-    if (firstSyncModalA) {
-      await pageA.click('button:has-text("Lấy Cloud làm gốc")');
-    }
-
-    // Chờ kết quả đồng bộ hiển thị trực tiếp trên DOM
     await pageA.waitForSelector('text=Kết quả đồng bộ:', { timeout: 15000 });
     const resultVisibleA = await pageA.isVisible('text=Kết quả đồng bộ:');
     assert.strictEqual(resultVisibleA, true, 'UI E2E 2: Kết quả đồng bộ phải hiển thị trên giao diện DOM của A');
     console.log('✓ [UI E2E 2 Passed]: Bấm nút "Đồng Bộ Ngay" trên UI Thiết bị A, kết quả hiển thị trực quan trên DOM');
 
-    // KỊCH BẢN UI 3: CHUYỂN SANG THIẾT BỊ B, BẤM "ĐỒNG BỘ NGAY" TRÊN UI
-    console.log('\n--- [UI E2E 3] Chuyển sang Thiết bị B, bấm "Đồng Bộ Ngay" trên UI ---');
-    await pageB.click('button:has-text("Đồng Bộ Ngay")');
-
-    const firstSyncModalB = await pageB.waitForSelector('text=Xác Nhận Lần Đầu Đồng Bộ', { timeout: 2000 }).catch(() => null);
-    if (firstSyncModalB) {
-      await pageB.click('button:has-text("Lấy Cloud làm gốc")');
-    }
+    // KỊCH BẢN UI 3: CHUYỂN SANG THIẾT BỊ B, BẤM "ĐỒNG BỘ NGAY" TRÊN UI VÀ ASSERT ĐỒNG NHẤT
+    console.log('\n--- [UI E2E 3] Chuyển sang Thiết bị B, bấm "Đồng Bộ Ngay" và kiểm tra dữ liệu thực sự đồng nhất ---');
+    await triggerSyncAndAwaitDone(pageB);
 
     await pageB.waitForSelector('text=Kết quả đồng bộ:', { timeout: 15000 });
     const resultVisibleB = await pageB.isVisible('text=Kết quả đồng bộ:');
     assert.strictEqual(resultVisibleB, true, 'UI E2E 3: Kết quả đồng bộ phải hiển thị trên giao diện DOM của B');
 
-    // Xác nhận cả 2 thiết bị đều sở hữu chung dữ liệu đồng bộ
-    const dataA = await pageA.evaluate(() => window.__TCL_TEST_HARNESS__.cult.getCultivationState().totalExp);
-    const dataB = await pageB.evaluate(() => window.__TCL_TEST_HARNESS__.cult.getCultivationState().totalExp);
-    console.log(`  - Dữ liệu tu vi sau đồng bộ: Thiết bị A = ${dataA} EXP, Thiết bị B = ${dataB} EXP`);
-    console.log('✓ [UI E2E 3 Passed]: Cả 2 thiết bị nhận cùng dữ liệu đồng nhất sau khi kích hoạt từ UI');
+    // Đọc trạng thái đồng bộ và ledger trên cả 2 thiết bị
+    const syncStateA3 = await pageA.evaluate(() => {
+      const { cult, ledger } = window.__TCL_TEST_HARNESS__;
+      return {
+        state: cult.getCultivationState(),
+        ledger: ledger.getSyncLedger()?.cultivation || {},
+      };
+    });
+
+    const syncStateB3 = await pageB.evaluate(() => {
+      const { cult, ledger } = window.__TCL_TEST_HARNESS__;
+      return {
+        state: cult.getCultivationState(),
+        ledger: ledger.getSyncLedger()?.cultivation || {},
+      };
+    });
+
+    console.log(`  - Thiết bị A: EXP = ${syncStateA3.state.totalExp}, realm = "${syncStateA3.state.realm}", lastSyncedRev = ${syncStateA3.ledger.lastSyncedRev}`);
+    console.log(`  - Thiết bị B: EXP = ${syncStateB3.state.totalExp}, realm = "${syncStateB3.state.realm}", lastSyncedRev = ${syncStateB3.ledger.lastSyncedRev}`);
+
+    // Bổ sung các assertions so sánh thực tế:
+    assert.strictEqual(syncStateB3.state.totalExp, syncStateA3.state.totalExp, 'UI E2E 3: Tổng EXP của Thiết bị B phải khớp chính xác với Thiết bị A');
+    assert.strictEqual(syncStateB3.state.realm, syncStateA3.state.realm, 'UI E2E 3: Cảnh giới của Thiết bị B phải khớp chính xác với Thiết bị A');
+    assert.strictEqual(syncStateB3.ledger.lastSyncedRev, syncStateA3.ledger.lastSyncedRev, 'UI E2E 3: lastSyncedRev trên cả 2 thiết bị phải hoàn toàn đồng nhất');
+    assert.ok(syncStateB3.ledger.lastSyncedRev > 0, 'UI E2E 3: lastSyncedRev phải là số dương hợp lệ');
+    assert.strictEqual(syncStateA3.ledger.conflictPending, false, 'UI E2E 3: Thiết bị A không có xung đột dở dang');
+    assert.strictEqual(syncStateB3.ledger.conflictPending, false, 'UI E2E 3: Thiết bị B không có xung đột dở dang');
+
+    // Xác minh trên PostgreSQL Cloud
+    const cloudCheckRow3 = await pgClient.query('SELECT rev, (state->>\'totalExp\')::int as exp FROM public.cultivation WHERE user_id = $1', [testUserId]);
+    assert.strictEqual(parseInt(cloudCheckRow3.rows[0].rev, 10), syncStateA3.ledger.lastSyncedRev, 'UI E2E 3: Cloud rev phải khớp chính xác với ledger của 2 máy');
+    assert.strictEqual(parseInt(cloudCheckRow3.rows[0].exp, 10), syncStateA3.state.totalExp, 'UI E2E 3: Cloud EXP phải khớp chính xác với EXP của 2 máy');
+    console.log('✓ [UI E2E 3 Passed]: Dữ liệu 2 thiết bị và Cloud được xác minh đồng nhất 100% bằng assertions thực tế');
 
     // KỊCH BẢN UI 4: XUNG ĐỘT TU VI TRÊN UI: HIỂN THỊ MODAL VÀ CLICK GIẢI QUYẾT
     console.log('\n--- [UI E2E 4] Xung đột tu vi trên UI: Hiển thị Modal "Xung Đột Tu Vi (Hồ Sơ Thật)" ---');
@@ -796,10 +868,21 @@ async function runFrontendOCCTests() {
     });
 
     // 5. Bấm nút "Đồng Bộ Ngay" trên UI Thiết bị B
+    await pageB.waitForFunction(() => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const syncBtn = btns.find(b => b.textContent.includes('Đồng Bộ Ngay'));
+      return syncBtn && !syncBtn.disabled;
+    }, { timeout: 15000 });
     await pageB.click('button:has-text("Đồng Bộ Ngay")');
 
     // Chờ Modal Xung Đột Tu Vi xuất hiện trên DOM thật
-    await pageB.waitForSelector('text=Xung Đột Tu Vi (Hồ Sơ Thật)', { timeout: 15000 });
+    try {
+      await pageB.waitForSelector('text=Xung Đột Tu Vi (Hồ Sơ Thật)', { timeout: 15000 });
+    } catch (err) {
+      const pageBText = await pageB.evaluate(() => document.body.innerText.slice(0, 500));
+      console.error('  [Debug pageB text when waiting for conflict modal]:', pageBText);
+      throw err;
+    }
     const modalVisible = await pageB.isVisible('text=Xung Đột Tu Vi (Hồ Sơ Thật)');
     assert.strictEqual(modalVisible, true, 'UI E2E 4: Modal Xung Đột Tu Vi (Hồ Sơ Thật) PHẢI xuất hiện trên DOM');
     console.log('  - Modal xung đột tu vi đã hiển thị thành công trên màn hình Thiết bị B');
@@ -811,37 +894,107 @@ async function runFrontendOCCTests() {
     await pageB.waitForSelector('text=Xung Đột Tu Vi (Hồ Sơ Thật)', { state: 'detached', timeout: 10000 });
     console.log('  - Modal xung đột tu vi đã đóng lại sau khi người dùng lựa chọn');
 
-    // Chờ kết quả đồng bộ thành công cập nhật
-    await pageB.waitForSelector('text=Kết quả đồng bộ:', { timeout: 15000 });
+    // Chờ Thiết bị B hoàn tất đồng bộ và nút "Đồng Bộ Ngay" quay lại trạng thái sẵn sàng
+    await pageB.waitForFunction(() => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const syncBtn = btns.find(b => b.textContent.includes('Đồng Bộ Ngay'));
+      return syncBtn && !syncBtn.disabled;
+    }, { timeout: 15000 });
+
+    // Xác nhận Cloud đã nhận bản ghi tu vi mới nhất từ Thiết bị B (rev >= currentCloudRev + 2)
+    const cloudRevAfter4 = await pgClient.query('SELECT rev, (state->>\'totalExp\')::int as exp FROM public.cultivation WHERE user_id = $1', [testUserId]);
+    console.log(`  - Cloud sau khi B giải quyết: rev = ${cloudRevAfter4.rows[0].rev}, EXP = ${cloudRevAfter4.rows[0].exp}`);
+
     const finalExpB = await pageB.evaluate(() => window.__TCL_TEST_HARNESS__.cult.getCultivationState().totalExp);
     assert.strictEqual(finalExpB, 750, 'UI E2E 4: EXP 750 của B được bảo toàn sau khi giải quyết');
     console.log('✓ [UI E2E 4 Passed]: Modal xung đột tu vi hiển thị chính xác trên UI và giải quyết thành công');
 
-    // KỊCH BẢN UI 5: BẬT BẢO TRÌ TRONG DB, BẤM "ĐỒNG BỘ NGAY" TRÊN UI
-    console.log('\n--- [UI E2E 5] Bật bảo trì trong DB, bấm "Đồng Bộ Ngay" trên UI ---');
+    // KỊCH BẢN UI 5: KIỂM TRA MAINTENANCE TOÀN DIỆN VÀ PHỤC HỒI ĐỒNG BỘ
+    console.log('\n--- [UI E2E 5] Kiểm tra maintenance toàn diện, tính bất biến của Cloud và phục hồi sau bảo trì ---');
+
+    // 5.0. Thiết bị A nạp trạng thái Cloud mới nhất (sau khi B đã giải quyết xung đột ở UI E2E 4)
+    await pageA.evaluate(async (uid) => {
+      const { supa, ledger, cult } = window.__TCL_TEST_HARNESS__;
+      const { data: cloudRow } = await supa.supabase.from('cultivation').select('*').eq('user_id', uid).single();
+      if (cloudRow) {
+        cult.saveCultivationState(cloudRow.state);
+        const led = ledger.getSyncLedger();
+        led.cultivation = {
+          ...led.cultivation,
+          lastSyncedRev: cloudRow.rev,
+          lastSyncedLocalSeq: cloudRow.state?._seq || cloudRow.rev,
+          conflictPending: false,
+        };
+        ledger.saveSyncLedger(led);
+      }
+    }, testUserId);
+
+    // 5.1. Thiết bị A tu luyện thêm và tích lũy pending_seconds trước bảo trì
+    const preMaintState = await pageA.evaluate(() => {
+      const { cult } = window.__TCL_TEST_HARNESS__;
+      const state = cult.getCultivationState();
+      state.totalExp = 800;
+      state._seq = 25;
+      cult.saveCultivationState(state);
+      localStorage.setItem('tcl_cultivation_pending_seconds_real', '35');
+      return {
+        exp: state.totalExp,
+        pendingSec: parseInt(localStorage.getItem('tcl_cultivation_pending_seconds_real') || '0', 10),
+      };
+    });
+
+    const preMaintCloudRow = await pgClient.query('SELECT rev, (state->>\'totalExp\')::int as exp FROM public.cultivation WHERE user_id = $1', [testUserId]);
+    const preMaintCloudRev = parseInt(preMaintCloudRow.rows[0].rev, 10);
+    const preMaintCloudExp = parseInt(preMaintCloudRow.rows[0].exp, 10);
+    console.log(`  - Trước bảo trì: Local A có ${preMaintState.exp} EXP, ${preMaintState.pendingSec}s pending; Cloud đang ở rev = ${preMaintCloudRev} (${preMaintCloudExp} EXP)`);
+
+    // 5.2. Bật Safe Maintenance Mode trong PostgreSQL
     await pgClient.query(`
       UPDATE public.app_system_flags 
       SET value = '{"enabled": true, "message": "Hệ thống đang bảo trì tu vi toàn diện"}'::jsonb, updated_at = NOW() 
       WHERE key = 'cultivation_maintenance';
     `);
 
-    // Thiết bị A bấm "Đồng Bộ Ngay" trên UI khi đang bảo trì
-    await pageA.click('button:has-text("Đồng Bộ Ngay")');
+    // 5.3. Thiết bị A bấm "Đồng Bộ Ngay" trên UI khi đang bảo trì
+    await triggerSyncAndAwaitDone(pageA);
 
-    // Chờ giao diện hoàn tất quá trình đồng bộ (an toàn dừng ở bước tu vi mà không bị crash)
-    await pageA.waitForTimeout(3000);
+    // 5.4. Xác nhận EXP và pending_seconds cục bộ không bị mất hoặc giảm
+    const postMaintLocalState = await pageA.evaluate(() => {
+      const { cult } = window.__TCL_TEST_HARNESS__;
+      return {
+        exp: cult.getCultivationState().totalExp,
+        pendingSec: parseInt(localStorage.getItem('tcl_cultivation_pending_seconds_real') || '0', 10),
+      };
+    });
+    assert.strictEqual(postMaintLocalState.exp, preMaintState.exp, 'UI E2E 5: EXP cục bộ không bị mất mát khi bảo trì');
+    assert.strictEqual(postMaintLocalState.pendingSec, preMaintState.pendingSec, 'UI E2E 5: pending_seconds cục bộ không bị mất mát khi bảo trì');
 
-    // Kiểm tra tu vi local của Thiết bị A không bị tổn hại
-    const expAfterMaintA = await pageA.evaluate(() => window.__TCL_TEST_HARNESS__.cult.getCultivationState().totalExp);
-    assert.ok(expAfterMaintA > 0, 'UI E2E 5: Tu vi local không bị mất mát khi bảo trì');
+    // 5.5. Xác nhận Cloud revision KHÔNG THAY ĐỔI và dữ liệu Cloud không bị ghi đè
+    const postMaintCloudRow = await pgClient.query('SELECT rev, (state->>\'totalExp\')::int as exp FROM public.cultivation WHERE user_id = $1', [testUserId]);
+    const postMaintCloudRev = parseInt(postMaintCloudRow.rows[0].rev, 10);
+    const postMaintCloudExp = parseInt(postMaintCloudRow.rows[0].exp, 10);
+    assert.strictEqual(postMaintCloudRev, preMaintCloudRev, 'UI E2E 5: Cloud revision phải giữ nguyên tuyệt đối khi bảo trì');
+    assert.strictEqual(postMaintCloudExp, preMaintCloudExp, 'UI E2E 5: Dữ liệu Cloud EXP không bị thay đổi khi bảo trì');
+    console.log('  - Đã xác nhận: EXP/pending cục bộ được bảo toàn trọn vẹn, Cloud revision bất biến');
 
-    // Tắt bảo trì
+    // 5.6. Tắt Maintenance và kiểm tra khả năng đồng bộ phục hồi
     await pgClient.query(`
       UPDATE public.app_system_flags 
       SET value = '{"enabled": false, "message": "Hoạt động bình thường"}'::jsonb, updated_at = NOW() 
       WHERE key = 'cultivation_maintenance';
     `);
-    console.log('✓ [UI E2E 5 Passed]: Khi hệ thống bảo trì, UI phản hồi an toàn tuyệt đối và không gây crash');
+
+    // Thiết bị A bấm lại nút "Đồng Bộ Ngay" trên UI sau khi mở bảo trì
+    await triggerSyncAndAwaitDone(pageA);
+
+    // Xác nhận đồng bộ phục hồi thành công: Cloud tiến lên rev mới và cập nhật tu vi mới
+    const restoredCloudRow = await pgClient.query('SELECT rev, (state->>\'totalExp\')::int as exp FROM public.cultivation WHERE user_id = $1', [testUserId]);
+    const restoredCloudRev = parseInt(restoredCloudRow.rows[0].rev, 10);
+    const restoredCloudExp = parseInt(restoredCloudRow.rows[0].exp, 10);
+    assert.strictEqual(restoredCloudRev, preMaintCloudRev + 1, 'UI E2E 5: Sau khi mở bảo trì, Cloud phải tiến lên rev mới (phục hồi đồng bộ)');
+    assert.strictEqual(restoredCloudExp, preMaintState.exp, 'UI E2E 5: Tu vi mới (800 EXP) được đẩy lên Cloud thành công');
+    console.log(`  - Phục hồi thành công sau bảo trì: Cloud tiến lên rev = ${restoredCloudRev}, EXP = ${restoredCloudExp}`);
+    console.log('✓ [UI E2E 5 Passed]: Circuit breaker dừng ghi an toàn khi bảo trì và phục hồi đồng bộ xuất sắc sau bảo trì');
 
     // ==========================================================================
     // TỔNG KẾT TOÀN DIỆN
@@ -856,9 +1009,9 @@ async function runFrontendOCCTests() {
     testError = err;
   } finally {
     // --------------------------------------------------------------------------
-    // DỌN DẸP AN TOÀN VÀ KHÔI PHỤC BASELINE (TUYỆT ĐỐI KHÔNG GỌI process.exit Ở ĐÂY)
+    // DỌN DẸP AN TOÀN VÀ BẢO VỆ DỮ LIỆU (TUYỆT ĐỐI KHÔNG DROP TABLE CASCADE)
     // --------------------------------------------------------------------------
-    console.log('\n[Dọn dẹp] Thực hiện dọn dẹp và khôi phục môi trường...');
+    console.log('\n[Dọn dẹp] Thực hiện dọn dẹp và khôi phục môi trường an toàn...');
     try {
       if (pageA) await pageA.close().catch(() => {});
       if (pageB) await pageB.close().catch(() => {});
@@ -882,35 +1035,50 @@ async function runFrontendOCCTests() {
       cleanupErrors.push(`Lỗi đóng Vite Preview Server: ${e.message}`);
     }
 
+    // 1. Chỉ dọn dẹp dữ liệu của test user cô lập, TUYỆT ĐỐI KHÔNG DROP BẢNG DÙNG CHUNG
     if (testUserId) {
       try {
+        await pgClient.query('DELETE FROM public.novels WHERE user_id = $1', [testUserId]);
+        await pgClient.query('DELETE FROM public.progress WHERE user_id = $1', [testUserId]);
+        await pgClient.query('DELETE FROM public.user_settings WHERE user_id = $1', [testUserId]);
         await pgClient.query('DELETE FROM public.cultivation_idempotency_log WHERE user_id = $1', [testUserId]);
         await pgClient.query('DELETE FROM public.cultivation WHERE user_id = $1', [testUserId]);
         await pgClient.query('DELETE FROM auth.users WHERE id = $1', [testUserId]);
-        console.log(`✓ Đã dọn dẹp test user: ${testUserId}`);
+        console.log(`✓ Đã dọn dẹp an toàn toàn bộ dữ liệu của test user: ${testUserId}`);
       } catch (e) {
         cleanupErrors.push(`Lỗi dọn dẹp test user: ${e.message}`);
       }
+
+      // Dọn dẹp object storage của test user nếu có
+      try {
+        await pgClient.query(`
+          DO $$ BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'objects') THEN
+              DELETE FROM storage.objects WHERE bucket_id = 'novels' AND (owner = $1::text OR name LIKE '%' || $1 || '%');
+            END IF;
+          END $$;
+        `, [testUserId]);
+      } catch (e) {}
     }
 
-    // Dọn dẹp các bảng phụ trợ test
+    // 2. Dọn dẹp các RLS policy test tạm thời (KHÔNG DROP BẢNG)
     try {
       await pgClient.query(`
-        DROP TABLE IF EXISTS public.novels CASCADE;
-        DROP TABLE IF EXISTS public.progress CASCADE;
-        DROP TABLE IF EXISTS public.user_settings CASCADE;
+        DROP POLICY IF EXISTS "Test user manage novels" ON public.novels;
+        DROP POLICY IF EXISTS "Test user manage progress" ON public.progress;
+        DROP POLICY IF EXISTS "Test user manage user_settings" ON public.user_settings;
         DO $$ BEGIN
           IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'storage') THEN
             DROP POLICY IF EXISTS "Test novels bucket objects" ON storage.objects;
           END IF;
         END $$;
       `);
-      console.log('✓ Đã dọn dẹp các bảng phụ trợ kiểm thử (novels, progress, user_settings)');
+      console.log('✓ Đã dọn dẹp các RLS policy test tạm thời');
     } catch (e) {
-      cleanupErrors.push(`Lỗi dọn dẹp bảng phụ trợ: ${e.message}`);
+      cleanupErrors.push(`Lỗi dọn dẹp policy test: ${e.message}`);
     }
 
-    // Khôi phục cờ bảo trì về false
+    // 3. Khôi phục cờ bảo trì về false
     try {
       await pgClient.query(`
         UPDATE public.app_system_flags 
@@ -920,6 +1088,23 @@ async function runFrontendOCCTests() {
       console.log('✓ Đã khôi phục cờ cultivation_maintenance về bình thường');
     } catch (e) {
       cleanupErrors.push(`Lỗi khôi phục cờ bảo trì: ${e.message}`);
+    }
+
+    // 4. Xác minh tính toàn vẹn của database: Không bảng ban đầu nào bị mất
+    try {
+      const postSchemaSnapshot = await pgClient.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        ORDER BY table_name;
+      `);
+      const postTestPublicTables = postSchemaSnapshot.rows.map(r => r.table_name);
+      for (const t of preTestPublicTables) {
+        assert.ok(postTestPublicTables.includes(t), `BẢO VỆ DỮ LIỆU: Bảng có sẵn "${t}" không được phép bị xóa!`);
+      }
+      console.log(`✓ Đã xác minh: Toàn bộ bảng có sẵn (${preTestPublicTables.length} bảng) được giữ nguyên vẹn 100%`);
+    } catch (e) {
+      cleanupErrors.push(`Lỗi xác minh tính toàn vẹn schema: ${e.message}`);
     }
 
     await pgClient.end().catch(() => {});

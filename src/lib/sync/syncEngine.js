@@ -667,6 +667,13 @@ export async function syncCultivation(supabase, userId, { onConflictCultivation,
     if (recRes.conflict) {
       return { skipped: true, conflict: true, currentCloudRev: recRes.currentCloudRev };
     }
+    if (recRes.committed) {
+      const freshLedger = getSyncLedger();
+      if (passedLedger) {
+        Object.assign(passedLedger, freshLedger);
+      }
+      return { pushedToCloud: true, rev: recRes.rev, reconciled: true };
+    }
   }
 
   const { data: cloudCultivation, error: fetchErr } = await supabase
