@@ -191,6 +191,13 @@ async function runSchemaCompatibilityTests() {
     // --------------------------------------------------------------------------
     console.log('\n[4/5] Kiểm thử tương thích hàm RPC sync_cultivation_occ với revision 4203...');
 
+    // Đảm bảo maintenance tắt trước khi test RPC
+    await pgClient.query(`
+      UPDATE public.app_system_flags 
+      SET value = '{"enabled": false, "message": "Hoạt động bình thường"}'::jsonb 
+      WHERE key = 'cultivation_maintenance';
+    `);
+
     // Đưa bản ghi rev = 4203 vào bảng public.cultivation của Local để test qua PostgREST REST API
     await pgClient.query(`
       INSERT INTO public.cultivation (user_id, rev, state, updated_at, device_id)

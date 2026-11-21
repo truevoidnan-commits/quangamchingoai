@@ -6,7 +6,7 @@
 -- Mục tiêu:
 -- 1. Khóa an toàn ACCESS EXCLUSIVE với lock_timeout = 2s chống nghẽn DB
 -- 2. Đợi toàn bộ in-flight transactions kết thúc
--- 3. Thu hồi quyền direct write (INSERT, UPDATE, DELETE) từ anon, authenticated, public
+-- 3. Thu hồi toàn bộ quyền direct write, truncate, trigger không cần thiết từ anon, authenticated, public
 -- 4. Tạo bảng app_system_flags (nếu chưa có) và BẬT cờ cultivation_maintenance = true
 -- 5. Báo hiệu PostgREST reload schema cache
 -- ==============================================================================
@@ -18,8 +18,11 @@ SET LOCAL statement_timeout = '5s';
 -- 1. Khóa bảng để đợi toàn bộ in-flight transactions kết thúc
 LOCK TABLE public.cultivation IN ACCESS EXCLUSIVE MODE;
 
--- 2. Thu hồi quyền direct write ngay trong transaction
-REVOKE INSERT, UPDATE, DELETE ON TABLE public.cultivation FROM anon, authenticated, public;
+-- 2. Thu hồi toàn bộ quyền direct write, truncate, trigger từ anon, authenticated, public
+-- Xử lý triệt để các quyền TRUNCATE, TRIGGER, INSERT, UPDATE, DELETE dư thừa
+REVOKE ALL PRIVILEGES ON TABLE public.cultivation FROM anon, authenticated, public;
+
+-- Chỉ cấp lại quyền SELECT duy nhất cho authenticated để đọc dữ liệu qua RLS
 GRANT SELECT ON TABLE public.cultivation TO authenticated;
 
 -- 3. Tạo bảng cờ bảo trì hệ thống (nếu chưa có) và BẬT bảo trì
