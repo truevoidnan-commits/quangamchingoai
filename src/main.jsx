@@ -49,3 +49,19 @@ window.addEventListener('pageshow', (event) => {
     renderApp();
   }
 });
+
+// An toàn cung cấp Test Harness cho Playwright E2E khi chạy trên loopback localhost
+if (typeof window !== 'undefined' && window.__ALLOW_LOCAL_SYNC__) {
+  Promise.all([
+    import('./lib/sync/syncEngine.js'),
+    import('./lib/sync/syncLedger.js'),
+    import('./lib/sync/autoSync.js'),
+    import('./lib/cultivation.js'),
+    import('./lib/storage.js'),
+    import('./lib/supabaseClient.js'),
+  ]).then(([engine, ledger, auto, cult, storage, supa]) => {
+    window.__TCL_TEST_HARNESS__ = { engine, ledger, auto, cult, storage, supa };
+  }).catch((err) => {
+    console.error('Lỗi nạp E2E Test Harness:', err);
+  });
+}

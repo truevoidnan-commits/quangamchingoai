@@ -2,13 +2,13 @@
  * BỘ KIỂM THỬ TÍCH HỢP TOÀN DIỆN TRÊN SUPABASE LOCAL THẬT
  * File: scripts/test-supabase-local-e2e.mjs
  * 
- * Kiểm thử:
- * 1. Supabase Auth Local: Đăng ký & lấy JWT thật qua GoTrue
- * 2. PostgREST API với JWT thật
- * 3. Quyền ghi Stage A (Direct write & RPC đều hoạt động)
- * 4. Concurrency & Idempotency qua RPC trên PostgreSQL thật
- * 5. Cutover Stage B (Khóa direct upsert nhưng RPC OCC vẫn hoạt động)
- * 6. Maintenance Mode (Trả về SYNC_PAUSED, direct write vẫn bị chặn)
+ * Kiểm thử an toàn & chuẩn hóa:
+ * 1. Khóa an toàn 100% vào Supabase Local đã xác minh (127.0.0.1 / localhost)
+ * 2. Supabase Auth Local: Đăng ký & lấy JWT thật qua GoTrue
+ * 3. Quyền ghi Giai đoạn A: Direct REST write & RPC OCC đều hoạt động
+ * 4. Cutover Giai đoạn B: Direct write bị từ chối 403/42501, RPC OCC vẫn hoạt động
+ * 5. Safe Maintenance Mode: Circuit breaker trả về SYNC_PAUSED
+ * 6. Khôi phục hoàn toàn trạng thái Stage A baseline sau khi test (Idempotent)
  */
 
 import assert from 'node:assert/strict';
@@ -22,11 +22,42 @@ const DB_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0
 
 const { Client } = pg;
 
+// ------------------------------------------------------------------------------
+// 1. KIỂM TRA BẢO VỆ AN TOÀN URL & KHÓA VÀO SUPABASE LOCAL
+// ------------------------------------------------------------------------------
+let parsedSupabaseUrl;
+let parsedDbUrl;
+try {
+  parsedSupabaseUrl = new URL(SUPABASE_URL);
+  parsedDbUrl = new URL(DB_URL);
+} catch (e) {
+  console.error('LỖI: URL kết nối không hợp lệ:', e.message);
+  process.exit(1);
+}
+
+const safeLoopbackHosts = ['127.0.0.1', 'localhost', '::1'];
+if (!safeLoopbackHosts.includes(parsedSupabaseUrl.hostname) || !safeLoopbackHosts.includes(parsedDbUrl.hostname)) {
+  console.error('========================================================================');
+  console.error('BẢO VỆ AN TOÀN TUYỆT ĐỐI: Phát hiện URL không thuộc loopback localhost!');
+  console.error(`  - Supabase Gateway: ${parsedSupabaseUrl.hostname}`);
+  console.error(`  - Database Host:    ${parsedDbUrl.hostname}`);
+  console.error('Script test này chỉ được phép chạy trên Supabase Local cô lập (127.0.0.1).');
+  console.error('Tuyệt đối KHÔNG chạy trên staging remote hay production!');
+  console.error('========================================================================');
+  process.exit(1);
+}
+
+const bannedKeywords = ['prod', 'production', 'live', 'supabase.co', 'supabase.com', 'aws-0', 'pooler'];
+if (bannedKeywords.some(b => parsedSupabaseUrl.hostname.toLowerCase().includes(b) || parsedDbUrl.hostname.toLowerCase().includes(b))) {
+  console.error('LỖI BẢO MẬT: Phát hiện định danh Production/Cloud trong URL. Dừng khẩn cấp!');
+  process.exit(1);
+}
+
 async function runLocalE2ETests() {
   console.log('==========================================================================');
   console.log('BẮT ĐẦU KIỂM THỬ SUPABASE LOCAL E2E VỚI JWT THẬT & POSTGREST API');
-  console.log(`Supabase Gateway: ${SUPABASE_URL}`);
-  console.log(`PostgreSQL: ${DB_URL.replace(/:[^:@]+@/, ':***@')}`);
+  console.log(`Supabase Gateway: ${SUPABASE_URL} (Localhost Port ${parsedSupabaseUrl.port})`);
+  console.log(`PostgreSQL:       ${DB_URL.replace(/:[^:@]+@/, ':***@')} (Localhost Port ${parsedDbUrl.port})`);
   console.log('==========================================================================');
 
   const pgClient = new Client({ connectionString: DB_URL });
@@ -37,7 +68,53 @@ async function runLocalE2ETests() {
 
   try {
     // --------------------------------------------------------------------------
-    // 1. TẠO TÀI KHOẢN THỬ NGHIỆM VÀ NHẬN JWT THẬT TỪ SUPABASE AUTH (GOTRUE)
+    // 1.1. XÁC NHẬN ĐỘC LẬP DANH TÍNH MÔI TRƯỜNG TRƯỚC KHI THỰC HIỆN BẤT KỲ THAO TÁC NÀO
+    // --------------------------------------------------------------------------
+    const dbInfo = await pgClient.query('SELECT current_database() AS dbname, current_user AS dbuser');
+    const currentDb = dbInfo.rows[0]?.dbname || '';
+    const currentUser = dbInfo.rows[0]?.dbuser || '';
+
+    if (bannedKeywords.some(b => currentDb.toLowerCase().includes(b))) {
+      throw new Error(`BẢO MẬT: Tên database "${currentDb}" chứa từ khóa cấm (production). Dừng khẩn cấp!`);
+    }
+
+    const envCheck = await pgClient.query(`
+      SELECT 
+        current_setting('app.environment', true) AS setting_env,
+        (SELECT value->>'identifier' FROM public.app_system_flags WHERE key = 'environment_identifier') AS flag_env_id
+    `);
+
+    const dbEnv = envCheck.rows[0]?.setting_env || envCheck.rows[0]?.flag_env_id;
+    if (dbEnv && bannedKeywords.some(b => dbEnv.toLowerCase().includes(b))) {
+      throw new Error(`Định danh cấu hình môi trường ("${dbEnv}") mang từ khóa production. Dừng khẩn cấp!`);
+    }
+
+    console.log(`✓ Xác thực danh tính Database Local thành công:`);
+    console.log(`  - Database: "${currentDb}" | User: "${currentUser}" | Environment: "${dbEnv || 'local'}"`);
+
+    // --------------------------------------------------------------------------
+    // 1.2. THIẾT LẬP BASELINE STAGE A TRƯỚC KHI BẮT ĐẦU TEST
+    // --------------------------------------------------------------------------
+    await pgClient.query(`
+      GRANT INSERT, UPDATE, DELETE, SELECT ON TABLE public.cultivation TO authenticated;
+      GRANT INSERT, UPDATE, DELETE, SELECT ON TABLE public.cultivation TO anon;
+
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'cultivation' AND policyname = 'Test legacy insert') THEN
+          CREATE POLICY "Test legacy insert" ON public.cultivation FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) = user_id);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'cultivation' AND policyname = 'Test legacy update') THEN
+          CREATE POLICY "Test legacy update" ON public.cultivation FOR UPDATE TO authenticated USING ((SELECT auth.uid()) = user_id);
+        END IF;
+      END $$;
+
+      UPDATE public.app_system_flags 
+      SET value = '{"enabled": false, "message": "Hoạt động bình thường"}'::jsonb, updated_at = NOW() 
+      WHERE key = 'cultivation_maintenance';
+    `);
+
+    // --------------------------------------------------------------------------
+    // 2. TẠO TÀI KHOẢN THỬ NGHIỆM VÀ NHẬN JWT THẬT TỪ SUPABASE AUTH (GOTRUE)
     // --------------------------------------------------------------------------
     console.log('\n[1/6] Tạo tài khoản thử nghiệm trên Supabase Auth Local...');
     const randomSuffix = crypto.randomBytes(4).toString('hex');
@@ -81,16 +158,32 @@ async function runLocalE2ETests() {
     console.log(`✓ Nhận JWT thật từ GoTrue (Header length: ${authToken.split('.')[0].length})`);
 
     // --------------------------------------------------------------------------
-    // 2. KIỂM THỬ GIAI ĐOẠN A: DIRECT WRITE & RPC OCC QUA POSTGREST VỚI JWT THẬT
+    // 3. KIỂM THỬ GIAI ĐOẠN A: DIRECT WRITE & RPC OCC QUA POSTGREST VỚI JWT THẬT
     // --------------------------------------------------------------------------
     console.log('\n[2/6] Kiểm thử Giai đoạn A qua PostgREST REST API...');
 
-    // Đảm bảo cờ maintenance đang tắt
-    await pgClient.query(`
-      UPDATE public.app_system_flags 
-      SET value = '{"enabled": false, "message": "Hoạt động bình thường"}'::jsonb, updated_at = NOW() 
-      WHERE key = 'cultivation_maintenance';
-    `);
+    // Test 2.0: Xác nhận trước Cutover: Direct write được phép trong Giai đoạn A
+    const directStageARes = await fetch(`${SUPABASE_URL}/rest/v1/cultivation`, {
+      method: 'POST',
+      headers: {
+        'apikey': ANON_KEY,
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({
+        user_id: testUserId,
+        rev: 1,
+        state: { realm: 'ngung_khi_1', totalExp: 50 },
+        updated_at: 1699999999,
+        device_id: 'device_stage_a_test',
+      }),
+    });
+    assert.ok([200, 201].includes(directStageARes.status), `Direct write Stage A phải thành công: ${directStageARes.status}`);
+    console.log('✓ Test 2.0 Passed: Giai đoạn A cho phép direct write (client cũ hoạt động bình thường)');
+
+    // Dọn dẹp bản ghi direct Stage A để bắt đầu bài kiểm thử RPC
+    await pgClient.query('DELETE FROM public.cultivation WHERE user_id = $1', [testUserId]);
 
     // Test 2.1: First insert qua RPC sync_cultivation_occ
     const rpcRes1 = await fetch(`${SUPABASE_URL}/rest/v1/rpc/sync_cultivation_occ`, {
@@ -175,7 +268,7 @@ async function runLocalE2ETests() {
     console.log('✓ Test 2.4 Passed: Đọc dữ liệu qua PostgREST SELECT với JWT thật thành công');
 
     // --------------------------------------------------------------------------
-    // 3. THỰC THI CUTOVER GIAI ĐOẠN B TRÊN SUPABASE LOCAL
+    // 4. THỰC THI CUTOVER GIAI ĐOẠN B TRÊN SUPABASE LOCAL
     // --------------------------------------------------------------------------
     console.log('\n[3/6] Thực thi Cutover Giai đoạn B (Thu hồi direct write)...');
 
@@ -203,7 +296,7 @@ async function runLocalE2ETests() {
     console.log('✓ Xác nhận quyền DB sau Cutover: can_insert=false, can_update=false, can_select=true, can_rpc=true');
 
     // --------------------------------------------------------------------------
-    // 4. KIỂM THỬ POST-CUTOVER: DIRECT UPSERT BỊ TỪ CHỐI, RPC OCC VẪN HOẠT ĐỘNG
+    // 5. KIỂM THỬ POST-CUTOVER: DIRECT UPSERT BỊ TỪ CHỐI, RPC OCC VẪN HOẠT ĐỘNG
     // --------------------------------------------------------------------------
     console.log('\n[4/6] Kiểm thử Post-Cutover qua PostgREST API với JWT thật...');
 
@@ -254,7 +347,7 @@ async function runLocalE2ETests() {
     console.log('✓ Test 4.2 Passed: RPC OCC vẫn hoạt động bình thường sau cutover (lên rev = 2)');
 
     // --------------------------------------------------------------------------
-    // 5. KIỂM THỬ CIRCUIT BREAKER (SAFE MAINTENANCE MODE)
+    // 6. KIỂM THỬ CIRCUIT BREAKER (SAFE MAINTENANCE MODE)
     // --------------------------------------------------------------------------
     console.log('\n[5/6] Kiểm thử Safe Maintenance Mode (Circuit Breaker)...');
 
@@ -301,7 +394,7 @@ async function runLocalE2ETests() {
     `);
 
     // --------------------------------------------------------------------------
-    // 6. KIỂM THỬ TRANSACTION ROLLBACK & SECURITY DEFINER CLEANUP
+    // 7. KIỂM THỬ TRANSACTION ROLLBACK & SECURITY DEFINER CLEANUP
     // --------------------------------------------------------------------------
     console.log('\n[6/6] Kiểm thử Security Definer Cleanup & Rollback...');
 
@@ -336,18 +429,38 @@ async function runLocalE2ETests() {
     console.log('Tất cả 6 giai đoạn kiểm thử với JWT thật và PostgREST API đã thành công!');
     console.log('==========================================================================');
   } finally {
-    // Dọn dẹp dữ liệu của test user trên local database
-    if (testUserId) {
-      try {
+    // --------------------------------------------------------------------------
+    // 8. KHÔI PHỤC HOÀN TOÀN TRẠNG THÁI BASELINE STAGE A & DỌN DẸP AN TOÀN (IDEMPOTENT)
+    // --------------------------------------------------------------------------
+    try {
+      // 1. Dọn dẹp dữ liệu của test user trên local database
+      if (testUserId) {
         await pgClient.query('DELETE FROM public.cultivation_idempotency_log WHERE user_id = $1', [testUserId]);
         await pgClient.query('DELETE FROM public.cultivation WHERE user_id = $1', [testUserId]);
         await pgClient.query('DELETE FROM auth.users WHERE id = $1', [testUserId]);
         console.log(`✓ Dọn dẹp thành công test user: ${testUserId}`);
-      } catch (e) {
-        console.warn('Lỗi dọn dẹp test user:', e.message);
       }
+
+      // 2. Khôi phục cờ bảo trì về trạng thái bình thường
+      await pgClient.query(`
+        UPDATE public.app_system_flags 
+        SET value = '{"enabled": false, "message": "Hoạt động bình thường"}'::jsonb, updated_at = NOW() 
+        WHERE key = 'cultivation_maintenance';
+      `);
+
+      // 3. Khôi phục quyền Stage A baseline trên database Local để các lượt test tiếp theo không bị lỗi
+      await pgClient.query(`
+        DROP POLICY IF EXISTS "Test legacy insert" ON public.cultivation;
+        DROP POLICY IF EXISTS "Test legacy update" ON public.cultivation;
+        GRANT INSERT, UPDATE, DELETE, SELECT ON TABLE public.cultivation TO authenticated;
+        GRANT INSERT, UPDATE, DELETE, SELECT ON TABLE public.cultivation TO anon;
+      `);
+      console.log('✓ Đã khôi phục hoàn toàn trạng thái Stage A baseline trên database Local (sẵn sàng cho lượt test tiếp theo)');
+    } catch (cleanupErr) {
+      console.warn('Cảnh báo dọn dẹp hoặc khôi phục baseline:', cleanupErr.message);
     }
-    await pgClient.end();
+
+    await pgClient.end().catch(() => {});
   }
 }
 
