@@ -17,6 +17,25 @@ CREATE TABLE IF NOT EXISTS public.cultivation (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- BẢO VỆ TƯƠNG THÍCH SCHEMA PRODUCTION HIỆN HỮU (GATE 1):
+-- 1. Nâng cấp rev từ INTEGER sang BIGINT nếu đang là INTEGER (Bảo toàn 100% dữ liệu rev = 4203)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = 'cultivation' 
+          AND column_name = 'rev' AND data_type = 'integer'
+    ) THEN
+        ALTER TABLE public.cultivation ALTER COLUMN rev TYPE BIGINT;
+    END IF;
+END $$;
+
+-- 2. Bổ sung created_at nếu bảng cũ chưa có
+ALTER TABLE public.cultivation ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- 3. Thiết lập default cho device_id nhưng giữ tính tương thích với NULL
+ALTER TABLE public.cultivation ALTER COLUMN device_id SET DEFAULT '';
+
 -- Chỉ mục hỗ trợ tối ưu tìm kiếm theo user_id
 CREATE INDEX IF NOT EXISTS idx_cultivation_user_id ON public.cultivation (user_id);
 
@@ -239,7 +258,7 @@ BEGIN
         INSERT INTO public.cultivation (
             user_id, rev, state, updated_at, device_id
         ) VALUES (
-            v_user_id, 1, p_state, p_updated_at, p_device_id
+            v_user_id, 1, p_state, p_updated_at, COALESCE(p_device_id, '')
         )
         ON CONFLICT (user_id) DO NOTHING;
 
@@ -296,7 +315,7 @@ BEGIN
     SET rev = v_new_rev,
         state = p_state,
         updated_at = p_updated_at,
-        device_id = p_device_id
+        device_id = COALESCE(p_device_id, '')
     WHERE user_id = v_user_id;
 
     INSERT INTO public.cultivation_idempotency_log (
