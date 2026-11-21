@@ -75,6 +75,61 @@ if (bannedKeywords.some(b => parsedSupabaseUrl.hostname.toLowerCase().includes(b
   process.exit(1);
 }
 
+async function getDatabaseBaselineSnapshot(pgClient) {
+  // 1. Danh sách bảng trong public schema
+  const tableRes = await pgClient.query(`
+    SELECT table_name 
+    FROM information_schema.tables 
+    WHERE table_schema = 'public'
+    ORDER BY table_name;
+  `);
+
+  // 2. Quyền trên các bảng liên quan
+  const privsRes = await pgClient.query(`
+    SELECT grantee, table_name, privilege_type 
+    FROM information_schema.table_privileges 
+    WHERE table_schema = 'public' 
+      AND table_name IN ('cultivation', 'cultivation_idempotency_log', 'app_system_flags', 'novels', 'progress', 'user_settings')
+      AND grantee IN ('authenticated', 'anon')
+    ORDER BY table_name, grantee, privilege_type;
+  `);
+
+  // 3. Danh sách RLS policies trên các bảng liên quan (loại trừ các test policies do bài test tạo)
+  const policiesRes = await pgClient.query(`
+    SELECT schemaname, tablename, policyname, roles, cmd 
+    FROM pg_policies 
+    WHERE schemaname IN ('public', 'storage') 
+      AND tablename IN ('cultivation', 'cultivation_idempotency_log', 'app_system_flags', 'novels', 'progress', 'user_settings', 'objects')
+      AND policyname NOT LIKE 'Test OCC E2E%'
+      AND policyname NOT LIKE 'Test user manage%'
+      AND policyname NOT LIKE 'Test novels bucket%'
+    ORDER BY schemaname, tablename, policyname;
+  `);
+
+  // 4. Trạng thái RLS (relrowsecurity)
+  const rlsRes = await pgClient.query(`
+    SELECT relname AS tablename, relrowsecurity AS rls_enabled 
+    FROM pg_class 
+    JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace 
+    WHERE pg_namespace.nspname = 'public' 
+      AND relname IN ('cultivation', 'cultivation_idempotency_log', 'app_system_flags', 'novels', 'progress', 'user_settings')
+    ORDER BY relname;
+  `);
+
+  // 5. Cờ maintenance
+  const maintRes = await pgClient.query(`
+    SELECT value FROM public.app_system_flags WHERE key = 'cultivation_maintenance';
+  `);
+
+  return {
+    tables: tableRes.rows.map(r => r.table_name),
+    privileges: privsRes.rows,
+    policies: policiesRes.rows,
+    rls: rlsRes.rows,
+    maintenance: maintRes.rows[0]?.value || { enabled: false, message: 'Hoạt động bình thường' },
+  };
+}
+
 async function runFrontendOCCTests() {
   console.log('==========================================================================');
   console.log('BẮT ĐẦU KIỂM THỬ FRONTEND THẬT 2 THIẾT BỊ VỚI SUPABASE LOCAL VÀ PLAYWRIGHT');
@@ -96,7 +151,7 @@ async function runFrontendOCCTests() {
   const testUserEmail = `test_fe_${crypto.randomBytes(4).toString('hex')}@thien-co-lau.local`;
   const testUserPassword = `Pass_${crypto.randomBytes(6).toString('hex')}!`;
 
-  let preTestPublicTables = [];
+  let baselineSnapshot = null;
   let testError = null;
   const cleanupErrors = [];
 
@@ -106,20 +161,31 @@ async function runFrontendOCCTests() {
     // --------------------------------------------------------------------------
     const dbInfo = await pgClient.query('SELECT current_database() AS dbname, current_user AS dbuser');
     const currentDb = dbInfo.rows[0]?.dbname || '';
-    if (bannedKeywords.some(b => currentDb.toLowerCase().includes(b))) {
-      throw new Error(`BẢO MẬT: Tên database "${currentDb}" chứa từ khóa cấm!`);
+    const currentUser = dbInfo.rows[0]?.dbuser || '';
+    if (bannedKeywords.some(b => currentDb.toLowerCase().includes(b) || currentUser.toLowerCase().includes(b))) {
+      throw new Error(`BẢO MẬT: Tên database "${currentDb}" hoặc user "${currentUser}" chứa từ khóa cấm!`);
     }
-    console.log(`✓ Xác thực danh tính Database Local thành công: "${currentDb}"`);
 
-    // Ghi nhận danh sách bảng ban đầu trong schema public để đảm bảo không bảng nào bị xóa mất
-    const tableSnapshotRes = await pgClient.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public'
-      ORDER BY table_name;
+    const envCheck = await pgClient.query(`
+      SELECT 
+        current_setting('app.environment', true) AS setting_env,
+        (SELECT value->>'identifier' FROM public.app_system_flags WHERE key = 'environment_identifier') AS flag_env_id
     `);
-    preTestPublicTables = tableSnapshotRes.rows.map(r => r.table_name);
-    console.log(`✓ Snapshot bảng ban đầu trong public schema (${preTestPublicTables.length} bảng): ${preTestPublicTables.join(', ')}`);
+    const dbEnv = envCheck.rows[0]?.setting_env || envCheck.rows[0]?.flag_env_id;
+    if (dbEnv && bannedKeywords.some(b => dbEnv.toLowerCase().includes(b))) {
+      throw new Error(`Định danh cấu hình môi trường ("${dbEnv}") mang từ khóa production. Dừng khẩn cấp!`);
+    }
+
+    console.log(`✓ Xác thực danh tính Database Local thành công:`);
+    console.log(`  - Database: "${currentDb}" | User: "${currentUser}" | Environment: "${dbEnv || 'local-isolated'}"`);
+
+    // Ghi nhận snapshot baseline ban đầu
+    baselineSnapshot = await getDatabaseBaselineSnapshot(pgClient);
+    console.log(`✓ Ghi nhận snapshot baseline thành công:`);
+    console.log(`  - Bảng public: ${baselineSnapshot.tables.length} bảng (${baselineSnapshot.tables.join(', ')})`);
+    console.log(`  - Policies: ${baselineSnapshot.policies.length} chính sách`);
+    console.log(`  - Table privileges: ${baselineSnapshot.privileges.length} quyền`);
+    console.log(`  - RLS status: ${baselineSnapshot.rls.map(r => `${r.tablename}:${r.rls_enabled ? 'ON' : 'OFF'}`).join(', ')}`);
 
     // --------------------------------------------------------------------------
     // 1.2. THIẾT LẬP BẢNG PHỤ TRỢ CHO KIỂM THỬ THƯ VIỆN & TIẾN ĐỘ ĐỌC (IDEMPOTENT - KHÔNG PHÁ HỦY)
@@ -141,8 +207,8 @@ async function runFrontendOCCTests() {
       );
       ALTER TABLE public.novels ENABLE ROW LEVEL SECURITY;
       DO $$ BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'novels' AND policyname = 'Test user manage novels') THEN
-          CREATE POLICY "Test user manage novels" ON public.novels FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id) WITH CHECK ((SELECT auth.uid()) = user_id);
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'novels' AND policyname = 'Test OCC E2E user manage novels') THEN
+          CREATE POLICY "Test OCC E2E user manage novels" ON public.novels FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id) WITH CHECK ((SELECT auth.uid()) = user_id);
         END IF;
       END $$;
 
@@ -155,8 +221,8 @@ async function runFrontendOCCTests() {
       );
       ALTER TABLE public.progress ENABLE ROW LEVEL SECURITY;
       DO $$ BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'progress' AND policyname = 'Test user manage progress') THEN
-          CREATE POLICY "Test user manage progress" ON public.progress FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id) WITH CHECK ((SELECT auth.uid()) = user_id);
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'progress' AND policyname = 'Test OCC E2E user manage progress') THEN
+          CREATE POLICY "Test OCC E2E user manage progress" ON public.progress FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id) WITH CHECK ((SELECT auth.uid()) = user_id);
         END IF;
       END $$;
 
@@ -167,14 +233,20 @@ async function runFrontendOCCTests() {
       );
       ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
       DO $$ BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'user_settings' AND policyname = 'Test user manage user_settings') THEN
-          CREATE POLICY "Test user manage user_settings" ON public.user_settings FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id) WITH CHECK ((SELECT auth.uid()) = user_id);
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'user_settings' AND policyname = 'Test OCC E2E user manage user_settings') THEN
+          CREATE POLICY "Test OCC E2E user manage user_settings" ON public.user_settings FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id) WITH CHECK ((SELECT auth.uid()) = user_id);
         END IF;
       END $$;
 
-      GRANT ALL ON TABLE public.novels TO authenticated, anon;
-      GRANT ALL ON TABLE public.progress TO authenticated, anon;
-      GRANT ALL ON TABLE public.user_settings TO authenticated, anon;
+      -- Cấp quyền tối thiểu cần thiết cho authenticated (CRUD)
+      GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.novels TO authenticated;
+      GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.progress TO authenticated;
+      GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.user_settings TO authenticated;
+
+      -- Thu hồi quyền thừa khỏi anon trên các bảng dùng chung
+      REVOKE ALL ON TABLE public.novels FROM anon;
+      REVOKE ALL ON TABLE public.progress FROM anon;
+      REVOKE ALL ON TABLE public.user_settings FROM anon;
 
       DO $$ BEGIN
         IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'storage') THEN
@@ -183,8 +255,8 @@ async function runFrontendOCCTests() {
           ON CONFLICT (id) DO NOTHING;
 
           IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'objects') THEN
-            IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Test novels bucket objects') THEN
-              CREATE POLICY "Test novels bucket objects" ON storage.objects FOR ALL TO authenticated, anon USING (bucket_id = 'novels') WITH CHECK (bucket_id = 'novels');
+            IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Test OCC E2E novels bucket objects') THEN
+              CREATE POLICY "Test OCC E2E novels bucket objects" ON storage.objects FOR ALL TO authenticated USING (bucket_id = 'novels') WITH CHECK (bucket_id = 'novels');
             END IF;
           END IF;
         END IF;
@@ -628,19 +700,29 @@ async function runFrontendOCCTests() {
       });
     }, { nId: novelTestId });
 
-    // 9.2. Thiết bị A đồng bộ đẩy dữ liệu lên Cloud
-    const pushA9 = await pageA.evaluate(async () => {
-      const { engine, supa } = window.__TCL_TEST_HARNESS__;
-      return await engine.performSync(supa.supabase, { firstSyncChoice: 'local_master' });
-    });
+    // 9.2. Thiết bị A đồng bộ đẩy dữ liệu lên Cloud (chờ nếu đang có sync nền)
+    let pushA9 = null;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      pushA9 = await pageA.evaluate(async () => {
+        const { engine, supa } = window.__TCL_TEST_HARNESS__;
+        return await engine.performSync(supa.supabase, { firstSyncChoice: 'local_master' });
+      });
+      if (!pushA9?.locked) break;
+      await pageA.waitForTimeout(500);
+    }
     console.log('  - pushA9 result:', JSON.stringify(pushA9));
     assert.strictEqual(pushA9?.success, true, `Kịch bản 9: Thiết bị A đẩy truyện và tiến độ lên Cloud thành công (errors: ${JSON.stringify(pushA9?.errors)})`);
 
-    // 9.3. Thiết bị B đồng bộ kéo dữ liệu từ Cloud về
-    const pullB9 = await pageB.evaluate(async () => {
-      const { engine, supa } = window.__TCL_TEST_HARNESS__;
-      return await engine.performSync(supa.supabase, { firstSyncChoice: 'cloud_master' });
-    });
+    // 9.3. Thiết bị B đồng bộ kéo dữ liệu từ Cloud về (chờ nếu đang có sync nền)
+    let pullB9 = null;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      pullB9 = await pageB.evaluate(async () => {
+        const { engine, supa } = window.__TCL_TEST_HARNESS__;
+        return await engine.performSync(supa.supabase, { firstSyncChoice: 'cloud_master' });
+      });
+      if (!pullB9?.locked) break;
+      await pageB.waitForTimeout(500);
+    }
     console.log('  - pullB9 result:', JSON.stringify(pullB9));
     assert.strictEqual(pullB9?.success, true, `Kịch bản 9: Thiết bị B kéo truyện và tiến độ từ Cloud về thành công (errors: ${JSON.stringify(pullB9?.errors)})`);
 
@@ -1049,26 +1131,52 @@ async function runFrontendOCCTests() {
         cleanupErrors.push(`Lỗi dọn dẹp test user: ${e.message}`);
       }
 
-      // Dọn dẹp object storage của test user nếu có
+      // Dọn dẹp object storage của test user nếu có (sử dụng query trực tiếp với transaction và allow_delete_query, không dùng DO $$ có parameter)
       try {
-        await pgClient.query(`
-          DO $$ BEGIN
-            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'objects') THEN
-              DELETE FROM storage.objects WHERE bucket_id = 'novels' AND (owner = $1::text OR name LIKE '%' || $1 || '%');
-            END IF;
-          END $$;
-        `, [testUserId]);
-      } catch (e) {}
+        const hasStorageObjects = await pgClient.query(`
+          SELECT 1 FROM information_schema.tables 
+          WHERE table_schema = 'storage' AND table_name = 'objects';
+        `);
+        if (hasStorageObjects.rows.length > 0) {
+          await pgClient.query('BEGIN');
+          await pgClient.query("SET LOCAL storage.allow_delete_query = 'true'");
+          await pgClient.query(`
+            DELETE FROM storage.objects 
+            WHERE bucket_id = 'novels' 
+              AND (owner::text = $1::text OR name LIKE ($1::text || '/%'));
+          `, [testUserId]);
+          await pgClient.query('COMMIT');
+
+          const remRes = await pgClient.query(`
+            SELECT count(*) AS count 
+            FROM storage.objects 
+            WHERE bucket_id = 'novels' 
+              AND (owner::text = $1::text OR name LIKE ($1::text || '/%'));
+          `, [testUserId]);
+          const remainingCount = parseInt(remRes.rows[0]?.count || '0', 10);
+          if (remainingCount > 0) {
+            throw new Error(`Dọn dẹp storage thất bại: Vẫn còn ${remainingCount} objects của test user ${testUserId}!`);
+          }
+          console.log(`✓ Đã dọn dẹp và xác minh không còn storage object nào của test user: ${testUserId}`);
+        }
+      } catch (e) {
+        await pgClient.query('ROLLBACK').catch(() => {});
+        cleanupErrors.push(`Lỗi dọn dẹp storage: ${e.message}`);
+      }
     }
 
     // 2. Dọn dẹp các RLS policy test tạm thời (KHÔNG DROP BẢNG)
     try {
       await pgClient.query(`
+        DROP POLICY IF EXISTS "Test OCC E2E user manage novels" ON public.novels;
+        DROP POLICY IF EXISTS "Test OCC E2E user manage progress" ON public.progress;
+        DROP POLICY IF EXISTS "Test OCC E2E user manage user_settings" ON public.user_settings;
         DROP POLICY IF EXISTS "Test user manage novels" ON public.novels;
         DROP POLICY IF EXISTS "Test user manage progress" ON public.progress;
         DROP POLICY IF EXISTS "Test user manage user_settings" ON public.user_settings;
         DO $$ BEGIN
           IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'storage') THEN
+            DROP POLICY IF EXISTS "Test OCC E2E novels bucket objects" ON storage.objects;
             DROP POLICY IF EXISTS "Test novels bucket objects" ON storage.objects;
           END IF;
         END $$;
@@ -1078,33 +1186,70 @@ async function runFrontendOCCTests() {
       cleanupErrors.push(`Lỗi dọn dẹp policy test: ${e.message}`);
     }
 
-    // 3. Khôi phục cờ bảo trì về false
+    // 3. Khôi phục cờ bảo trì về giá trị ban đầu trong baseline
     try {
-      await pgClient.query(`
-        UPDATE public.app_system_flags 
-        SET value = '{"enabled": false, "message": "Hoạt động bình thường"}'::jsonb, updated_at = NOW() 
-        WHERE key = 'cultivation_maintenance';
-      `);
-      console.log('✓ Đã khôi phục cờ cultivation_maintenance về bình thường');
+      if (baselineSnapshot?.maintenance) {
+        await pgClient.query(`
+          UPDATE public.app_system_flags 
+          SET value = $1::jsonb, updated_at = NOW() 
+          WHERE key = 'cultivation_maintenance';
+        `, [JSON.stringify(baselineSnapshot.maintenance)]);
+      } else {
+        await pgClient.query(`
+          UPDATE public.app_system_flags 
+          SET value = '{"enabled": false, "message": "Hoạt động bình thường"}'::jsonb, updated_at = NOW() 
+          WHERE key = 'cultivation_maintenance';
+        `);
+      }
+      console.log('✓ Đã khôi phục cờ cultivation_maintenance về giá trị baseline');
     } catch (e) {
       cleanupErrors.push(`Lỗi khôi phục cờ bảo trì: ${e.message}`);
     }
 
-    // 4. Xác minh tính toàn vẹn của database: Không bảng ban đầu nào bị mất
-    try {
-      const postSchemaSnapshot = await pgClient.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public'
-        ORDER BY table_name;
-      `);
-      const postTestPublicTables = postSchemaSnapshot.rows.map(r => r.table_name);
-      for (const t of preTestPublicTables) {
-        assert.ok(postTestPublicTables.includes(t), `BẢO VỆ DỮ LIỆU: Bảng có sẵn "${t}" không được phép bị xóa!`);
+    // 4. Xác minh tính toàn vẹn và khôi phục của database so với baseline ban đầu
+    if (baselineSnapshot) {
+      try {
+        const postTestBaseline = await getDatabaseBaselineSnapshot(pgClient);
+
+        // 4.1. Không bảng ban đầu nào bị mất
+        for (const t of baselineSnapshot.tables) {
+          assert.ok(postTestBaseline.tables.includes(t), `BẢO VỆ DỮ LIỆU: Bảng có sẵn "${t}" không được phép bị xóa!`);
+        }
+        console.log(`✓ Đã xác minh: Toàn bộ bảng có sẵn (${baselineSnapshot.tables.length} bảng) được giữ nguyên vẹn 100%`);
+
+        // 4.2. Toàn bộ non-test policies ban đầu được giữ nguyên vẹn
+        assert.strictEqual(
+          postTestBaseline.policies.length,
+          baselineSnapshot.policies.length,
+          `BẢO VỆ DỮ LIỆU: Số lượng baseline policies (${postTestBaseline.policies.length}) không khớp với trước test (${baselineSnapshot.policies.length})!`
+        );
+        const basePolicyKeys = baselineSnapshot.policies.map(p => `${p.schemaname}.${p.tablename}.${p.policyname}`).sort();
+        const postPolicyKeys = postTestBaseline.policies.map(p => `${p.schemaname}.${p.tablename}.${p.policyname}`).sort();
+        assert.deepStrictEqual(postPolicyKeys, basePolicyKeys, 'BẢO VỆ DỮ LIỆU: Danh sách policies baseline bị thay đổi ngoài ý muốn!');
+        console.log(`✓ Đã xác minh: Toàn bộ ${baselineSnapshot.policies.length} baseline policies được bảo toàn nguyên vẹn 100%`);
+
+        // 4.3. Trạng thái RLS của các bảng được giữ nguyên vẹn
+        for (const baseRls of baselineSnapshot.rls) {
+          const postRls = postTestBaseline.rls.find(r => r.tablename === baseRls.tablename);
+          assert.ok(postRls, `BẢO VỆ DỮ LIỆU: Thiếu thông tin RLS của bảng "${baseRls.tablename}"`);
+          assert.strictEqual(
+            postRls.rls_enabled,
+            baseRls.rls_enabled,
+            `BẢO VỆ DỮ LIỆU: Trạng thái RLS của bảng "${baseRls.tablename}" bị thay đổi!`
+          );
+        }
+        console.log(`✓ Đã xác minh: Trạng thái RLS của toàn bộ bảng được bảo toàn nguyên vẹn 100%`);
+
+        // 4.4. Trạng thái maintenance được khôi phục
+        assert.deepStrictEqual(
+          postTestBaseline.maintenance,
+          baselineSnapshot.maintenance,
+          'BẢO VỆ DỮ LIỆU: Cờ cultivation_maintenance không được khôi phục về trạng thái baseline!'
+        );
+        console.log(`✓ Đã xác minh: Cờ cultivation_maintenance được khôi phục về trạng thái baseline`);
+      } catch (e) {
+        cleanupErrors.push(`Lỗi xác minh tính toàn vẹn schema & baseline: ${e.message}`);
       }
-      console.log(`✓ Đã xác minh: Toàn bộ bảng có sẵn (${preTestPublicTables.length} bảng) được giữ nguyên vẹn 100%`);
-    } catch (e) {
-      cleanupErrors.push(`Lỗi xác minh tính toàn vẹn schema: ${e.message}`);
     }
 
     await pgClient.end().catch(() => {});
