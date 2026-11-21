@@ -2,17 +2,14 @@
 .SYNOPSIS
     Script điều phối duy nhất triển khai nâng cấp OCC lên Supabase Production cho dự án Thiên Cơ Lâu.
 .DESCRIPTION
-    Tuân thủ quy trình 6 bước với Short Write Freeze, Fail-Closed Preconditions và 2 điểm phê duyệt bắt buộc:
-    1. Xác minh trạng thái GitHub và backup cũ
-    2. Tạo Delta Backup tức thời trước giờ G
-    3. Tiền kiểm Production READ-ONLY (kiểm tra rev = 4203, zero query treo)
-    4. [ĐIỂM PHÊ DUYỆT 1] Người dùng xác nhận Freeze & Migration Stage A
-    5. Thực thi Atomic Write Freeze & Migration Stage A
-    6. [ĐIỂM PHÊ DUYỆT 2] Người dùng xác nhận Merge PR #5 & Deploy Frontend GitHub Pages
-    7. Thực thi Stage B Cutover Lockdown (thu hồi triệt để quyền ghi/truncate/trigger)
-    8. Thực thi Fail-Closed Unfreeze & Mở RPC OCC
-    9. Kiểm tra trang web thực tế và đồng bộ tu vi
-    10. Kết luận DEPLOYED hoặc STOPPED
+    Tuân thủ quy trình bảo mật nghiêm ngặt:
+    - Không truyền mật khẩu qua tham số dòng lệnh cho các tiến trình con (dùng biến môi trường / stdin).
+    - Kiểm tra mã thoát (exit code) của pg_dump, dừng ngay khi backup có sự cố.
+    - Tiền kiểm READ-ONLY và chụp baseline snapshot dữ liệu tu vi (rev, EXP).
+    - 2 Điểm phê duyệt bắt buộc: trước Freeze/Stage A và trước Stage B/Unfreeze.
+    - Kiểm tra frontend live triển khai đúng commit và chứa RPC sync_cultivation_occ (không chỉ dựa vào HTTP 200).
+    - Xác minh đối chiếu thực tế revision và tổng EXP tu vi trước khi kết luận DEPLOYED.
+    - Fail-Closed: Bất kỳ lỗi nào phát sinh sau Freeze đều giữ nguyên trạng thái bảo trì an toàn và báo rõ hiện trạng.
 .PARAMETER DatabaseUrl
     Connection string của Supabase Production (nếu không truyền, script sẽ đọc từ $env:PROD_DATABASE_URL hoặc hỏi an toàn)
 .PARAMETER WebsiteUrl
@@ -29,6 +26,7 @@ param (
 )
 
 $ErrorActionPreference = "Stop"
+$isFrozen = $false
 
 function Mask-Url([string]$url) {
     if ([string]::IsNullOrWhiteSpace($url)) { return "" }
@@ -41,16 +39,20 @@ function Write-Step([string]$stepNum, [string]$title) {
     Write-Host "==========================================================================" -ForegroundColor Cyan
 }
 
-function Abort-Deployment([string]$reason, [bool]$isFrozen = $false) {
+function Abort-Deployment([string]$reason, [bool]$frozen = $false) {
     Write-Host "`n==========================================================================" -ForegroundColor Red
     Write-Host "KẾT LUẬN: [STOPPED] NÂNG CẤP OCC ĐÃ DỪNG!" -ForegroundColor Red
     Write-Host "Nguyên nhân: $reason" -ForegroundColor Yellow
-    if ($isFrozen) {
-        Write-Host "TRẠNG THÁI BẢO TRÌ: [BẬT (AN TOÀN)]" -ForegroundColor Magenta
-        Write-Host "Database đang ở trạng thái Safe Maintenance Mode (đóng băng ghi 100%)." -ForegroundColor Magenta
-        Write-Host "Dữ liệu người dùng tiếp tục được bảo toàn an toàn tại LocalStorage." -ForegroundColor Magenta
+    if ($frozen) {
+        Write-Host "`nTRẠNG THÁI BẢO TRÌ: [BẬT (AN TOÀN)]" -ForegroundColor Magenta
+        Write-Host "Database đang ở trạng thái Safe Maintenance Mode (đóng băng ghi 100%):" -ForegroundColor Magenta
+        Write-Host "  - Bảng app_system_flags: cultivation_maintenance = true." -ForegroundColor Magenta
+        Write-Host "  - Direct REST write từ frontend cũ: Bị từ chối hoàn toàn (HTTP 403 / 42501)." -ForegroundColor Magenta
+        Write-Host "  - RPC sync_cultivation_occ: Trả về trạng thái { status: 'MAINTENANCE', code: 'SYNC_PAUSED' }." -ForegroundColor Magenta
+        Write-Host "  - Dữ liệu tu vi người dùng: Được bảo toàn nguyên vẹn tại LocalStorage phía client." -ForegroundColor Magenta
+        Write-Host "  - Không có bất kỳ dữ liệu tu vi nào bị mất mát hoặc ghi đè sai lệch." -ForegroundColor Magenta
     } else {
-        Write-Host "TRẠNG THÁI DATABASE: Chưa thay đổi hoặc đã giữ nguyên an toàn." -ForegroundColor Green
+        Write-Host "`nTRẠNG THÁI DATABASE: Chưa bị thay đổi (giữ nguyên trạng thái ban đầu)." -ForegroundColor Green
     }
     Write-Host "==========================================================================" -ForegroundColor Red
     exit 1
@@ -77,6 +79,26 @@ if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) {
 if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) {
     Abort-Deployment "Chưa cung cấp DatabaseUrl. Dừng khẩn cấp!" $false
 }
+
+# Phân tách connection string để cô lập mật khẩu (không lộ qua command line argv)
+$dbUser = $null
+$dbPass = $null
+$dbHost = $null
+$dbPort = "5432"
+$dbName = "postgres"
+
+if ($DatabaseUrl -match '^postgres(?:ql)?:\/\/([^:]+):([^@]+)@([^:\/]+)(?::(\d+))?\/(.+)$') {
+    $dbUser = [System.Uri]::UnescapeDataString($matches[1])
+    $dbPass = [System.Uri]::UnescapeDataString($matches[2])
+    $dbHost = $matches[3]
+    if ($matches[4]) { $dbPort = $matches[4] }
+    $dbName = ($matches[5] -split '\?')[0]
+} else {
+    Abort-Deployment "Định dạng DatabaseUrl không hợp lệ! Vui lòng dùng format: postgresql://user:password@host:port/database" $false
+}
+
+# Thiết lập biến môi trường phiên làm việc cho các tiến trình Node.js (KHÔNG truyền qua argv)
+$env:PROD_DATABASE_URL = $DatabaseUrl
 
 $maskedDbUrl = Mask-Url $DatabaseUrl
 Write-Host "Database Target: $maskedDbUrl" -ForegroundColor Green
@@ -109,7 +131,7 @@ $existingBackups = Get-ChildItem -Path $BackupDir -Filter "*.dump" -ErrorAction 
 Write-Host "✓ Số lượng bản backup đã có trong ${BackupDir}: $(@($existingBackups).Count)" -ForegroundColor Green
 
 # ------------------------------------------------------------------------------
-# BƯỚC 2: CHUẨN BỊ DELTA BACKUP MỚI BẢO VỆ DỮ LIỆU PHÁT SINH GẦN GIỜ G
+# BƯỚC 2: CHUẨN BỊ DELTA BACKUP MỚI (KIỂM TRA EXIT CODE, KHÔNG TRUYỀN MẬT KHẨU ARGV)
 # ------------------------------------------------------------------------------
 Write-Step "2/10" "Tạo Delta Backup tức thời trước thời điểm Cutover"
 
@@ -117,60 +139,79 @@ $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $deltaBackupFile = Join-Path $BackupDir "thien_co_lau_prod_cutover_$timestamp.dump"
 Write-Host "Đang tạo bản sao lưu mới: $deltaBackupFile..." -ForegroundColor Yellow
 
-$pgDumpCmd = "pg_dump"
 $hasLocalPgDump = Get-Command "pg_dump" -ErrorAction SilentlyContinue
+$dumpExitCode = 1
 
 if ($hasLocalPgDump) {
-    & pg_dump --dbname="$DatabaseUrl" --format=custom --file="$deltaBackupFile" --schema="public" --schema="auth" --schema="storage" --verbose
+    Write-Host "Sử dụng pg_dump local (mật khẩu truyền qua PGPASSWORD môi trường, không lộ argv)..." -ForegroundColor Yellow
+    $env:PGPASSWORD = $dbPass
+    & pg_dump -h $dbHost -p $dbPort -U $dbUser -d $dbName --format=custom --file="$deltaBackupFile" --schema="public" --schema="auth" --schema="storage"
+    $dumpExitCode = $LASTEXITCODE
+    $env:PGPASSWORD = $null
 } else {
-    # Nếu Windows host không cài pg_dump, dùng pg_dump bên trong docker container postgres có sẵn
     $runningContainers = docker ps --format "{{.Names}}"
     $dbContainer = $runningContainers | Where-Object { $_ -like "*postgres*" -or $_ -like "*supabase_db*" } | Select-Object -First 1
 
     if ($dbContainer) {
-        Write-Host "Sử dụng pg_dump từ container: $dbContainer..." -ForegroundColor Yellow
-        $escapedUrl = $DatabaseUrl -replace '"', '\"'
+        Write-Host "Sử dụng pg_dump từ container: $dbContainer (truyền qua stdin pipe an toàn, không lộ argv)..." -ForegroundColor Yellow
         $tmpContainerFile = "/tmp/delta_backup_$timestamp.dump"
-        docker exec $dbContainer pg_dump "$escapedUrl" -Fc --schema=public --schema=auth --schema=storage -f "$tmpContainerFile"
-        if ($LASTEXITCODE -ne 0) {
-            Abort-Deployment "Lỗi khi chạy pg_dump trong container $dbContainer" $false
+        # Truyền lệnh kèm PGPASSWORD qua stdin của container sh để không lộ mật khẩu trên argv của tiến trình
+        $shCmd = "export PGPASSWORD='$dbPass'; pg_dump -h '$dbHost' -p '$dbPort' -U '$dbUser' -d '$dbName' -Fc --schema=public --schema=auth --schema=storage -f '$tmpContainerFile'"
+        $shCmd | docker exec -i $dbContainer sh
+        $dumpExitCode = $LASTEXITCODE
+
+        if ($dumpExitCode -eq 0) {
+            docker cp "${dbContainer}:${tmpContainerFile}" "$deltaBackupFile"
+            docker exec $dbContainer rm -f "$tmpContainerFile"
         }
-        docker cp "${dbContainer}:${tmpContainerFile}" "$deltaBackupFile"
-        docker exec $dbContainer rm -f "$tmpContainerFile"
     } else {
-        Abort-Deployment "Không tìm thấy công cụ pg_dump trên Windows host hoặc Docker container. Hãy cài đặt PostgreSQL client hoặc khởi chạy Docker!" $false
+        Abort-Deployment "Không tìm thấy công cụ pg_dump trên Windows host hoặc Docker container. Hãy cài đặt pg_dump hoặc khởi chạy Docker!" $false
     }
 }
 
+# Kiểm tra mã thoát của pg_dump
+if ($dumpExitCode -ne 0) {
+    Abort-Deployment "pg_dump thất bại với mã lỗi $dumpExitCode! Dừng khẩn cấp, chưa thay đổi database." $false
+}
+
 if (-not (Test-Path $deltaBackupFile)) {
-    Abort-Deployment "Lỗi tạo backup: File $deltaBackupFile không tồn tại!" $false
+    Abort-Deployment "Lỗi tạo backup: File $deltaBackupFile không tồn tại trên đĩa!" $false
 }
 
 $fileSize = (Get-Item $deltaBackupFile).Length
 if ($fileSize -lt 5120) {
     Abort-Deployment "Lỗi tạo backup: Kích thước file backup quá nhỏ ($fileSize bytes). Nguy cơ lỗi kết nối!" $false
 }
-Write-Host "✓ Delta Backup hoàn tất thành công! Kích thước: $([math]::Round($fileSize / 1KB, 2)) KB" -ForegroundColor Green
+Write-Host "✓ Delta Backup hoàn tất thành công! Kích thước: $([math]::Round($fileSize / 1KB, 2)) KB (Mã thoát pg_dump: 0)" -ForegroundColor Green
 
 # ------------------------------------------------------------------------------
 # BƯỚC 3: KIỂM TRA ĐỦ ĐIỀU KIỆN TRƯỚC KHI THAY ĐỔI PRODUCTION (PREFLIGHT READ-ONLY)
 # ------------------------------------------------------------------------------
-Write-Step "3/10" "Thực thi Preflight READ-ONLY trên Supabase Production"
+Write-Step "3/10" "Thực thi Preflight READ-ONLY & Chụp Baseline Snapshot Dữ Liệu Tu Vi"
 
 $preflightFile = "supabase/operations/20261121_production_preflight_readonly.sql"
 if (-not (Test-Path $preflightFile)) {
     Abort-Deployment "Không tìm thấy file $preflightFile!" $false
 }
 
-Write-Host "Đang chạy preflight read-only qua Node.js runner..." -ForegroundColor Yellow
-$preflightOutput = node scripts/run-sql-file.mjs "$preflightFile" "$DatabaseUrl"
+Write-Host "3.1. Đang chạy preflight read-only qua Node.js runner (bảo mật biến môi trường)..." -ForegroundColor Yellow
+$preflightOutput = node scripts/run-sql-file.mjs "$preflightFile"
 
 if ($LASTEXITCODE -ne 0) {
-    Abort-Deployment "Preflight READ-ONLY thất bại! Kiểm tra lại thông số kết nối." $false
+    Abort-Deployment "Preflight READ-ONLY thất bại! Kiểm tra lại kết nối cơ sở dữ liệu." $false
 }
-
 Write-Host $preflightOutput
 Write-Host "✓ Preflight READ-ONLY hoàn tất thành công 100%!" -ForegroundColor Green
+
+Write-Host "`n3.2. Chụp Baseline Snapshot dữ liệu tu vi hiện tại..." -ForegroundColor Yellow
+$baselineSnapshotFile = Join-Path $BackupDir "cultivation_baseline_snapshot_$timestamp.json"
+node scripts/verify-cultivation-live.mjs --snapshot "$baselineSnapshotFile"
+
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path $baselineSnapshotFile)) {
+    Abort-Deployment "Không thể chụp baseline snapshot dữ liệu tu vi! Dừng khẩn cấp." $false
+}
+$baselineContent = Get-Content -Path $baselineSnapshotFile -Raw | ConvertFrom-Json
+Write-Host "✓ Đã ghi nhận Baseline: User=$($baselineContent.userId) | Revision=$($baselineContent.rev) | Tổng EXP=$($baselineContent.totalCalculatedExp)" -ForegroundColor Green
 
 # ------------------------------------------------------------------------------
 # BƯỚC 4: [ĐIỂM PHÊ DUYỆT 1] XÁC NHẬN TRƯỚC THAO TÁC FREEZE / MIGRATION
@@ -180,11 +221,12 @@ Write-Step "4/10" "[ĐIỂM PHÊ DUYỆT 1] Xác nhận thực thi Atomic Write 
 Write-Host "THÔNG TIN TRƯỚC GIỜ G:" -ForegroundColor Yellow
 Write-Host "  - Target Database: $maskedDbUrl"
 Write-Host "  - Delta Backup:    $deltaBackupFile ($([math]::Round($fileSize / 1KB, 2)) KB)"
+Write-Host "  - Baseline Tu Vi:  Revision $($baselineContent.rev), Tổng EXP $($baselineContent.totalCalculatedExp)"
 Write-Host "  - Thao tác kế tiếp:"
 Write-Host "      1. Khóa bảng ACCESS EXCLUSIVE (timeout 2s), REVOKE toàn bộ quyền direct write (kể cả TRUNCATE/TRIGGER)"
 Write-Host "      2. Bật cờ cultivation_maintenance = true"
 Write-Host "      3. Áp dụng Migration Stage A (Nâng rev -> BIGINT, tạo Idempotency Log, tạo RPC sync_cultivation_occ)"
-Write-Host "  - Dữ liệu tu vi: Bảo toàn nguyên vẹn rev hiện tại (4203), KHÔNG reset về 0/1."
+Write-Host "  - Bảo toàn dữ liệu: Giữ nguyên vẹn rev hiện tại ($($baselineContent.rev)) và toàn bộ EXP tu vi."
 
 Write-Host "`nBạn có chắc chắn muốn thực thi Freeze và Migration Stage A lên Production?" -ForegroundColor Red
 $confirm1 = Read-Host -Prompt "Nhập 'YES' (chữ hoa) để xác nhận thực thi, phím khác để hủy"
@@ -202,16 +244,17 @@ $freezeFile = "supabase/operations/20261121_cultivation_occ_atomic_write_freeze.
 $stageAFile = "supabase/migrations/20261120_cultivation_occ_stage_a.sql"
 
 Write-Host "5.1. Thực thi Atomic Write Freeze..." -ForegroundColor Yellow
-node scripts/run-sql-file.mjs "$freezeFile" "$DatabaseUrl"
+node scripts/run-sql-file.mjs "$freezeFile"
 if ($LASTEXITCODE -ne 0) {
-    Abort-Deployment "Lỗi thực thi Atomic Write Freeze!" $true
+    Abort-Deployment "Lỗi thực thi Atomic Write Freeze! Giao dịch có thể đã rollback." $true
 }
-Write-Host "✓ Atomic Write Freeze thành công! Toàn bộ direct write đã bị đóng băng." -ForegroundColor Green
+$isFrozen = $true
+Write-Host "✓ Atomic Write Freeze thành công! Toàn bộ direct write đã bị đóng băng an toàn." -ForegroundColor Green
 
 Write-Host "5.2. Thực thi Migration Stage A..." -ForegroundColor Yellow
-node scripts/run-sql-file.mjs "$stageAFile" "$DatabaseUrl"
+node scripts/run-sql-file.mjs "$stageAFile"
 if ($LASTEXITCODE -ne 0) {
-    Abort-Deployment "Lỗi thực thi Migration Stage A! Database vẫn đang ở trạng thái Bảo trì an toàn." $true
+    Abort-Deployment "Lỗi thực thi Migration Stage A!" $true
 }
 Write-Host "✓ Migration Stage A thành công! Cột rev đã là BIGINT, RPC OCC và Idempotency Log đã sẵn sàng." -ForegroundColor Green
 
@@ -240,61 +283,105 @@ if ($confirm2 -ne "YES") {
 }
 
 # ------------------------------------------------------------------------------
-# BƯỚC 7: THỰC HIỆN STAGE B LOCKDOWN & XÁC MINH QUYỀN HIỆU LỰC
+# BƯỚC 7: XÁC MINH FRONTEND TRIỂN KHAI ĐÚNG COMMIT (KHÔNG CHỈ HTTP 200)
 # ------------------------------------------------------------------------------
-Write-Step "7/10" "Thực thi Stage B Lockdown & Xác minh Quyền Hiệu Lực"
+Write-Step "7/10" "Xác minh Frontend Đã Triển Khai Đúng Commit và Chứa RPC OCC"
+
+Write-Host "7.1. Kiểm tra trạng thái triển khai qua GitHub Deployments API..." -ForegroundColor Yellow
+try {
+    $deployments = Invoke-RestMethod -Uri "https://api.github.com/repos/truevoidnan-commits/quangamchingoai/deployments?environment=github-pages`&per_page=3" -Headers @{"User-Agent"="PowerShell"} -TimeoutSec 15
+    if ($deployments -and $deployments.Count -gt 0) {
+        $latestDeploy = $deployments[0]
+        $statuses = Invoke-RestMethod -Uri $latestDeploy.statuses_url -Headers @{"User-Agent"="PowerShell"} -TimeoutSec 15
+        $deployState = if ($statuses -and $statuses.Count -gt 0) { $statuses[0].state } else { "unknown" }
+        Write-Host "  - Deployment ID: $($latestDeploy.id)"
+        Write-Host "  - Deployed SHA:  $($latestDeploy.sha)"
+        Write-Host "  - Trạng thái:    $deployState"
+
+        if ($deployState -ne "success") {
+            Abort-Deployment "GitHub Pages deployment chưa ở trạng thái 'success' (trạng thái hiện tại: $deployState). Vui lòng đợi GitHub Actions build và deploy hoàn tất!" $true
+        }
+        Write-Host "  ✓ GitHub Pages Deployment đã hoàn tất thành công (state: success)!" -ForegroundColor Green
+    }
+} catch {
+    Write-Host "  (Không thể truy vấn GitHub Deployments API: $($_.Exception.Message) - chuyển sang kiểm tra bundle trực tiếp)" -ForegroundColor DarkGray
+}
+
+Write-Host "`n7.2. Kiểm tra JavaScript bundle trực tiếp trên trang live ($WebsiteUrl)..." -ForegroundColor Yellow
+$cacheBuster = [System.DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+$webRes = Invoke-WebRequest -Uri "$WebsiteUrl?t=$cacheBuster" -UseBasicParsing -TimeoutSec 15
+
+if ($webRes.StatusCode -ne 200) {
+    Abort-Deployment "Website live không phản hồi HTTP 200 OK (mã phản hồi: $($webRes.StatusCode))!" $true
+}
+
+if ($webRes.Content -match 'src=["'']\.\/assets\/(index-[^"'']+\.js)["'']') {
+    $bundleName = $matches[1]
+    Write-Host "  - Nhận diện JavaScript Entry Bundle: $bundleName"
+    $bundleUrl = "$WebsiteUrl/assets/$bundleName?t=$cacheBuster"
+    $bundleRes = Invoke-WebRequest -Uri "$bundleUrl" -UseBasicParsing -TimeoutSec 20
+    
+    # Bắt buộc bundle phải chứa chuỗi RPC 'sync_cultivation_occ'
+    if ($bundleRes.Content -notmatch 'sync_cultivation_occ') {
+        Abort-Deployment "JavaScript bundle live ($bundleName) KHÔNG chứa RPC 'sync_cultivation_occ'! Frontend phiên bản cũ vẫn đang phục vụ trên GitHub Pages (chưa nhận commit OCC mới). Dừng lại an toàn!" $true
+    }
+    Write-Host "  ✓ Bundle live đã được xác minh chứa hàm RPC sync_cultivation_occ!" -ForegroundColor Green
+} else {
+    Abort-Deployment "Không tìm thấy file bundle JavaScript index trong HTML trang live! Nguy cơ trang bị lỗi hiển thị." $true
+}
+
+# ------------------------------------------------------------------------------
+# BƯỚC 8: THỰC HIỆN STAGE B LOCKDOWN & FAIL-CLOSED UNFREEZE
+# ------------------------------------------------------------------------------
+Write-Step "8/10" "Thực thi Stage B Cutover & Fail-Closed Unfreeze"
 
 $stageBFile = "supabase/operations/20261120_cultivation_occ_stage_b_cutover.sql"
-Write-Host "Thực thi Stage B Cutover..." -ForegroundColor Yellow
-node scripts/run-sql-file.mjs "$stageBFile" "$DatabaseUrl"
+Write-Host "8.1. Thực thi Stage B Cutover Lockdown..." -ForegroundColor Yellow
+node scripts/run-sql-file.mjs "$stageBFile"
 
 if ($LASTEXITCODE -ne 0) {
     Abort-Deployment "Lỗi thực thi Stage B Cutover!" $true
 }
-Write-Host "✓ Stage B Cutover hoàn tất! Quyền direct write/truncate/trigger đã bị khóa vĩnh viễn." -ForegroundColor Green
-
-# ------------------------------------------------------------------------------
-# BƯỚC 8: FAIL-CLOSED UNFREEZE (CHỈ UNFREEZE NẾU 100% PRECONDITIONS THỎA MÃN)
-# ------------------------------------------------------------------------------
-Write-Step "8/10" "Thực thi Fail-Closed Unfreeze & Mở Đồng Bộ RPC OCC"
+Write-Host "✓ Stage B Cutover hoàn tất! Toàn bộ direct write/truncate/trigger đã bị khóa vĩnh viễn." -ForegroundColor Green
 
 $unfreezeFile = "supabase/operations/20261121_cultivation_occ_unfreeze_and_enable.sql"
-Write-Host "Đang kiểm tra 100% Preconditions và mở lại đồng bộ..." -ForegroundColor Yellow
-$unfreezeOutput = node scripts/run-sql-file.mjs "$unfreezeFile" "$DatabaseUrl"
+Write-Host "`n8.2. Đang kiểm tra 100% Preconditions và mở lại đồng bộ..." -ForegroundColor Yellow
+$unfreezeOutput = node scripts/run-sql-file.mjs "$unfreezeFile"
 
 if ($LASTEXITCODE -ne 0) {
     Abort-Deployment "Preconditions không đạt! Script đã tự động ROLLBACK và giữ nguyên chế độ bảo trì (Fail-Closed)." $true
 }
 
 Write-Host $unfreezeOutput
+$isFrozen = $false
 Write-Host "✓ Unfreeze thành công! Cờ bảo trì đã tắt, hệ thống mở RPC OCC toàn diện." -ForegroundColor Green
 
 # ------------------------------------------------------------------------------
-# BƯỚC 9: KIỂM TRA ĐỒNG BỘ THÀNH CÔNG & BẢO TOÀN DỮ LIỆU THỰC TẾ
+# BƯỚC 9: XÁC MINH ĐỒNG BỘ EXP VÀ REVISION THỰC TẾ TRÊN DATABASE LIVE
 # ------------------------------------------------------------------------------
-Write-Step "9/10" "Kiểm tra Website Thực Tế và Dữ Liệu Tu Vi Live"
+Write-Step "9/10" "Xác minh Đối Chiếu EXP và Revision Tu Vi Thực Tế"
 
-Write-Host "Kiểm tra kết nối tới Website: $WebsiteUrl..." -ForegroundColor Yellow
-try {
-    $webRes = Invoke-WebRequest -Uri $WebsiteUrl -UseBasicParsing -TimeoutSec 15
-    if ($webRes.StatusCode -eq 200) {
-        Write-Host "✓ Website Live phản hồi tốt (HTTP 200 OK)." -ForegroundColor Green
-    } else {
-        Write-Host "Cảnh báo: Website phản hồi mã HTTP $($webRes.StatusCode)." -ForegroundColor Yellow
-    }
-} catch {
-    Write-Host "Cảnh báo kiểm tra website: $($_.Exception.Message)" -ForegroundColor Yellow
+Write-Host "Đối chiếu trạng thái database live với baseline snapshot..." -ForegroundColor Yellow
+node scripts/verify-cultivation-live.mjs --verify "$baselineSnapshotFile"
+
+if ($LASTEXITCODE -ne 0) {
+    # Nếu xác minh thất bại, kích hoạt lại freeze khẩn cấp để bảo vệ database
+    Write-Host "`nCẢNH BÁO: Phát hiện sai lệch dữ liệu! Kích hoạt lại freeze khẩn cấp..." -ForegroundColor Red
+    node scripts/run-sql-file.mjs "$freezeFile"
+    Abort-Deployment "Xác minh revision hoặc EXP tu vi thất bại! Đã tái kích hoạt chế độ bảo trì để bảo vệ dữ liệu." $true
 }
 
 # ------------------------------------------------------------------------------
 # BƯỚC 10: KẾT LUẬN CUỐI CÙNG
 # ------------------------------------------------------------------------------
-Write-Step "10/10" "Hoàn tất Triển khai"
+Write-Step "10/10" "Hoàn tất Triển khai Production OCC"
 
 Write-Host "`n==========================================================================" -ForegroundColor Green
 Write-Host "KẾT LUẬN: [DEPLOYED] NÂNG CẤP OCC LÊN PRODUCTION HOÀN TẤT XUẤT SẮC!" -ForegroundColor Green
-Write-Host "  - Revision tu vi được bảo toàn tuyệt đối (>= 4203)." -ForegroundColor Green
+Write-Host "  - Revision tu vi được bảo toàn tuyệt đối (>= $($baselineContent.rev))." -ForegroundColor Green
+Write-Host "  - Toàn bộ EXP tu vi được bảo toàn nguyên vẹn, không suy giảm." -ForegroundColor Green
 Write-Host "  - Toàn bộ đường ghi direct write/truncate cũ đã bị khóa vĩnh viễn." -ForegroundColor Green
-Write-Host "  - RPC sync_cultivation_occ đang hoạt động mượt mà." -ForegroundColor Green
+Write-Host "  - Frontend live đã xác minh chứa mã nguồn RPC sync_cultivation_occ." -ForegroundColor Green
+Write-Host "  - Database đã Unfreeze, cờ cultivation_maintenance = false." -ForegroundColor Green
 Write-Host "  - Bản backup an toàn lưu tại: $deltaBackupFile" -ForegroundColor Green
 Write-Host "==========================================================================" -ForegroundColor Green

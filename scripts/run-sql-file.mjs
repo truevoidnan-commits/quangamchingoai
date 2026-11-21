@@ -12,7 +12,14 @@ import fs from 'node:fs';
 import pg from 'pg';
 
 const filePath = process.argv[2];
-const dbUrl = process.argv[3] || process.env.PROD_DATABASE_URL || process.env.DATABASE_URL;
+
+if (process.argv[3]) {
+  console.error('CẢNH BÁO BẢO MẬT: Không truyền connection string chứa mật khẩu qua tham số dòng lệnh!');
+  console.error('Vui lòng thiết lập biến môi trường PROD_DATABASE_URL.');
+  process.exit(1);
+}
+
+const dbUrl = process.env.PROD_DATABASE_URL || process.env.DATABASE_URL;
 
 if (!filePath || !fs.existsSync(filePath)) {
   console.error(`LỖI: File SQL không tồn tại: ${filePath}`);
@@ -20,7 +27,7 @@ if (!filePath || !fs.existsSync(filePath)) {
 }
 
 if (!dbUrl) {
-  console.error('LỖI: Chưa cung cấp DATABASE_URL qua tham số hoặc biến môi trường.');
+  console.error('LỖI: Chưa thiết lập biến môi trường PROD_DATABASE_URL.');
   process.exit(1);
 }
 
