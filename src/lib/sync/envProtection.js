@@ -14,6 +14,12 @@ export function getHostOverrideForTesting() {
 }
 
 export function isProductionHost() {
+  if (typeof window !== 'undefined' && window.__ALLOW_LOCAL_SYNC__ === true) {
+    const host = window.location?.hostname || '';
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') {
+      return true;
+    }
+  }
   if (_overrideHostForTesting !== null) {
     return typeof _overrideHostForTesting === 'string' && _overrideHostForTesting.endsWith('github.io');
   }

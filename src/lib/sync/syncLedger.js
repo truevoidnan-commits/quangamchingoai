@@ -7,6 +7,8 @@ export const LEDGER_KEY = 'tcl_sync_ledger';
 export const DIRTY_KEY = 'tcl_sync_dirty';
 export const TOMBSTONES_KEY = 'tcl_sync_tombstones';
 export const DEVICE_ID_KEY = 'tcl_device_id';
+export const CULTIVATION_CONFLICT_KEY = 'tcl_cultivation_conflict_state';
+export const PENDING_CULTIVATION_REQUEST_KEY = 'tcl_cultivation_pending_request';
 
 let _syncBypassDirty = false;
 
@@ -34,9 +36,15 @@ export function getDeviceId() {
 export function getSyncLedger() {
   try {
     const raw = localStorage.getItem(LEDGER_KEY);
-    return raw ? JSON.parse(raw) : { novels: {}, cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 } };
+    const ledger = raw ? JSON.parse(raw) : { novels: {}, cultivation: { lastSyncedRev: 0, lastSyncedLocalSeq: 0, lastCloudUpdatedAt: 0 } };
+    if (!ledger.cultivation) {
+      ledger.cultivation = { lastSyncedRev: 0, lastSyncedLocalSeq: 0, lastCloudUpdatedAt: 0 };
+    } else if (typeof ledger.cultivation.lastSyncedLocalSeq !== 'number') {
+      ledger.cultivation.lastSyncedLocalSeq = ledger.cultivation.lastSyncedRev || 0;
+    }
+    return ledger;
   } catch {
-    return { novels: {}, cultivation: { lastSyncedRev: 0, lastCloudUpdatedAt: 0 } };
+    return { novels: {}, cultivation: { lastSyncedRev: 0, lastSyncedLocalSeq: 0, lastCloudUpdatedAt: 0 } };
   }
 }
 
@@ -242,3 +250,58 @@ export function releaseSyncLock() {
     localStorage.removeItem(SYNC_LOCK_KEY);
   } catch {}
 }
+
+export function getCultivationConflictState() {
+  try {
+    const raw = localStorage.getItem(CULTIVATION_CONFLICT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setCultivationConflictState(data) {
+  try {
+    if (data) {
+      localStorage.setItem(CULTIVATION_CONFLICT_KEY, JSON.stringify(data));
+    } else {
+      localStorage.removeItem(CULTIVATION_CONFLICT_KEY);
+    }
+  } catch (e) {
+    console.warn('Lỗi lưu cultivation conflict state:', e);
+  }
+}
+
+export function clearCultivationConflictState() {
+  try {
+    localStorage.removeItem(CULTIVATION_CONFLICT_KEY);
+  } catch {}
+}
+
+export function getPendingCultivationRequest() {
+  try {
+    const raw = localStorage.getItem(PENDING_CULTIVATION_REQUEST_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function savePendingCultivationRequest(req) {
+  try {
+    if (req) {
+      localStorage.setItem(PENDING_CULTIVATION_REQUEST_KEY, JSON.stringify(req));
+    } else {
+      localStorage.removeItem(PENDING_CULTIVATION_REQUEST_KEY);
+    }
+  } catch (e) {
+    console.warn('Lỗi lưu pending cultivation request:', e);
+  }
+}
+
+export function clearPendingCultivationRequest() {
+  try {
+    localStorage.removeItem(PENDING_CULTIVATION_REQUEST_KEY);
+  } catch {}
+}
+
