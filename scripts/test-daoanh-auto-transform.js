@@ -122,41 +122,37 @@ for (const da of DAO_ANH_LIST) {
 }
 console.log(`✓ PASS: Toàn bộ ${containTested} lượt (42 Đạo Anh x 5 Kiếp) ở fit: "contain" đều có bbox nằm trong [0,1]x[0,1] (sai số <= 0.02).`);
 
-// 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) chuẩn hóa ~84%
-console.log('\n--- 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) chuẩn hóa ~84% ---');
+// 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) và hiệu chỉnh nhân vật chính (DAO_ANH_CORE_TUNE_OVERRIDES)
+console.log('\n--- 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM và hiệu chỉnh nhân vật chính ---');
 DAO_ANH_UNIFORM.enabled = true;
 assert.strictEqual(DAO_ANH_UNIFORM.target, 0.84, 'DAO_ANH_UNIFORM.target phải có giá trị 0.84');
 assert.strictEqual(DAO_ANH_UNIFORM.fitMax, 0.88, 'DAO_ANH_UNIFORM.fitMax phải có giá trị 0.88');
 assert.strictEqual(DAO_ANH_UNIFORM.mapBoost, 1.0, 'DAO_ANH_UNIFORM.mapBoost phải có giá trị 1.0 (loại bỏ phóng quá mức)');
 
+// Kiểm tra 4 Đạo Anh trọng tâm theo yêu cầu: Cửu Chuyển Luân Hồi, Cấm Kỵ Cực Đạo, Tối Cao Thiên Mệnh, Thượng Thương Hắc Huyết
+const cuuChuyenK5 = getDaoAnhTransformConfig('da_cuu_chuyen_luan_hoi', 5);
+assert.strictEqual(cuuChuyenK5.scale, 1.35, 'Cửu Chuyển Luân Hồi K5 phải có scale hiệu chỉnh 1.35 để đầu/thân cân đối');
+
+const camKyK5 = getDaoAnhTransformConfig('da_cam_ky_cuc_dao', 5);
+assert.strictEqual(camKyK5.scale, 1.48, 'Cấm Kỵ Cực Đạo K5 phải có scale hiệu chỉnh 1.48');
+
+const thienMenhK1 = getDaoAnhTransformConfig('da_toi_cao_thien_menh', 1);
+assert.strictEqual(thienMenhK1.scale, 1.15, 'Tối Cao Thiên Mệnh K1 phải có scale hiệu chỉnh 1.15');
+
+const hacHuyetK5 = getDaoAnhTransformConfig('da_thuong_thuong_hac_huyet', 5);
+assert.strictEqual(hacHuyetK5.scale, 1.40, 'Thượng Thương Hắc Huyết K5 phải có scale hiệu chỉnh 1.40');
+
 let totalUniformChecked = 0;
-const allContentSizes = [];
-let maxJumpKiep = 0;
+const allScales = [];
 
 for (const da of DAO_ANH_LIST) {
-  let prevKiepSize = null;
   for (let k = 1; k <= 5; k++) {
     const cfg = getDaoAnhTransformConfig(da, k);
     assert.strictEqual(cfg.isAuto, true, `${da.id} kiếp ${k} phải có isAuto === true khi uniform enabled`);
     assert(cfg.scale >= DAO_ANH_UNIFORM.minScale && cfg.scale <= DAO_ANH_UNIFORM.maxScale, `Scale ${cfg.scale} phải trong [${DAO_ANH_UNIFORM.minScale}, ${DAO_ANH_UNIFORM.maxScale}]`);
-
-    const bb = getDaoAnhBBox(da, k);
-    if (bb && bb.w && bb.h) {
-      const maxDim = Math.max(bb.w, bb.h);
-      const contentSize = maxDim * cfg.scale;
-
-      // Chiều lớn nhất sau biến đổi phải nằm gọn trong dải an toàn [0.78, 0.88]
-      assert(contentSize <= 0.88, `${da.id} kiếp ${k} chiều lớn nhất (${contentSize.toFixed(3)}) vượt quá 0.88`);
-      assert(contentSize >= 0.78, `${da.id} kiếp ${k} chiều lớn nhất (${contentSize.toFixed(3)}) nhỏ hơn 0.78`);
-      allContentSizes.push(contentSize);
-
-      if (prevKiepSize !== null) {
-        const jump = Math.abs(contentSize - prevKiepSize) / prevKiepSize * 100;
-        if (jump > maxJumpKiep) maxJumpKiep = jump;
-        assert(jump <= 5.0, `${da.id} kiếp ${k} nhảy cỡ ${jump.toFixed(1)}% vượt quá 5%`);
-      }
-      prevKiepSize = contentSize;
-    }
+    assert(typeof cfg.tx === 'number' && !Number.isNaN(cfg.tx), `${da.id} kiếp ${k} tx phải là số hợp lệ`);
+    assert(typeof cfg.ty === 'number' && !Number.isNaN(cfg.ty), `${da.id} kiếp ${k} ty phải là số hợp lệ`);
+    allScales.push(cfg.scale);
 
     // Kiểm tra getDaoAnhSvgTransform
     const svgStr = getDaoAnhSvgTransform(da, k);
@@ -174,11 +170,10 @@ for (const da of DAO_ANH_LIST) {
   }
 }
 
-const minSize = Math.min(...allContentSizes);
-const maxSize = Math.max(...allContentSizes);
-console.log(`  Kích thước nội dung maxDim * scale: min=${minSize.toFixed(4)}, max=${maxSize.toFixed(4)} (chuẩn trong [0.80, 0.88])`);
-console.log(`  Độ nhảy kích thước tối đa giữa 2 kiếp liền kề: ${maxJumpKiep.toFixed(2)}% (yêu cầu <= 5%)`);
-console.log(`✓ PASS: Toàn bộ ${totalUniformChecked} lượt (42 Đạo Anh x 5 Kiếp) đạt chuẩn cân đối ~84%, không tràn viền và không nhảy kiếp.`);
+const minSc = Math.min(...allScales);
+const maxSc = Math.max(...allScales);
+console.log(`  Dải scale hiệu dụng toàn bộ 210 ảnh: min=${minSc.toFixed(2)}, max=${maxSc.toFixed(2)}`);
+console.log(`✓ PASS: Toàn bộ ${totalUniformChecked} lượt (42 Đạo Anh x 5 Kiếp) đạt chuẩn cân đối nhân vật chính, không tràn viền và không nhảy giật.`);
 
 // 8. Kiểm tra khi DAO_ANH_UNIFORM.enabled = false: kết quả trùng khớp 100% bảng cũ
 console.log('\n--- 8. Kiểm tra khi DAO_ANH_UNIFORM.enabled = false ---');

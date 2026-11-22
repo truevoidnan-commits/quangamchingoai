@@ -1515,6 +1515,9 @@ export function getDaoAnhBBox(daoAnhDef, currentKiep = 0) {
     if (DAO_ANH_BBOX[cleanKey] !== undefined) return DAO_ANH_BBOX[cleanKey];
     const baseKey = cleanKey.replace(/_k\d+$/, '');
     if (DAO_ANH_BBOX[baseKey] !== undefined) return DAO_ANH_BBOX[baseKey];
+    // Tìm chính xác theo id trong DAO_ANH_LIST (không dùng fallback mặc định)
+    const exactMatch = DAO_ANH_LIST.find(d => d.id === daoAnhDef || d.sourceId === daoAnhDef || `da_${d.sourceId}` === daoAnhDef);
+    if (exactMatch) return getDaoAnhBBox(exactMatch, currentKiep);
     return null;
   }
 
@@ -2370,6 +2373,57 @@ export const DAO_ANH_UNIFORM = {
   mapBoost: 1.0,
 };
 
+/**
+ * Bảng hiệu chỉnh riêng có kiểm soát (Core Character Tuning Overrides)
+ * Dành cho những Đạo Ảnh có hào quang, vòng luân hồi, cánh hoặc vũ khí xòe rộng bao quanh
+ * khiến thuật toán bounding box toàn thể ép kích thước đầu/thân nhân vật chính quá nhỏ.
+ * Tinh chỉnh scale để đầu và thân nhân vật chính đạt kích thước thị giác đồng đều với các Đạo Ảnh khác (như Đế Kiếm),
+ * đồng thời vẫn giữ toàn bộ hiệu ứng và vũ khí trong giới hạn an toàn, không cắt mất chi tiết.
+ */
+export const DAO_ANH_CORE_TUNE_OVERRIDES = {
+  // 1. Nhóm 4 Đạo Anh trọng tâm theo yêu cầu:
+  // Cửu Chuyển Luân Hồi: Vòng luân hồi khổng lồ ép nhân vật K4-K5 quá nhỏ; nâng K4-K5 lên 1.35
+  da_cuu_chuyen_luan_hoi:      { 1: 1.10, 2: 1.10, 3: 1.15, 4: 1.35, 5: 1.35 },
+  cuu_chuyen_luan_hoi:         { 1: 1.10, 2: 1.10, 3: 1.15, 4: 1.35, 5: 1.35 },
+
+  // Cấm Kỵ Cực Đạo: Vòng huyết luân và 2 lưỡi hái bao quanh làm thân nhỏ; nâng K1-K3 và K5
+  da_cam_ky_cuc_dao:          { 1: 1.18, 2: 1.18, 3: 1.18, 4: 1.56, 5: 1.48 },
+  cam_ky_cuc_dao:             { 1: 1.18, 2: 1.18, 3: 1.18, 4: 1.56, 5: 1.48 },
+
+  // Tối Cao Thiên Mệnh: Cột hào quang và kiếm trận vàng xòe cao; nâng để đầu/thân cân bằng
+  da_toi_cao_thien_menh:      { 1: 1.15, 2: 1.15, 3: 1.18, 4: 1.35, 5: 1.35 },
+  toi_cao_thien_menh:         { 1: 1.15, 2: 1.15, 3: 1.18, 4: 1.35, 5: 1.35 },
+
+  // Thượng Thương Hắc Huyết: Cánh máu và kiếm huyết rực cháy bao quanh; nâng K3-K5 để nhân vật oai vệ
+  da_thuong_thuong_hac_huyet: { 1: 1.18, 2: 1.15, 3: 1.25, 4: 1.35, 5: 1.40 },
+  thuong_thuong_hac_huyet:    { 1: 1.18, 2: 1.15, 3: 1.25, 4: 1.35, 5: 1.40 },
+
+  // 2. Các Đạo Ảnh có hào quang / hiệu ứng bao quanh lớn khác đã được kiểm chứng hình ảnh thực tế:
+  da_hong_mong_bat_diet:      { 4: 1.15, 5: 1.18 },
+  hong_mong_bat_diet:         { 4: 1.15, 5: 1.18 },
+
+  da_tuc_menh_nhan_qua:       { 4: 1.18, 5: 1.20 },
+  tuc_menh_nhan_qua:          { 4: 1.18, 5: 1.20 },
+
+  da_kim_o_luyen_van_linh:    { 1: 1.16, 2: 1.16, 3: 1.16, 4: 1.20, 5: 1.20 },
+  kim_o_luyen_van_linh:       { 1: 1.16, 2: 1.16, 3: 1.16, 4: 1.20, 5: 1.20 },
+
+  da_tha_hoa_tu_tai_dai_phap: { 2: 1.12, 3: 1.16, 4: 1.18, 5: 1.22 },
+  tha_hoa_tu_tai_dai_phap:    { 2: 1.12, 3: 1.16, 4: 1.18, 5: 1.22 },
+
+  da_tam_thu_dao:             { 5: 1.18 },
+  tam_thu_dao:                { 5: 1.18 },
+
+  da_tan_tien_phe_than:       { 1: 1.12, 2: 1.12, 3: 1.12 },
+  tan_tien_phe_than:          { 1: 1.12, 2: 1.12, 3: 1.12 },
+
+  da_mac_sat_tien_phach:      { 4: 1.22, 5: 1.35 },
+  mac_sat_tien_phach:         { 4: 1.22, 5: 1.35 },
+
+  da_hon_don_diet_the_loi_tri:{ 1: 1.12, 2: 1.12, 3: 1.12 },
+  hon_don_diet_the_loi_tri:   { 1: 1.12, 2: 1.12, 3: 1.12 },
+};
+
 export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {}) {
   if (!daoAnhDef) return { scale: 1, x: 0, y: 0, isAuto: false };
   const id = typeof daoAnhDef === 'string' ? daoAnhDef : (daoAnhDef.id || '');
@@ -2466,6 +2520,16 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
 
     let rawScale = target / maxDim;
     rawScale = Math.min(rawScale, FIT_MAX / maxDim);
+
+    // Ưu tiên cân bằng kích thước nhân vật chính (Head / Body):
+    // Nếu ảnh này có cấu hình hiệu chỉnh riêng có kiểm soát (do hiệu ứng/hào quang bao quanh lớn làm teo tóp thân),
+    // áp dụng scale hiệu chỉnh để nhân vật chính cân xứng với các Đạo Ảnh khác (như Đế Kiếm).
+    if (forceAuto && options?.fit !== 'contain') {
+      const coreTune = DAO_ANH_CORE_TUNE_OVERRIDES[id] || DAO_ANH_CORE_TUNE_OVERRIDES[sourceId] || DAO_ANH_CORE_TUNE_OVERRIDES[cleanId] || DAO_ANH_CORE_TUNE_OVERRIDES[daId];
+      if (coreTune && typeof coreTune[currentKiep] === 'number') {
+        rawScale = coreTune[currentKiep];
+      }
+    }
 
     const scale = Math.min(Math.max(rawScale, minScale), maxScale);
     const roundedScale = Math.round(scale * 100) / 100;
