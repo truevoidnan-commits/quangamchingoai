@@ -82,7 +82,13 @@ export default function VideoAdminModal({
       const res = await testR2Connection();
       setR2TestResult(res);
     } catch (err) {
-      setR2TestResult({ ok: false, error: err.message || 'Lỗi kiểm tra kết nối R2' });
+      setR2TestResult({
+        ok: false,
+        error: err.message || 'Lỗi kiểm tra kết nối R2',
+        code: err.code,
+        stage: err.stage || err.code || 'R2_FAIL',
+        runtimeDiagnostics: err.runtimeDiagnostics,
+      });
     } finally {
       setR2Testing(false);
     }
@@ -644,6 +650,42 @@ export default function VideoAdminModal({
                     {r2TestResult.authSource && (
                       <div style={{ marginTop: 2, fontSize: 11, color: '#cbd5e1' }}>
                         Nguồn key: {r2TestResult.authSource} | Key hint: {r2TestResult.keyHint} | Bucket: {r2TestResult.bucket}
+                      </div>
+                    )}
+                    {r2TestResult.runtimeDiagnostics && (
+                      <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed rgba(255, 255, 255, 0.15)', fontSize: 11, color: '#cbd5e1' }}>
+                        <div style={{ fontWeight: 600, marginBottom: 2 }}>Trạng thái biến môi trường Edge Function (Bảo mật - chỉ kiểm tra tồn tại và độ dài):</div>
+                        <div>• R2_ACCOUNT_ID: {r2TestResult.runtimeDiagnostics.hasR2AccountId ? `Có (${r2TestResult.runtimeDiagnostics.r2AccountIdLength} ký tự)` : '[Chưa có / Rỗng]'}</div>
+                        <div>• R2_VIDEO_ACCESS_KEY_ID: {r2TestResult.runtimeDiagnostics.hasR2VideoAccessKeyId ? `Có (${r2TestResult.runtimeDiagnostics.r2VideoAccessKeyIdLength} ký tự)` : '[Chưa có / Rỗng]'}</div>
+                        <div>• R2_VIDEO_SECRET_ACCESS_KEY: {r2TestResult.runtimeDiagnostics.hasR2VideoSecretAccessKey ? `Có (${r2TestResult.runtimeDiagnostics.r2VideoSecretAccessKeyLength} ký tự)` : '[Chưa có / Rỗng]'}</div>
+                        <div>• R2_VIDEO_BUCKET: {r2TestResult.runtimeDiagnostics.r2VideoBucket || 'tcl-videos'}</div>
+                        {r2TestResult.runtimeDiagnostics.hasLegacyComicKeyPresent && (
+                          <div style={{ color: '#fbbf24', marginTop: 3 }}>
+                            [Lưu ý] Biến R2_ACCESS_KEY_ID (truyện tranh) tồn tại trên môi trường nhưng Edge Function đã cách ly hoàn toàn, không sử dụng làm fallback.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {r2TestResult && r2TestResult.ok && (
+                  <div
+                    style={{
+                      background: 'rgba(34, 197, 94, 0.12)',
+                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      borderRadius: 4,
+                      padding: '6px 10px',
+                      fontSize: 12,
+                      color: '#86efac',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    <div><strong>Trạng thái:</strong> {r2TestResult.message}</div>
+                    {r2TestResult.runtimeDiagnostics && (
+                      <div style={{ marginTop: 4, fontSize: 11, color: '#cbd5e1' }}>
+                        <div>• Nguồn xác thực: {r2TestResult.authSource} (Độ dài: {r2TestResult.runtimeDiagnostics.r2VideoAccessKeyIdLength} ký tự)</div>
+                        <div>• Bucket: {r2TestResult.bucket} | Số đối tượng mẫu: {r2TestResult.keyCount}</div>
                       </div>
                     )}
                   </div>

@@ -651,7 +651,7 @@ test('S3 ListObjectsV2 pagination accumulates pages and fails closed on unread p
 });
 
 // -----------------------------------------------------------------------------
-// TEST GROUP 13: R2 Diagnostics & Connectivity Probe Logic
+// TEST GROUP 13: R2 Diagnostics, Environment Isolation & Connectivity Probe Logic
 // -----------------------------------------------------------------------------
 test('R2 connection probe validates action and classifies errors without leaking secrets', () => {
   // 1. validateVideoPresignRequest accepts test-r2-connection without series/episode
@@ -679,15 +679,176 @@ test('R2 connection probe validates action and classifies errors without leaking
   assert.strictEqual(classifyR2Error({ httpStatus: 403, errName: 'SignatureDoesNotMatch' }), 'CREDENTIAL_INVALID');
   assert.strictEqual(classifyR2Error({ httpStatus: null, errName: 'FetchError', message: 'getaddrinfo ENOTFOUND' }), 'ENDPOINT_UNREACHABLE');
 
-  // 3. Security: ensure secrets are never leaked in key hint
+  // 3. Security: ensure secrets are NEVER leaked in key hint (zero substring exposure)
   function formatKeyHint(key) {
     if (!key) return '(chưa có)';
-    return `${key.slice(0, 4)}...${key.slice(-4)}`;
+    return `[Ẩn bảo mật - ${key.length} ký tự]`;
   }
   const secretKey = '0123456789abcdef0123456789abcdef';
   const hint = formatKeyHint(secretKey);
-  assert.strictEqual(hint, '0123...cdef');
-  assert.strictEqual(hint.includes('456789abcdef0123456789ab'), false);
+  assert.strictEqual(hint, '[Ẩn bảo mật - 32 ký tự]');
+  assert.strictEqual(hint.includes('0123'), false);
+  assert.strictEqual(hint.includes('cdef'), false);
+});
+
+test('Video runtime environment enforces zero comic fallback and returns safe diagnostics', () => {
+  // Simulate environment parser logic in Edge Function
+  function parseVideoRuntimeEnv(mockEnv) {
+    const rawAccountId = (mockEnv['R2_VIDEO_ACCOUNT_ID'] || mockEnv['R2_ACCOUNT_ID'] || '').trim();
+    const rawAccessKeyId = (mockEnv['R2_VIDEO_ACCESS_KEY_ID'] || '').trim();
+    const rawSecretAccessKey = (mockEnv['R2_VIDEO_SECRET_ACCESS_KEY'] || '').trim();
+    const rawBucket = (mockEnv['R2_VIDEO_BUCKET'] || 'tcl-videos').trim();
+    const legacyComicKeyPresent = Boolean(mockEnv['R2_ACCESS_KEY_ID']);
+
+    const R2_ACCOUNT_ID = rawAccountId;
+    const R2_ACCESS_KEY_ID = rawAccessKeyId;
+    const R2_SECRET_ACCESS_KEY = rawSecretAccessKey;
+    const R2_BUCKET = rawBucket;
+
+    const runtimeDiagnostics = {
+      hasR2AccountId: Boolean(R2_ACCOUNT_ID),
+      r2AccountIdLength: R2_ACCOUNT_ID.length,
+      hasR2VideoAccessKeyId: Boolean(R2_ACCESS_KEY_ID),
+      r2VideoAccessKeyIdLength: R2_ACCESS_KEY_ID.length,
+      hasR2VideoSecretAccessKey: Boolean(R2_SECRET_ACCESS_KEY),
+      r2VideoSecretAccessKeyLength: R2_SECRET_ACCESS_KEY.length,
+      hasR2VideoBucket: Boolean(R2_BUCKET),
+      r2VideoBucket: R2_BUCKET,
+      hasLegacyComicKeyPresent: legacyComicKeyPresent,
+    };
+
+    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+      return {
+        ok: false,
+        code: 'R2_VIDEO_CONFIG_MISSING',
+        error: 'Cloudflare R2 Video chưa được cấu hình (thiếu biến R2_VIDEO_*)',
+        runtimeDiagnostics,
+      };
+    }
+
+    return {
+      ok: true,
+      authSource: 'R2_VIDEO_ACCESS_KEY_ID',
+      bucket: R2_BUCKET,
+      runtimeDiagnostics,
+    };
+  }
+
+  // Case 1: Comic key present in env, but R2_VIDEO_ACCESS_KEY_ID is missing
+  // MUST NOT fallback to comic key. MUST return R2_VIDEO_CONFIG_MISSING!
+  const envWithOnlyComicKeys = {
+    R2_ACCOUNT_ID: 'cf-account-123',
+    R2_ACCESS_KEY_ID: 'comic-key-should-not-be-used',
+    R2_SECRET_ACCESS_KEY: 'comic-secret-should-not-be-used',
+    R2_BUCKET: 'tcl-comics',
+  };
+  const res1 = parseVideoRuntimeEnv(envWithOnlyComicKeys);
+  assert.strictEqual(res1.ok, false);
+  assert.strictEqual(res1.code, 'R2_VIDEO_CONFIG_MISSING');
+  assert.strictEqual(res1.runtimeDiagnostics.hasR2VideoAccessKeyId, false);
+  assert.strictEqual(res1.runtimeDiagnostics.r2VideoAccessKeyIdLength, 0);
+  assert.strictEqual(res1.runtimeDiagnostics.hasLegacyComicKeyPresent, true);
+
+  // Case 2: All video keys properly configured
+  const envWithValidVideoKeys = {
+    R2_ACCOUNT_ID: 'cf-account-1234567890123456789012',
+    R2_VIDEO_ACCESS_KEY_ID: 'video-access-key-id-32-chars-long',
+    R2_VIDEO_SECRET_ACCESS_KEY: 'video-secret-access-key-64-chars-long-abcdef0123456789abcdef0123',
+    R2_VIDEO_BUCKET: 'tcl-videos',
+    R2_ACCESS_KEY_ID: 'legacy-comic-key',
+  };
+  const res2 = parseVideoRuntimeEnv(envWithValidVideoKeys);
+  assert.strictEqual(res2.ok, true);
+  assert.strictEqual(res2.authSource, 'R2_VIDEO_ACCESS_KEY_ID');
+  assert.strictEqual(res2.bucket, 'tcl-videos');
+  assert.strictEqual(res2.runtimeDiagnostics.hasR2VideoAccessKeyId, true);
+  assert.strictEqual(res2.runtimeDiagnostics.r2VideoAccessKeyIdLength, 'video-access-key-id-32-chars-long'.length);
+  assert.strictEqual(res2.runtimeDiagnostics.hasR2VideoSecretAccessKey, true);
+  assert.strictEqual(res2.runtimeDiagnostics.r2VideoSecretAccessKeyLength, 'video-secret-access-key-64-chars-long-abcdef0123456789abcdef0123'.length);
+  assert.strictEqual(res2.runtimeDiagnostics.hasLegacyComicKeyPresent, true);
+
+  // Case 3: Verify security of runtimeDiagnostics object (no key values exist as properties or string content)
+  const diagString = JSON.stringify(res2.runtimeDiagnostics);
+  assert.strictEqual(diagString.includes('video-access-key'), false);
+  assert.strictEqual(diagString.includes('video-secret'), false);
+  assert.strictEqual(diagString.includes('legacy-comic-key'), false);
+});
+
+test('R2_VIDEO_CONFIG_MISSING strictly conceals runtimeDiagnostics and configuration from unauthenticated and non-admin users', () => {
+  // Simulate auth-guarded fail-fast response logic in video-presign Edge Function
+  function handleConfigMissingResponse({ currentUser, isUserAdmin, runtimeDiagnostics }) {
+    const errorPayload = {
+      ok: false,
+      error: 'Hệ thống lưu trữ video tạm thời chưa sẵn sàng (Lỗi cấu hình dịch vụ lưu trữ).',
+      code: 'R2_VIDEO_CONFIG_MISSING',
+    };
+
+    if (currentUser && isUserAdmin) {
+      errorPayload.error = 'Cloudflare R2 Video chưa được cấu hình (thiếu hoặc rỗng biến R2_VIDEO_ACCESS_KEY_ID, R2_VIDEO_SECRET_ACCESS_KEY hoặc R2_ACCOUNT_ID). Vui lòng cấu hình trong Supabase Secrets.';
+      errorPayload.stage = 'CONFIG_MISSING';
+      errorPayload.runtimeDiagnostics = runtimeDiagnostics;
+    }
+
+    return errorPayload;
+  }
+
+  const sampleDiagnostics = {
+    hasR2AccountId: true,
+    r2AccountIdLength: 32,
+    hasR2VideoAccessKeyId: false,
+    r2VideoAccessKeyIdLength: 0,
+    hasR2VideoSecretAccessKey: true,
+    r2VideoSecretAccessKeyLength: 64,
+    hasR2VideoBucket: true,
+    r2VideoBucket: 'tcl-videos',
+    hasLegacyComicKeyPresent: true,
+  };
+
+  // Case 1: Unauthenticated request (no JWT / currentUser is null)
+  const unauthRes = handleConfigMissingResponse({
+    currentUser: null,
+    isUserAdmin: false,
+    runtimeDiagnostics: sampleDiagnostics,
+  });
+  assert.strictEqual(unauthRes.ok, false);
+  assert.strictEqual(unauthRes.code, 'R2_VIDEO_CONFIG_MISSING');
+  assert.strictEqual(unauthRes.runtimeDiagnostics, undefined);
+  assert.strictEqual(unauthRes.stage, undefined);
+  assert.strictEqual('runtimeDiagnostics' in unauthRes, false);
+  assert.strictEqual(JSON.stringify(unauthRes).includes('tcl-videos'), false);
+  assert.strictEqual(JSON.stringify(unauthRes).includes('R2_VIDEO_ACCESS_KEY_ID'), false);
+  assert.strictEqual(JSON.stringify(unauthRes).includes('R2_VIDEO_SECRET_ACCESS_KEY'), false);
+  assert.strictEqual(JSON.stringify(unauthRes).includes('32'), false);
+  assert.strictEqual(JSON.stringify(unauthRes).includes('64'), false);
+
+  // Case 2: Authenticated request by regular user (not admin)
+  const nonAdminRes = handleConfigMissingResponse({
+    currentUser: { id: 'regular-user-id', email: 'user@example.com' },
+    isUserAdmin: false,
+    runtimeDiagnostics: sampleDiagnostics,
+  });
+  assert.strictEqual(nonAdminRes.ok, false);
+  assert.strictEqual(nonAdminRes.code, 'R2_VIDEO_CONFIG_MISSING');
+  assert.strictEqual(nonAdminRes.runtimeDiagnostics, undefined);
+  assert.strictEqual('runtimeDiagnostics' in nonAdminRes, false);
+  assert.strictEqual(JSON.stringify(nonAdminRes).includes('tcl-videos'), false);
+  assert.strictEqual(JSON.stringify(nonAdminRes).includes('R2_VIDEO_ACCESS_KEY_ID'), false);
+  assert.strictEqual(JSON.stringify(nonAdminRes).includes('R2_VIDEO_SECRET_ACCESS_KEY'), false);
+
+  // Case 3: Authenticated Admin user
+  const adminRes = handleConfigMissingResponse({
+    currentUser: { id: 'admin-user-id', email: 'admin@example.com' },
+    isUserAdmin: true,
+    runtimeDiagnostics: sampleDiagnostics,
+  });
+  assert.strictEqual(adminRes.ok, false);
+  assert.strictEqual(adminRes.code, 'R2_VIDEO_CONFIG_MISSING');
+  assert.strictEqual(adminRes.stage, 'CONFIG_MISSING');
+  assert.notStrictEqual(adminRes.runtimeDiagnostics, undefined);
+  assert.strictEqual(adminRes.runtimeDiagnostics.hasR2VideoAccessKeyId, false);
+  assert.strictEqual(adminRes.runtimeDiagnostics.r2VideoSecretAccessKeyLength, 64);
+  assert.strictEqual(adminRes.runtimeDiagnostics.r2VideoBucket, 'tcl-videos');
+  assert.strictEqual(adminRes.error.includes('Supabase Secrets'), true);
 });
 
 // -----------------------------------------------------------------------------
