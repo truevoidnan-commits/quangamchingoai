@@ -1,16 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './LobbyTabs.module.css';
-import { IconBook, IconBookOpen } from './Icon';
+import { IconBook, IconBookOpen, IconVideo } from './Icon';
 
 export default function LobbyTabs({ activeTab = 'novels', active }) {
   const current = active || activeTab;
-  const isNovels = current === 'novels';
 
   return (
     <div className={styles.tabSwitcherWrap}>
       <div className={styles.tabSwitcher} role="tablist">
-        {isNovels ? (
+        {current === 'novels' ? (
           <div className={`${styles.tabItem} ${styles.tabItemActive}`} role="tab" aria-selected="true">
             <IconBook size={15} />
             <span>Truyện Chữ</span>
@@ -22,7 +21,7 @@ export default function LobbyTabs({ activeTab = 'novels', active }) {
           </Link>
         )}
 
-        {!isNovels ? (
+        {current === 'comics' ? (
           <div
             className={`${styles.tabItem} ${styles.tabItemActive}`}
             id="tab-comics"
@@ -42,6 +41,29 @@ export default function LobbyTabs({ activeTab = 'novels', active }) {
           >
             <IconBookOpen size={15} />
             <span>Truyện Tranh</span>
+          </Link>
+        )}
+
+        {current === 'videos' ? (
+          <div
+            className={`${styles.tabItem} ${styles.tabItemActive}`}
+            id="tab-videos"
+            role="tab"
+            aria-selected="true"
+          >
+            <IconVideo size={15} />
+            <span>Truyện Video</span>
+          </div>
+        ) : (
+          <Link
+            to="/videos"
+            className={styles.tabItem}
+            id="tab-videos"
+            role="tab"
+            aria-selected="false"
+          >
+            <IconVideo size={15} />
+            <span>Truyện Video</span>
           </Link>
         )}
       </div>

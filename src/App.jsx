@@ -24,6 +24,9 @@ const SearchPage = lazyWithRetry(() => import('./pages/SearchPage'), 'SearchPage
 const ComicsPage = lazyWithRetry(() => import('./pages/ComicsPage'), 'ComicsPage');
 const ComicSeriesPage = lazyWithRetry(() => import('./pages/ComicSeriesPage'), 'ComicSeriesPage');
 const ComicReaderPage = lazyWithRetry(() => import('./pages/ComicReaderPage'), 'ComicReaderPage');
+const VideosPage = lazyWithRetry(() => import('./pages/videos/VideosPage'), 'VideosPage');
+const VideoDetailPage = lazyWithRetry(() => import('./pages/videos/VideoDetailPage'), 'VideoDetailPage');
+const VideoPlayerPage = lazyWithRetry(() => import('./pages/videos/VideoPlayerPage'), 'VideoPlayerPage');
 const IconsPreviewPage = lazyWithRetry(() => import('./pages/IconsPreviewPage'), 'IconsPreviewPage');
 
 import { preloadCoreArtifactIcons } from './lib/artifactIcons';
@@ -109,7 +112,8 @@ function MainLayout() {
     location.pathname.startsWith('/cultivation') || 
     location.pathname.startsWith('/sanctum') ||
     location.pathname.includes('/read/') ||
-    location.pathname.includes('/chapter/');
+    location.pathname.includes('/chapter/') ||
+    location.pathname.includes('/watch/');
 
   return (
     <>
@@ -142,6 +146,9 @@ function MainLayout() {
           <Route path="/comics" element={<Suspense fallback={<RouteLoadingFallback />}><ComicsPage /></Suspense>} />
           <Route path="/comics/:seriesId" element={<Suspense fallback={<RouteLoadingFallback />}><ComicSeriesPage /></Suspense>} />
           <Route path="/comics/:seriesId/read/:volumeId" element={<Suspense fallback={<RouteLoadingFallback />}><ComicReaderPage /></Suspense>} />
+          <Route path="/videos" element={<Suspense fallback={<RouteLoadingFallback />}><VideosPage /></Suspense>} />
+          <Route path="/videos/:seriesId" element={<Suspense fallback={<RouteLoadingFallback />}><VideoDetailPage /></Suspense>} />
+          <Route path="/videos/:seriesId/watch/:episodeId" element={<Suspense fallback={<RouteLoadingFallback />}><VideoPlayerPage /></Suspense>} />
           <Route path="/__icons" element={<Suspense fallback={<RouteLoadingFallback />}><IconsPreviewPage /></Suspense>} />
         </Routes>
       </main>

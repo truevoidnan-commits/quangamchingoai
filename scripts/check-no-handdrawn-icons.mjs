@@ -11,6 +11,7 @@ import path from 'path';
 const ALLOWLIST = [
   'src/components/ui/Icon.jsx',
   'src/components/comics/ComicIcons.jsx',
+  'src/components/videos/VideoIcons.jsx',
   'src/components/cultivation/ArtifactIcon.jsx',
   'src/components/cultivation/RealmPreviewVisualizer.jsx',
   'src/components/cultivation/DaoAnhAvatarRenderer.jsx',

@@ -83,6 +83,19 @@ import {
   LayoutGrid,
   Wrench,
   HelpCircle,
+  Film,
+  Video,
+  Volume2,
+  Volume1,
+  VolumeX,
+  Maximize,
+  Minimize,
+  RotateCcw,
+  RotateCw,
+  FastForward,
+  SkipForward,
+  SkipBack,
+  Subtitles,
 } from 'lucide-react';
 
 import {
@@ -239,6 +252,22 @@ const ICON_REGISTRY = {
   pages: { type: 'lucide', comp: Files },
   grid: { type: 'lucide', comp: LayoutGrid },
   tools: { type: 'lucide', comp: Wrench },
+  video: { type: 'lucide', comp: Video },
+  film: { type: 'lucide', comp: Film },
+  volume: { type: 'lucide', comp: Volume2 },
+  'volume-2': { type: 'lucide', comp: Volume2 },
+  'volume-1': { type: 'lucide', comp: Volume1 },
+  'volume-x': { type: 'lucide', comp: VolumeX },
+  'volume-mute': { type: 'lucide', comp: VolumeX },
+  maximize: { type: 'lucide', comp: Maximize },
+  minimize: { type: 'lucide', comp: Minimize },
+  fullscreen: { type: 'lucide', comp: Maximize },
+  'rotate-ccw': { type: 'lucide', comp: RotateCcw },
+  'rotate-cw': { type: 'lucide', comp: RotateCw },
+  'fast-forward': { type: 'lucide', comp: FastForward },
+  'skip-forward': { type: 'lucide', comp: SkipForward },
+  'skip-back': { type: 'lucide', comp: SkipBack },
+  subtitles: { type: 'lucide', comp: Subtitles },
 
   // --- Brand & Decorative ---
   star: { type: 'custom', comp: BrandStarIcon },
@@ -540,5 +569,20 @@ export const IconLotus = (props) => <Icon name="lotus" {...props} />;
 export const IconSliders = (props) => <Icon name="sliders" {...props} />;
 export const IconSwap = (props) => <Icon name="swap" {...props} />;
 export const IconArrowLeftRight = (props) => <Icon name="swap" {...props} />;
+
+// Video & Media named exports
+export const IconVideo = (props) => <Icon name="video" {...props} />;
+export const IconFilm = (props) => <Icon name="film" {...props} />;
+export const IconVolume = (props) => <Icon name="volume" {...props} />;
+export const IconVolumeMute = (props) => <Icon name="volume-mute" {...props} />;
+export const IconMaximize = (props) => <Icon name="maximize" {...props} />;
+export const IconMinimize = (props) => <Icon name="minimize" {...props} />;
+export const IconRotateCcw = (props) => <Icon name="rotate-ccw" {...props} />;
+export const IconRotateCw = (props) => <Icon name="rotate-cw" {...props} />;
+export const IconFastForward = (props) => <Icon name="fast-forward" {...props} />;
+export const IconSkipForward = (props) => <Icon name="skip-forward" {...props} />;
+export const IconSkipBack = (props) => <Icon name="skip-back" {...props} />;
+export const IconSubtitles = (props) => <Icon name="subtitles" {...props} />;
+export const IconSparkles = (props) => <Icon name="sparkles" {...props} />;
 
 export { ICON_REGISTRY };
