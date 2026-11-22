@@ -774,6 +774,83 @@ test('Video runtime environment enforces zero comic fallback and returns safe di
   assert.strictEqual(diagString.includes('legacy-comic-key'), false);
 });
 
+test('R2_VIDEO_CONFIG_MISSING strictly conceals runtimeDiagnostics and configuration from unauthenticated and non-admin users', () => {
+  // Simulate auth-guarded fail-fast response logic in video-presign Edge Function
+  function handleConfigMissingResponse({ currentUser, isUserAdmin, runtimeDiagnostics }) {
+    const errorPayload = {
+      ok: false,
+      error: 'Hệ thống lưu trữ video tạm thời chưa sẵn sàng (Lỗi cấu hình dịch vụ lưu trữ).',
+      code: 'R2_VIDEO_CONFIG_MISSING',
+    };
+
+    if (currentUser && isUserAdmin) {
+      errorPayload.error = 'Cloudflare R2 Video chưa được cấu hình (thiếu hoặc rỗng biến R2_VIDEO_ACCESS_KEY_ID, R2_VIDEO_SECRET_ACCESS_KEY hoặc R2_ACCOUNT_ID). Vui lòng cấu hình trong Supabase Secrets.';
+      errorPayload.stage = 'CONFIG_MISSING';
+      errorPayload.runtimeDiagnostics = runtimeDiagnostics;
+    }
+
+    return errorPayload;
+  }
+
+  const sampleDiagnostics = {
+    hasR2AccountId: true,
+    r2AccountIdLength: 32,
+    hasR2VideoAccessKeyId: false,
+    r2VideoAccessKeyIdLength: 0,
+    hasR2VideoSecretAccessKey: true,
+    r2VideoSecretAccessKeyLength: 64,
+    hasR2VideoBucket: true,
+    r2VideoBucket: 'tcl-videos',
+    hasLegacyComicKeyPresent: true,
+  };
+
+  // Case 1: Unauthenticated request (no JWT / currentUser is null)
+  const unauthRes = handleConfigMissingResponse({
+    currentUser: null,
+    isUserAdmin: false,
+    runtimeDiagnostics: sampleDiagnostics,
+  });
+  assert.strictEqual(unauthRes.ok, false);
+  assert.strictEqual(unauthRes.code, 'R2_VIDEO_CONFIG_MISSING');
+  assert.strictEqual(unauthRes.runtimeDiagnostics, undefined);
+  assert.strictEqual(unauthRes.stage, undefined);
+  assert.strictEqual('runtimeDiagnostics' in unauthRes, false);
+  assert.strictEqual(JSON.stringify(unauthRes).includes('tcl-videos'), false);
+  assert.strictEqual(JSON.stringify(unauthRes).includes('R2_VIDEO_ACCESS_KEY_ID'), false);
+  assert.strictEqual(JSON.stringify(unauthRes).includes('R2_VIDEO_SECRET_ACCESS_KEY'), false);
+  assert.strictEqual(JSON.stringify(unauthRes).includes('32'), false);
+  assert.strictEqual(JSON.stringify(unauthRes).includes('64'), false);
+
+  // Case 2: Authenticated request by regular user (not admin)
+  const nonAdminRes = handleConfigMissingResponse({
+    currentUser: { id: 'regular-user-id', email: 'user@example.com' },
+    isUserAdmin: false,
+    runtimeDiagnostics: sampleDiagnostics,
+  });
+  assert.strictEqual(nonAdminRes.ok, false);
+  assert.strictEqual(nonAdminRes.code, 'R2_VIDEO_CONFIG_MISSING');
+  assert.strictEqual(nonAdminRes.runtimeDiagnostics, undefined);
+  assert.strictEqual('runtimeDiagnostics' in nonAdminRes, false);
+  assert.strictEqual(JSON.stringify(nonAdminRes).includes('tcl-videos'), false);
+  assert.strictEqual(JSON.stringify(nonAdminRes).includes('R2_VIDEO_ACCESS_KEY_ID'), false);
+  assert.strictEqual(JSON.stringify(nonAdminRes).includes('R2_VIDEO_SECRET_ACCESS_KEY'), false);
+
+  // Case 3: Authenticated Admin user
+  const adminRes = handleConfigMissingResponse({
+    currentUser: { id: 'admin-user-id', email: 'admin@example.com' },
+    isUserAdmin: true,
+    runtimeDiagnostics: sampleDiagnostics,
+  });
+  assert.strictEqual(adminRes.ok, false);
+  assert.strictEqual(adminRes.code, 'R2_VIDEO_CONFIG_MISSING');
+  assert.strictEqual(adminRes.stage, 'CONFIG_MISSING');
+  assert.notStrictEqual(adminRes.runtimeDiagnostics, undefined);
+  assert.strictEqual(adminRes.runtimeDiagnostics.hasR2VideoAccessKeyId, false);
+  assert.strictEqual(adminRes.runtimeDiagnostics.r2VideoSecretAccessKeyLength, 64);
+  assert.strictEqual(adminRes.runtimeDiagnostics.r2VideoBucket, 'tcl-videos');
+  assert.strictEqual(adminRes.error.includes('Supabase Secrets'), true);
+});
+
 // -----------------------------------------------------------------------------
 // TEST GROUP 14: Upload Retry & uq_series_episode Elimination Logic
 // -----------------------------------------------------------------------------

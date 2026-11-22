@@ -78,19 +78,6 @@ Deno.serve(async (req: Request) => {
       hasLegacyComicKeyPresent: legacyComicKeyPresent,
     };
 
-    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          error: 'Cloudflare R2 Video chưa được cấu hình (thiếu hoặc rỗng biến R2_VIDEO_ACCESS_KEY_ID, R2_VIDEO_SECRET_ACCESS_KEY hoặc R2_ACCOUNT_ID). Vui lòng cấu hình trong Supabase Secrets.',
-          code: 'R2_VIDEO_CONFIG_MISSING',
-          stage: 'CONFIG_MISSING',
-          runtimeDiagnostics,
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // 3. Authenticate User via Supabase JWT
     const authHeader = req.headers.get('Authorization') || '';
     let currentUser: any = null;
@@ -101,28 +88,54 @@ Deno.serve(async (req: Request) => {
     });
 
     if (authHeader.startsWith('Bearer ')) {
-      const supabaseAuthClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        global: { headers: { Authorization: authHeader } },
-        auth: { persistSession: false },
-      });
+      try {
+        const supabaseAuthClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } },
+          auth: { persistSession: false },
+        });
 
-      const { data: { user } } = await supabaseAuthClient.auth.getUser();
-      if (user) {
-        currentUser = user;
-        // Verify admin status server-side strictly
-        if (user.app_metadata?.role === 'admin') {
-          isUserAdmin = true;
-        } else {
-          const { data: adminRow } = await supabaseAdmin
-            .from('video_admins')
-            .select('user_id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          if (adminRow) {
+        const { data: { user } } = await supabaseAuthClient.auth.getUser();
+        if (user) {
+          currentUser = user;
+          // Verify admin status server-side strictly
+          if (user.app_metadata?.role === 'admin') {
             isUserAdmin = true;
+          } else {
+            const { data: adminRow } = await supabaseAdmin
+              .from('video_admins')
+              .select('user_id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            if (adminRow) {
+              isUserAdmin = true;
+            }
           }
         }
+      } catch {
+        // Ignore auth inspection errors for fail-fast response
       }
+    }
+
+    // Fail-fast guard: R2_VIDEO_* secrets validation
+    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+      const errorPayload: Record<string, any> = {
+        ok: false,
+        error: 'Hệ thống lưu trữ video tạm thời chưa sẵn sàng (Lỗi cấu hình dịch vụ lưu trữ).',
+        code: 'R2_VIDEO_CONFIG_MISSING',
+      };
+
+      // Security Guard: runtimeDiagnostics is strictly restricted to authenticated Admins only.
+      // Unauthenticated users or non-admin users must NEVER receive internal configuration, lengths, or diagnostics.
+      if (currentUser && isUserAdmin) {
+        errorPayload.error = 'Cloudflare R2 Video chưa được cấu hình (thiếu hoặc rỗng biến R2_VIDEO_ACCESS_KEY_ID, R2_VIDEO_SECRET_ACCESS_KEY hoặc R2_ACCOUNT_ID). Vui lòng cấu hình trong Supabase Secrets.';
+        errorPayload.stage = 'CONFIG_MISSING';
+        errorPayload.runtimeDiagnostics = runtimeDiagnostics;
+      }
+
+      return new Response(
+        JSON.stringify(errorPayload),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // 4. Parse & Validate Request Body
