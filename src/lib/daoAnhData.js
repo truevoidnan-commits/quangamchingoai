@@ -2390,13 +2390,17 @@ export const DAO_ANH_CORE_TUNE_OVERRIDES = {
   da_cam_ky_cuc_dao:          { 1: 1.18, 2: 1.18, 3: 1.18, 4: 1.56, 5: 1.48 },
   cam_ky_cuc_dao:             { 1: 1.18, 2: 1.18, 3: 1.18, 4: 1.56, 5: 1.48 },
 
-  // Tối Cao Thiên Mệnh: Cột hào quang và kiếm trận vàng xòe cao; nâng để đầu/thân cân bằng
-  da_toi_cao_thien_menh:      { 1: 1.15, 2: 1.15, 3: 1.18, 4: 1.35, 5: 1.35 },
-  toi_cao_thien_menh:         { 1: 1.15, 2: 1.15, 3: 1.18, 4: 1.35, 5: 1.35 },
+  // Tối Cao Thiên Mệnh: Cột hào quang và kiếm trận vàng xòe cao; K2 hạ nhẹ và dịch dy=3% để chóp không bị cắt
+  da_toi_cao_thien_menh:      { 1: 1.15, 2: { scale: 1.05, dy: 3 }, 3: 1.18, 4: 1.35, 5: 1.35 },
+  toi_cao_thien_menh:         { 1: 1.15, 2: { scale: 1.05, dy: 3 }, 3: 1.18, 4: 1.35, 5: 1.35 },
 
   // Thượng Thương Hắc Huyết: Cánh máu và kiếm huyết rực cháy bao quanh; nâng K3-K5 để nhân vật oai vệ
   da_thuong_thuong_hac_huyet: { 1: 1.18, 2: 1.15, 3: 1.25, 4: 1.35, 5: 1.40 },
   thuong_thuong_hac_huyet:    { 1: 1.18, 2: 1.15, 3: 1.25, 4: 1.35, 5: 1.40 },
+
+  // Khởi Nguyên Thời Không: Cân bằng kích thước đầu và thân K4-K5 đồng đều với K1-K3 sau khi thay ảnh mới
+  da_khoi_nguyen_thoi_khong:  { 4: 1.05, 5: 1.05 },
+  khoi_nguyen_thoi_khong:     { 4: 1.05, 5: 1.05 },
 
   // 2. Các Đạo Ảnh có hào quang / hiệu ứng bao quanh lớn khác đã được kiểm chứng hình ảnh thực tế:
   da_hong_mong_bat_diet:      { 4: 1.15, 5: 1.18 },
@@ -2408,11 +2412,13 @@ export const DAO_ANH_CORE_TUNE_OVERRIDES = {
   da_kim_o_luyen_van_linh:    { 1: 1.16, 2: 1.16, 3: 1.16, 4: 1.20, 5: 1.20 },
   kim_o_luyen_van_linh:       { 1: 1.16, 2: 1.16, 3: 1.16, 4: 1.20, 5: 1.20 },
 
-  da_tha_hoa_tu_tai_dai_phap: { 2: 1.12, 3: 1.16, 4: 1.18, 5: 1.22 },
-  tha_hoa_tu_tai_dai_phap:    { 2: 1.12, 3: 1.16, 4: 1.18, 5: 1.22 },
+  // Tha Hóa Tự Tại: K4-K5 hạ nhẹ để cánh kiếm khí và cự kiếm không bị cắt bởi overflow: hidden
+  da_tha_hoa_tu_tai_dai_phap: { 2: 1.12, 3: 1.14, 4: 1.02, 5: 1.04 },
+  tha_hoa_tu_tai_dai_phap:    { 2: 1.12, 3: 1.14, 4: 1.02, 5: 1.04 },
 
-  da_tam_thu_dao:             { 5: 1.18 },
-  tam_thu_dao:                { 5: 1.18 },
+  // Tam Thu Đao: K5 hạ về 1.02 để hiệu ứng đao lửa không tràn khung, đầu/thân tương đồng K4
+  da_tam_thu_dao:             { 5: 1.02 },
+  tam_thu_dao:                { 5: 1.02 },
 
   da_tan_tien_phe_than:       { 1: 1.12, 2: 1.12, 3: 1.12 },
   tan_tien_phe_than:          { 1: 1.12, 2: 1.12, 3: 1.12 },
@@ -2521,22 +2527,32 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
     let rawScale = target / maxDim;
     rawScale = Math.min(rawScale, FIT_MAX / maxDim);
 
+    let dxOffset = 0;
+    let dyOffset = 0;
+
     // Ưu tiên cân bằng kích thước nhân vật chính (Head / Body):
     // Nếu ảnh này có cấu hình hiệu chỉnh riêng có kiểm soát (do hiệu ứng/hào quang bao quanh lớn làm teo tóp thân),
     // áp dụng scale hiệu chỉnh để nhân vật chính cân xứng với các Đạo Ảnh khác (như Đế Kiếm).
     if (forceAuto && options?.fit !== 'contain') {
       const coreTune = DAO_ANH_CORE_TUNE_OVERRIDES[id] || DAO_ANH_CORE_TUNE_OVERRIDES[sourceId] || DAO_ANH_CORE_TUNE_OVERRIDES[cleanId] || DAO_ANH_CORE_TUNE_OVERRIDES[daId];
-      if (coreTune && typeof coreTune[currentKiep] === 'number') {
-        rawScale = coreTune[currentKiep];
+      if (coreTune && coreTune[currentKiep] !== undefined) {
+        const kTune = coreTune[currentKiep];
+        if (typeof kTune === 'number') {
+          rawScale = kTune;
+        } else if (typeof kTune === 'object' && kTune !== null) {
+          if (typeof kTune.scale === 'number') rawScale = kTune.scale;
+          if (typeof kTune.dx === 'number') dxOffset = kTune.dx;
+          if (typeof kTune.dy === 'number') dyOffset = kTune.dy;
+        }
       }
     }
 
     const scale = Math.min(Math.max(rawScale, minScale), maxScale);
     const roundedScale = Math.round(scale * 100) / 100;
 
-    // Căn giữa vùng nội dung nhân vật: Dịch theo % của phần tử: tx = (0.5 - bb.cx) * scale * 100 (%)
-    const tx = (0.5 - bb.cx) * scale * 100;
-    const ty = (0.5 - bb.cy) * scale * 100;
+    // Căn giữa vùng nội dung nhân vật có kèm bù trừ vi chỉnh (dx, dy):
+    const tx = (0.5 - bb.cx) * scale * 100 + dxOffset;
+    const ty = (0.5 - bb.cy) * scale * 100 + dyOffset;
     const roundedTx = Math.round(tx * 10) / 10;
     const roundedTy = Math.round(ty * 10) / 10;
 
@@ -2546,6 +2562,8 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
       y: roundedTy,
       tx: roundedTx,
       ty: roundedTy,
+      dxOffset,
+      dyOffset,
       isAuto: true,
       unit: '%',
     };
@@ -2603,8 +2621,8 @@ export function getDaoAnhSvgTransform(daoAnhDef, currentKiep = 1, options = {}) 
           : 1.0);
 
     const sc = clampedSc * boost;
-    const x = -sc * (bb.cx - 0.5) * box;
-    const y = offsetY - sc * ((bb.cy - 0.5) * box + offsetY);
+    const x = -sc * (bb.cx - 0.5) * box + (cfg.dxOffset || 0) * (box / 100);
+    const y = offsetY - sc * ((bb.cy - 0.5) * box + offsetY) + (cfg.dyOffset || 0) * (box / 100);
 
     const roundedSc = Math.round(sc * 100) / 100;
     const roundedX = Math.round(x * 10) / 10;

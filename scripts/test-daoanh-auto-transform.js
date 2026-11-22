@@ -139,8 +139,29 @@ assert.strictEqual(camKyK5.scale, 1.48, 'Cấm Kỵ Cực Đạo K5 phải có s
 const thienMenhK1 = getDaoAnhTransformConfig('da_toi_cao_thien_menh', 1);
 assert.strictEqual(thienMenhK1.scale, 1.15, 'Tối Cao Thiên Mệnh K1 phải có scale hiệu chỉnh 1.15');
 
+const thienMenhK2 = getDaoAnhTransformConfig('da_toi_cao_thien_menh', 2);
+assert.strictEqual(thienMenhK2.scale, 1.05, 'Tối Cao Thiên Mệnh K2 phải có scale hiệu chỉnh 1.05');
+assert.strictEqual(thienMenhK2.dyOffset, 3, 'Tối Cao Thiên Mệnh K2 phải có dyOffset === 3 để chóp không bị cắt');
+
 const hacHuyetK5 = getDaoAnhTransformConfig('da_thuong_thuong_hac_huyet', 5);
 assert.strictEqual(hacHuyetK5.scale, 1.40, 'Thượng Thương Hắc Huyết K5 phải có scale hiệu chỉnh 1.40');
+
+// Kiểm tra 3 trường hợp hoàn thiện kích thước theo yêu cầu:
+const tamThuDaoK5 = getDaoAnhTransformConfig('da_tam_thu_dao', 5);
+assert.strictEqual(tamThuDaoK5.scale, 1.02, 'Tam Thu Đao K5 phải có scale 1.02 để đao lửa không tràn khung, đầu/thân đồng đều K4');
+
+const thaHoaK4 = getDaoAnhTransformConfig('da_tha_hoa_tu_tai_dai_phap', 4);
+assert.strictEqual(thaHoaK4.scale, 1.02, 'Tha Hóa Tự Tại K4 phải có scale 1.02 để cánh kiếm không bị cắt');
+
+const thaHoaK5 = getDaoAnhTransformConfig('da_tha_hoa_tu_tai_dai_phap', 5);
+assert.strictEqual(thaHoaK5.scale, 1.04, 'Tha Hóa Tự Tại K5 phải có scale 1.04 để hiệu ứng không bị cắt');
+
+// Kiểm tra Khởi Nguyên Thời Không K4-K5 sau khi thay ảnh mới
+const khoiNguyenK4 = getDaoAnhTransformConfig('da_khoi_nguyen_thoi_khong', 4);
+assert.strictEqual(khoiNguyenK4.scale, 1.05, 'Khởi Nguyên Thời Không K4 phải có scale 1.05');
+
+const khoiNguyenK5 = getDaoAnhTransformConfig('da_khoi_nguyen_thoi_khong', 5);
+assert.strictEqual(khoiNguyenK5.scale, 1.05, 'Khởi Nguyên Thời Không K5 phải có scale 1.05');
 
 let totalUniformChecked = 0;
 const allScales = [];

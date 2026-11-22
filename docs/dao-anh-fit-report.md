@@ -1,6 +1,6 @@
 # Báo Cáo Nhất Quán Hiển Thị Đạo Ảnh (Dao Anh Fit Report)
 
-*Thời gian tạo:* 2026-11-22T11:49:44.837Z
+*Thời gian tạo:* 2026-11-22T12:25:33.126Z
 *Tổng số Đạo Ảnh:* 42 mục (210 ảnh qua 5 kiếp)
 
 ## 1. Tổng Kết Các Cờ Cảnh Báo
@@ -9,8 +9,8 @@
 | :--- | :--- | :--- |
 | **LỆCH** | Tâm lệch \|dx\| > 6% hoặc \|dy\| > 6% so với tâm khung | 0 |
 | **NHỎ** | Kích thước tối đa max(w', h') < 0.55 chiều khung | 0 |
-| **LỚN** | Kích thước tối đa max(w', h') > 0.96 (nguy cơ tràn) | 20 |
-| **NHẢY KIẾP** | Kích thước giữa 2 kiếp liền kề chênh > 18% | 7 |
+| **LỚN** | Kích thước tối đa max(w', h') > 0.96 (nguy cơ tràn) | 17 |
+| **NHẢY KIẾP** | Kích thước giữa 2 kiếp liền kề chênh > 18% | 6 |
 
 ## 2. Top 15 Ảnh Có Độ Sai Lệch Cao Nhất
 
@@ -20,17 +20,17 @@
 | 2 | **Cửu Chuyển Luân Hồi Đạo Anh** (`da_cuu_chuyen_luan_hoi`) | K5 | 1.35 | dx: -0.0%, dy: 0.0% | 0.809 x 1.150 | Tự động (BBox) | LỚN |
 | 3 | **Thượng Thương Hắc Huyết Đạo Anh** (`da_thuong_thuong_hac_huyet`) | K5 | 1.40 | dx: -0.0%, dy: -0.0% | 0.658 x 1.135 | Tự động (BBox) | LỚN |
 | 4 | **Thượng Thương Hắc Huyết Đạo Anh** (`da_thuong_thuong_hac_huyet`) | K4 | 1.35 | dx: 0.0%, dy: 0.0% | 0.729 x 1.093 | Tự động (BBox) | LỚN |
-| 5 | **Tam Thu Đao Đạo Anh** (`da_tam_thu_dao`) | K5 | 1.18 | dx: 0.0%, dy: 0.0% | 1.063 x 1.063 | Tự động (BBox) | LỚN, NHẢY KIẾP (34%) |
-| 6 | **Túc Mệnh Nhân Quả Đạo Anh** (`da_tuc_menh_nhan_qua`) | K5 | 1.20 | dx: -0.0%, dy: 0.0% | 0.697 x 1.050 | Tự động (BBox) | LỚN |
-| 7 | **Tha Hóa Tự Tại Đạo Anh** (`da_tha_hoa_tu_tai_dai_phap`) | K5 | 1.22 | dx: -0.0%, dy: 0.0% | 0.952 x 1.039 | Tự động (BBox) | LỚN |
-| 8 | **Tối Cao Thiên Mệnh Đạo Anh** (`da_toi_cao_thien_menh`) | K2 | 1.15 | dx: -0.0%, dy: -0.0% | 0.866 x 1.035 | Tự động (BBox) | LỚN |
-| 9 | **Hồng Mông Bất Diệt Đạo Anh** (`da_hong_mong_bat_diet`) | K5 | 1.18 | dx: -0.0%, dy: 0.0% | 0.937 x 1.033 | Tự động (BBox) | LỚN |
-| 10 | **Tối Cao Thiên Mệnh Đạo Anh** (`da_toi_cao_thien_menh`) | K1 | 1.15 | dx: 0.0%, dy: -0.0% | 0.782 x 1.025 | Tự động (BBox) | LỚN |
-| 11 | **Túc Mệnh Nhân Quả Đạo Anh** (`da_tuc_menh_nhan_qua`) | K4 | 1.18 | dx: -0.0%, dy: 0.0% | 0.913 x 1.008 | Tự động (BBox) | LỚN, NHẢY KIẾP (27%) |
-| 12 | **Diệt Thế Lôi Trì Đạo Anh** (`da_hon_don_diet_the_loi_tri`) | K2 | 1.12 | dx: 0.0%, dy: 0.0% | 0.797 x 1.004 | Tự động (BBox) | LỚN |
-| 13 | **Tàn Tiên Phệ Thần Đạo Anh** (`da_tan_tien_phe_than`) | K3 | 1.12 | dx: 0.0%, dy: 0.0% | 0.819 x 1.003 | Tự động (BBox) | LỚN |
-| 14 | **Diệt Thế Lôi Trì Đạo Anh** (`da_hon_don_diet_the_loi_tri`) | K1 | 1.12 | dx: 0.0%, dy: -0.0% | 0.781 x 1.003 | Tự động (BBox) | LỚN |
-| 15 | **Diệt Thế Lôi Trì Đạo Anh** (`da_hon_don_diet_the_loi_tri`) | K3 | 1.12 | dx: -0.0%, dy: 0.0% | 0.850 x 1.002 | Tự động (BBox) | LỚN |
+| 5 | **Túc Mệnh Nhân Quả Đạo Anh** (`da_tuc_menh_nhan_qua`) | K5 | 1.20 | dx: -0.0%, dy: 0.0% | 0.697 x 1.050 | Tự động (BBox) | LỚN |
+| 6 | **Hồng Mông Bất Diệt Đạo Anh** (`da_hong_mong_bat_diet`) | K5 | 1.18 | dx: -0.0%, dy: 0.0% | 0.937 x 1.033 | Tự động (BBox) | LỚN |
+| 7 | **Tối Cao Thiên Mệnh Đạo Anh** (`da_toi_cao_thien_menh`) | K1 | 1.15 | dx: 0.0%, dy: -0.0% | 0.782 x 1.025 | Tự động (BBox) | LỚN |
+| 8 | **Túc Mệnh Nhân Quả Đạo Anh** (`da_tuc_menh_nhan_qua`) | K4 | 1.18 | dx: -0.0%, dy: 0.0% | 0.913 x 1.008 | Tự động (BBox) | LỚN, NHẢY KIẾP (27%) |
+| 9 | **Diệt Thế Lôi Trì Đạo Anh** (`da_hon_don_diet_the_loi_tri`) | K2 | 1.12 | dx: 0.0%, dy: 0.0% | 0.797 x 1.004 | Tự động (BBox) | LỚN |
+| 10 | **Tàn Tiên Phệ Thần Đạo Anh** (`da_tan_tien_phe_than`) | K3 | 1.12 | dx: 0.0%, dy: 0.0% | 0.819 x 1.003 | Tự động (BBox) | LỚN |
+| 11 | **Diệt Thế Lôi Trì Đạo Anh** (`da_hon_don_diet_the_loi_tri`) | K1 | 1.12 | dx: 0.0%, dy: -0.0% | 0.781 x 1.003 | Tự động (BBox) | LỚN |
+| 12 | **Diệt Thế Lôi Trì Đạo Anh** (`da_hon_don_diet_the_loi_tri`) | K3 | 1.12 | dx: -0.0%, dy: 0.0% | 0.850 x 1.002 | Tự động (BBox) | LỚN |
+| 13 | **Thượng Thương Hắc Huyết Đạo Anh** (`da_thuong_thuong_hac_huyet`) | K2 | 1.15 | dx: 0.0%, dy: -0.0% | 0.998 x 0.956 | Tự động (BBox) | LỚN |
+| 14 | **Thượng Thương Hắc Huyết Đạo Anh** (`da_thuong_thuong_hac_huyet`) | K3 | 1.25 | dx: -0.0%, dy: -0.0% | 0.768 x 0.985 | Tự động (BBox) | LỚN |
+| 15 | **Hồng Mông Bất Diệt Đạo Anh** (`da_hong_mong_bat_diet`) | K4 | 1.15 | dx: 0.0%, dy: 0.0% | 0.911 x 0.983 | Tự động (BBox) | LỚN, NHẢY KIẾP (23%) |
 
 ## 3. Bảng Chi Tiết Toàn Bộ 210 Ảnh
 
@@ -84,15 +84,15 @@
 | Khởi Nguyên Thời Không Đạo Anh | K1 | BBox Auto | 0.93 | 0.0% | -0.0% | 0.706 | 0.795 | ✓ Chuẩn |
 | Khởi Nguyên Thời Không Đạo Anh | K2 | BBox Auto | 0.98 | 0.0% | 0.0% | 0.713 | 0.796 | ✓ Chuẩn |
 | Khởi Nguyên Thời Không Đạo Anh | K3 | BBox Auto | 0.99 | -0.0% | 0.0% | 0.571 | 0.806 | ✓ Chuẩn |
-| Khởi Nguyên Thời Không Đạo Anh | K4 | BBox Auto | 0.91 | 0.0% | 0.0% | 0.496 | 0.815 | ✓ Chuẩn |
-| Khởi Nguyên Thời Không Đạo Anh | K5 | BBox Auto | 0.96 | -0.0% | -0.0% | 0.498 | 0.815 | ✓ Chuẩn |
+| Khởi Nguyên Thời Không Đạo Anh | K4 | BBox Auto | 1.05 | 0.0% | -0.0% | 0.895 | 0.910 | ✓ Chuẩn |
+| Khởi Nguyên Thời Không Đạo Anh | K5 | BBox Auto | 1.05 | -0.0% | 0.0% | 0.886 | 0.930 | ✓ Chuẩn |
 | Tinh Hà Dịch Đạo Đạo Anh | K1 | BBox Auto | 1.03 | 0.0% | 0.0% | 0.708 | 0.798 | ✓ Chuẩn |
 | Tinh Hà Dịch Đạo Đạo Anh | K2 | BBox Auto | 1.00 | 0.0% | 0.0% | 0.688 | 0.801 | ✓ Chuẩn |
 | Tinh Hà Dịch Đạo Đạo Anh | K3 | BBox Auto | 0.98 | -0.0% | 0.0% | 0.669 | 0.797 | ✓ Chuẩn |
 | Tinh Hà Dịch Đạo Đạo Anh | K4 | BBox Auto | 0.97 | 0.0% | -0.0% | 0.639 | 0.800 | ✓ Chuẩn |
 | Tinh Hà Dịch Đạo Đạo Anh | K5 | BBox Auto | 0.96 | 0.0% | 0.0% | 0.553 | 0.807 | ✓ Chuẩn |
 | Tối Cao Thiên Mệnh Đạo Anh | K1 | BBox Auto | 1.15 | 0.0% | -0.0% | 0.782 | 1.025 | **LỚN** |
-| Tối Cao Thiên Mệnh Đạo Anh | K2 | BBox Auto | 1.15 | -0.0% | -0.0% | 0.866 | 1.035 | **LỚN** |
+| Tối Cao Thiên Mệnh Đạo Anh | K2 | BBox Auto | 1.05 | 0.0% | 2.8% | 0.790 | 0.945 | ✓ Chuẩn |
 | Tối Cao Thiên Mệnh Đạo Anh | K3 | BBox Auto | 1.18 | 0.0% | 0.0% | 0.786 | 0.922 | ✓ Chuẩn |
 | Tối Cao Thiên Mệnh Đạo Anh | K4 | BBox Auto | 1.35 | 0.0% | 0.0% | 0.796 | 0.887 | ✓ Chuẩn |
 | Tối Cao Thiên Mệnh Đạo Anh | K5 | BBox Auto | 1.35 | -0.0% | 0.0% | 0.763 | 0.898 | ✓ Chuẩn |
@@ -198,9 +198,9 @@
 | Thảo Tự Kiếm Đạo Anh | K5 | BBox Auto | 1.18 | 0.0% | -0.0% | 0.737 | 0.797 | ✓ Chuẩn |
 | Tha Hóa Tự Tại Đạo Anh | K1 | BBox Auto | 1.12 | 0.0% | 0.0% | 0.733 | 0.793 | ✓ Chuẩn |
 | Tha Hóa Tự Tại Đạo Anh | K2 | BBox Auto | 1.12 | 0.0% | -0.0% | 0.854 | 0.908 | ✓ Chuẩn |
-| Tha Hóa Tự Tại Đạo Anh | K3 | BBox Auto | 1.16 | 0.0% | -0.0% | 0.888 | 0.959 | ✓ Chuẩn |
-| Tha Hóa Tự Tại Đạo Anh | K4 | BBox Auto | 1.18 | -0.0% | 0.0% | 0.901 | 0.958 | ✓ Chuẩn |
-| Tha Hóa Tự Tại Đạo Anh | K5 | BBox Auto | 1.22 | -0.0% | 0.0% | 0.952 | 1.039 | **LỚN** |
+| Tha Hóa Tự Tại Đạo Anh | K3 | BBox Auto | 1.14 | -0.0% | -0.0% | 0.873 | 0.943 | ✓ Chuẩn |
+| Tha Hóa Tự Tại Đạo Anh | K4 | BBox Auto | 1.02 | -0.0% | 0.0% | 0.779 | 0.828 | ✓ Chuẩn |
+| Tha Hóa Tự Tại Đạo Anh | K5 | BBox Auto | 1.04 | 0.0% | -0.0% | 0.812 | 0.886 | ✓ Chuẩn |
 | Tiểu Túc Mệnh Đạo Anh | K1 | BBox Auto | 1.00 | 0.0% | -0.1% | 0.651 | 0.800 | ✓ Chuẩn |
 | Tiểu Túc Mệnh Đạo Anh | K2 | BBox Auto | 0.96 | -0.1% | -0.1% | 0.674 | 0.796 | ✓ Chuẩn |
 | Tiểu Túc Mệnh Đạo Anh | K3 | BBox Auto | 1.01 | 0.0% | -0.0% | 0.742 | 0.793 | ✓ Chuẩn |
@@ -230,7 +230,7 @@
 | Tam Thu Đao Đạo Anh | K2 | BBox Auto | 0.88 | -0.0% | 0.0% | 0.791 | 0.729 | ✓ Chuẩn |
 | Tam Thu Đao Đạo Anh | K3 | BBox Auto | 0.88 | -0.0% | 0.0% | 0.791 | 0.748 | ✓ Chuẩn |
 | Tam Thu Đao Đạo Anh | K4 | BBox Auto | 1.23 | 0.0% | -0.0% | 0.793 | 0.788 | ✓ Chuẩn |
-| Tam Thu Đao Đạo Anh | K5 | BBox Auto | 1.18 | 0.0% | 0.0% | 1.063 | 1.063 | **LỚN, NHẢY KIẾP (34%)** |
+| Tam Thu Đao Đạo Anh | K5 | BBox Auto | 1.02 | 0.0% | 0.0% | 0.919 | 0.919 | ✓ Chuẩn |
 | Thượng Thương Hắc Huyết Đạo Anh | K1 | BBox Auto | 1.18 | -0.0% | -0.0% | 0.912 | 0.899 | ✓ Chuẩn |
 | Thượng Thương Hắc Huyết Đạo Anh | K2 | BBox Auto | 1.15 | 0.0% | -0.0% | 0.998 | 0.956 | **LỚN** |
 | Thượng Thương Hắc Huyết Đạo Anh | K3 | BBox Auto | 1.25 | -0.0% | -0.0% | 0.768 | 0.985 | **LỚN** |
