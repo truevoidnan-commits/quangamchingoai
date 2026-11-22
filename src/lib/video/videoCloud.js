@@ -343,15 +343,17 @@ export async function uploadVideoMultipart({ seriesId, episodeId, file, onProgre
     };
   } catch (err) {
     // 4. Abort Multipart session if error occurs or user cancels
-    try {
-      await callVideoPresign({
-        action: 'abort-multipart-upload',
-        seriesId,
-        episodeId,
-        uploadId,
-      });
-    } catch (abortErr) {
-      console.warn('[VideoCloud] Failed to cleanly abort multipart session:', abortErr);
+    if (uploadId) {
+      try {
+        await callVideoPresign({
+          action: 'abort-multipart-upload',
+          seriesId,
+          episodeId,
+          uploadId,
+        });
+      } catch (abortErr) {
+        console.warn('[VideoCloud] Failed to cleanly abort multipart session:', abortErr);
+      }
     }
     throw err;
   }

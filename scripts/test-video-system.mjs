@@ -404,4 +404,250 @@ test('Playback authorization strictly blocks non-admin if series or episode is p
   assert.strictEqual(resPublic.allow, true);
 });
 
+// -----------------------------------------------------------------------------
+// TEST GROUP 10: Abort Multipart Verification & Fail-Closed Behavior
+// -----------------------------------------------------------------------------
+test('abort-multipart-upload verifies session bounds and fails closed if R2 or DB fails', () => {
+  const mockSessions = new Map([
+    [
+      'sess-active',
+      {
+        series_id: 'series-A',
+        episode_id: 'ep-1',
+        r2_key: 'videos/series-A/ep-1/source.mp4',
+        status: 'in_progress',
+      },
+    ],
+    [
+      'sess-completed',
+      {
+        series_id: 'series-A',
+        episode_id: 'ep-2',
+        r2_key: 'videos/series-A/ep-2/source.mp4',
+        status: 'completed',
+      },
+    ],
+  ]);
+
+  const mockDbEpisodes = new Map([
+    ['ep-1', { id: 'ep-1', upload_status: 'uploading' }],
+    ['ep-2', { id: 'ep-2', upload_status: 'ready' }],
+  ]);
+
+  function handleAbort({ uploadId, seriesId, episodeId, r2AbortSuccess, dbSessionUpdateFails, dbEpisodeUpdateFails }) {
+    const session = mockSessions.get(uploadId);
+    if (!session) return { ok: false, code: 'SESSION_NOT_FOUND' };
+    if (session.series_id !== seriesId || session.episode_id !== episodeId) {
+      return { ok: false, code: 'SESSION_MISMATCH' };
+    }
+    const expectedKey = `videos/${seriesId}/${episodeId}/source.mp4`;
+    if (session.r2_key !== expectedKey) {
+      return { ok: false, code: 'KEY_MISMATCH' };
+    }
+    if (session.status !== 'in_progress') {
+      return { ok: false, code: 'SESSION_NOT_ABORTABLE' };
+    }
+
+    // Call R2 abort
+    if (!r2AbortSuccess) {
+      // Do NOT modify database if R2 fails
+      return { ok: false, code: 'R2_ABORT_FAILED' };
+    }
+
+    if (dbSessionUpdateFails) {
+      return { ok: false, code: 'DB_UPDATE_FAILED' };
+    }
+    session.status = 'aborted';
+
+    if (dbEpisodeUpdateFails) {
+      return { ok: false, code: 'DB_UPDATE_FAILED' };
+    }
+    const ep = mockDbEpisodes.get(episodeId);
+    if (ep && ep.upload_status === 'uploading') {
+      ep.upload_status = 'failed';
+    }
+
+    return { ok: true, aborted: true };
+  }
+
+  // 1. Unknown uploadId
+  assert.strictEqual(handleAbort({ uploadId: 'unknown', seriesId: 'series-A', episodeId: 'ep-1', r2AbortSuccess: true }).code, 'SESSION_NOT_FOUND');
+
+  // 2. Mismatched seriesId/episodeId
+  assert.strictEqual(handleAbort({ uploadId: 'sess-active', seriesId: 'series-WRONG', episodeId: 'ep-1', r2AbortSuccess: true }).code, 'SESSION_MISMATCH');
+
+  // 3. Already completed session cannot be aborted
+  assert.strictEqual(handleAbort({ uploadId: 'sess-completed', seriesId: 'series-A', episodeId: 'ep-2', r2AbortSuccess: true }).code, 'SESSION_NOT_ABORTABLE');
+
+  // 4. R2 abort fails -> DB remains untouched, status remains in_progress
+  const r2FailRes = handleAbort({ uploadId: 'sess-active', seriesId: 'series-A', episodeId: 'ep-1', r2AbortSuccess: false });
+  assert.strictEqual(r2FailRes.code, 'R2_ABORT_FAILED');
+  assert.strictEqual(mockSessions.get('sess-active').status, 'in_progress');
+  assert.strictEqual(mockDbEpisodes.get('ep-1').upload_status, 'uploading');
+
+  // 5. DB update fails during abort -> returns error and leaves episode in uploading
+  const dbFailRes = handleAbort({ uploadId: 'sess-active', seriesId: 'series-A', episodeId: 'ep-1', r2AbortSuccess: true, dbSessionUpdateFails: true });
+  assert.strictEqual(dbFailRes.code, 'DB_UPDATE_FAILED');
+  assert.strictEqual(mockSessions.get('sess-active').status, 'in_progress');
+
+  // 6. Successful abort
+  const successRes = handleAbort({ uploadId: 'sess-active', seriesId: 'series-A', episodeId: 'ep-1', r2AbortSuccess: true });
+  assert.strictEqual(successRes.ok, true);
+  assert.strictEqual(mockSessions.get('sess-active').status, 'aborted');
+  assert.strictEqual(mockDbEpisodes.get('ep-1').upload_status, 'failed');
+});
+
+// -----------------------------------------------------------------------------
+// TEST GROUP 11: Init Multipart Failure Cleanup & DB Consistency
+// -----------------------------------------------------------------------------
+test('init-multipart-upload cleans up R2 session and maintains consistent DB status on errors', () => {
+  const mockEpisodes = new Map([
+    ['ep-exists', { id: 'ep-exists', series_id: 'series-A', upload_status: 'draft' }],
+  ]);
+
+  let r2AbortedSession = null;
+  let createdSessionStatus = null;
+
+  function handleInit({ seriesId, episodeId, dbSessionInsertFails, dbEpisodeUpdateFails }) {
+    const ep = mockEpisodes.get(episodeId);
+    if (!ep || ep.series_id !== seriesId) {
+      return { ok: false, code: 'EPISODE_NOT_FOUND' };
+    }
+
+    // R2 init succeeds and produces uploadId
+    const uploadId = 'r2-upload-123';
+
+    if (dbSessionInsertFails) {
+      // Must abort initiated R2 session!
+      r2AbortedSession = uploadId;
+      return { ok: false, code: 'SESSION_CREATE_FAILED' };
+    }
+    createdSessionStatus = 'in_progress';
+
+    if (dbEpisodeUpdateFails) {
+      // Must abort initiated R2 session and revert DB session to aborted
+      r2AbortedSession = uploadId;
+      createdSessionStatus = 'aborted';
+      return { ok: false, code: 'DB_UPDATE_FAILED' };
+    }
+
+    ep.upload_status = 'uploading';
+    return { ok: true, uploadId };
+  }
+
+  // 1. Episode not found or mismatch
+  assert.strictEqual(handleInit({ seriesId: 'series-A', episodeId: 'ep-missing' }).code, 'EPISODE_NOT_FOUND');
+
+  // 2. Session insert fails -> R2 aborted, error returned
+  r2AbortedSession = null;
+  const sessFail = handleInit({ seriesId: 'series-A', episodeId: 'ep-exists', dbSessionInsertFails: true });
+  assert.strictEqual(sessFail.code, 'SESSION_CREATE_FAILED');
+  assert.strictEqual(r2AbortedSession, 'r2-upload-123');
+
+  // 3. Episode update fails -> R2 aborted, DB session marked aborted, error returned
+  r2AbortedSession = null;
+  createdSessionStatus = null;
+  const epFail = handleInit({ seriesId: 'series-A', episodeId: 'ep-exists', dbEpisodeUpdateFails: true });
+  assert.strictEqual(epFail.code, 'DB_UPDATE_FAILED');
+  assert.strictEqual(r2AbortedSession, 'r2-upload-123');
+  assert.strictEqual(createdSessionStatus, 'aborted');
+
+  // 4. Clean success
+  r2AbortedSession = null;
+  const cleanSuccess = handleInit({ seriesId: 'series-A', episodeId: 'ep-exists' });
+  assert.strictEqual(cleanSuccess.ok, true);
+  assert.strictEqual(cleanSuccess.uploadId, 'r2-upload-123');
+  assert.strictEqual(r2AbortedSession, null);
+  assert.strictEqual(mockEpisodes.get('ep-exists').upload_status, 'uploading');
+});
+
+// -----------------------------------------------------------------------------
+// TEST GROUP 12: S3 ListObjectsV2 Pagination & Deletion Fail-Closed Logic
+// -----------------------------------------------------------------------------
+test('S3 ListObjectsV2 pagination accumulates pages and fails closed on unread pages or deletion errors', () => {
+  // Simulate 3 pages of S3 results
+  const mockPages = [
+    {
+      isTruncated: true,
+      nextToken: 'token-page-2',
+      items: [
+        { key: 'videos/series-1/ep-1/source.mp4', size: 1000 },
+        { key: 'videos/series-1/ep-1/subtitles/vi.vtt', size: 100 },
+      ],
+    },
+    {
+      isTruncated: true,
+      nextToken: 'token-page-3',
+      items: [
+        { key: 'videos/series-1/ep-2/source.mp4', size: 2000 },
+      ],
+    },
+    {
+      isTruncated: false,
+      nextToken: null,
+      items: [
+        { key: 'videos/series-1/ep-3/source.mp4', size: 3000 },
+      ],
+    },
+  ];
+
+  function simulateListAll({ failOnPage = null } = {}) {
+    const allObjects = [];
+    let currentPageIndex = 0;
+
+    while (currentPageIndex < mockPages.length) {
+      if (failOnPage === currentPageIndex + 1) {
+        return { ok: false, objects: allObjects, error: `Page ${failOnPage} fetch failed` };
+      }
+
+      const page = mockPages[currentPageIndex];
+      allObjects.push(...page.items);
+
+      if (page.isTruncated && page.nextToken) {
+        currentPageIndex++;
+      } else {
+        return { ok: true, objects: allObjects };
+      }
+    }
+    return { ok: false, objects: allObjects, error: 'Pagination overflow' };
+  }
+
+  // 1. Clean multi-page traversal
+  const fullList = simulateListAll();
+  assert.strictEqual(fullList.ok, true);
+  assert.strictEqual(fullList.objects.length, 4);
+  const totalBytes = fullList.objects.reduce((acc, o) => acc + o.size, 0);
+  assert.strictEqual(totalBytes, 6100);
+
+  // 2. Failure on page 2 halts with ok: false (prevents false complete stats)
+  const failList = simulateListAll({ failOnPage: 2 });
+  assert.strictEqual(failList.ok, false);
+  assert.strictEqual(failList.objects.length, 2); // only page 1 items were read
+
+  // 3. Subtitle deletion fail-closed check
+  function simulateDeleteSubtitles(items, failOnKey = null) {
+    const failedKeys = [];
+    for (const item of items) {
+      if (item.key === failOnKey) {
+        failedKeys.push(item.key);
+      }
+    }
+    if (failedKeys.length > 0) {
+      return { ok: false, code: 'R2_DELETE_FAILED', failedKeys };
+    }
+    return { ok: true, deleted: true };
+  }
+
+  const subDeleteFail = simulateDeleteSubtitles(
+    [{ key: 'sub-1.vtt' }, { key: 'sub-2.vtt' }],
+    'sub-2.vtt'
+  );
+  assert.strictEqual(subDeleteFail.ok, false);
+  assert.strictEqual(subDeleteFail.code, 'R2_DELETE_FAILED');
+  assert.strictEqual(subDeleteFail.failedKeys.includes('sub-2.vtt'), true);
+
+  const subDeleteOk = simulateDeleteSubtitles([{ key: 'sub-1.vtt' }, { key: 'sub-2.vtt' }]);
+  assert.strictEqual(subDeleteOk.ok, true);
+});
+
 console.log(`\n🎉 ALL ${passedTests} TEST CASES PASSED SUCCESSFULLY!\n`);

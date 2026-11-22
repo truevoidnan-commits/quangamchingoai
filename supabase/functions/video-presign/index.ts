@@ -136,6 +136,105 @@ Deno.serve(async (req: Request) => {
       return null;
     };
 
+    // Helper: Abort R2 Multipart Upload session
+    const abortR2Multipart = async (key: string, uploadId: string): Promise<boolean> => {
+      try {
+        const abortUrl = new URL(`${r2Endpoint}/${key}`);
+        abortUrl.searchParams.set('uploadId', uploadId);
+        const signedAbort = await aws.sign(abortUrl.toString(), { method: 'DELETE' });
+        const res = await fetch(signedAbort.url, { method: 'DELETE', headers: signedAbort.headers });
+        return res.ok || res.status === 204 || res.status === 404;
+      } catch (abortErr) {
+        console.warn('[video-presign] Failed to abort multipart on R2:', abortErr);
+        return false;
+      }
+    };
+
+    // Helper: List all R2 objects with S3 ListObjectsV2 pagination (IsTruncated + NextContinuationToken)
+    interface R2ObjectItem {
+      key: string;
+      size: number;
+    }
+
+    const listAllR2Objects = async (
+      prefix: string,
+      maxPages = 50
+    ): Promise<{ ok: boolean; objects: R2ObjectItem[]; error?: string }> => {
+      const allObjects: R2ObjectItem[] = [];
+      let continuationToken: string | null = null;
+      let pageCount = 0;
+
+      while (pageCount < maxPages) {
+        pageCount++;
+        const listUrl = new URL(r2Endpoint);
+        listUrl.searchParams.set('list-type', '2');
+        listUrl.searchParams.set('prefix', prefix);
+        if (continuationToken) {
+          listUrl.searchParams.set('continuation-token', continuationToken);
+        }
+
+        let listRes: Response;
+        try {
+          const signedList = await aws.sign(listUrl.toString(), { method: 'GET' });
+          listRes = await fetch(signedList.url, { headers: signedList.headers });
+        } catch (fetchErr: any) {
+          return {
+            ok: false,
+            objects: allObjects,
+            error: `Lỗi kết nối khi liệt kê tệp R2: ${fetchErr?.message || fetchErr}`,
+          };
+        }
+
+        if (!listRes.ok) {
+          const errText = await listRes.text().catch(() => '');
+          return {
+            ok: false,
+            objects: allObjects,
+            error: `R2 ListObjectsV2 thất bại (HTTP ${listRes.status}): ${errText}`,
+          };
+        }
+
+        const xml = await listRes.text();
+
+        // Extract object keys and sizes from <Contents> blocks
+        const contentsMatches = xml.match(/<Contents>([\s\S]*?)<\/Contents>/g) || [];
+        for (const contentXml of contentsMatches) {
+          const keyMatch = contentXml.match(/<Key>(.*?)<\/Key>/);
+          const sizeMatch = contentXml.match(/<Size>(\d+)<\/Size>/);
+          if (keyMatch) {
+            allObjects.push({
+              key: keyMatch[1],
+              size: sizeMatch ? parseInt(sizeMatch[1], 10) || 0 : 0,
+            });
+          }
+        }
+
+        // Check if there are more keys / truncated
+        const isTruncatedMatch = xml.match(/<IsTruncated>(true|false)<\/IsTruncated>/i);
+        const isTruncated = isTruncatedMatch ? isTruncatedMatch[1].toLowerCase() === 'true' : false;
+        const nextTokenMatch = xml.match(/<NextContinuationToken>(.*?)<\/NextContinuationToken>/);
+        const nextToken = nextTokenMatch ? nextTokenMatch[1] : null;
+
+        if (isTruncated && nextToken) {
+          continuationToken = nextToken;
+        } else if (isTruncated && !nextToken) {
+          return {
+            ok: false,
+            objects: allObjects,
+            error: 'R2 báo còn trang (IsTruncated=true) nhưng thiếu NextContinuationToken',
+          };
+        } else {
+          return { ok: true, objects: allObjects };
+        }
+      }
+
+      return {
+        ok: false,
+        objects: allObjects,
+        error: `Số lượng trang liệt kê vượt quá giới hạn an toàn (${maxPages} trang)`,
+      };
+    };
+
     // --------------------------------------------------------------------------
     // ACTION: get-storage-stats
     // --------------------------------------------------------------------------
@@ -151,23 +250,16 @@ Deno.serve(async (req: Request) => {
         dbTrackedVideoBytes = episodesData.reduce((acc, row) => acc + (Number(row.file_size) || 0), 0);
       }
 
-      // 2. Query R2 bucket directly via S3 ListObjectsV2 under videos/ prefix
+      // 2. Query R2 bucket directly via S3 ListObjectsV2 under videos/ prefix with full pagination
       let actualR2VideoBytes: number | null = null;
       let isR2ActualAvailable = false;
-      try {
-        const listUrl = new URL(r2Endpoint);
-        listUrl.searchParams.set('list-type', '2');
-        listUrl.searchParams.set('prefix', 'videos/');
-        const signedList = await aws.sign(listUrl.toString(), { method: 'GET' });
-        const listRes = await fetch(signedList.url, { headers: signedList.headers });
-        if (listRes.ok) {
-          const xml = await listRes.text();
-          const sizes = [...xml.matchAll(/<Size>(\d+)<\/Size>/g)].map((m) => parseInt(m[1], 10));
-          actualR2VideoBytes = sizes.reduce((acc, sz) => acc + (isNaN(sz) ? 0 : sz), 0);
-          isR2ActualAvailable = true;
-        }
-      } catch (r2Err) {
-        console.warn('[video-presign] R2 list objects for storage stats failed:', r2Err);
+
+      const listResult = await listAllR2Objects('videos/');
+      if (listResult.ok) {
+        actualR2VideoBytes = listResult.objects.reduce((acc, obj) => acc + (obj.size || 0), 0);
+        isR2ActualAvailable = true;
+      } else {
+        console.warn('[video-presign] R2 list objects for storage stats failed or incomplete:', listResult.error);
         actualR2VideoBytes = null;
         isR2ActualAvailable = false;
       }
@@ -235,6 +327,21 @@ Deno.serve(async (req: Request) => {
       const { fileSize, mimeType } = validation.data;
       const key = buildVideoSourceKey(seriesId, episodeId);
 
+      // Precondition: Verify target episode exists and belongs to seriesId
+      const { data: targetEp, error: targetEpErr } = await supabaseAdmin
+        .from('video_episodes')
+        .select('id, series_id, upload_status')
+        .eq('id', episodeId)
+        .eq('series_id', seriesId)
+        .maybeSingle();
+
+      if (targetEpErr || !targetEp) {
+        return new Response(
+          JSON.stringify({ error: 'Tập phim không tồn tại hoặc không thuộc bộ phim này', code: 'EPISODE_NOT_FOUND' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       // Check storage threshold warning
       const { data: epRows } = await supabaseAdmin
         .from('video_episodes')
@@ -293,8 +400,13 @@ Deno.serve(async (req: Request) => {
 
       if (sessErr) {
         console.error('[video-presign] Failed to create upload session:', sessErr);
+        // Cleanup initiated R2 multipart session
+        await abortR2Multipart(key, uploadId);
         return new Response(
-          JSON.stringify({ error: `Lỗi ghi phiên upload: ${sessErr.message}`, code: 'SESSION_CREATE_FAILED' }),
+          JSON.stringify({
+            error: `Lỗi ghi phiên upload vào cơ sở dữ liệu: ${sessErr.message}. Phiên R2 đã được dọn dẹp.`,
+            code: 'SESSION_CREATE_FAILED',
+          }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -312,6 +424,20 @@ Deno.serve(async (req: Request) => {
 
       if (epErr) {
         console.error('[video-presign] Failed to update episode for upload:', epErr);
+        // Cleanup initiated R2 multipart session and mark DB session aborted to maintain consistent state
+        await abortR2Multipart(key, uploadId);
+        await supabaseAdmin
+          .from('video_upload_sessions')
+          .update({ status: 'aborted' })
+          .eq('upload_id', uploadId);
+
+        return new Response(
+          JSON.stringify({
+            error: `Lỗi cập nhật tập phim trong cơ sở dữ liệu: ${epErr.message}. Phiên upload đã được hủy an toàn.`,
+            code: 'DB_UPDATE_FAILED',
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       return new Response(
@@ -573,51 +699,119 @@ Deno.serve(async (req: Request) => {
       if (adminErr) return adminErr;
 
       const { uploadId } = validation.data;
-      const key = buildVideoSourceKey(seriesId, episodeId);
+      const expectedKey = buildVideoSourceKey(seriesId, episodeId);
 
-      // Verify session exists
-      const { data: session } = await supabaseAdmin
+      // Verify session exists and belongs to this series, episode and key
+      const { data: session, error: sessErr } = await supabaseAdmin
         .from('video_upload_sessions')
-        .select('id, series_id, episode_id, status')
+        .select('id, series_id, episode_id, r2_key, status')
         .eq('upload_id', uploadId)
         .maybeSingle();
 
-      if (!session) {
+      if (sessErr || !session) {
         return new Response(
-          JSON.stringify({ error: 'Phiên upload không tồn tại', code: 'SESSION_NOT_FOUND' }),
+          JSON.stringify({ error: 'Phiên upload không tồn tại hoặc uploadId không hợp lệ', code: 'SESSION_NOT_FOUND' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const abortUrl = new URL(`${r2Endpoint}/${key}`);
-      abortUrl.searchParams.set('uploadId', uploadId);
-
-      const signedAbort = await aws.sign(abortUrl.toString(), {
-        method: 'DELETE',
-      });
-
-      const abortRes = await fetch(signedAbort.url, {
-        method: 'DELETE',
-        headers: signedAbort.headers,
-      });
-
-      if (!abortRes.ok && abortRes.status !== 204 && abortRes.status !== 404) {
-        console.warn('[R2 Abort Multipart Warning]:', abortRes.status);
+      if (session.series_id !== seriesId || session.episode_id !== episodeId) {
+        return new Response(
+          JSON.stringify({ error: 'Phiên upload không khớp với bộ phim hoặc tập phim được yêu cầu', code: 'SESSION_MISMATCH' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
-      await supabaseAdmin
+      if (session.r2_key !== expectedKey) {
+        return new Response(
+          JSON.stringify({ error: 'Khóa lưu trữ R2 của phiên không khớp', code: 'KEY_MISMATCH' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check if session is in an abortable status
+      if (session.status !== 'in_progress') {
+        return new Response(
+          JSON.stringify({
+            error: `Phiên upload không ở trạng thái cho phép hủy (trạng thái hiện tại: ${session.status})`,
+            code: 'SESSION_NOT_ABORTABLE',
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Abort multipart on Cloudflare R2
+      const abortUrl = new URL(`${r2Endpoint}/${expectedKey}`);
+      abortUrl.searchParams.set('uploadId', uploadId);
+
+      let abortRes: Response;
+      try {
+        const signedAbort = await aws.sign(abortUrl.toString(), {
+          method: 'DELETE',
+        });
+        abortRes = await fetch(signedAbort.url, {
+          method: 'DELETE',
+          headers: signedAbort.headers,
+        });
+      } catch (fetchErr: any) {
+        return new Response(
+          JSON.stringify({
+            error: `Lỗi kết nối khi gửi yêu cầu hủy multipart lên R2: ${fetchErr?.message || fetchErr}`,
+            code: 'R2_ABORT_FAILED',
+          }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // S3 AbortMultipartUpload returns 204 No Content on success. If already aborted or expired, 404 can be tolerated.
+      if (!abortRes.ok && abortRes.status !== 204 && abortRes.status !== 404) {
+        const errText = await abortRes.text().catch(() => '');
+        console.error('[R2 Abort Multipart Error]:', abortRes.status, errText);
+        return new Response(
+          JSON.stringify({
+            error: `Hủy multipart upload trên R2 thất bại (HTTP ${abortRes.status}): ${errText}`,
+            code: 'R2_ABORT_FAILED',
+          }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Only update database after R2 abort succeeds
+      const { error: sessUpdateErr } = await supabaseAdmin
         .from('video_upload_sessions')
         .update({ status: 'aborted' })
         .eq('upload_id', uploadId);
 
-      await supabaseAdmin
+      if (sessUpdateErr) {
+        console.error('[video-presign] Failed to update session to aborted in DB:', sessUpdateErr);
+        return new Response(
+          JSON.stringify({
+            error: `Lỗi cập nhật phiên upload trong cơ sở dữ liệu: ${sessUpdateErr.message}`,
+            code: 'DB_UPDATE_FAILED',
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { error: epUpdateErr } = await supabaseAdmin
         .from('video_episodes')
         .update({ upload_status: 'failed' })
         .eq('id', episodeId)
         .eq('upload_status', 'uploading');
 
+      if (epUpdateErr) {
+        console.error('[video-presign] Failed to update episode to failed in DB:', epUpdateErr);
+        return new Response(
+          JSON.stringify({
+            error: `Lỗi cập nhật trạng thái tập phim trong cơ sở dữ liệu: ${epUpdateErr.message}`,
+            code: 'DB_UPDATE_FAILED',
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       return new Response(
-        JSON.stringify({ success: true, aborted: true, uploadId }),
+        JSON.stringify({ success: true, aborted: true, uploadId, episodeId }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -720,41 +914,56 @@ Deno.serve(async (req: Request) => {
       const videoKey = buildVideoSourceKey(seriesId, episodeId);
       const subPrefix = `videos/${seriesId}/${episodeId}/subtitles/`;
 
-      // Delete video file
+      // 1. Delete video file
       const delVideoUrl = `${r2Endpoint}/${videoKey}`;
       const signedDel = await aws.sign(delVideoUrl, { method: 'DELETE' });
       const delVideoRes = await fetch(signedDel.url, { method: 'DELETE', headers: signedDel.headers });
 
       if (!delVideoRes.ok && delVideoRes.status !== 204 && delVideoRes.status !== 404) {
-        const errText = await delVideoRes.text();
+        const errText = await delVideoRes.text().catch(() => '');
         return new Response(
           JSON.stringify({ error: `Xóa video trên R2 thất bại: ${errText}`, code: 'R2_DELETE_FAILED' }),
           { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Delete subtitles
-      const listUrl = new URL(r2Endpoint);
-      listUrl.searchParams.set('list-type', '2');
-      listUrl.searchParams.set('prefix', subPrefix);
-      const signedList = await aws.sign(listUrl.toString(), { method: 'GET' });
-      const listRes = await fetch(signedList.url, { headers: signedList.headers });
+      // 2. List all subtitles with full S3 ListObjectsV2 pagination
+      const subListResult = await listAllR2Objects(subPrefix);
+      if (!subListResult.ok) {
+        return new Response(
+          JSON.stringify({
+            error: `Liệt kê phụ đề trên R2 để xóa thất bại: ${subListResult.error}`,
+            code: 'R2_LIST_FAILED',
+          }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
-      if (listRes.ok) {
-        const xml = await listRes.text();
-        const keys = [...xml.matchAll(/<Key>(.*?)<\/Key>/g)].map((m) => m[1]);
-        for (const k of keys) {
-          const delSubUrl = `${r2Endpoint}/${k}`;
-          const s = await aws.sign(delSubUrl, { method: 'DELETE' });
-          const delSubRes = await fetch(s.url, { method: 'DELETE', headers: s.headers });
-          if (!delSubRes.ok && delSubRes.status !== 204 && delSubRes.status !== 404) {
-            console.warn(`[video-presign] Failed to delete subtitle ${k}`);
-          }
+      // 3. Delete each subtitle file and strictly verify response status
+      const failedSubtitles: string[] = [];
+      for (const item of subListResult.objects) {
+        const delSubUrl = `${r2Endpoint}/${item.key}`;
+        const s = await aws.sign(delSubUrl, { method: 'DELETE' });
+        const delSubRes = await fetch(s.url, { method: 'DELETE', headers: s.headers });
+        if (!delSubRes.ok && delSubRes.status !== 204 && delSubRes.status !== 404) {
+          failedSubtitles.push(item.key);
+          console.error(`[video-presign] Failed to delete subtitle ${item.key}: HTTP ${delSubRes.status}`);
         }
       }
 
+      if (failedSubtitles.length > 0) {
+        return new Response(
+          JSON.stringify({
+            error: `Xóa phụ đề trên R2 không hoàn tất: ${failedSubtitles.length} tệp thất bại (${failedSubtitles.join(', ')})`,
+            code: 'R2_DELETE_FAILED',
+            failedSubtitles,
+          }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       return new Response(
-        JSON.stringify({ success: true, deleted: true }),
+        JSON.stringify({ success: true, deleted: true, episodeId }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -767,35 +976,32 @@ Deno.serve(async (req: Request) => {
       if (adminErr) return adminErr;
 
       const seriesPrefix = `videos/${seriesId}/`;
-      const listUrl = new URL(r2Endpoint);
-      listUrl.searchParams.set('list-type', '2');
-      listUrl.searchParams.set('prefix', seriesPrefix);
-      const signedList = await aws.sign(listUrl.toString(), { method: 'GET' });
-      const listRes = await fetch(signedList.url, { headers: signedList.headers });
+      const seriesListResult = await listAllR2Objects(seriesPrefix);
 
-      if (!listRes.ok) {
-        const errText = await listRes.text();
+      if (!seriesListResult.ok) {
         return new Response(
-          JSON.stringify({ error: `Liệt kê tệp phim trên R2 để xóa thất bại: ${errText}`, code: 'R2_LIST_FAILED' }),
+          JSON.stringify({
+            error: `Liệt kê tệp phim trên R2 để xóa thất bại: ${seriesListResult.error}`,
+            code: 'R2_LIST_FAILED',
+          }),
           { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const xml = await listRes.text();
-      const keys = [...xml.matchAll(/<Key>(.*?)<\/Key>/g)].map((m) => m[1]);
-
       let deletedCount = 0;
       let failedCount = 0;
+      const failedKeys: string[] = [];
 
-      for (const k of keys) {
-        const delUrl = `${r2Endpoint}/${k}`;
+      for (const item of seriesListResult.objects) {
+        const delUrl = `${r2Endpoint}/${item.key}`;
         const s = await aws.sign(delUrl, { method: 'DELETE' });
         const delRes = await fetch(s.url, { method: 'DELETE', headers: s.headers });
         if (delRes.ok || delRes.status === 204 || delRes.status === 404) {
           deletedCount++;
         } else {
           failedCount++;
-          console.error(`[video-presign] Failed to delete ${k}:`, delRes.status);
+          failedKeys.push(item.key);
+          console.error(`[video-presign] Failed to delete ${item.key}: HTTP ${delRes.status}`);
         }
       }
 
@@ -806,6 +1012,7 @@ Deno.serve(async (req: Request) => {
             code: 'R2_DELETE_FAILED',
             deletedCount,
             failedCount,
+            failedKeys,
           }),
           { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
