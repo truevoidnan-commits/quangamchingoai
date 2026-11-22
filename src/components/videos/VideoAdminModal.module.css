@@ -1,0 +1,370 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 7, 13, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal {
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  background: #0d1527;
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 204, 0, 0.15);
+  overflow: hidden;
+  color: #f1f5f9;
+}
+
+.header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 204, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fbbf24;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  transition: color 0.15s ease;
+}
+
+.closeBtn:hover {
+  color: #fff;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.15);
+  padding: 0 20px;
+  gap: 8px;
+}
+
+.tabBtn {
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tabBtn:hover {
+  color: #f1f5f9;
+}
+
+.tabBtnActive {
+  color: #fbbf24;
+  border-bottom-color: #fbbf24;
+  font-weight: 600;
+}
+
+.content {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #cbd5e1;
+}
+
+.input,
+.textarea,
+.select {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #f8fafc;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  border-color: #fbbf24;
+}
+
+.textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #cbd5e1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #fbbf24;
+  cursor: pointer;
+}
+
+/* File Drop Zone */
+.dropZone {
+  border: 2px dashed rgba(255, 204, 0, 0.25);
+  border-radius: 10px;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.5);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropZone:hover {
+  border-color: #fbbf24;
+  background: rgba(255, 204, 0, 0.05);
+}
+
+.dropZoneText {
+  font-size: 13px;
+  color: #cbd5e1;
+  margin: 0;
+}
+
+.dropZoneHint {
+  font-size: 11px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Storage & Cost Guard Box */
+.quotaBox {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 204, 0, 0.2);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quotaBoxWarning {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.quotaHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+.quotaGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  font-size: 11px;
+}
+
+.quotaItem {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 8px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quotaLabel {
+  color: #64748b;
+}
+
+.quotaVal {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.alertBanner {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #fca5a5;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.alertIcon {
+  color: #f87171;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Upload Progress Box */
+.progressBox {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progressInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.progressBarTrack {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  transition: width 0.25s ease;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+}
+
+.footer {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.btnSecondary {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btnSecondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btnPrimary {
+  padding: 8px 20px;
+  background: #f59e0b;
+  border: none;
+  color: #0f172a;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btnPrimary:hover {
+  background: #fbbf24;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+}
+
+.btnPrimary:disabled,
+.btnSecondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btnDanger {
+  padding: 8px 16px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btnDanger:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+@media (max-width: 600px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .quotaGrid {
+    grid-template-columns: 1fr;
+  }
+}

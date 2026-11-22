@@ -1,0 +1,46 @@
+/**
+ * VideoIcons.jsx
+ * Unified Icon re-exports from src/components/ui/Icon for the Video subsystem ("Thần Thông Ảnh Họa").
+ * Standardized on Lucide React icons.
+ */
+
+export {
+  IconPlay,
+  IconPause,
+  IconRewind,
+  IconFastForward,
+  IconSkipForward,
+  IconSkipBack,
+  IconRotateCcw,
+  IconRotateCw,
+  IconVolume,
+  IconVolumeMute,
+  IconMaximize,
+  IconMinimize,
+  IconSubtitles,
+  IconVideo,
+  IconFilm,
+  IconPlus,
+  IconUpload,
+  IconDownload,
+  IconTrash,
+  IconEdit,
+  IconClock,
+  IconCheck,
+  IconCheckCircle,
+  IconAlertTriangle,
+  IconAlertCircle,
+  IconX,
+  IconArrowLeft,
+  IconArrowRight,
+  IconChevronDown,
+  IconChevronUp,
+  IconChevronLeft,
+  IconChevronRight,
+  IconSearch,
+  IconSettings,
+  IconDotsVertical,
+  IconHardDrive,
+  IconRefresh,
+  IconSparkles,
+} from '../ui/Icon';

@@ -18,7 +18,8 @@
     "test:supabase:local": "node scripts/test-supabase-local-e2e.mjs",
     "test:frontend:occ": "node scripts/test-frontend-occ-local.mjs",
     "report:daoanh-fit": "node scripts/report-daoanh-fit.mjs",
-    "sheet:daoanh": "node scripts/make-daoanh-contact-sheet.mjs"
+    "sheet:daoanh": "node scripts/make-daoanh-contact-sheet.mjs",
+    "test:video": "node scripts/test-video-system.mjs"
   },
   "dependencies": {
     "@jsquash/webp": "^1.5.0",
