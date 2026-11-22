@@ -331,6 +331,43 @@ class MockSupabaseClient {
     };
     return builder;
   }
+
+  async rpc(funcName, params) {
+    if (funcName === 'sync_cultivation_occ') {
+      const { p_expected_rev, p_state, p_updated_at, p_device_id } = params;
+      const uid = this.userId || 'user_123';
+      const current = this.tables.cultivation.get(uid);
+      if (current && current.rev !== p_expected_rev) {
+        return {
+          data: {
+            status: 'CONFLICT',
+            reason: 'REV_MISMATCH',
+            expected_rev: p_expected_rev,
+            current_cloud: { ...current },
+          },
+          error: null,
+        };
+      }
+      const newRev = current ? current.rev + 1 : 1;
+      const updatedRow = {
+        user_id: uid,
+        rev: newRev,
+        state: p_state,
+        updated_at: p_updated_at,
+        device_id: p_device_id,
+      };
+      this.tables.cultivation.set(uid, updatedRow);
+      return {
+        data: {
+          status: 'SUCCESS',
+          rev: newRev,
+          updated_at: p_updated_at,
+        },
+        error: null,
+      };
+    }
+    return { data: null, error: { message: `Function ${funcName} not found` } };
+  }
 }
 
 // -------------------------------------------------------------

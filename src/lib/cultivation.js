@@ -990,6 +990,7 @@ export function getCultivationState(profile = getActiveProfile()) {
     const parsed = JSON.parse(raw);
     const state = { ...DEFAULT_STATE, ...parsed };
     if (typeof state._rev !== 'number' || isNaN(state._rev)) state._rev = 0;
+    if (typeof state._seq !== 'number' || isNaN(state._seq)) state._seq = state._rev;
     if (typeof state._updatedAt !== 'number' || isNaN(state._updatedAt)) state._updatedAt = 0;
 
     // Tự động chuyển đổi dữ liệu cũ (Legacy Items Migration)
@@ -1240,8 +1241,11 @@ export function getCultivationState(profile = getActiveProfile()) {
  */
 export function saveCultivationState(state) {
   try {
-    const currentRev = typeof state._rev === 'number' && !isNaN(state._rev) ? state._rev : 0;
-    state._rev = currentRev + 1;
+    const currentSeq = typeof state._seq === 'number' && !isNaN(state._seq)
+      ? state._seq
+      : (typeof state._rev === 'number' && !isNaN(state._rev) ? state._rev : 0);
+    state._seq = currentSeq + 1;
+    state._rev = state._seq; // Giữ tương thích ngược với mã đọc _rev
     state._updatedAt = Date.now();
     localStorage.setItem(getCultivationKey('state'), JSON.stringify(state));
     if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {

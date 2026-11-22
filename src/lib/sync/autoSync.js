@@ -22,6 +22,12 @@ import {
   getContentSyncPoint,
   recordContentPulled,
   recordContentPushed,
+  getCultivationConflictState,
+  setCultivationConflictState,
+  clearCultivationConflictState,
+  getPendingCultivationRequest,
+  savePendingCultivationRequest,
+  clearPendingCultivationRequest,
 } from './syncLedger.js';
 import {
   getActiveProfile,
@@ -53,6 +59,8 @@ import {
   mergeNovelWithCloud,
   pushNovelToCloud,
   syncNovelMetadata,
+  commitCultivationOCC,
+  reconcilePendingCultivationRequest,
 } from './syncEngine.js';
 import {
   startRealtime,
@@ -250,10 +258,30 @@ export async function pullCultivationBeforeMeditation(customSupabase = null, { t
   if (!session?.user) return { skipped: true };
 
   const userId = session.user.id;
+  // 0. Nếu đang có pending request dở dang -> Ưu tiên hòa giải trước, không tự động kéo đè
+  if (getPendingCultivationRequest()) {
+    const recRes = await reconcilePendingCultivationRequest(client, userId);
+    if (!recRes.reconciled || recRes.conflict) {
+      return { skipped: true, reason: 'pending_request_unreconciled' };
+    }
+  }
+
+  // 0.1 Nếu có conflict chưa giải quyết -> Không kéo đè
+  const existingConflict = getCultivationConflictState();
+  if (existingConflict || getSyncLedger()?.cultivation?.conflictPending) {
+    return { skipped: true, reason: 'cultivation_conflict_pending' };
+  }
+
   const ledger = getSyncLedger();
   const localState = getCultivationState();
-  const localRev = typeof localState?._rev === 'number' ? localState._rev : 0;
+  const localSeq = typeof localState?._seq === 'number' && !isNaN(localState._seq)
+    ? localState._seq
+    : (typeof localState?._rev === 'number' ? localState._rev : 0);
+  const localRev = localSeq;
   const lastSyncedRev = ledger.cultivation?.lastSyncedRev || 0;
+  const lastSyncedLocalSeq = typeof ledger.cultivation?.lastSyncedLocalSeq === 'number'
+    ? ledger.cultivation.lastSyncedLocalSeq
+    : lastSyncedRev;
   const lastSyncedPending = ledger.cultivation?.lastSyncedPending ?? 0;
   const localPending = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')) || '0', 10) || 0;
 
@@ -277,38 +305,51 @@ export async function pullCultivationBeforeMeditation(customSupabase = null, { t
 
     const cloudRev = cloudCult.rev || 0;
     const isCloudNewer = cloudRev > lastSyncedRev;
-    const isLocalUnchanged = localRev <= lastSyncedRev;
+    const isLocalUnchanged = localSeq <= lastSyncedLocalSeq;
     const isOwnDevice = Boolean(cloudCult.device_id && cloudCult.device_id === getDeviceId());
 
-    if (isOwnDevice && cloudRev <= localRev) {
-      return { skipped: true, reason: 'own_device_not_newer' };
+    // Nếu Cloud không mới hơn mốc đã đồng bộ, bỏ qua
+    if (!isCloudNewer) {
+      return { skipped: true, reason: 'cloud_not_newer' };
     }
 
-    // Fast-forward
-    if (isCloudNewer && isLocalUnchanged && cloudCult.state) {
+    // Fast-forward an toàn khi local không có thay đổi bẩn chưa đồng bộ
+    if (isLocalUnchanged && cloudCult.state) {
       backupCultivationState(localState);
       const cloudState = { ...cloudCult.state };
       cloudState._rev = cloudRev;
+      cloudState._seq = cloudRev;
       cloudState._updatedAt = cloudCult.updated_at || Date.now();
       const cloudPending = cloudState.__meta?.pendingSeconds ?? 0;
       delete cloudState.__meta;
 
-      let targetPending = localPending;
+      // Khi fast-forward:
+      // Nếu local pending chưa đổi (localPending === lastSyncedPending): nhận cloudPending.
+      // Nếu local pending ĐÃ tăng (localPending !== lastSyncedPending):
+      // BẢO LƯU localPending, và GIỮ NGUYÊN lastSyncedPending để cờ bẩn tiếp tục bật,
+      // tuyệt đối KHÔNG ghi nhận localPending vào lastSyncedPending khi Cloud chưa commit!
+      let syncedPending = lastSyncedPending;
       if (localPending === lastSyncedPending) {
-        targetPending = cloudPending;
+        syncedPending = cloudPending;
         try {
           localStorage.setItem(getCultivationKey('pending_seconds', 'real'), String(cloudPending));
         } catch {}
+      } else {
+        syncedPending = lastSyncedPending;
       }
 
       try {
         localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cloudState));
       } catch {}
 
+      clearCultivationConflictState();
+
       ledger.cultivation = {
         lastSyncedRev: cloudRev,
-        lastSyncedPending: targetPending,
+        lastSyncedLocalSeq: cloudState._seq,
+        lastSyncedPending: syncedPending,
         lastCloudUpdatedAt: cloudCult.updated_at || Date.now(),
+        conflictPending: false,
       };
       saveSyncLedger(ledger);
 
@@ -418,11 +459,17 @@ export async function runAutoSync(customSupabase = null, options = {}) {
       throw novelsErr;
     }
 
-    const { data: cloudCultivation } = await client
-      .from('cultivation')
-      .select('rev, updated_at, device_id, state')
-      .eq('user_id', userId)
-      .single();
+    let cloudCultivation = null;
+    try {
+      const { data: initCloudCult } = await client
+        .from('cultivation')
+        .select('rev, updated_at, device_id, state')
+        .eq('user_id', userId)
+        .single();
+      cloudCultivation = initCloudCult;
+    } catch {
+      cloudCultivation = null;
+    }
 
     // Cảnh báo dùng song song (Parallel device warning)
     let parallelDeviceDetected = false;
@@ -582,58 +629,164 @@ export async function runAutoSync(customSupabase = null, options = {}) {
     refreshSyncLock();
 
     // D. Đồng bộ Tu Vi (Cultivation - chỉ hồ sơ Thật)
-    const localState = getCultivationState();
-    let localRev = typeof localState?._rev === 'number' ? localState._rev : 0;
-    const lastSyncedRev = ledger.cultivation?.lastSyncedRev || 0;
-    const lastSyncedPending = ledger.cultivation?.lastSyncedPending ?? 0;
-    const cloudRev = cloudCultivation?.rev || 0;
-    const localPending = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')) || '0', 10) || 0;
+    let skipCultivation = false;
 
-    const cloudPending = cloudCultivation?.state?.__meta?.pendingSeconds ?? 0;
-    const isCloudRevChanged = cloudRev > lastSyncedRev;
-    const isCloudPendingChanged = cloudRev === lastSyncedRev && (cloudCultivation?.updated_at || 0) > (ledger.cultivation?.lastCloudUpdatedAt || 0) && cloudPending !== lastSyncedPending;
-    const isCloudChanged = isCloudRevChanged || isCloudPendingChanged;
-
-    const isLocalRevChanged = localRev > lastSyncedRev;
-    const isLocalPendingChanged = localPending !== lastSyncedPending;
-    const isLocalChanged = isLocalRevChanged || isLocalPendingChanged;
-
-    const isOwnCultDevice = Boolean(cloudCultivation?.device_id && cloudCultivation.device_id === getDeviceId());
-
-    if (isCloudRevChanged && isLocalRevChanged) {
-      // Cả hai cùng sửa tu vi -> XUNG ĐỘT, KHÔNG ghi đè, bật cờ attention
+    // 1. Kiểm tra trạng thái xung đột tồn đọng trước đó: bảo tồn tuyệt đối, không ghi đè, không tự xóa
+    const existingConflictState = getCultivationConflictState();
+    if (ledger.cultivation?.conflictPending || existingConflictState) {
       hasAttention = true;
       attentionReason = 'cultivation_conflict';
-      logSyncEvent({ level: 'warn', src: syncSource, evt: 'cultivation_conflict' });
-    } else if (isCloudChanged && !isLocalRevChanged && cloudCultivation?.state) {
-      if (isOwnCultDevice && cloudRev <= localRev) {
+      skipCultivation = true;
+      logSyncEvent({ level: 'warn', src: syncSource, evt: 'cultivation_conflict_preserved' });
+    }
+
+    // 2. Nếu có pending request và chưa bị xung đột chặn: thực hiện hòa giải
+    if (!skipCultivation && getPendingCultivationRequest()) {
+      const recRes = await reconcilePendingCultivationRequest(client, userId);
+      if (!recRes.reconciled) {
+        // Reconciliation thất bại (network error / timeout) hoặc server MAINTENANCE:
+        // Tuyệt đối không tiếp tục push hoặc fast-forward, không tự xóa pending request,
+        // chỉ tạm dừng phạm vi cultivation, không làm gián đoạn thư viện và tiến độ đọc.
+        skipCultivation = true;
+        if (recRes.maintenance) {
+          console.warn('Hòa giải pending cultivation request: server đang bảo trì');
+        } else {
+          console.warn('Pending cultivation request chưa hòa giải được (lỗi mạng hoặc timeout):', recRes.error);
+        }
+      } else if (recRes.conflict) {
+        // Reconciliation phát hiện xung đột
+        hasAttention = true;
+        attentionReason = 'cultivation_conflict';
+        skipCultivation = true;
+        logSyncEvent({ level: 'warn', src: syncSource, evt: 'cultivation_conflict' });
+        const freshLedger = getSyncLedger();
+        ledger = {
+          ...freshLedger,
+          novels: { ...(freshLedger.novels || {}), ...(ledger.novels || {}) },
+          cultivation: { ...(freshLedger.cultivation || {}), conflictPending: true },
+        };
+      } else if (recRes.committed) {
+        // Hòa giải thành công!
+        // 1. Nạp lại ledger mới nhất từ getSyncLedger() để không bị ledger cũ ghi đè
+        const freshLedger = getSyncLedger();
+        ledger = {
+          ...freshLedger,
+          novels: { ...(freshLedger.novels || {}), ...(ledger.novels || {}) },
+          cultivation: freshLedger.cultivation ? { ...freshLedger.cultivation } : ledger.cultivation,
+        };
+
+        // 2. Đọc lại Cloud cultivation mới nhất từ Supabase vì revision trên Cloud vừa tăng
+        // NGUYÊN TẮC FAIL-CLOSED:
+        // Nếu đọc lại từ Cloud bị lỗi, trả dữ liệu thiếu, hoặc không xác minh được revision >= committedRev,
+        // BẮT BUỘC skip cultivation để bảo vệ dữ liệu, TUYỆT ĐỐI không dùng snapshot Cloud cũ!
+        const committedRev = recRes.rev || recRes.committed_rev || 0;
+        let freshCloudCult = null;
+        let freshCultErr = null;
+
+        try {
+          const res = await client
+            .from('cultivation')
+            .select('rev, updated_at, device_id, state')
+            .eq('user_id', userId)
+            .single();
+          freshCloudCult = res?.data;
+          freshCultErr = res?.error;
+        } catch (fetchFreshErr) {
+          freshCultErr = fetchFreshErr;
+        }
+
+        if (freshCultErr || !freshCloudCult || typeof freshCloudCult.rev !== 'number' || (committedRev > 0 && freshCloudCult.rev < committedRev)) {
+          skipCultivation = true;
+          logSyncEvent({
+            level: 'warn',
+            src: syncSource,
+            evt: 'cultivation_cloud_refresh_failed',
+            reason: freshCultErr ? (freshCultErr.message || 'fetch_error') : (!freshCloudCult ? 'missing_cloud_row' : 'stale_cloud_revision'),
+          });
+          console.warn('Tạm dừng phạm vi cultivation (Fail-closed): Không đọc lại được Cloud snapshot mới nhất sau reconcile:',
+            freshCultErr?.message || (!freshCloudCult ? 'Dữ liệu Cloud trống' : `Cloud rev (${freshCloudCult.rev}) < committedRev (${committedRev})`)
+          );
+        } else {
+          cloudCultivation = freshCloudCult;
+        }
+      }
+    }
+
+    if (!skipCultivation) {
+      const localState = getCultivationState();
+      let localSeq = typeof localState?._seq === 'number' && !isNaN(localState._seq)
+        ? localState._seq
+        : (typeof localState?._rev === 'number' ? localState._rev : 0);
+      let localRev = localSeq;
+      const lastSyncedRev = ledger.cultivation?.lastSyncedRev || 0; // lastSyncedCloudRev
+      const lastSyncedLocalSeq = typeof ledger.cultivation?.lastSyncedLocalSeq === 'number'
+        ? ledger.cultivation.lastSyncedLocalSeq
+        : lastSyncedRev;
+      const lastSyncedPending = ledger.cultivation?.lastSyncedPending ?? 0;
+      const cloudRev = cloudCultivation?.rev || 0;
+      const localPending = parseInt(localStorage.getItem(getCultivationKey('pending_seconds', 'real')) || '0', 10) || 0;
+
+      const cloudPending = cloudCultivation?.state?.__meta?.pendingSeconds ?? 0;
+      const isCloudRevChanged = cloudRev > lastSyncedRev;
+      const isCloudPendingChanged = cloudRev === lastSyncedRev && (cloudCultivation?.updated_at || 0) > (ledger.cultivation?.lastCloudUpdatedAt || 0) && cloudPending !== lastSyncedPending;
+      const isCloudChanged = isCloudRevChanged || isCloudPendingChanged;
+
+      const isLocalRevChanged = localSeq > lastSyncedLocalSeq;
+      const isLocalPendingChanged = localPending !== lastSyncedPending;
+      const isLocalChanged = isLocalRevChanged || isLocalPendingChanged;
+
+      const isOwnCultDevice = Boolean(cloudCultivation?.device_id && cloudCultivation.device_id === getDeviceId());
+
+      if (isCloudRevChanged && isLocalRevChanged) {
+        // Cả hai cùng sửa tu vi -> XUNG ĐỘT, KHÔNG ghi đè, bật cờ attention
+        hasAttention = true;
+        attentionReason = 'cultivation_conflict';
+        logSyncEvent({ level: 'warn', src: syncSource, evt: 'cultivation_conflict' });
         if (!ledger.cultivation) ledger.cultivation = {};
-        ledger.cultivation.lastSyncedRev = Math.max(ledger.cultivation.lastSyncedRev || 0, cloudRev, localRev);
-        ledger.cultivation.lastCloudUpdatedAt = cloudCultivation.updated_at || Date.now();
-      } else {
+        ledger.cultivation.conflictPending = true;
+        backupCultivationState(localState);
+        setCultivationConflictState({
+          local: localState,
+          cloud: cloudCultivation,
+          detectedAt: Date.now(),
+        });
+      } else if (isCloudChanged && !isLocalRevChanged && cloudCultivation?.state) {
+        // Cloud có thay đổi mới và local chưa phát sinh mutation mới -> Fast-forward an toàn
         backupCultivationState(localState);
         const cloudState = { ...cloudCultivation.state };
         cloudState._rev = cloudRev;
+        cloudState._seq = cloudRev;
         cloudState._updatedAt = cloudCultivation.updated_at || Date.now();
         const cloudPending = cloudState.__meta?.pendingSeconds ?? 0;
         delete cloudState.__meta;
 
-        let targetPending = localPending;
+        // Khi fast-forward:
+        // Nếu local pending chưa đổi (localPending === lastSyncedPending): nhận cloudPending.
+        // Nếu local pending ĐÃ tăng (localPending !== lastSyncedPending):
+        // BẢO LƯU localPending, và GIỮ NGUYÊN lastSyncedPending để cờ bẩn tiếp tục bật,
+        // tuyệt đối KHÔNG ghi nhận localPending vào lastSyncedPending khi Cloud chưa commit!
+        let syncedPending = lastSyncedPending;
         if (localPending === lastSyncedPending) {
-          targetPending = cloudPending;
+          syncedPending = cloudPending;
           try {
             localStorage.setItem(getCultivationKey('pending_seconds', 'real'), String(cloudPending));
           } catch {}
+        } else {
+          syncedPending = lastSyncedPending;
         }
 
         try {
           localStorage.setItem(getCultivationKey('state', 'real'), JSON.stringify(cloudState));
         } catch {}
 
+        clearCultivationConflictState();
+
         ledger.cultivation = {
           lastSyncedRev: cloudRev,
-          lastSyncedPending: targetPending,
+          lastSyncedLocalSeq: cloudState._seq,
+          lastSyncedPending: syncedPending,
           lastCloudUpdatedAt: cloudCultivation.updated_at || Date.now(),
+          conflictPending: false,
         };
 
         if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
@@ -644,33 +797,87 @@ export async function runAutoSync(customSupabase = null, options = {}) {
             }));
           }
         }
-      }
-    } else if (!isCloudChanged && isLocalChanged) {
-      const lastPendingPushAt = ledger.cultivation?.lastPendingPushAt || 0;
-      const canPush = isLocalRevChanged || (now - lastPendingPushAt >= 60000) || options.force;
-      if (canPush) {
-        const payloadState = { ...localState, __meta: { pendingSeconds: localPending } };
-        const nowTime = Date.now();
+      } else if (!isCloudChanged && isLocalChanged) {
+        const lastPendingPushAt = ledger.cultivation?.lastPendingPushAt || 0;
+        const canPush = isLocalRevChanged || (now - lastPendingPushAt >= 60000) || options.force;
+        if (canPush) {
+          let pendingReq = getPendingCultivationRequest();
+          let inFlightSnapshot;
+          if (pendingReq) {
+            inFlightSnapshot = pendingReq;
+          } else {
+            inFlightSnapshot = {
+              idempotencyKey: 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9),
+              expectedRev: lastSyncedRev,
+              sentLocalSeq: localSeq,
+              sentPendingSeconds: localPending,
+              payloadState: JSON.parse(JSON.stringify(localState)),
+              createdAt: Date.now(),
+            };
+            savePendingCultivationRequest(inFlightSnapshot);
+          }
 
-        const { error: cultUpsertErr } = await client.from('cultivation').upsert({
-          user_id: userId,
-          state: payloadState,
-          rev: localRev,
-          updated_at: nowTime,
-          device_id: getDeviceId(),
-        }, { onConflict: 'user_id' });
+          const occRes = await commitCultivationOCC(client, userId, {
+            expectedRev: inFlightSnapshot.expectedRev,
+            state: inFlightSnapshot.payloadState,
+            pendingSeconds: inFlightSnapshot.sentPendingSeconds,
+            deviceId: getDeviceId(),
+            idempotencyKey: inFlightSnapshot.idempotencyKey,
+          });
 
-        if (!cultUpsertErr) {
-          pushedScopes.add('cultivation');
-          ledger.cultivation = {
-            lastSyncedRev: localRev,
-            lastSyncedPending: localPending,
-            lastCloudUpdatedAt: nowTime,
-            lastPendingPushAt: nowTime,
-          };
-        } else {
-          console.warn('Lỗi upsert tu vi lên cloud:', cultUpsertErr.message);
-          errors.push(`Lỗi cập nhật tu vi lên cloud: ${cultUpsertErr.message}`);
+          if (occRes.status === 'SUCCESS') {
+            clearPendingCultivationRequest();
+            const committedRev = occRes.rev || occRes.committed_rev;
+            const nowTime = Date.now();
+            pushedScopes.add('cultivation');
+            ledger.cultivation = {
+              lastSyncedRev: committedRev,
+              lastSyncedLocalSeq: inFlightSnapshot.sentLocalSeq,
+              lastSyncedPending: inFlightSnapshot.sentPendingSeconds,
+              lastCloudUpdatedAt: nowTime,
+              lastPendingPushAt: nowTime,
+              conflictPending: false,
+            };
+            clearCultivationConflictState();
+
+            // Kiểm tra nếu là Idempotent Replay và Cloud đã có revision mới hơn từ thiết bị khác
+            if (occRes.idempotent_replay && occRes.current_cloud_rev && occRes.current_cloud_rev > committedRev) {
+              const currentLocal = getCultivationState();
+              const currentSeq = typeof currentLocal?._seq === 'number' ? currentLocal._seq : (currentLocal?._rev || 0);
+              if (currentSeq > inFlightSnapshot.sentLocalSeq) {
+                hasAttention = true;
+                attentionReason = 'cultivation_conflict';
+                logSyncEvent({ level: 'warn', src: syncSource, evt: 'cultivation_conflict' });
+                if (!ledger.cultivation) ledger.cultivation = {};
+                ledger.cultivation.conflictPending = true;
+                backupCultivationState(currentLocal);
+                setCultivationConflictState({
+                  local: currentLocal,
+                  cloud: { rev: occRes.current_cloud_rev },
+                  detectedAt: Date.now(),
+                  reason: 'CONCURRENT_CLOUD_ADVANCE_AFTER_IDEMPOTENT_REPLAY',
+                });
+              }
+            }
+          } else if (occRes.status === 'CONFLICT') {
+            clearPendingCultivationRequest();
+            hasAttention = true;
+            attentionReason = 'cultivation_conflict';
+            logSyncEvent({ level: 'warn', src: syncSource, evt: 'cultivation_conflict' });
+            if (!ledger.cultivation) ledger.cultivation = {};
+            ledger.cultivation.conflictPending = true;
+            backupCultivationState(localState);
+            setCultivationConflictState({
+              local: localState,
+              cloud: occRes.current_cloud,
+              detectedAt: Date.now(),
+            });
+          } else if (occRes.status === 'MAINTENANCE') {
+            console.warn('Đồng bộ tu vi đang tạm bảo trì:', occRes.message);
+          } else {
+            console.warn('Lỗi OCC tu vi lên cloud:', occRes.message || occRes.error);
+            errors.push(`Lỗi cập nhật tu vi lên cloud: ${occRes.message || occRes.error}`);
+          }
         }
       }
     }
