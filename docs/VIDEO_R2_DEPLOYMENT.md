@@ -162,36 +162,28 @@ supabase functions deploy video-presign --no-verify-jwt
 
 ---
 
-## 7. XÁC MINH VẬN HÀNH THẬT (VERIFICATION)
+## 7. XÁC MINH VẬN HÀNH THẬT & CHẨN ĐOÁN R2
 
-Sau khi deploy backend và frontend:
+### 7.1 Chẩn đoán kết nối Cloudflare R2 (Khắc phục lỗi 403 AccessDenied)
 
-1. **Kiểm tra Thư viện (`/videos`)**:
-   - Truy cập `/videos`.
-   - Giao diện hiển thị tiêu đề "Thần Thông Ảnh Họa", bộ lọc thể loại, thanh tìm kiếm.
-2. **Kiểm tra Quyền Admin**:
-   - Đăng nhập với tài khoản admin đã cấp quyền ở Mục 5.
-   - Thanh điều khiển Admin xuất hiện với nút "Thêm phim mới".
-3. **Tạo Phim & Upload Ảnh Bìa**:
-   - Nhập tên phim, thể loại, chọn ảnh poster.
-   - Bấm lưu: Poster được upload trực tiếp lên R2 qua presigned PUT.
-4. **Upload Video MP4 (Multipart)**:
-   - Chuyển sang thẻ "Tập phim & Upload MP4".
-   - Chọn tệp MP4 bất kỳ từ máy tính.
-   - Kiểm tra hộp kiểm soát dung lượng R2:
-     - Hiển thị dung lượng video hiện tại.
-     - Hiển thị dung lượng truyện tranh ước tính 1.2 GB.
-     - Hiển thị kích thước file sắp tải lên.
-     - Hiển thị cảnh báo nếu tổng chạm hoặc vượt 8 GB.
-   - Bấm "Bắt đầu tải lên R2": Quan sát thanh tiến độ phần trăm, số phần (part) và tốc độ tải lên.
-   - Sau khi hoàn thành 100%, tập phim tự động chuyển sang trạng thái sẵn sàng (`ready`).
-5. **Upload Phụ Đề**:
-   - Chọn tệp WebVTT (.vtt) và tải lên.
-6. **Kiểm tra Phát Video (`/videos/:seriesId/watch/:episodeId`)**:
-   - Trình phát mở mượt mà, hỗ trợ play/pause, tua qua lại 10s, đổi tốc độ 0.5x - 2x.
-   - Phụ đề tiếng Việt hiển thị chính xác.
-   - Tua đến giữa tập, tắt trang và vào lại: Kiểm tra tính năng "Tiếp tục xem từ mm:ss".
-   - Khi xem xong 95% thời lượng: Tập phim được đánh dấu hoàn thành, tự động chuyển sang tập kế tiếp nếu bật "Tự chuyển tập".
+Hàm `video-presign` được nâng cấp sử dụng **AWS SDK v3 (`@aws-sdk/client-s3` & `@aws-sdk/s3-request-presigner`)** với `forcePathStyle: true` và `region: 'auto'` chuẩn của Cloudflare R2, loại bỏ hoàn toàn các lỗi ký thủ công SigV4 (lỗi stripped `Host` header, canonical query `?uploads` và XML serialization).
+
+Để chẩn đoán trạng thái kết nối Cloudflare R2 ngay trên giao diện:
+1. Đăng nhập với tài khoản Admin và mở **Thêm phim mới / Chỉnh sửa**.
+2. Chọn thẻ **2. Tập phim & Upload MP4**.
+3. Trong hộp **Kiểm soát dung lượng & chi phí Cloudflare R2**, bấm nút **Kiểm tra kết nối R2**.
+4. Edge Function sẽ thực hiện một thao tác đọc an toàn (`ListObjectsV2` với `MaxKeys: 1, prefix: 'videos/'` - không ghi, không sửa dữ liệu) và phân loại lỗi:
+   - **CONNECTED (Xanh lá)**: Token, endpoint và bucket hợp lệ 100%, sẵn sàng upload.
+   - **PERMISSIONS_OR_BUCKET_MISMATCH (HTTP 403)**: Token R2 không có quyền `Object Read & Write` trên bucket `tcl-videos`, hoặc `R2_ACCOUNT_ID` không khớp với tài khoản sở hữu token.
+   - **CREDENTIAL_INVALID**: Access Key ID hoặc Secret Access Key sai.
+   - **BUCKET_NOT_FOUND (HTTP 404)**: Tên bucket trên Cloudflare Dashboard không khớp với biến `R2_VIDEO_BUCKET` (mặc định: `tcl-videos`).
+   - **ENDPOINT_UNREACHABLE**: Sai Account ID hoặc mạng không kết nối được đến Cloudflare R2.
+   > [!NOTE]
+   > Công cụ chẩn đoán hiển thị nguồn biến môi trường đang dùng (`R2_VIDEO_ACCESS_KEY_ID` hoặc `R2_ACCESS_KEY_ID`) và 4 ký tự đầu/cuối của Access Key để đối chiếu với Cloudflare Dashboard, tuyệt đối **không log hoặc để lộ Secret Access Key**.
+
+### 7.2 Cơ chế tự động thử lại khi tải lên thất bại (Loại bỏ lỗi uq_series_episode)
+
+Khi upload MP4 thất bại giữa chừng (do rớt mạng hoặc lỗi R2), hệ thống đánh dấu trạng thái tập phim là `failed`. Lần tải lên tiếp theo với cùng số tập sẽ **tự động tái sử dụng và cập nhật vỏ tập phim hiện có (`prepareVideoEpisodeForUpload`)**, không cố chèn mới (insert) nên hoàn toàn không bị lỗi trùng khóa `duplicate key value violates unique constraint "uq_series_episode"`.
 
 ---
 

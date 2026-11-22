@@ -1,15 +1,27 @@
 // Supabase Edge Function: video-presign
 // Generates S3 SigV4 presigned URLs and manages multipart upload for Cloudflare R2 bucket 'tcl-videos'
-// Runs on Deno runtime inside Supabase Edge Functions.
+// Powered by AWS SDK v3 for S3 (@aws-sdk/client-s3 & @aws-sdk/s3-request-presigner) on Deno runtime.
 
-import { AwsClient } from 'npm:aws4fetch@1.0.20';
+import {
+  S3Client,
+  ListObjectsV2Command,
+  CreateMultipartUploadCommand,
+  UploadPartCommand,
+  CompleteMultipartUploadCommand,
+  AbortMultipartUploadCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from 'npm:@aws-sdk/client-s3@3.714.0';
+import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3.714.0';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import {
   buildPosterKey,
   buildVideoSourceKey,
   buildSubtitleKey,
   validateVideoPresignRequest,
-  escapeXml,
+  cleanEtag,
   getCorsHeaders,
   PUT_EXPIRATION_SECONDS,
   PLAYBACK_EXPIRATION_SECONDS,
@@ -112,15 +124,17 @@ Deno.serve(async (req: Request) => {
 
     const { action, seriesId, episodeId } = validation.data;
 
-    // 5. Initialize AWS S3 Client for Cloudflare R2
-    const aws = new AwsClient({
-      accessKeyId: R2_ACCESS_KEY_ID,
-      secretAccessKey: R2_SECRET_ACCESS_KEY,
-      service: 's3',
+    // 5. Initialize S3 Client configured specifically for Cloudflare R2
+    // endpoint uses Account ID format, region is 'auto', forcePathStyle ensures path-style routing
+    const s3 = new S3Client({
       region: 'auto',
+      endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: R2_ACCESS_KEY_ID,
+        secretAccessKey: R2_SECRET_ACCESS_KEY,
+      },
+      forcePathStyle: true,
     });
-
-    const r2Endpoint = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}`;
 
     // Helper: Admin Guard
     const requireAdmin = () => {
@@ -136,104 +150,87 @@ Deno.serve(async (req: Request) => {
       return null;
     };
 
-    // Helper: Abort R2 Multipart Upload session
-    const abortR2Multipart = async (key: string, uploadId: string): Promise<boolean> => {
+    // --------------------------------------------------------------------------
+    // ACTION: test-r2-connection (Admin Only - Read-only Diagnostics)
+    // --------------------------------------------------------------------------
+    if (action === 'test-r2-connection') {
+      const adminErr = requireAdmin();
+      if (adminErr) return adminErr;
+
+      const authSource = Deno.env.get('R2_VIDEO_ACCESS_KEY_ID')
+        ? 'R2_VIDEO_ACCESS_KEY_ID'
+        : Deno.env.get('R2_ACCESS_KEY_ID')
+        ? 'R2_ACCESS_KEY_ID'
+        : 'missing';
+      const keyHint = R2_ACCESS_KEY_ID
+        ? `${R2_ACCESS_KEY_ID.slice(0, 4)}...${R2_ACCESS_KEY_ID.slice(-4)}`
+        : '(chưa có)';
+      const endpoint = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+
       try {
-        const abortUrl = new URL(`${r2Endpoint}/${key}`);
-        abortUrl.searchParams.set('uploadId', uploadId);
-        const signedAbort = await aws.sign(abortUrl.toString(), { method: 'DELETE' });
-        const res = await fetch(signedAbort.url, { method: 'DELETE', headers: signedAbort.headers });
-        return res.ok || res.status === 204 || res.status === 404;
-      } catch (abortErr) {
-        console.warn('[video-presign] Failed to abort multipart on R2:', abortErr);
-        return false;
-      }
-    };
+        // Read-only probe with MaxKeys: 1 on videos/ prefix
+        const probeRes = await s3.send(
+          new ListObjectsV2Command({
+            Bucket: R2_BUCKET,
+            Prefix: 'videos/',
+            MaxKeys: 1,
+          })
+        );
 
-    // Helper: List all R2 objects with S3 ListObjectsV2 pagination (IsTruncated + NextContinuationToken)
-    interface R2ObjectItem {
-      key: string;
-      size: number;
-    }
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            status: 'CONNECTED',
+            message: 'Kết nối Cloudflare R2 thành công và xác thực SigV4 hợp lệ!',
+            bucket: R2_BUCKET,
+            endpoint,
+            keyHint,
+            authSource,
+            keyCount: probeRes.KeyCount || 0,
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (err: any) {
+        const httpStatus = err.$metadata?.httpStatusCode;
+        const errName = err.name || 'UnknownError';
+        let stage = 'UNKNOWN';
+        let diagnosticMessage = '';
 
-    const listAllR2Objects = async (
-      prefix: string,
-      maxPages = 50
-    ): Promise<{ ok: boolean; objects: R2ObjectItem[]; error?: string }> => {
-      const allObjects: R2ObjectItem[] = [];
-      let continuationToken: string | null = null;
-      let pageCount = 0;
-
-      while (pageCount < maxPages) {
-        pageCount++;
-        const listUrl = new URL(r2Endpoint);
-        listUrl.searchParams.set('list-type', '2');
-        listUrl.searchParams.set('prefix', prefix);
-        if (continuationToken) {
-          listUrl.searchParams.set('continuation-token', continuationToken);
-        }
-
-        let listRes: Response;
-        try {
-          const signedList = await aws.sign(listUrl.toString(), { method: 'GET' });
-          listRes = await fetch(signedList.url, { headers: signedList.headers });
-        } catch (fetchErr: any) {
-          return {
-            ok: false,
-            objects: allObjects,
-            error: `Lỗi kết nối khi liệt kê tệp R2: ${fetchErr?.message || fetchErr}`,
-          };
-        }
-
-        if (!listRes.ok) {
-          const errText = await listRes.text().catch(() => '');
-          return {
-            ok: false,
-            objects: allObjects,
-            error: `R2 ListObjectsV2 thất bại (HTTP ${listRes.status}): ${errText}`,
-          };
-        }
-
-        const xml = await listRes.text();
-
-        // Extract object keys and sizes from <Contents> blocks
-        const contentsMatches = xml.match(/<Contents>([\s\S]*?)<\/Contents>/g) || [];
-        for (const contentXml of contentsMatches) {
-          const keyMatch = contentXml.match(/<Key>(.*?)<\/Key>/);
-          const sizeMatch = contentXml.match(/<Size>(\d+)<\/Size>/);
-          if (keyMatch) {
-            allObjects.push({
-              key: keyMatch[1],
-              size: sizeMatch ? parseInt(sizeMatch[1], 10) || 0 : 0,
-            });
-          }
-        }
-
-        // Check if there are more keys / truncated
-        const isTruncatedMatch = xml.match(/<IsTruncated>(true|false)<\/IsTruncated>/i);
-        const isTruncated = isTruncatedMatch ? isTruncatedMatch[1].toLowerCase() === 'true' : false;
-        const nextTokenMatch = xml.match(/<NextContinuationToken>(.*?)<\/NextContinuationToken>/);
-        const nextToken = nextTokenMatch ? nextTokenMatch[1] : null;
-
-        if (isTruncated && nextToken) {
-          continuationToken = nextToken;
-        } else if (isTruncated && !nextToken) {
-          return {
-            ok: false,
-            objects: allObjects,
-            error: 'R2 báo còn trang (IsTruncated=true) nhưng thiếu NextContinuationToken',
-          };
+        if (errName === 'InvalidAccessKeyId' || errName === 'SignatureDoesNotMatch') {
+          stage = 'CREDENTIAL_INVALID';
+          diagnosticMessage = `Khóa xác thực R2 không hợp lệ (${errName}). Vui lòng kiểm tra lại Access Key ID và Secret Access Key trong Supabase Secrets.`;
+        } else if (httpStatus === 403 || errName === 'AccessDenied') {
+          stage = 'PERMISSIONS_OR_BUCKET_MISMATCH';
+          diagnosticMessage =
+            `Cloudflare R2 từ chối truy cập (HTTP 403 AccessDenied). ` +
+            `Nguyên nhân: Token R2 đang dùng (${keyHint} từ ${authSource}) không có quyền Object Read & Write trên bucket '${R2_BUCKET}', ` +
+            `hoặc Account ID '${R2_ACCOUNT_ID}' không khớp với tài khoản sở hữu token.`;
+        } else if (httpStatus === 404 || errName === 'NoSuchBucket') {
+        } else if (err.code === 'ENOTFOUND' || err.message?.includes('fetch failed') || err.message?.includes('getaddrinfo')) {
+          stage = 'ENDPOINT_UNREACHABLE';
+          diagnosticMessage = `Không thể kết nối đến endpoint R2: ${endpoint}. Vui lòng kiểm tra Account ID '${R2_ACCOUNT_ID}'.`;
         } else {
-          return { ok: true, objects: allObjects };
+          stage = 'S3_ERROR';
+          diagnosticMessage = `Lỗi từ R2 S3 API (${errName}, HTTP ${httpStatus || 'N/A'}): ${err.message}`;
         }
-      }
 
-      return {
-        ok: false,
-        objects: allObjects,
-        error: `Số lượng trang liệt kê vượt quá giới hạn an toàn (${maxPages} trang)`,
-      };
-    };
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            status: 'FAILED',
+            stage,
+            error: diagnosticMessage,
+            httpStatus,
+            errName,
+            bucket: R2_BUCKET,
+            endpoint,
+            keyHint,
+            authSource,
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // --------------------------------------------------------------------------
     // ACTION: get-storage-stats
@@ -250,22 +247,47 @@ Deno.serve(async (req: Request) => {
         dbTrackedVideoBytes = episodesData.reduce((acc, row) => acc + (Number(row.file_size) || 0), 0);
       }
 
-      // 2. Query R2 bucket directly via S3 ListObjectsV2 under videos/ prefix with full pagination
-      let actualR2VideoBytes: number | null = null;
+      // 2. Query R2 bucket directly via S3 ListObjectsV2 with full pagination
+      let actualR2VideoBytes: number | null = 0;
       let isR2ActualAvailable = false;
+      let continuationToken: string | undefined = undefined;
 
-      const listResult = await listAllR2Objects('videos/');
-      if (listResult.ok) {
-        actualR2VideoBytes = listResult.objects.reduce((acc, obj) => acc + (obj.size || 0), 0);
-        isR2ActualAvailable = true;
-      } else {
-        console.warn('[video-presign] R2 list objects for storage stats failed or incomplete:', listResult.error);
+      try {
+        let pageCount = 0;
+        const maxPages = 50;
+        do {
+          pageCount++;
+          const listRes = await s3.send(
+            new ListObjectsV2Command({
+              Bucket: R2_BUCKET,
+              Prefix: 'videos/',
+              ContinuationToken: continuationToken,
+            })
+          );
+
+          for (const item of listRes.Contents || []) {
+            actualR2VideoBytes = (actualR2VideoBytes || 0) + (item.Size || 0);
+          }
+
+          continuationToken = listRes.IsTruncated ? listRes.NextContinuationToken : undefined;
+        } while (continuationToken && pageCount < maxPages);
+
+        if (!continuationToken) {
+          isR2ActualAvailable = true;
+        } else {
+          console.warn('[video-presign] Storage stats pagination reached maxPages');
+          isR2ActualAvailable = false;
+          actualR2VideoBytes = null;
+        }
+      } catch (r2Err) {
+        console.warn('[video-presign] R2 list objects for storage stats failed');
         actualR2VideoBytes = null;
         isR2ActualAvailable = false;
       }
 
       const comicStorageBytes = Math.round(ESTIMATED_COMIC_STORAGE_BYTES);
-      const effectiveVideoBytes = isR2ActualAvailable && actualR2VideoBytes !== null ? actualR2VideoBytes : dbTrackedVideoBytes;
+      const effectiveVideoBytes =
+        isR2ActualAvailable && actualR2VideoBytes !== null ? actualR2VideoBytes : dbTrackedVideoBytes;
       const totalStorageBytesEstimated = effectiveVideoBytes + comicStorageBytes;
       const isOverThreshold = totalStorageBytesEstimated >= WARNING_THRESHOLD_BYTES;
 
@@ -299,17 +321,17 @@ Deno.serve(async (req: Request) => {
         key = buildSubtitleKey(seriesId, episodeId, lang);
       }
 
-      const url = new URL(`${r2Endpoint}/${key}`);
-      url.searchParams.set('X-Amz-Expires', String(PUT_EXPIRATION_SECONDS));
-      const signed = await aws.sign(url.toString(), {
-        method: 'PUT',
-        headers: mimeType ? { 'Content-Type': mimeType } : undefined,
-        aws: { signQuery: true },
+      const command = new PutObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: key,
+        ContentType: mimeType || (targetType === 'poster' ? 'image/webp' : 'text/vtt'),
       });
+
+      const uploadUrl = await getSignedUrl(s3, command, { expiresIn: PUT_EXPIRATION_SECONDS });
 
       return new Response(
         JSON.stringify({
-          uploadUrl: signed.url,
+          uploadUrl,
           r2Key: key,
           expiresIn: PUT_EXPIRATION_SECONDS,
         }),
@@ -351,30 +373,30 @@ Deno.serve(async (req: Request) => {
       const projectedTotal = currentVideoBytes + Math.round(ESTIMATED_COMIC_STORAGE_BYTES) + fileSize;
       const isThresholdExceeded = projectedTotal >= WARNING_THRESHOLD_BYTES;
 
-      // Initiate S3 Multipart Upload
-      const initUrl = new URL(`${r2Endpoint}/${key}?uploads`);
-      const signedInit = await aws.sign(initUrl.toString(), {
-        method: 'POST',
-        headers: { 'Content-Type': mimeType },
-      });
-
-      const initRes = await fetch(signedInit.url, {
-        method: 'POST',
-        headers: signedInit.headers,
-      });
-
-      if (!initRes.ok) {
-        const errText = await initRes.text();
-        console.error('[R2 Init Multipart Error]:', initRes.status, errText);
+      // Initiate S3 Multipart Upload via AWS SDK v3
+      let uploadId: string | undefined;
+      try {
+        const createRes = await s3.send(
+          new CreateMultipartUploadCommand({
+            Bucket: R2_BUCKET,
+            Key: key,
+            ContentType: mimeType,
+          })
+        );
+        uploadId = createRes.UploadId;
+      } catch (initErr: any) {
+        const httpStatus = initErr.$metadata?.httpStatusCode;
+        const errName = initErr.name || 'R2_INIT_FAILED';
+        console.error('[R2 Init Multipart Error]:', errName, httpStatus, initErr.message);
         return new Response(
-          JSON.stringify({ error: `Không thể khởi tạo multipart upload trên R2: ${errText}`, code: 'R2_INIT_FAILED' }),
+          JSON.stringify({
+            error: `Không thể khởi tạo multipart upload trên R2 (${errName}): ${initErr.message}`,
+            code: 'R2_INIT_FAILED',
+            httpStatus,
+          }),
           { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
-      const xml = await initRes.text();
-      const uploadIdMatch = xml.match(/<UploadId>(.*?)<\/UploadId>/);
-      const uploadId = uploadIdMatch ? uploadIdMatch[1] : null;
 
       if (!uploadId) {
         return new Response(
@@ -399,9 +421,11 @@ Deno.serve(async (req: Request) => {
       });
 
       if (sessErr) {
-        console.error('[video-presign] Failed to create upload session:', sessErr);
+        console.error('[video-presign] Failed to create upload session in DB');
         // Cleanup initiated R2 multipart session
-        await abortR2Multipart(key, uploadId);
+        try {
+          await s3.send(new AbortMultipartUploadCommand({ Bucket: R2_BUCKET, Key: key, UploadId: uploadId }));
+        } catch (_) {}
         return new Response(
           JSON.stringify({
             error: `Lỗi ghi phiên upload vào cơ sở dữ liệu: ${sessErr.message}. Phiên R2 đã được dọn dẹp.`,
@@ -423,9 +447,11 @@ Deno.serve(async (req: Request) => {
         .eq('id', episodeId);
 
       if (epErr) {
-        console.error('[video-presign] Failed to update episode for upload:', epErr);
+        console.error('[video-presign] Failed to update episode for upload');
         // Cleanup initiated R2 multipart session and mark DB session aborted to maintain consistent state
-        await abortR2Multipart(key, uploadId);
+        try {
+          await s3.send(new AbortMultipartUploadCommand({ Bucket: R2_BUCKET, Key: key, UploadId: uploadId }));
+        } catch (_) {}
         await supabaseAdmin
           .from('video_upload_sessions')
           .update({ status: 'aborted' })
@@ -500,24 +526,26 @@ Deno.serve(async (req: Request) => {
 
       if (partNumber < 1 || partNumber > session.total_parts) {
         return new Response(
-          JSON.stringify({ error: `partNumber ${partNumber} vượt quá tổng số part (${session.total_parts}) của phiên`, code: 'PART_OUT_OF_RANGE' }),
+          JSON.stringify({
+            error: `partNumber ${partNumber} vượt quá tổng số part (${session.total_parts}) của phiên`,
+            code: 'PART_OUT_OF_RANGE',
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const partUrl = new URL(`${r2Endpoint}/${key}`);
-      partUrl.searchParams.set('partNumber', String(partNumber));
-      partUrl.searchParams.set('uploadId', uploadId);
-      partUrl.searchParams.set('X-Amz-Expires', String(PUT_EXPIRATION_SECONDS));
-
-      const signed = await aws.sign(partUrl.toString(), {
-        method: 'PUT',
-        aws: { signQuery: true },
+      const command = new UploadPartCommand({
+        Bucket: R2_BUCKET,
+        Key: key,
+        UploadId: uploadId,
+        PartNumber: partNumber,
       });
+
+      const partUrl = await getSignedUrl(s3, command, { expiresIn: PUT_EXPIRATION_SECONDS });
 
       return new Response(
         JSON.stringify({
-          partUrl: signed.url,
+          partUrl,
           partNumber,
           uploadId,
           expiresIn: PUT_EXPIRATION_SECONDS,
@@ -585,56 +613,52 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // XML body construction with safe XML escaping
-      const xmlBody =
-        '<CompleteMultipartUpload>' +
-        sortedParts
-          .map((p) => `<Part><PartNumber>${p.PartNumber}</PartNumber><ETag>"${escapeXml(p.ETag)}"</ETag></Part>`)
-          .join('') +
-        '</CompleteMultipartUpload>';
-
-      const completeUrl = new URL(`${r2Endpoint}/${key}`);
-      completeUrl.searchParams.set('uploadId', uploadId);
-
-      const signedComplete = await aws.sign(completeUrl.toString(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/xml' },
-        body: xmlBody,
-      });
-
-      const completeRes = await fetch(signedComplete.url, {
-        method: 'POST',
-        headers: signedComplete.headers,
-        body: xmlBody,
-      });
-
-      if (!completeRes.ok) {
-        const errText = await completeRes.text();
-        console.error('[R2 Complete Multipart Error]:', completeRes.status, errText);
-        return new Response(
-          JSON.stringify({ error: `Hoàn tất multipart upload thất bại trên R2: ${errText}`, code: 'R2_COMPLETE_FAILED' }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      // Complete Multipart Upload via AWS SDK v3
+      try {
+        await s3.send(
+          new CompleteMultipartUploadCommand({
+            Bucket: R2_BUCKET,
+            Key: key,
+            UploadId: uploadId,
+            MultipartUpload: {
+              Parts: sortedParts.map((p) => ({
+                PartNumber: p.PartNumber,
+                ETag: cleanEtag(p.ETag),
+              })),
+            },
+          })
         );
-      }
-
-      // Verify object exists and get actual size via HEAD
-      const headUrl = `${r2Endpoint}/${key}`;
-      const signedHead = await aws.sign(headUrl, { method: 'HEAD' });
-      const headRes = await fetch(signedHead.url, { method: 'HEAD', headers: signedHead.headers });
-
-      if (!headRes.ok) {
-        console.error('[R2 HEAD Verify Error]:', headRes.status);
+      } catch (completeErr: any) {
+        console.error('[R2 Complete Multipart Error]:', completeErr.name, completeErr.message);
         return new Response(
           JSON.stringify({
-            error: `Không thể xác minh tệp video trên R2 sau khi hoàn tất multipart (HTTP ${headRes.status}). Không đánh dấu tập phim sẵn sàng.`,
-            code: 'R2_HEAD_FAILED',
+            error: `Hoàn tất multipart upload thất bại trên R2: ${completeErr.message}`,
+            code: 'R2_COMPLETE_FAILED',
           }),
           { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const lenHeader = headRes.headers.get('content-length');
-      const actualSize = lenHeader ? parseInt(lenHeader, 10) : 0;
+      // Verify object exists and get actual size via HEAD
+      let actualSize = 0;
+      try {
+        const headRes = await s3.send(
+          new HeadObjectCommand({
+            Bucket: R2_BUCKET,
+            Key: key,
+          })
+        );
+        actualSize = headRes.ContentLength || 0;
+      } catch (headErr: any) {
+        console.error('[R2 HEAD Verify Error]:', headErr.name, headErr.message);
+        return new Response(
+          JSON.stringify({
+            error: `Không thể xác minh tệp video trên R2 sau khi hoàn tất multipart (${headErr.name}). Không đánh dấu tập phim sẵn sàng.`,
+            code: 'R2_HEAD_FAILED',
+          }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
       // Verify size matches session file_size
       if (actualSize <= 0 || (session.file_size > 0 && actualSize !== session.file_size)) {
@@ -741,39 +765,26 @@ Deno.serve(async (req: Request) => {
       }
 
       // Abort multipart on Cloudflare R2
-      const abortUrl = new URL(`${r2Endpoint}/${expectedKey}`);
-      abortUrl.searchParams.set('uploadId', uploadId);
-
-      let abortRes: Response;
       try {
-        const signedAbort = await aws.sign(abortUrl.toString(), {
-          method: 'DELETE',
-        });
-        abortRes = await fetch(signedAbort.url, {
-          method: 'DELETE',
-          headers: signedAbort.headers,
-        });
-      } catch (fetchErr: any) {
-        return new Response(
-          JSON.stringify({
-            error: `Lỗi kết nối khi gửi yêu cầu hủy multipart lên R2: ${fetchErr?.message || fetchErr}`,
-            code: 'R2_ABORT_FAILED',
-          }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        await s3.send(
+          new AbortMultipartUploadCommand({
+            Bucket: R2_BUCKET,
+            Key: expectedKey,
+            UploadId: uploadId,
+          })
         );
-      }
-
-      // S3 AbortMultipartUpload returns 204 No Content on success. If already aborted or expired, 404 can be tolerated.
-      if (!abortRes.ok && abortRes.status !== 204 && abortRes.status !== 404) {
-        const errText = await abortRes.text().catch(() => '');
-        console.error('[R2 Abort Multipart Error]:', abortRes.status, errText);
-        return new Response(
-          JSON.stringify({
-            error: `Hủy multipart upload trên R2 thất bại (HTTP ${abortRes.status}): ${errText}`,
-            code: 'R2_ABORT_FAILED',
-          }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      } catch (abortErr: any) {
+        const httpStatus = abortErr.$metadata?.httpStatusCode;
+        if (httpStatus !== 204 && httpStatus !== 404 && abortErr.name !== 'NoSuchUpload') {
+          console.error('[R2 Abort Multipart Error]:', abortErr.name, abortErr.message);
+          return new Response(
+            JSON.stringify({
+              error: `Hủy multipart upload trên R2 thất bại (${abortErr.name}): ${abortErr.message}`,
+              code: 'R2_ABORT_FAILED',
+            }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
 
       // Only update database after R2 abort succeeds
@@ -820,10 +831,6 @@ Deno.serve(async (req: Request) => {
     // ACTION: get-playback-url (Presigned GET for Video + Subtitle)
     // --------------------------------------------------------------------------
     if (action === 'get-playback-url') {
-      // Check permissions: non-admin must satisfy:
-      // 1. Episode belongs to requested seriesId
-      // 2. Episode published = true and upload_status = 'ready'
-      // 3. Parent series published = true
       if (!isUserAdmin) {
         const { data: epRow, error: epErr } = await supabaseAdmin
           .from('video_episodes')
@@ -860,13 +867,12 @@ Deno.serve(async (req: Request) => {
       }
 
       const key = buildVideoSourceKey(seriesId, episodeId);
-      const videoGetUrl = new URL(`${r2Endpoint}/${key}`);
-      videoGetUrl.searchParams.set('X-Amz-Expires', String(PLAYBACK_EXPIRATION_SECONDS));
-
-      const signedVideo = await aws.sign(videoGetUrl.toString(), {
-        method: 'GET',
-        aws: { signQuery: true },
+      const getCommand = new GetObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: key,
       });
+
+      const playbackUrl = await getSignedUrl(s3, getCommand, { expiresIn: PLAYBACK_EXPIRATION_SECONDS });
 
       // Also fetch subtitle presigned URL if subtitles exist
       const { data: subRows } = await supabaseAdmin
@@ -877,17 +883,16 @@ Deno.serve(async (req: Request) => {
       const subtitles = [];
       if (subRows && subRows.length > 0) {
         for (const sub of subRows) {
-          const subUrl = new URL(`${r2Endpoint}/${sub.r2_key}`);
-          subUrl.searchParams.set('X-Amz-Expires', String(PLAYBACK_EXPIRATION_SECONDS));
-          const signedSub = await aws.sign(subUrl.toString(), {
-            method: 'GET',
-            aws: { signQuery: true },
+          const subCommand = new GetObjectCommand({
+            Bucket: R2_BUCKET,
+            Key: sub.r2_key,
           });
+          const subUrl = await getSignedUrl(s3, subCommand, { expiresIn: PLAYBACK_EXPIRATION_SECONDS });
           subtitles.push({
             id: sub.id,
             languageCode: sub.language_code,
             label: sub.label,
-            url: signedSub.url,
+            url: subUrl,
             isDefault: sub.is_default,
           });
         }
@@ -895,7 +900,7 @@ Deno.serve(async (req: Request) => {
 
       return new Response(
         JSON.stringify({
-          playbackUrl: signedVideo.url,
+          playbackUrl,
           r2Key: key,
           subtitles,
           expiresIn: PLAYBACK_EXPIRATION_SECONDS,
@@ -915,24 +920,39 @@ Deno.serve(async (req: Request) => {
       const subPrefix = `videos/${seriesId}/${episodeId}/subtitles/`;
 
       // 1. Delete video file
-      const delVideoUrl = `${r2Endpoint}/${videoKey}`;
-      const signedDel = await aws.sign(delVideoUrl, { method: 'DELETE' });
-      const delVideoRes = await fetch(signedDel.url, { method: 'DELETE', headers: signedDel.headers });
-
-      if (!delVideoRes.ok && delVideoRes.status !== 204 && delVideoRes.status !== 404) {
-        const errText = await delVideoRes.text().catch(() => '');
-        return new Response(
-          JSON.stringify({ error: `Xóa video trên R2 thất bại: ${errText}`, code: 'R2_DELETE_FAILED' }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      try {
+        await s3.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: videoKey }));
+      } catch (delErr: any) {
+        const httpStatus = delErr.$metadata?.httpStatusCode;
+        if (httpStatus !== 204 && httpStatus !== 404 && delErr.name !== 'NoSuchKey') {
+          return new Response(
+            JSON.stringify({ error: `Xóa video trên R2 thất bại: ${delErr.message}`, code: 'R2_DELETE_FAILED' }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
 
       // 2. List all subtitles with full S3 ListObjectsV2 pagination
-      const subListResult = await listAllR2Objects(subPrefix);
-      if (!subListResult.ok) {
+      const subKeys: string[] = [];
+      let continuationToken: string | undefined = undefined;
+      try {
+        do {
+          const listRes = await s3.send(
+            new ListObjectsV2Command({
+              Bucket: R2_BUCKET,
+              Prefix: subPrefix,
+              ContinuationToken: continuationToken,
+            })
+          );
+          for (const item of listRes.Contents || []) {
+            if (item.Key) subKeys.push(item.Key);
+          }
+          continuationToken = listRes.IsTruncated ? listRes.NextContinuationToken : undefined;
+        } while (continuationToken);
+      } catch (listErr: any) {
         return new Response(
           JSON.stringify({
-            error: `Liệt kê phụ đề trên R2 để xóa thất bại: ${subListResult.error}`,
+            error: `Liệt kê phụ đề trên R2 để xóa thất bại: ${listErr.message}`,
             code: 'R2_LIST_FAILED',
           }),
           { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -941,13 +961,14 @@ Deno.serve(async (req: Request) => {
 
       // 3. Delete each subtitle file and strictly verify response status
       const failedSubtitles: string[] = [];
-      for (const item of subListResult.objects) {
-        const delSubUrl = `${r2Endpoint}/${item.key}`;
-        const s = await aws.sign(delSubUrl, { method: 'DELETE' });
-        const delSubRes = await fetch(s.url, { method: 'DELETE', headers: s.headers });
-        if (!delSubRes.ok && delSubRes.status !== 204 && delSubRes.status !== 404) {
-          failedSubtitles.push(item.key);
-          console.error(`[video-presign] Failed to delete subtitle ${item.key}: HTTP ${delSubRes.status}`);
+      for (const k of subKeys) {
+        try {
+          await s3.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: k }));
+        } catch (delSubErr: any) {
+          const httpStatus = delSubErr.$metadata?.httpStatusCode;
+          if (httpStatus !== 204 && httpStatus !== 404 && delSubErr.name !== 'NoSuchKey') {
+            failedSubtitles.push(k);
+          }
         }
       }
 
@@ -976,12 +997,27 @@ Deno.serve(async (req: Request) => {
       if (adminErr) return adminErr;
 
       const seriesPrefix = `videos/${seriesId}/`;
-      const seriesListResult = await listAllR2Objects(seriesPrefix);
+      const seriesKeys: string[] = [];
+      let continuationToken: string | undefined = undefined;
 
-      if (!seriesListResult.ok) {
+      try {
+        do {
+          const listRes = await s3.send(
+            new ListObjectsV2Command({
+              Bucket: R2_BUCKET,
+              Prefix: seriesPrefix,
+              ContinuationToken: continuationToken,
+            })
+          );
+          for (const item of listRes.Contents || []) {
+            if (item.Key) seriesKeys.push(item.Key);
+          }
+          continuationToken = listRes.IsTruncated ? listRes.NextContinuationToken : undefined;
+        } while (continuationToken);
+      } catch (listErr: any) {
         return new Response(
           JSON.stringify({
-            error: `Liệt kê tệp phim trên R2 để xóa thất bại: ${seriesListResult.error}`,
+            error: `Liệt kê tệp phim trên R2 để xóa thất bại: ${listErr.message}`,
             code: 'R2_LIST_FAILED',
           }),
           { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -992,16 +1028,18 @@ Deno.serve(async (req: Request) => {
       let failedCount = 0;
       const failedKeys: string[] = [];
 
-      for (const item of seriesListResult.objects) {
-        const delUrl = `${r2Endpoint}/${item.key}`;
-        const s = await aws.sign(delUrl, { method: 'DELETE' });
-        const delRes = await fetch(s.url, { method: 'DELETE', headers: s.headers });
-        if (delRes.ok || delRes.status === 204 || delRes.status === 404) {
+      for (const k of seriesKeys) {
+        try {
+          await s3.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: k }));
           deletedCount++;
-        } else {
-          failedCount++;
-          failedKeys.push(item.key);
-          console.error(`[video-presign] Failed to delete ${item.key}: HTTP ${delRes.status}`);
+        } catch (delErr: any) {
+          const httpStatus = delErr.$metadata?.httpStatusCode;
+          if (httpStatus === 204 || httpStatus === 404 || delErr.name === 'NoSuchKey') {
+            deletedCount++;
+          } else {
+            failedCount++;
+            failedKeys.push(k);
+          }
         }
       }
 

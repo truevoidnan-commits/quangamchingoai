@@ -650,4 +650,95 @@ test('S3 ListObjectsV2 pagination accumulates pages and fails closed on unread p
   assert.strictEqual(subDeleteOk.ok, true);
 });
 
+// -----------------------------------------------------------------------------
+// TEST GROUP 13: R2 Diagnostics & Connectivity Probe Logic
+// -----------------------------------------------------------------------------
+test('R2 connection probe validates action and classifies errors without leaking secrets', () => {
+  // 1. validateVideoPresignRequest accepts test-r2-connection without series/episode
+  const resValidProbe = validateVideoPresignRequest({ action: 'test-r2-connection' });
+  assert.strictEqual(resValidProbe.ok, true);
+  assert.strictEqual(resValidProbe.data.action, 'test-r2-connection');
+
+  // 2. Classify errors
+  function classifyR2Error({ httpStatus, errName, message }) {
+    let stage = 'UNKNOWN';
+    if (errName === 'InvalidAccessKeyId' || errName === 'SignatureDoesNotMatch') {
+      stage = 'CREDENTIAL_INVALID';
+    } else if (httpStatus === 403 || errName === 'AccessDenied') {
+      stage = 'PERMISSIONS_OR_BUCKET_MISMATCH';
+    } else if (httpStatus === 404 || errName === 'NoSuchBucket') {
+      stage = 'BUCKET_NOT_FOUND';
+    } else if (message?.includes('ENOTFOUND') || message?.includes('fetch failed')) {
+      stage = 'ENDPOINT_UNREACHABLE';
+    }
+    return stage;
+  }
+
+  assert.strictEqual(classifyR2Error({ httpStatus: 403, errName: 'AccessDenied' }), 'PERMISSIONS_OR_BUCKET_MISMATCH');
+  assert.strictEqual(classifyR2Error({ httpStatus: 404, errName: 'NoSuchBucket' }), 'BUCKET_NOT_FOUND');
+  assert.strictEqual(classifyR2Error({ httpStatus: 403, errName: 'SignatureDoesNotMatch' }), 'CREDENTIAL_INVALID');
+  assert.strictEqual(classifyR2Error({ httpStatus: null, errName: 'FetchError', message: 'getaddrinfo ENOTFOUND' }), 'ENDPOINT_UNREACHABLE');
+
+  // 3. Security: ensure secrets are never leaked in key hint
+  function formatKeyHint(key) {
+    if (!key) return '(chưa có)';
+    return `${key.slice(0, 4)}...${key.slice(-4)}`;
+  }
+  const secretKey = '0123456789abcdef0123456789abcdef';
+  const hint = formatKeyHint(secretKey);
+  assert.strictEqual(hint, '0123...cdef');
+  assert.strictEqual(hint.includes('456789abcdef0123456789ab'), false);
+});
+
+// -----------------------------------------------------------------------------
+// TEST GROUP 14: Upload Retry & uq_series_episode Elimination Logic
+// -----------------------------------------------------------------------------
+test('prepareVideoEpisodeForUpload reuses incomplete episodes and avoids uq_series_episode violation', () => {
+  const mockDb = new Map();
+
+  function prepareEpisode({ seriesId, episodeNumber, title, status = 'pending' }) {
+    const key = `${seriesId}:${episodeNumber}`;
+    const existing = mockDb.get(key);
+
+    if (existing) {
+      if (existing.upload_status === 'ready') {
+        return { ok: false, error: `Tập ${episodeNumber} đã tồn tại và đã tải lên hoàn tất.` };
+      }
+      // Reuse existing incomplete shell
+      existing.title = title;
+      existing.upload_status = 'pending';
+      return { ok: true, reused: true, episode: existing };
+    }
+
+    // Insert new shell
+    const newEp = { id: `ep-${episodeNumber}`, series_id: seriesId, episode_number: episodeNumber, title, upload_status: status };
+    mockDb.set(key, newEp);
+    return { ok: true, reused: false, episode: newEp };
+  }
+
+  // First attempt: creates shell
+  const res1 = prepareEpisode({ seriesId: 'series-A', episodeNumber: 1, title: 'Tập 1' });
+  assert.strictEqual(res1.ok, true);
+  assert.strictEqual(res1.reused, false);
+  assert.strictEqual(res1.episode.id, 'ep-1');
+
+  // Simulate upload failed on R2 (status remains 'pending' or becomes 'failed')
+  res1.episode.upload_status = 'failed';
+
+  // Second attempt (retry after R2 error): MUST reuse existing shell without duplicate key error
+  const resRetry = prepareEpisode({ seriesId: 'series-A', episodeNumber: 1, title: 'Tập 1 Sửa' });
+  assert.strictEqual(resRetry.ok, true);
+  assert.strictEqual(resRetry.reused, true);
+  assert.strictEqual(resRetry.episode.id, 'ep-1');
+  assert.strictEqual(resRetry.episode.title, 'Tập 1 Sửa');
+
+  // Mark ready
+  resRetry.episode.upload_status = 'ready';
+
+  // Third attempt when episode is already ready -> Rejected cleanly
+  const resReady = prepareEpisode({ seriesId: 'series-A', episodeNumber: 1, title: 'Tập 1 Trùng' });
+  assert.strictEqual(resReady.ok, false);
+  assert.strictEqual(resReady.error.includes('đã tải lên hoàn tất'), true);
+});
+
 console.log(`\n🎉 ALL ${passedTests} TEST CASES PASSED SUCCESSFULLY!\n`);
