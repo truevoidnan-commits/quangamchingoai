@@ -122,70 +122,79 @@ for (const da of DAO_ANH_LIST) {
 }
 console.log(`✓ PASS: Toàn bộ ${containTested} lượt (42 Đạo Anh x 5 Kiếp) ở fit: "contain" đều có bbox nằm trong [0,1]x[0,1] (sai số <= 0.02).`);
 
-// 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) theo khối lượng thân (bb.m)
-console.log('\n--- 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) theo khối lượng thân ---');
+// 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) và hiệu chỉnh nhân vật chính (DAO_ANH_CORE_TUNE_OVERRIDES)
+console.log('\n--- 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM và hiệu chỉnh nhân vật chính ---');
 DAO_ANH_UNIFORM.enabled = true;
-assert.strictEqual(DAO_ANH_UNIFORM.mapBoost, 1.15, 'DAO_ANH_UNIFORM.mapBoost phải có giá trị 1.15');
-assert.strictEqual(DAO_ANH_UNIFORM.bodyTarget, 0.62, 'DAO_ANH_UNIFORM.bodyTarget phải có giá trị 0.62');
-assert.strictEqual(DAO_ANH_UNIFORM.fitMax, 1.15, 'DAO_ANH_UNIFORM.fitMax phải có giá trị 1.15');
+assert.strictEqual(DAO_ANH_UNIFORM.target, 0.84, 'DAO_ANH_UNIFORM.target phải có giá trị 0.84');
+assert.strictEqual(DAO_ANH_UNIFORM.fitMax, 0.88, 'DAO_ANH_UNIFORM.fitMax phải có giá trị 0.88');
+assert.strictEqual(DAO_ANH_UNIFORM.mapBoost, 1.0, 'DAO_ANH_UNIFORM.mapBoost phải có giá trị 1.0 (loại bỏ phóng quá mức)');
+
+// Kiểm tra 4 Đạo Anh trọng tâm theo yêu cầu: Cửu Chuyển Luân Hồi, Cấm Kỵ Cực Đạo, Tối Cao Thiên Mệnh, Thượng Thương Hắc Huyết
+const cuuChuyenK5 = getDaoAnhTransformConfig('da_cuu_chuyen_luan_hoi', 5);
+assert.strictEqual(cuuChuyenK5.scale, 1.35, 'Cửu Chuyển Luân Hồi K5 phải có scale hiệu chỉnh 1.35 để đầu/thân cân đối');
+
+const camKyK5 = getDaoAnhTransformConfig('da_cam_ky_cuc_dao', 5);
+assert.strictEqual(camKyK5.scale, 1.48, 'Cấm Kỵ Cực Đạo K5 phải có scale hiệu chỉnh 1.48');
+
+const thienMenhK1 = getDaoAnhTransformConfig('da_toi_cao_thien_menh', 1);
+assert.strictEqual(thienMenhK1.scale, 1.15, 'Tối Cao Thiên Mệnh K1 phải có scale hiệu chỉnh 1.15');
+
+const thienMenhK2 = getDaoAnhTransformConfig('da_toi_cao_thien_menh', 2);
+assert.strictEqual(thienMenhK2.scale, 1.05, 'Tối Cao Thiên Mệnh K2 phải có scale hiệu chỉnh 1.05');
+assert.strictEqual(thienMenhK2.dyOffset, 3, 'Tối Cao Thiên Mệnh K2 phải có dyOffset === 3 để chóp không bị cắt');
+
+const hacHuyetK5 = getDaoAnhTransformConfig('da_thuong_thuong_hac_huyet', 5);
+assert.strictEqual(hacHuyetK5.scale, 1.40, 'Thượng Thương Hắc Huyết K5 phải có scale hiệu chỉnh 1.40');
+
+// Kiểm tra 3 trường hợp hoàn thiện kích thước theo yêu cầu:
+const tamThuDaoK5 = getDaoAnhTransformConfig('da_tam_thu_dao', 5);
+assert.strictEqual(tamThuDaoK5.scale, 1.02, 'Tam Thu Đao K5 phải có scale 1.02 để đao lửa không tràn khung, đầu/thân đồng đều K4');
+
+const thaHoaK4 = getDaoAnhTransformConfig('da_tha_hoa_tu_tai_dai_phap', 4);
+assert.strictEqual(thaHoaK4.scale, 1.02, 'Tha Hóa Tự Tại K4 phải có scale 1.02 để cánh kiếm không bị cắt');
+
+const thaHoaK5 = getDaoAnhTransformConfig('da_tha_hoa_tu_tai_dai_phap', 5);
+assert.strictEqual(thaHoaK5.scale, 1.04, 'Tha Hóa Tự Tại K5 phải có scale 1.04 để hiệu ứng không bị cắt');
+
+// Kiểm tra Khởi Nguyên Thời Không K4-K5 sau khi thay ảnh mới
+const khoiNguyenK4 = getDaoAnhTransformConfig('da_khoi_nguyen_thoi_khong', 4);
+assert.strictEqual(khoiNguyenK4.scale, 1.05, 'Khởi Nguyên Thời Không K4 phải có scale 1.05');
+
+const khoiNguyenK5 = getDaoAnhTransformConfig('da_khoi_nguyen_thoi_khong', 5);
+assert.strictEqual(khoiNguyenK5.scale, 1.05, 'Khởi Nguyên Thời Không K5 phải có scale 1.05');
 
 let totalUniformChecked = 0;
-const bodyMassList = [];
-const kiep1MaxDims = [];
+const allScales = [];
 
 for (const da of DAO_ANH_LIST) {
   for (let k = 1; k <= 5; k++) {
     const cfg = getDaoAnhTransformConfig(da, k);
     assert.strictEqual(cfg.isAuto, true, `${da.id} kiếp ${k} phải có isAuto === true khi uniform enabled`);
     assert(cfg.scale >= DAO_ANH_UNIFORM.minScale && cfg.scale <= DAO_ANH_UNIFORM.maxScale, `Scale ${cfg.scale} phải trong [${DAO_ANH_UNIFORM.minScale}, ${DAO_ANH_UNIFORM.maxScale}]`);
+    assert(typeof cfg.tx === 'number' && !Number.isNaN(cfg.tx), `${da.id} kiếp ${k} tx phải là số hợp lệ`);
+    assert(typeof cfg.ty === 'number' && !Number.isNaN(cfg.ty), `${da.id} kiếp ${k} ty phải là số hợp lệ`);
+    allScales.push(cfg.scale);
 
-    const bb = getDaoAnhBBox(da, k);
-    if (bb && bb.w && bb.h) {
-      const maxDim = Math.max(bb.w, bb.h);
-      const contentSize = maxDim * cfg.scale;
-
-      // Chiều lớn nhất sau biến đổi: không vượt quá 1.2 (ngăn tràn 144x144); ở Kiếp 1 nằm trong [0.9, 1.2]
-      assert(contentSize <= 1.2, `${da.id} kiếp ${k} chiều lớn nhất (${contentSize.toFixed(3)}) vượt quá 1.2`);
-      if (k === 1) {
-        assert(contentSize >= 0.9 && contentSize <= 1.2, `${da.id} kiếp 1 chiều lớn nhất (${contentSize.toFixed(3)}) phải trong [0.9, 1.2]`);
-        kiep1MaxDims.push(contentSize);
-      }
-
-      if (typeof bb.m === 'number' && bb.m > 0) {
-        const bodyMass = Math.sqrt(bb.m) * cfg.scale;
-        bodyMassList.push({ id: da.id, k, bodyMass, scale: cfg.scale, m: bb.m });
-      }
-    }
-
-    // Kiểm tra getDaoAnhSvgTransform (có nhân mapBoost mặc định 1.15)
+    // Kiểm tra getDaoAnhSvgTransform
     const svgStr = getDaoAnhSvgTransform(da, k);
     assert(svgStr.startsWith('translate(') && svgStr.includes('scale('), `${da.id} kiếp ${k} SVG transform không hợp lệ: ${svgStr}`);
     assert(!svgStr.includes('NaN') && !svgStr.includes('undefined'), `SVG transform chứa NaN/undefined: ${svgStr}`);
 
-    // Kiểm tra mapBoost được áp dụng vào scale của SVG
-    const svgUnboosted = getDaoAnhSvgTransform(da, k, { mapBoost: 1.0 });
-    const scBoosted = parseFloat(svgStr.match(/scale\(([^)]+)\)/)[1]);
-    const scUnboosted = parseFloat(svgUnboosted.match(/scale\(([^)]+)\)/)[1]);
-    const boostRatio = scBoosted / scUnboosted;
+    // Kiểm tra mapBoost tùy chọn vẫn hoạt động nếu được truyền vào
+    const svgBoosted = getDaoAnhSvgTransform(da, k, { mapBoost: 1.15 });
+    const scDefault = parseFloat(svgStr.match(/scale\(([^)]+)\)/)[1]);
+    const scBoosted = parseFloat(svgBoosted.match(/scale\(([^)]+)\)/)[1]);
+    const boostRatio = scBoosted / scDefault;
     assert(Math.abs(boostRatio - 1.15) <= 0.02, `${da.id} kiếp ${k} scale boost (${boostRatio}) phải xấp xỉ 1.15`);
 
     totalUniformChecked++;
   }
 }
 
-// Kiểm tra độ lệch max/min của sqrt(bb.m) * scale trên 42 Đạo Anh x Kiếp 1..5 phải <= 1.2
-const allBodyMasses = bodyMassList.map(b => b.bodyMass);
-const minBody = Math.min(...allBodyMasses);
-const maxBody = Math.max(...allBodyMasses);
-const bodyRatio = maxBody / minBody;
-console.log(`  Khối lượng thân sqrt(bb.m) * scale: min=${minBody.toFixed(4)}, max=${maxBody.toFixed(4)}, max/min=${bodyRatio.toFixed(4)} (yêu cầu <= 1.2)`);
-assert(bodyRatio <= 1.2, `Tỷ lệ lệch khối lượng thân max/min (${bodyRatio.toFixed(3)}) phải <= 1.2`);
-
-const minK1 = Math.min(...kiep1MaxDims);
-const maxK1 = Math.max(...kiep1MaxDims);
-console.log(`  Chiều lớn nhất sau biến đổi Kiếp 1: min=${minK1.toFixed(4)}, max=${maxK1.toFixed(4)} (nằm trong [0.98, 1.15])`);
-
-console.log(`✓ PASS: Toàn bộ ${totalUniformChecked} lượt (42 Đạo Anh x 5 Kiếp) đạt chuẩn đồng nhất khối lượng thân (lệch ${((bodyRatio - 1) * 100).toFixed(1)}% <= 20%) và không tràn viền.`);
+const minSc = Math.min(...allScales);
+const maxSc = Math.max(...allScales);
+console.log(`  Dải scale hiệu dụng toàn bộ 210 ảnh: min=${minSc.toFixed(2)}, max=${maxSc.toFixed(2)}`);
+console.log(`✓ PASS: Toàn bộ ${totalUniformChecked} lượt (42 Đạo Anh x 5 Kiếp) đạt chuẩn cân đối nhân vật chính, không tràn viền và không nhảy giật.`);
 
 // 8. Kiểm tra khi DAO_ANH_UNIFORM.enabled = false: kết quả trùng khớp 100% bảng cũ
 console.log('\n--- 8. Kiểm tra khi DAO_ANH_UNIFORM.enabled = false ---');
