@@ -100,6 +100,7 @@ export function validateVideoPresignRequest(body: any): { ok: boolean; error?: s
     'abort-multipart-upload',
     'get-playback-url',
     'get-storage-stats',
+    'test-r2-connection',
     'delete-episode-media',
     'delete-series-media',
   ];
@@ -112,7 +113,7 @@ export function validateVideoPresignRequest(body: any): { ok: boolean; error?: s
     };
   }
 
-  if (action === 'get-storage-stats') {
+  if (action === 'get-storage-stats' || action === 'test-r2-connection') {
     return { ok: true, data: { action } };
   }
 
