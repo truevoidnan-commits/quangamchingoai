@@ -12,6 +12,7 @@ import {
   createVideoSeries,
   updateVideoSeries,
   createVideoEpisode,
+  prepareVideoEpisodeForUpload,
   updateVideoEpisode,
   addVideoSubtitle,
 } from '../../lib/video/videoApi';
@@ -20,6 +21,7 @@ import {
   uploadVideoMultipart,
   uploadEpisodeSubtitle,
   fetchStorageStats,
+  testR2Connection,
 } from '../../lib/video/videoCloud';
 import styles from './VideoAdminModal.module.css';
 
@@ -69,7 +71,22 @@ export default function VideoAdminModal({
   // Storage and Upload Progress State
   const [storageStats, setStorageStats] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(null); // { percent, loaded, total, partIndex, totalParts, speedBytesPerSec }
+  const [r2TestResult, setR2TestResult] = useState(null);
+  const [r2Testing, setR2Testing] = useState(false);
   const abortControllerRef = useRef(null);
+
+  const handleTestR2Connection = async () => {
+    setR2Testing(true);
+    setR2TestResult(null);
+    try {
+      const res = await testR2Connection();
+      setR2TestResult(res);
+    } catch (err) {
+      setR2TestResult({ ok: false, error: err.message || 'Lỗi kiểm tra kết nối R2' });
+    } finally {
+      setR2Testing(false);
+    }
+  };
 
   // Load storage stats & populate initialSeries if editing
   useEffect(() => {
@@ -229,10 +246,11 @@ export default function VideoAdminModal({
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    let episode = null;
 
     try {
-      // Create episode shell
-      const episode = await createVideoEpisode({
+      // Prepare episode shell (supports clean retry on previous incomplete uploads without uq_series_episode error)
+      episode = await prepareVideoEpisodeForUpload({
         seriesId,
         episodeNumber: Number(episodeNumber),
         title: episodeTitle.trim() || `Tập ${episodeNumber}`,
@@ -273,6 +291,9 @@ export default function VideoAdminModal({
       console.error('[AdminModal] Upload error:', err);
       setErrorMsg(err.message || 'Lỗi khi tải tập phim lên R2');
       setUploadProgress(null);
+      if (episode?.id) {
+        updateVideoEpisode(seriesId, episode.id, { upload_status: 'failed' }).catch(() => {});
+      }
     } finally {
       setSubmitting(false);
       abortControllerRef.current = null;
@@ -576,6 +597,57 @@ export default function VideoAdminModal({
                   <span className={styles.quotaLabel}>Tệp sắp tải lên:</span>
                   <span className={styles.quotaVal}>{formatBytes(selectedFileBytes)}</span>
                 </div>
+              </div>
+
+              {/* R2 Connection Diagnostics Probe */}
+              <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <button
+                    type="button"
+                    onClick={handleTestR2Connection}
+                    disabled={r2Testing}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: 4,
+                      color: '#e2e8f0',
+                      padding: '4px 10px',
+                      fontSize: 12,
+                      cursor: r2Testing ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    {r2Testing ? 'Đang kiểm tra kết nối R2...' : 'Kiểm tra kết nối R2'}
+                  </button>
+                  {r2TestResult && (
+                    <span style={{ fontSize: 12, color: r2TestResult.ok ? '#4ade80' : '#f87171' }}>
+                      {r2TestResult.ok ? 'Kết nối R2 sẵn sàng (SigV4 OK)' : `Lỗi: ${r2TestResult.stage || 'R2_FAIL'}`}
+                    </span>
+                  )}
+                </div>
+
+                {r2TestResult && !r2TestResult.ok && (
+                  <div
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.12)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: 4,
+                      padding: '6px 10px',
+                      fontSize: 12,
+                      color: '#fca5a5',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    <div><strong>Chi tiết lỗi:</strong> {r2TestResult.error}</div>
+                    {r2TestResult.authSource && (
+                      <div style={{ marginTop: 2, fontSize: 11, color: '#cbd5e1' }}>
+                        Nguồn key: {r2TestResult.authSource} | Key hint: {r2TestResult.keyHint} | Bucket: {r2TestResult.bucket}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Threshold Warning Banner */}

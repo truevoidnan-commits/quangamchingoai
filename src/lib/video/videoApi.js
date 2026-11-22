@@ -278,6 +278,67 @@ export async function createVideoEpisode({ seriesId, episodeNumber, title, descr
 }
 
 /**
+ * ADMIN: Prepare an episode shell for upload.
+ * If an episode with (series_id, episode_number) already exists:
+ * - If already 'ready': throws error to prevent accidental overwrite.
+ * - If 'pending', 'failed', or 'uploading': reuses and updates the shell, allowing clean retries
+ *   without triggering unique constraint violation 'uq_series_episode'.
+ * If it does not exist: inserts a new row.
+ */
+export async function prepareVideoEpisodeForUpload({
+  seriesId,
+  episodeNumber,
+  title,
+  description = '',
+  mimeType = 'video/mp4',
+  published = false,
+}) {
+  const tempKey = `videos/${seriesId}/pending/source.mp4`;
+
+  const { data: existing, error: findErr } = await activeSupabase
+    .from('video_episodes')
+    .select('id, upload_status')
+    .eq('series_id', seriesId)
+    .eq('episode_number', episodeNumber)
+    .maybeSingle();
+
+  if (findErr) throw findErr;
+
+  if (existing) {
+    if (existing.upload_status === 'ready') {
+      throw new Error(`Tập ${episodeNumber} đã tồn tại và đã tải lên hoàn tất. Vui lòng chọn số tập khác.`);
+    }
+
+    // Reuse and update the unready episode for retry
+    const { data: updated, error: updateErr } = await activeSupabase
+      .from('video_episodes')
+      .update({
+        title,
+        description,
+        r2_key: tempKey,
+        upload_status: 'pending',
+        published,
+        mime_type: mimeType,
+      })
+      .eq('id', existing.id)
+      .select()
+      .single();
+
+    if (updateErr) throw updateErr;
+    return updated;
+  }
+
+  return createVideoEpisode({
+    seriesId,
+    episodeNumber,
+    title,
+    description,
+    mimeType,
+    published,
+  });
+}
+
+/**
  * ADMIN: Update episode metadata.
  */
 export async function updateVideoEpisode(seriesId, episodeId, updates) {

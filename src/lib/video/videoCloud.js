@@ -408,6 +408,15 @@ export async function deleteEpisodeMedia(seriesId, episodeId) {
 }
 
 /**
+ * ADMIN: Test Cloudflare R2 connection and credentials (Read-only probe).
+ */
+export async function testR2Connection() {
+  return callVideoPresign({
+    action: 'test-r2-connection',
+  });
+}
+
+/**
  * Delete all media objects under a series on R2.
  */
 export async function deleteSeriesMedia(seriesId) {
