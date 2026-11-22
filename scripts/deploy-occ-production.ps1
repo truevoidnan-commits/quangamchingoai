@@ -2,13 +2,14 @@
 .SYNOPSIS
     Script điều phối duy nhất triển khai nâng cấp OCC lên Supabase Production cho dự án Thiên Cơ Lâu.
 .DESCRIPTION
-    Tuân thủ quy trình bảo mật nghiêm ngặt:
-    - Không truyền mật khẩu qua tham số dòng lệnh cho các tiến trình con (dùng biến môi trường / stdin).
+    Tuân thủ quy trình bảo mật và nghiệm thu nghiêm ngặt:
+    - Không truyền mật khẩu qua tham số dòng lệnh hay chuỗi shell (dùng chuẩn PostgreSQL PGPASSFILE).
+    - Hỗ trợ đầy đủ mật khẩu có ký tự đặc biệt (nháy đơn, nháy kép, dollar, backslash, colon...).
     - Kiểm tra mã thoát (exit code) của pg_dump, dừng ngay khi backup có sự cố.
     - Tiền kiểm READ-ONLY và chụp baseline snapshot dữ liệu tu vi (rev, EXP).
     - 2 Điểm phê duyệt bắt buộc: trước Freeze/Stage A và trước Stage B/Unfreeze.
     - Kiểm tra frontend live triển khai đúng commit và chứa RPC sync_cultivation_occ (không chỉ dựa vào HTTP 200).
-    - Xác minh đối chiếu thực tế revision và tổng EXP tu vi trước khi kết luận DEPLOYED.
+    - BẮT BUỘC xác minh một lần đồng bộ OCC thực tế thành công (rev tăng, có log idempotency) trước khi báo DEPLOYED.
     - Fail-Closed: Bất kỳ lỗi nào phát sinh sau Freeze đều giữ nguyên trạng thái bảo trì an toàn và báo rõ hiện trạng.
 .PARAMETER DatabaseUrl
     Connection string của Supabase Production (nếu không truyền, script sẽ đọc từ $env:PROD_DATABASE_URL hoặc hỏi an toàn)
@@ -58,6 +59,19 @@ function Abort-Deployment([string]$reason, [bool]$frozen = $false) {
     exit 1
 }
 
+function New-PgPassFile([string]$hostName, [string]$port, [string]$db, [string]$user, [string]$pass) {
+    $tempFile = [System.IO.Path]::GetTempFileName()
+    # Theo chuẩn PostgreSQL pgpass: escape ký tự \ thành \\ và : thành \:
+    $escHost = $hostName -replace '\\', '\\' -replace ':', '\:'
+    $escPort = $port -replace '\\', '\\' -replace ':', '\:'
+    $escDb   = $db -replace '\\', '\\' -replace ':', '\:'
+    $escUser = $user -replace '\\', '\\' -replace ':', '\:'
+    $escPass = $pass -replace '\\', '\\' -replace ':', '\:'
+    $pgPassLine = "${escHost}:${escPort}:${escDb}:${escUser}:${escPass}`n"
+    [System.IO.File]::WriteAllText($tempFile, $pgPassLine, (New-Object System.Text.UTF8Encoding($false)))
+    return $tempFile
+}
+
 # ------------------------------------------------------------------------------
 # KHỞI TẠO VÀ XÁC THỰC THAM SỐ
 # ------------------------------------------------------------------------------
@@ -80,20 +94,23 @@ if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) {
     Abort-Deployment "Chưa cung cấp DatabaseUrl. Dừng khẩn cấp!" $false
 }
 
-# Phân tách connection string để cô lập mật khẩu (không lộ qua command line argv)
+# Phân tách connection string để cô lập thông tin kết nối (hỗ trợ đầy đủ ký tự đặc biệt)
 $dbUser = $null
 $dbPass = $null
 $dbHost = $null
 $dbPort = "5432"
 $dbName = "postgres"
 
-if ($DatabaseUrl -match '^postgres(?:ql)?:\/\/([^:]+):([^@]+)@([^:\/]+)(?::(\d+))?\/(.+)$') {
-    $dbUser = [System.Uri]::UnescapeDataString($matches[1])
-    $dbPass = [System.Uri]::UnescapeDataString($matches[2])
-    $dbHost = $matches[3]
-    if ($matches[4]) { $dbPort = $matches[4] }
-    $dbName = ($matches[5] -split '\?')[0]
-} else {
+try {
+    $uri = [System.Uri]$DatabaseUrl
+    $dbHost = $uri.Host
+    $dbPort = if ($uri.Port -gt 0) { $uri.Port.ToString() } else { "5432" }
+    $userInfo = $uri.UserInfo -split ':', 2
+    $dbUser = [System.Uri]::UnescapeDataString($userInfo[0])
+    $dbPass = if ($userInfo.Length -gt 1) { [System.Uri]::UnescapeDataString($userInfo[1]) } else { "" }
+    $dbName = ($uri.AbsolutePath.TrimStart('/') -split '\?')[0]
+    if ([string]::IsNullOrWhiteSpace($dbName)) { $dbName = "postgres" }
+} catch {
     Abort-Deployment "Định dạng DatabaseUrl không hợp lệ! Vui lòng dùng format: postgresql://user:password@host:port/database" $false
 }
 
@@ -131,7 +148,7 @@ $existingBackups = Get-ChildItem -Path $BackupDir -Filter "*.dump" -ErrorAction 
 Write-Host "✓ Số lượng bản backup đã có trong ${BackupDir}: $(@($existingBackups).Count)" -ForegroundColor Green
 
 # ------------------------------------------------------------------------------
-# BƯỚC 2: CHUẨN BỊ DELTA BACKUP MỚI (KIỂM TRA EXIT CODE, KHÔNG TRUYỀN MẬT KHẨU ARGV)
+# BƯỚC 2: CHUẨN BỊ DELTA BACKUP MỚI (CHUẨN PGPASSFILE, HỖ TRỢ KÝ TỰ ĐẶC BIỆT)
 # ------------------------------------------------------------------------------
 Write-Step "2/10" "Tạo Delta Backup tức thời trước thời điểm Cutover"
 
@@ -142,30 +159,44 @@ Write-Host "Đang tạo bản sao lưu mới: $deltaBackupFile..." -ForegroundCo
 $hasLocalPgDump = Get-Command "pg_dump" -ErrorAction SilentlyContinue
 $dumpExitCode = 1
 
-if ($hasLocalPgDump) {
-    Write-Host "Sử dụng pg_dump local (mật khẩu truyền qua PGPASSWORD môi trường, không lộ argv)..." -ForegroundColor Yellow
-    $env:PGPASSWORD = $dbPass
-    & pg_dump -h $dbHost -p $dbPort -U $dbUser -d $dbName --format=custom --file="$deltaBackupFile" --schema="public" --schema="auth" --schema="storage"
-    $dumpExitCode = $LASTEXITCODE
-    $env:PGPASSWORD = $null
-} else {
-    $runningContainers = docker ps --format "{{.Names}}"
-    $dbContainer = $runningContainers | Where-Object { $_ -like "*postgres*" -or $_ -like "*supabase_db*" } | Select-Object -First 1
+$tempPassFile = New-PgPassFile $dbHost $dbPort $dbName $dbUser $dbPass
 
-    if ($dbContainer) {
-        Write-Host "Sử dụng pg_dump từ container: $dbContainer (truyền qua stdin pipe an toàn, không lộ argv)..." -ForegroundColor Yellow
-        $tmpContainerFile = "/tmp/delta_backup_$timestamp.dump"
-        # Truyền lệnh kèm PGPASSWORD qua stdin của container sh để không lộ mật khẩu trên argv của tiến trình
-        $shCmd = "export PGPASSWORD='$dbPass'; pg_dump -h '$dbHost' -p '$dbPort' -U '$dbUser' -d '$dbName' -Fc --schema=public --schema=auth --schema=storage -f '$tmpContainerFile'"
-        $shCmd | docker exec -i $dbContainer sh
+try {
+    if ($hasLocalPgDump) {
+        Write-Host "Sử dụng pg_dump local (xác thực an toàn qua PGPASSFILE, hỗ trợ mọi ký tự đặc biệt)..." -ForegroundColor Yellow
+        $env:PGPASSFILE = $tempPassFile
+        & pg_dump -h $dbHost -p $dbPort -U $dbUser -d $dbName --format=custom --file="$deltaBackupFile" --schema="public" --schema="auth" --schema="storage"
         $dumpExitCode = $LASTEXITCODE
-
-        if ($dumpExitCode -eq 0) {
-            docker cp "${dbContainer}:${tmpContainerFile}" "$deltaBackupFile"
-            docker exec $dbContainer rm -f "$tmpContainerFile"
-        }
+        $env:PGPASSFILE = $null
     } else {
-        Abort-Deployment "Không tìm thấy công cụ pg_dump trên Windows host hoặc Docker container. Hãy cài đặt pg_dump hoặc khởi chạy Docker!" $false
+        $runningContainers = docker ps --format "{{.Names}}" 2>$null
+        $dbContainer = $runningContainers | Where-Object { $_ -like "*postgres*" -or $_ -like "*supabase_db*" } | Select-Object -First 1
+
+        if ($dbContainer) {
+            Write-Host "Sử dụng pg_dump từ container: $dbContainer (xác thực an toàn qua PGPASSFILE, không dùng chuỗi shell)..." -ForegroundColor Yellow
+            $tmpContainerFile = "/tmp/delta_backup_$timestamp.dump"
+            $containerPassFile = "/tmp/.pgpass_$timestamp"
+
+            # Copy file .pgpass vào container và phân quyền 0600 chuẩn POSIX
+            docker cp "$tempPassFile" "${dbContainer}:${containerPassFile}"
+            docker exec $dbContainer chmod 0600 "$containerPassFile"
+
+            # Thực thi pg_dump trực tiếp dưới dạng tiến trình, truyền PGPASSFILE qua biến môi trường
+            docker exec -e "PGPASSFILE=$containerPassFile" $dbContainer pg_dump -h "$dbHost" -p "$dbPort" -U "$dbUser" -d "$dbName" -Fc --schema=public --schema=auth --schema=storage -f "$tmpContainerFile"
+            $dumpExitCode = $LASTEXITCODE
+
+            if ($dumpExitCode -eq 0) {
+                docker cp "${dbContainer}:${tmpContainerFile}" "$deltaBackupFile"
+                docker exec $dbContainer rm -f "$tmpContainerFile"
+            }
+            docker exec $dbContainer rm -f "$containerPassFile"
+        } else {
+            Abort-Deployment "Không tìm thấy công cụ pg_dump trên Windows host hoặc Docker container. Hãy cài đặt pg_dump hoặc khởi chạy Docker!" $false
+        }
+    }
+} finally {
+    if (Test-Path $tempPassFile) {
+        Remove-Item -Path $tempPassFile -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -357,18 +388,59 @@ $isFrozen = $false
 Write-Host "✓ Unfreeze thành công! Cờ bảo trì đã tắt, hệ thống mở RPC OCC toàn diện." -ForegroundColor Green
 
 # ------------------------------------------------------------------------------
-# BƯỚC 9: XÁC MINH ĐỒNG BỘ EXP VÀ REVISION THỰC TẾ TRÊN DATABASE LIVE
+# BƯỚC 9: XÁC MINH MỘT LẦN ĐỒNG BỘ OCC THỰC TẾ TRÊN DATABASE LIVE
 # ------------------------------------------------------------------------------
-Write-Step "9/10" "Xác minh Đối Chiếu EXP và Revision Tu Vi Thực Tế"
+Write-Step "9/10" "Xác minh Đồng Bộ OCC Thực Tế & Kiểm Tra Toàn Vẹn EXP"
 
-Write-Host "Đối chiếu trạng thái database live với baseline snapshot..." -ForegroundColor Yellow
+# 9.1. Kiểm tra đối chiếu toàn vẹn dữ liệu cơ bản
+Write-Host "9.1. Đối chiếu trạng thái cơ bản sau unfreeze..." -ForegroundColor Yellow
 node scripts/verify-cultivation-live.mjs --verify "$baselineSnapshotFile"
 
 if ($LASTEXITCODE -ne 0) {
-    # Nếu xác minh thất bại, kích hoạt lại freeze khẩn cấp để bảo vệ database
     Write-Host "`nCẢNH BÁO: Phát hiện sai lệch dữ liệu! Kích hoạt lại freeze khẩn cấp..." -ForegroundColor Red
     node scripts/run-sql-file.mjs "$freezeFile"
     Abort-Deployment "Xác minh revision hoặc EXP tu vi thất bại! Đã tái kích hoạt chế độ bảo trì để bảo vệ dữ liệu." $true
+}
+
+# 9.2. Yêu cầu và xác minh 1 lần đồng bộ OCC thực tế qua frontend
+Write-Host "`n9.2. Xác minh 1 lần đồng bộ OCC thực tế từ frontend mới qua RPC sync_cultivation_occ..." -ForegroundColor Yellow
+Write-Host "--------------------------------------------------------------------------" -ForegroundColor Cyan
+Write-Host "HƯỚNG DẪN THỰC HIỆN TRÊN TRÌNH DUYỆT:" -ForegroundColor Cyan
+Write-Host "  1. Mở trang web: $WebsiteUrl (hoặc tải lại tab đang mở)"
+Write-Host "  2. Đăng nhập tài khoản tu vi."
+Write-Host "  3. Thực hiện 1 thao tác tu vi (bấm tu luyện, nạp linh lực, đổi cảnh giới, hoặc bấm 'Đồng Bộ')."
+Write-Host "  4. Đợi 3-5 giây để client gửi RPC sync_cultivation_occ và lưu vết vào PostgreSQL."
+Write-Host "--------------------------------------------------------------------------" -ForegroundColor Cyan
+
+$syncVerified = $false
+
+while (-not $syncVerified) {
+    Write-Host "`nChọn hành động xác minh:" -ForegroundColor Yellow
+    Write-Host "  - Nhấn [Enter] hoặc gõ 'CHECK' để kiểm tra kết quả đồng bộ OCC thực tế trên database."
+    Write-Host "  - Gõ 'ABORT' để dừng quy trình (không báo DEPLOYED)."
+    $userChoice = Read-Host -Prompt "Lựa chọn của bạn"
+
+    if ($userChoice -eq "ABORT") {
+        Abort-Deployment "Người dùng dừng quy trình khi chưa xác minh được đồng bộ OCC thực tế. Không thể kết luận DEPLOYED!" $false
+    }
+
+    Write-Host "Đang kiểm tra giao dịch OCC thực tế trên database live..." -ForegroundColor Yellow
+    node scripts/verify-cultivation-live.mjs --verify-sync "$baselineSnapshotFile"
+    $syncCheckExit = $LASTEXITCODE
+
+    if ($syncCheckExit -eq 0) {
+        $syncVerified = $true
+        Write-Host "`n✓ XÁC MINH THÀNH CÔNG: Đã ghi nhận giao dịch OCC thực tế thành công!" -ForegroundColor Green
+        break
+    } elseif ($syncCheckExit -eq 2) {
+        Write-Host "`n⚠️ CHƯA PHÁT HIỆN GIAO DỊCH OCC MỚI:" -ForegroundColor Yellow
+        Write-Host "  - Revision tu vi trên DB vẫn chưa tăng so với baseline (hoặc chưa có bản ghi trong cultivation_idempotency_log)."
+        Write-Host "  - Vui lòng vào trang web, đảm bảo đã đăng nhập và bấm tu luyện hoặc bấm 'Đồng Bộ'."
+    } else {
+        Write-Host "`nCẢNH BÁO: Phát hiện lỗi nghiêm trọng khi đối chiếu dữ liệu tu vi!" -ForegroundColor Red
+        node scripts/run-sql-file.mjs "$freezeFile"
+        Abort-Deployment "Lỗi xác minh dữ liệu tu vi! Đã kích hoạt lại freeze khẩn cấp." $true
+    }
 }
 
 # ------------------------------------------------------------------------------
@@ -378,7 +450,8 @@ Write-Step "10/10" "Hoàn tất Triển khai Production OCC"
 
 Write-Host "`n==========================================================================" -ForegroundColor Green
 Write-Host "KẾT LUẬN: [DEPLOYED] NÂNG CẤP OCC LÊN PRODUCTION HOÀN TẤT XUẤT SẮC!" -ForegroundColor Green
-Write-Host "  - Revision tu vi được bảo toàn tuyệt đối (>= $($baselineContent.rev))." -ForegroundColor Green
+Write-Host "  - Revision tu vi được bảo toàn và đã tăng tiến qua OCC thực tế (Baseline: $($baselineContent.rev))." -ForegroundColor Green
+Write-Host "  - Đồng bộ OCC thực tế đã được kiểm chứng 100% trên database live." -ForegroundColor Green
 Write-Host "  - Toàn bộ EXP tu vi được bảo toàn nguyên vẹn, không suy giảm." -ForegroundColor Green
 Write-Host "  - Toàn bộ đường ghi direct write/truncate cũ đã bị khóa vĩnh viễn." -ForegroundColor Green
 Write-Host "  - Frontend live đã xác minh chứa mã nguồn RPC sync_cultivation_occ." -ForegroundColor Green
