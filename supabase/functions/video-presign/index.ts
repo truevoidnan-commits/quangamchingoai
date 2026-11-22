@@ -50,20 +50,42 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // 2. Read Secrets from Environment
-    const R2_ACCOUNT_ID = Deno.env.get('R2_ACCOUNT_ID') || '';
-    const R2_ACCESS_KEY_ID = Deno.env.get('R2_VIDEO_ACCESS_KEY_ID') || Deno.env.get('R2_ACCESS_KEY_ID') || '';
-    const R2_SECRET_ACCESS_KEY = Deno.env.get('R2_VIDEO_SECRET_ACCESS_KEY') || Deno.env.get('R2_SECRET_ACCESS_KEY') || '';
-    const R2_BUCKET = Deno.env.get('R2_VIDEO_BUCKET') || 'tcl-videos';
+    // 2. Read Secrets from Environment (Strict Video Scope - Zero Fallback to Comic Secrets)
+    const rawAccountId = (Deno.env.get('R2_VIDEO_ACCOUNT_ID') || Deno.env.get('R2_ACCOUNT_ID') || '').trim();
+    const rawAccessKeyId = (Deno.env.get('R2_VIDEO_ACCESS_KEY_ID') || '').trim();
+    const rawSecretAccessKey = (Deno.env.get('R2_VIDEO_SECRET_ACCESS_KEY') || '').trim();
+    const rawBucket = (Deno.env.get('R2_VIDEO_BUCKET') || 'tcl-videos').trim();
+    const legacyComicKeyPresent = Boolean(Deno.env.get('R2_ACCESS_KEY_ID'));
+
+    const R2_ACCOUNT_ID = rawAccountId;
+    const R2_ACCESS_KEY_ID = rawAccessKeyId;
+    const R2_SECRET_ACCESS_KEY = rawSecretAccessKey;
+    const R2_BUCKET = rawBucket;
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
+    // Safe runtime diagnostics - Only booleans and lengths, strictly never returning secret values
+    const runtimeDiagnostics = {
+      hasR2AccountId: Boolean(R2_ACCOUNT_ID),
+      r2AccountIdLength: R2_ACCOUNT_ID.length,
+      hasR2VideoAccessKeyId: Boolean(R2_ACCESS_KEY_ID),
+      r2VideoAccessKeyIdLength: R2_ACCESS_KEY_ID.length,
+      hasR2VideoSecretAccessKey: Boolean(R2_SECRET_ACCESS_KEY),
+      r2VideoSecretAccessKeyLength: R2_SECRET_ACCESS_KEY.length,
+      hasR2VideoBucket: Boolean(R2_BUCKET),
+      r2VideoBucket: R2_BUCKET,
+      hasLegacyComicKeyPresent: legacyComicKeyPresent,
+    };
+
     if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
       return new Response(
         JSON.stringify({
-          error: 'Cloudflare R2 chưa được cấu hình (thiếu biến môi trường R2)',
-          code: 'R2_CONFIG_MISSING',
+          ok: false,
+          error: 'Cloudflare R2 Video chưa được cấu hình (thiếu hoặc rỗng biến R2_VIDEO_ACCESS_KEY_ID, R2_VIDEO_SECRET_ACCESS_KEY hoặc R2_ACCOUNT_ID). Vui lòng cấu hình trong Supabase Secrets.',
+          code: 'R2_VIDEO_CONFIG_MISSING',
+          stage: 'CONFIG_MISSING',
+          runtimeDiagnostics,
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -157,13 +179,9 @@ Deno.serve(async (req: Request) => {
       const adminErr = requireAdmin();
       if (adminErr) return adminErr;
 
-      const authSource = Deno.env.get('R2_VIDEO_ACCESS_KEY_ID')
-        ? 'R2_VIDEO_ACCESS_KEY_ID'
-        : Deno.env.get('R2_ACCESS_KEY_ID')
-        ? 'R2_ACCESS_KEY_ID'
-        : 'missing';
+      const authSource = 'R2_VIDEO_ACCESS_KEY_ID';
       const keyHint = R2_ACCESS_KEY_ID
-        ? `${R2_ACCESS_KEY_ID.slice(0, 4)}...${R2_ACCESS_KEY_ID.slice(-4)}`
+        ? `[Ẩn bảo mật - ${R2_ACCESS_KEY_ID.length} ký tự]`
         : '(chưa có)';
       const endpoint = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 
@@ -186,6 +204,7 @@ Deno.serve(async (req: Request) => {
             endpoint,
             keyHint,
             authSource,
+            runtimeDiagnostics,
             keyCount: probeRes.KeyCount || 0,
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -198,14 +217,16 @@ Deno.serve(async (req: Request) => {
 
         if (errName === 'InvalidAccessKeyId' || errName === 'SignatureDoesNotMatch') {
           stage = 'CREDENTIAL_INVALID';
-          diagnosticMessage = `Khóa xác thực R2 không hợp lệ (${errName}). Vui lòng kiểm tra lại Access Key ID và Secret Access Key trong Supabase Secrets.`;
+          diagnosticMessage = `Khóa xác thực R2 không hợp lệ (${errName}). Vui lòng kiểm tra lại R2_VIDEO_ACCESS_KEY_ID và R2_VIDEO_SECRET_ACCESS_KEY trong Supabase Secrets.`;
         } else if (httpStatus === 403 || errName === 'AccessDenied') {
           stage = 'PERMISSIONS_OR_BUCKET_MISMATCH';
           diagnosticMessage =
             `Cloudflare R2 từ chối truy cập (HTTP 403 AccessDenied). ` +
-            `Nguyên nhân: Token R2 đang dùng (${keyHint} từ ${authSource}) không có quyền Object Read & Write trên bucket '${R2_BUCKET}', ` +
+            `Nguyên nhân: Token R2_VIDEO_ACCESS_KEY_ID (${R2_ACCESS_KEY_ID.length} ký tự) không có quyền Object Read & Write trên bucket '${R2_BUCKET}', ` +
             `hoặc Account ID '${R2_ACCOUNT_ID}' không khớp với tài khoản sở hữu token.`;
         } else if (httpStatus === 404 || errName === 'NoSuchBucket') {
+          stage = 'BUCKET_NOT_FOUND';
+          diagnosticMessage = `Bucket '${R2_BUCKET}' không tồn tại trên tài khoản Cloudflare R2 '${R2_ACCOUNT_ID}'.`;
         } else if (err.code === 'ENOTFOUND' || err.message?.includes('fetch failed') || err.message?.includes('getaddrinfo')) {
           stage = 'ENDPOINT_UNREACHABLE';
           diagnosticMessage = `Không thể kết nối đến endpoint R2: ${endpoint}. Vui lòng kiểm tra Account ID '${R2_ACCOUNT_ID}'.`;
@@ -226,6 +247,7 @@ Deno.serve(async (req: Request) => {
             endpoint,
             keyHint,
             authSource,
+            runtimeDiagnostics,
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );

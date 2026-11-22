@@ -40,15 +40,26 @@ Không dùng API token toàn quyền của tài khoản Cloudflare. Hãy tạo t
 
 ## 3. CÁC BIẾN MÔI TRƯỜNG VÀ SECRETS CẦN THIẾT
 
-Cấu hình các bí mật trên Supabase CLI hoặc Supabase Dashboard (Settings > Edge Functions > Secrets):
+Cấu hình các bí mật trên Supabase CLI hoặc Supabase Dashboard (Settings > Edge Functions > Secrets).
+
+> [!IMPORTANT]
+> **Project Ref Production**: `vmzgjlooapqskcmkerdz`
+>
+> Phân hệ video sử dụng bộ khóa riêng biệt (`R2_VIDEO_*`), hoàn toàn cách ly với bộ khóa truyện tranh (`R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`). Edge Function `video-presign` không tự động fallback sang khóa truyện tranh để tránh lỗi 403 do sai lệch quyền bucket.
+>
+> Luôn chỉ định `--project-ref vmzgjlooapqskcmkerdz` để đảm bảo tác vụ ghi vào đúng project Production của Thiên Cơ Lâu.
 
 ```bash
-# Lệnh cấu hình qua Supabase CLI:
+# 1. Kiểm tra danh sách secrets hiện tại của project:
+supabase secrets list --project-ref vmzgjlooapqskcmkerdz
+
+# 2. Cấu hình các biến cho video (thay các giá trị trong dấu ngoặc kép bằng thông tin thật):
 supabase secrets set \
   R2_ACCOUNT_ID="<your-cloudflare-account-id>" \
-  R2_VIDEO_ACCESS_KEY_ID="<your-access-key-id>" \
-  R2_VIDEO_SECRET_ACCESS_KEY="<your-secret-access-key>" \
-  R2_VIDEO_BUCKET="tcl-videos"
+  R2_VIDEO_ACCESS_KEY_ID="<your-video-access-key-id>" \
+  R2_VIDEO_SECRET_ACCESS_KEY="<your-video-secret-access-key>" \
+  R2_VIDEO_BUCKET="tcl-videos" \
+  --project-ref vmzgjlooapqskcmkerdz
 ```
 
 > [!NOTE]
@@ -151,14 +162,15 @@ WHERE id = '<UUID-CỦA-ADMIN>';
 
 ## 6. DEPLOY EDGE FUNCTION `video-presign`
 
-Sử dụng Supabase CLI để deploy:
+Sử dụng Supabase CLI để deploy lên project production:
 
 ```bash
-supabase functions deploy video-presign --no-verify-jwt
+supabase functions deploy video-presign --project-ref vmzgjlooapqskcmkerdz --no-verify-jwt
 ```
 
-> [!NOTE]
-> Ta sử dụng `--no-verify-jwt` để Edge Function tự phân tích Authorization header trong mã Deno, cho phép hỗ trợ đồng thời cả người dùng thường (xem phim) và quản trị viên (upload/xóa phim), đồng thời xử lý CORS preflight (OPTIONS) mượt mà.
+> [!IMPORTANT]
+> - Sau khi cập nhật Secrets trên Supabase Dashboard hoặc Supabase CLI, các worker Deno đang chạy có thể giữ cache biến môi trường cũ. Chạy lại lệnh deploy trên sẽ kích hoạt phiên bản Edge Function mới nhất và tải các Secrets mới một cách tức thì.
+> - Ta sử dụng `--no-verify-jwt` để Edge Function tự phân tích Authorization header trong mã Deno, cho phép hỗ trợ đồng thời cả người dùng thường (xem phim) và quản trị viên (upload/xóa phim), đồng thời xử lý CORS preflight (OPTIONS) mượt mà.
 
 ---
 

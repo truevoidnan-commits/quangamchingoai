@@ -39,21 +39,29 @@ export async function callVideoPresign(payload, { signal = null } = {}) {
   if (error) {
     let errMsg = error.message || 'Lỗi kết nối máy chủ Cloud (video-presign)';
     let errCode = error.code || 'CLOUD_ERROR';
+    let stage = null;
+    let runtimeDiagnostics = null;
 
     try {
       if (typeof error.context?.json === 'function') {
         const body = await error.context.json();
         if (body?.error) errMsg = body.error;
         if (body?.code) errCode = body.code;
+        if (body?.stage) stage = body.stage;
+        if (body?.runtimeDiagnostics) runtimeDiagnostics = body.runtimeDiagnostics;
       } else if (error.context?.body) {
         const body = typeof error.context.body === 'string' ? JSON.parse(error.context.body) : error.context.body;
         if (body?.error) errMsg = body.error;
         if (body?.code) errCode = body.code;
+        if (body?.stage) stage = body.stage;
+        if (body?.runtimeDiagnostics) runtimeDiagnostics = body.runtimeDiagnostics;
       }
     } catch {}
 
     const customErr = new Error(errMsg);
     customErr.code = errCode;
+    customErr.stage = stage;
+    customErr.runtimeDiagnostics = runtimeDiagnostics;
     throw customErr;
   }
 
