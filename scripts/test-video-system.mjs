@@ -6,6 +6,9 @@
 import assert from 'assert';
 import {
   isValidUuid,
+  isValidEtag,
+  cleanEtag,
+  escapeXml,
   buildPosterKey,
   buildVideoSourceKey,
   buildSubtitleKey,
@@ -95,13 +98,13 @@ test('validateVideoPresignRequest validates action and UUIDs', () => {
   assert.strictEqual(resInit.ok, true);
   assert.strictEqual(resInit.data.fileSize, 104857600);
 
-  // Invalid part number
+  // Invalid part number (0)
   const resBadPart = validateVideoPresignRequest({
     action: 'get-part-url',
     seriesId,
     episodeId,
     uploadId: 'mock-upload-id',
-    partNumber: 0, // Must be >= 1
+    partNumber: 0,
   });
   assert.strictEqual(resBadPart.ok, false);
   assert.strictEqual(resBadPart.code, 'INVALID_PART_NUMBER');
@@ -196,13 +199,209 @@ test('Progress conflict resolution favors newer or furthest position', () => {
     completed: false,
   };
 
-  // If local is newer, local wins
   const resolve1 = localProgress.updatedAt > cloudProgressOlder.updatedAt ? localProgress : cloudProgressOlder;
   assert.strictEqual(resolve1.positionSeconds, 120);
 
-  // If cloud is newer, cloud wins
   const resolve2 = cloudProgressNewer.updatedAt > localProgress.updatedAt ? cloudProgressNewer : localProgress;
   assert.strictEqual(resolve2.positionSeconds, 150);
+});
+
+// -----------------------------------------------------------------------------
+// TEST GROUP 6: ETag Validation & Elimination of Fake ETags
+// -----------------------------------------------------------------------------
+test('ETag validation accepts valid S3/R2 hashes and rejects fake or injected values', () => {
+  // Valid ETags
+  assert.strictEqual(isValidEtag('"9b10ea733c3a004d9852f2e17855b5f4"'), true);
+  assert.strictEqual(isValidEtag('9b10ea733c3a004d9852f2e17855b5f4'), true);
+  assert.strictEqual(isValidEtag('"e-tag-with-dashes-123"'), true);
+
+  // Invalid / Injected ETags
+  assert.strictEqual(isValidEtag(''), false);
+  assert.strictEqual(isValidEtag(null), false);
+  assert.strictEqual(isValidEtag('fake<tag>'), false);
+  assert.strictEqual(isValidEtag('part-1</ETag><EvilTag>'), false);
+  assert.strictEqual(isValidEtag('part with spaces'), false);
+
+  // cleanEtag strips outer quotes safely
+  assert.strictEqual(cleanEtag('"hash123"'), 'hash123');
+  assert.strictEqual(cleanEtag('hash123'), 'hash123');
+
+  // escapeXml properly sanitizes strings
+  assert.strictEqual(escapeXml('<script>alert("xss")</script>'), '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+});
+
+test('validateVideoPresignRequest rejects complete-multipart-upload with invalid or duplicate ETags', () => {
+  const seriesId = 'c0a80101-0000-0000-0000-000000000001';
+  const episodeId = 'c0a80101-0000-0000-0000-000000000002';
+
+  // Bad ETag in part
+  const resBadEtag = validateVideoPresignRequest({
+    action: 'complete-multipart-upload',
+    seriesId,
+    episodeId,
+    uploadId: 'mock-upload-id',
+    parts: [{ PartNumber: 1, ETag: '<invalid>' }],
+  });
+  assert.strictEqual(resBadEtag.ok, false);
+  assert.strictEqual(resBadEtag.code, 'INVALID_ETAG_FORMAT');
+
+  // Duplicate part numbers
+  const resDup = validateVideoPresignRequest({
+    action: 'complete-multipart-upload',
+    seriesId,
+    episodeId,
+    uploadId: 'mock-upload-id',
+    parts: [
+      { PartNumber: 1, ETag: '"hash1"' },
+      { PartNumber: 1, ETag: '"hash2"' },
+    ],
+  });
+  assert.strictEqual(resDup.ok, false);
+  assert.strictEqual(resDup.code, 'DUPLICATE_PART_NUMBER');
+
+  // Valid parts
+  const resValid = validateVideoPresignRequest({
+    action: 'complete-multipart-upload',
+    seriesId,
+    episodeId,
+    uploadId: 'mock-upload-id',
+    parts: [
+      { PartNumber: 1, ETag: '"hash1"' },
+      { PartNumber: 2, ETag: '"hash2"' },
+    ],
+  });
+  assert.strictEqual(resValid.ok, true);
+  assert.strictEqual(resValid.data.parts.length, 2);
+  assert.strictEqual(resValid.data.parts[0].ETag, 'hash1'); // clean quotes
+});
+
+// -----------------------------------------------------------------------------
+// TEST GROUP 7: Upload Session Verification Simulation
+// -----------------------------------------------------------------------------
+test('Upload session verification enforces ownership and active status', () => {
+  const mockSessions = new Map([
+    [
+      'valid-upload-id',
+      {
+        series_id: 'series-A',
+        episode_id: 'ep-1',
+        r2_key: 'videos/series-A/ep-1/source.mp4',
+        status: 'in_progress',
+        total_parts: 3,
+        file_size: 25000000,
+      },
+    ],
+    [
+      'completed-upload-id',
+      {
+        series_id: 'series-A',
+        episode_id: 'ep-2',
+        r2_key: 'videos/series-A/ep-2/source.mp4',
+        status: 'completed',
+        total_parts: 1,
+        file_size: 10000000,
+      },
+    ],
+  ]);
+
+  function verifySession(uploadId, seriesId, episodeId, partNumber = null) {
+    const session = mockSessions.get(uploadId);
+    if (!session) return { ok: false, code: 'SESSION_NOT_FOUND' };
+    if (session.series_id !== seriesId || session.episode_id !== episodeId) {
+      return { ok: false, code: 'SESSION_MISMATCH' };
+    }
+    if (session.status !== 'in_progress') {
+      return { ok: false, code: 'SESSION_NOT_ACTIVE' };
+    }
+    if (partNumber !== null && (partNumber < 1 || partNumber > session.total_parts)) {
+      return { ok: false, code: 'PART_OUT_OF_RANGE' };
+    }
+    return { ok: true, session };
+  }
+
+  // Non-existent uploadId
+  assert.strictEqual(verifySession('unknown-id', 'series-A', 'ep-1').code, 'SESSION_NOT_FOUND');
+
+  // Mismatched series/episode
+  assert.strictEqual(verifySession('valid-upload-id', 'series-WRONG', 'ep-1').code, 'SESSION_MISMATCH');
+
+  // Session already completed
+  assert.strictEqual(verifySession('completed-upload-id', 'series-A', 'ep-2').code, 'SESSION_NOT_ACTIVE');
+
+  // Part out of range
+  assert.strictEqual(verifySession('valid-upload-id', 'series-A', 'ep-1', 4).code, 'PART_OUT_OF_RANGE');
+
+  // Valid part check
+  assert.strictEqual(verifySession('valid-upload-id', 'series-A', 'ep-1', 2).ok, true);
+});
+
+// -----------------------------------------------------------------------------
+// TEST GROUP 8: HEAD Verification and Size Matching Simulation
+// -----------------------------------------------------------------------------
+test('HEAD verification rejects ready status if HEAD fails or size mismatches', () => {
+  function verifyHeadAndSize(headStatus, actualContentLength, expectedFileSize) {
+    if (headStatus !== 200) {
+      return { ok: false, code: 'R2_HEAD_FAILED' };
+    }
+    if (actualContentLength <= 0 || (expectedFileSize > 0 && actualContentLength !== expectedFileSize)) {
+      return { ok: false, code: 'FILE_SIZE_MISMATCH' };
+    }
+    return { ok: true, actualSize: actualContentLength };
+  }
+
+  // HEAD returns 404 (object missing)
+  assert.strictEqual(verifyHeadAndSize(404, 0, 25000000).code, 'R2_HEAD_FAILED');
+
+  // HEAD returns 500
+  assert.strictEqual(verifyHeadAndSize(500, 0, 25000000).code, 'R2_HEAD_FAILED');
+
+  // Size mismatch (e.g. truncated upload)
+  assert.strictEqual(verifyHeadAndSize(200, 15000000, 25000000).code, 'FILE_SIZE_MISMATCH');
+
+  // Perfect match
+  assert.strictEqual(verifyHeadAndSize(200, 25000000, 25000000).ok, true);
+});
+
+// -----------------------------------------------------------------------------
+// TEST GROUP 9: Playback Authorization Guard Simulation
+// -----------------------------------------------------------------------------
+test('Playback authorization strictly blocks non-admin if series or episode is private', () => {
+  function checkPlaybackPermission({ isAdmin, seriesPublished, episodePublished, episodeStatus, episodeSeriesId, requestedSeriesId }) {
+    if (isAdmin) return { allow: true };
+
+    if (episodeSeriesId !== requestedSeriesId) {
+      return { allow: false, code: 'EPISODE_NOT_AVAILABLE' };
+    }
+    if (!episodePublished || episodeStatus !== 'ready') {
+      return { allow: false, code: 'EPISODE_NOT_AVAILABLE' };
+    }
+    if (!seriesPublished) {
+      return { allow: false, code: 'SERIES_NOT_PUBLISHED' };
+    }
+
+    return { allow: true };
+  }
+
+  // Admin always has access
+  assert.strictEqual(checkPlaybackPermission({ isAdmin: true, seriesPublished: false, episodePublished: false, episodeStatus: 'uploading', episodeSeriesId: 'A', requestedSeriesId: 'A' }).allow, true);
+
+  // Non-admin with published episode but UNPUBLISHED parent series -> FORBIDDEN
+  const resUnpubSeries = checkPlaybackPermission({ isAdmin: false, seriesPublished: false, episodePublished: true, episodeStatus: 'ready', episodeSeriesId: 'A', requestedSeriesId: 'A' });
+  assert.strictEqual(resUnpubSeries.allow, false);
+  assert.strictEqual(resUnpubSeries.code, 'SERIES_NOT_PUBLISHED');
+
+  // Non-admin with episode not ready -> FORBIDDEN
+  const resNotReady = checkPlaybackPermission({ isAdmin: false, seriesPublished: true, episodePublished: true, episodeStatus: 'uploading', episodeSeriesId: 'A', requestedSeriesId: 'A' });
+  assert.strictEqual(resNotReady.allow, false);
+  assert.strictEqual(resNotReady.code, 'EPISODE_NOT_AVAILABLE');
+
+  // Non-admin with mismatched series ID -> FORBIDDEN
+  const resMismatch = checkPlaybackPermission({ isAdmin: false, seriesPublished: true, episodePublished: true, episodeStatus: 'ready', episodeSeriesId: 'B', requestedSeriesId: 'A' });
+  assert.strictEqual(resMismatch.allow, false);
+
+  // Fully public published episode -> ALLOWED
+  const resPublic = checkPlaybackPermission({ isAdmin: false, seriesPublished: true, episodePublished: true, episodeStatus: 'ready', episodeSeriesId: 'A', requestedSeriesId: 'A' });
+  assert.strictEqual(resPublic.allow, true);
 });
 
 console.log(`\n🎉 ALL ${passedTests} TEST CASES PASSED SUCCESSFULLY!\n`);

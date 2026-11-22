@@ -101,6 +101,9 @@ Trình duyệt của người dùng tải trực tiếp MP4 lên R2 qua HTTP PUT
 
 4. Bấm **Save CORS Policy**.
 
+> [!WARNING]
+> Trường `ETag` trong `ExposeHeaders` là **bắt buộc**. Nếu thiếu `ETag`, trình duyệt sẽ chặn JavaScript đọc ETag của các phần tải lên, dẫn đến lỗi xác thực multipart upload.
+
 ---
 
 ## 5. CHẠY DATABASE MIGRATION AN TOÀN
@@ -197,7 +200,13 @@ Sau khi deploy backend và frontend:
 ### A. Kiểm soát chi phí R2
 - Gói Cloudflare R2 miễn phí cung cấp **10 GB lưu trữ/tháng** và 10.000.000 Class B Operations (Đọc).
 - Hệ thống đã tích hợp ngưỡng cảnh báo tự động ở mức **8 GB** (khoảng 8.589.934.592 bytes).
-- Hiện tại dữ liệu truyện tranh đang chiếm khoảng 1,2 GB. Khi tổng dữ liệu R2 (video + tranh) chạm 8 GB, giao diện quản trị viên sẽ hiện cảnh báo màu vàng/cam nổi bật.
+- **Phân định rõ ràng nguồn dữ liệu dung lượng**:
+  - Khi Edge Function truy vấn thành công S3 ListObjects trên R2: Hiển thị dung lượng thực tế từ R2 API.
+  - Khi không kết nối được S3 ListObjects: Hiển thị tổng kích thước `file_size` từ cơ sở dữ liệu và ghi rõ "Ước tính từ DB" chứ không giả mạo là số liệu thật.
+  - Dữ liệu truyện tranh: Cố định mức ước tính ~1,2 GB.
+- **Cơ chế tải lên**:
+  - Hệ thống hỗ trợ chia nhỏ tệp (10 MB/part), tự động thử lại 3 lần (exponential backoff) nếu rớt mạng giữa chừng trong phiên tải lên, và hủy an toàn (`abort-multipart-upload`) nếu người dùng bấm Hủy.
+  - Không hỗ trợ tiếp tục phiên sau khi đóng trình duyệt hoặc tải lại trang (nếu tải lại, phiên cũ sẽ được dọn dẹp và bắt đầu phiên mới).
 - Hệ thống **tuyệt đối không tự ý mua gói, thay đổi thông tin thanh toán hoặc xóa dữ liệu** của người dùng.
 
 ### B. Quy trình Rollback (Nếu cần)

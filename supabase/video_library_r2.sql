@@ -182,13 +182,24 @@ CREATE POLICY "Admins can manage series"
   WITH CHECK (public.is_video_admin());
 
 -- 3. Policies cho video_episodes:
--- Người dùng xem tập đã xuất bản và đã upload sẵn sàng; Admin xem toàn bộ
+-- Người dùng xem tập đã xuất bản và đã upload sẵn sàng CÙNG ĐIỀU KIỆN bộ phim cha đã xuất bản; Admin xem toàn bộ
 DROP POLICY IF EXISTS "Public can view published episodes" ON public.video_episodes;
 CREATE POLICY "Public can view published episodes"
   ON public.video_episodes
   FOR SELECT
   TO anon, authenticated
-  USING ((published = true AND upload_status = 'ready') OR public.is_video_admin());
+  USING (
+    (
+      published = true
+      AND upload_status = 'ready'
+      AND EXISTS (
+        SELECT 1 FROM public.video_series s
+        WHERE s.id = video_episodes.series_id
+          AND s.published = true
+      )
+    )
+    OR public.is_video_admin()
+  );
 
 -- Admin có toàn quyền quản lý tập phim
 DROP POLICY IF EXISTS "Admins can manage episodes" ON public.video_episodes;
@@ -209,8 +220,12 @@ CREATE POLICY "Public can view subtitles of accessible episodes"
   USING (
     EXISTS (
       SELECT 1 FROM public.video_episodes ep
+      JOIN public.video_series s ON s.id = ep.series_id
       WHERE ep.id = video_subtitles.episode_id
-        AND ((ep.published = true AND ep.upload_status = 'ready') OR public.is_video_admin())
+        AND (
+          (ep.published = true AND ep.upload_status = 'ready' AND s.published = true)
+          OR public.is_video_admin()
+        )
     )
   );
 

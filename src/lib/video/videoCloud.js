@@ -62,28 +62,31 @@ export async function callVideoPresign(payload, { signal = null } = {}) {
 
 /**
  * Fetch Cloudflare R2 storage metrics and check against the 8GB threshold.
+ * Distinguishes between verified R2 bucket size and database-tracked estimates.
  */
 export async function fetchStorageStats() {
   try {
     const data = await callVideoPresign({ action: 'get-storage-stats' });
     return {
-      videoStorageBytes: data.videoStorageBytes || 0,
+      dbTrackedVideoBytes: data.dbTrackedVideoBytes || 0,
+      actualR2VideoBytes: typeof data.actualR2VideoBytes === 'number' ? data.actualR2VideoBytes : null,
+      isR2ActualAvailable: Boolean(data.isR2ActualAvailable),
       comicStorageBytesEstimated: data.comicStorageBytesEstimated || (1.2 * 1024 * 1024 * 1024),
-      totalStorageBytes: data.totalStorageBytes || 0,
+      totalStorageBytesEstimated: data.totalStorageBytesEstimated || 0,
       warningThresholdBytes: data.warningThresholdBytes || (8 * 1024 * 1024 * 1024),
       isOverThreshold: Boolean(data.isOverThreshold),
-      isR2ActualAvailable: Boolean(data.isR2ActualAvailable),
       bucket: data.bucket || 'tcl-videos',
     };
   } catch (err) {
     console.warn('[VideoCloud] Failed to fetch storage stats:', err);
     return {
-      videoStorageBytes: null,
+      dbTrackedVideoBytes: 0,
+      actualR2VideoBytes: null,
+      isR2ActualAvailable: false,
       comicStorageBytesEstimated: 1.2 * 1024 * 1024 * 1024,
-      totalStorageBytes: null,
+      totalStorageBytesEstimated: 1.2 * 1024 * 1024 * 1024,
       warningThresholdBytes: 8 * 1024 * 1024 * 1024,
       isOverThreshold: false,
-      isR2ActualAvailable: false,
       error: err.message,
     };
   }
@@ -252,17 +255,24 @@ export async function uploadVideoMultipart({ seriesId, episodeId, file, onProgre
           });
 
           if (res.ok) {
-            let etag = res.headers.get('ETag') || res.headers.get('etag');
-            if (etag) {
-              partEtag = etag.trim().replace(/^"|"$/g, ''); // strip quotes
-              break;
+            const rawEtag = res.headers.get('ETag') || res.headers.get('etag');
+            if (!rawEtag) {
+              lastErr = new Error(
+                `Không tìm thấy tiêu đề ETag từ phản hồi của Cloudflare R2 cho phần ${partNumber}/${totalParts}. ` +
+                `Vui lòng kiểm tra cấu hình CORS của bucket 'tcl-videos' (mục ExposeHeaders bắt buộc phải có 'ETag').`
+              );
             } else {
-              // Cloudflare R2 returns ETag in lowercase or uppercase
-              partEtag = `part-${partNumber}`;
-              break;
+              const clean = rawEtag.trim().replace(/^"|"$/g, '');
+              if (!/^[a-zA-Z0-9_\-:]+$/.test(clean)) {
+                lastErr = new Error(`ETag không hợp lệ từ Cloudflare R2 cho phần ${partNumber}: "${clean}"`);
+              } else {
+                partEtag = clean;
+                break;
+              }
             }
           } else {
-            lastErr = new Error(`Part ${partNumber} upload thất bại: HTTP ${res.status}`);
+            const errBody = await res.text().catch(() => '');
+            lastErr = new Error(`Part ${partNumber} upload thất bại (HTTP ${res.status}): ${errBody || res.statusText}`);
           }
         } catch (err) {
           if (signal?.aborted) throw err;
@@ -270,11 +280,15 @@ export async function uploadVideoMultipart({ seriesId, episodeId, file, onProgre
         }
 
         // Exponential backoff wait before retry: 1s, 2s, 4s
-        await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
+        if (attempt < MAX_RETRIES - 1) {
+          await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
+        }
       }
 
       if (!partEtag) {
-        throw new Error(`Không thể tải lên phần ${partNumber}/${totalParts}: ${lastErr?.message || 'Lỗi mạng'}`);
+        throw new Error(
+          `Không thể tải lên phần ${partNumber}/${totalParts} sau ${MAX_RETRIES} lần thử: ${lastErr?.message || 'Lỗi mạng'}`
+        );
       }
 
       completedParts.push({ PartNumber: partNumber, ETag: `"${partEtag}"` });
@@ -380,11 +394,15 @@ export async function getPlaybackUrl(seriesId, episodeId, { forceRefresh = false
  */
 export async function deleteEpisodeMedia(seriesId, episodeId) {
   playbackCache.delete(episodeId);
-  return callVideoPresign({
+  const res = await callVideoPresign({
     action: 'delete-episode-media',
     seriesId,
     episodeId,
   });
+  if (!res?.success) {
+    throw new Error('Xóa tệp media tập phim trên R2 không thành công');
+  }
+  return res;
 }
 
 /**
@@ -394,8 +412,12 @@ export async function deleteSeriesMedia(seriesId) {
   for (const [key] of playbackCache.entries()) {
     playbackCache.delete(key);
   }
-  return callVideoPresign({
+  const res = await callVideoPresign({
     action: 'delete-series-media',
     seriesId,
   });
+  if (!res?.success) {
+    throw new Error(`Xóa tệp media của bộ phim trên R2 không thành công: ${res?.error || ''}`);
+  }
+  return res;
 }

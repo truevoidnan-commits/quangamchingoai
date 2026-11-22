@@ -245,6 +245,15 @@ export async function deleteVideoSeries(seriesId) {
 }
 
 /**
+ * ADMIN: Safely delete video series: deletes R2 media first, only then removes DB row.
+ */
+export async function deleteVideoSeriesEverywhere(seriesId) {
+  const { deleteSeriesMedia } = await import('./videoCloud.js');
+  await deleteSeriesMedia(seriesId);
+  return deleteVideoSeries(seriesId);
+}
+
+/**
  * ADMIN: Create a new episode shell.
  */
 export async function createVideoEpisode({ seriesId, episodeNumber, title, description = '', mimeType = 'video/mp4', published = false }) {
@@ -296,6 +305,15 @@ export async function deleteVideoEpisode(seriesId, episodeId) {
 
   if (error) throw error;
   return true;
+}
+
+/**
+ * ADMIN: Safely delete episode: deletes R2 media first, only then removes DB row.
+ */
+export async function deleteVideoEpisodeEverywhere(seriesId, episodeId) {
+  const { deleteEpisodeMedia } = await import('./videoCloud.js');
+  await deleteEpisodeMedia(seriesId, episodeId);
+  return deleteVideoEpisode(seriesId, episodeId);
 }
 
 /**

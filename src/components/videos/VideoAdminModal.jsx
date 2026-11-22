@@ -137,7 +137,8 @@ export default function VideoAdminModal({
   };
 
   // Projected storage calculations
-  const currentVideoBytes = storageStats?.videoStorageBytes ?? 0;
+  const currentVideoBytes = storageStats?.actualR2VideoBytes ?? storageStats?.dbTrackedVideoBytes ?? 0;
+  const isR2Verified = Boolean(storageStats?.isR2ActualAvailable);
   const comicBytes = storageStats?.comicStorageBytesEstimated ?? (1.2 * 1024 * 1024 * 1024);
   const selectedFileBytes = videoFile?.size || 0;
   const projectedTotal = currentVideoBytes + comicBytes + selectedFileBytes;
@@ -543,7 +544,7 @@ export default function VideoAdminModal({
                   {videoFile ? `${videoFile.name} (${formatBytes(videoFile.size)})` : 'Bấm để chọn tệp MP4'}
                 </p>
                 <p className={styles.dropZoneHint}>
-                  Tải trực tiếp từ máy lên Cloudflare R2 qua Multipart Chunked Upload (10MB/phần)
+                  Tải trực tiếp từ máy lên Cloudflare R2 qua Multipart Upload (10MB/phần, tự động thử lại khi lỗi mạng và hủy an toàn)
                 </p>
               </label>
             </div>
@@ -559,14 +560,17 @@ export default function VideoAdminModal({
 
               <div className={styles.quotaGrid}>
                 <div className={styles.quotaItem}>
-                  <span className={styles.quotaLabel}>Video R2 hiện tại:</span>
+                  <span className={styles.quotaLabel}>
+                    {isR2Verified ? 'Video R2 (Xác thực R2):' : 'Video (Ước tính DB):'}
+                  </span>
                   <span className={styles.quotaVal}>
-                    {storageStats?.isR2ActualAvailable ? formatBytes(currentVideoBytes) : 'Không xác định'}
+                    {formatBytes(currentVideoBytes)}
+                    {!isR2Verified && ' (Ước tính)'}
                   </span>
                 </div>
                 <div className={styles.quotaItem}>
-                  <span className={styles.quotaLabel}>Truyện tranh R2:</span>
-                  <span className={styles.quotaVal}>~1.2 GB (ước tính)</span>
+                  <span className={styles.quotaLabel}>Truyện tranh:</span>
+                  <span className={styles.quotaVal}>~1.2 GB (Ước tính)</span>
                 </div>
                 <div className={styles.quotaItem}>
                   <span className={styles.quotaLabel}>Tệp sắp tải lên:</span>

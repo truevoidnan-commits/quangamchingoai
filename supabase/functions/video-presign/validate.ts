@@ -4,6 +4,8 @@
  */
 
 export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const ETAG_REGEX = /^[a-zA-Z0-9_\-:]+$/;
+
 export const ALLOWED_ORIGINS = [
   'https://truevoidnan-commits.github.io',
   'http://localhost:5173',
@@ -26,6 +28,30 @@ export const MAX_SUBTITLE_BYTES = 5 * 1024 * 1024; // 5MB
 export function isValidUuid(str: unknown): boolean {
   if (typeof str !== 'string') return false;
   return UUID_REGEX.test(str);
+}
+
+export function isValidEtag(etag: unknown): boolean {
+  if (typeof etag !== 'string') return false;
+  const clean = etag.trim().replace(/^"|"$/g, '');
+  if (!clean || clean.length > 256) return false;
+  return ETAG_REGEX.test(clean);
+}
+
+export function cleanEtag(etag: string): string {
+  return etag.trim().replace(/^"|"$/g, '');
+}
+
+export function escapeXml(unsafe: string): string {
+  return unsafe.replace(/[<>&'"]/g, (c) => {
+    switch (c) {
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '&': return '&amp;';
+      case '\'': return '&apos;';
+      case '"': return '&quot;';
+      default: return c;
+    }
+  });
 }
 
 export function buildPosterKey(seriesId: string, ext = 'webp'): string {
@@ -135,12 +161,33 @@ export function validateVideoPresignRequest(body: any): { ok: boolean; error?: s
     if (!Array.isArray(parts) || parts.length === 0) {
       return { ok: false, error: 'Danh sách parts không được rỗng', code: 'EMPTY_PARTS' };
     }
+
+    const seenPartNumbers = new Set<number>();
+    const sanitizedParts: Array<{ PartNumber: number; ETag: string }> = [];
+
     for (const p of parts) {
       if (!p || typeof p.PartNumber !== 'number' || !p.ETag) {
         return { ok: false, error: 'Cấu trúc part không hợp lệ: cần PartNumber và ETag', code: 'INVALID_PART_ENTRY' };
       }
+      if (p.PartNumber < 1 || p.PartNumber > MAX_PARTS) {
+        return { ok: false, error: `PartNumber ${p.PartNumber} ngoài giới hạn cho phép`, code: 'INVALID_PART_NUMBER' };
+      }
+      if (seenPartNumbers.has(p.PartNumber)) {
+        return { ok: false, error: `PartNumber ${p.PartNumber} bị trùng lặp`, code: 'DUPLICATE_PART_NUMBER' };
+      }
+      seenPartNumbers.add(p.PartNumber);
+
+      if (!isValidEtag(p.ETag)) {
+        return { ok: false, error: `Part ${p.PartNumber} có ETag không hợp lệ hoặc chứa ký tự không an toàn: "${p.ETag}"`, code: 'INVALID_ETAG_FORMAT' };
+      }
+
+      sanitizedParts.push({
+        PartNumber: p.PartNumber,
+        ETag: cleanEtag(p.ETag),
+      });
     }
-    return { ok: true, data: { action, seriesId, episodeId, uploadId, parts } };
+
+    return { ok: true, data: { action, seriesId, episodeId, uploadId, parts: sanitizedParts } };
   }
 
   if (action === 'abort-multipart-upload') {
