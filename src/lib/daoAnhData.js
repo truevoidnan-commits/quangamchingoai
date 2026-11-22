@@ -2362,12 +2362,12 @@ export function getDaoAnhDevTuneOverrides() {
 // ============================================================================
 export const DAO_ANH_UNIFORM = {
   enabled: true,
-  target: 1.0,
+  target: 0.84,
   bodyTarget: 0.62,
-  fitMax: 1.15,
+  fitMax: 0.88,
   minScale: 0.6,
   maxScale: 2.0,
-  mapBoost: 1.15,
+  mapBoost: 1.0,
 };
 
 export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {}) {
@@ -2433,9 +2433,9 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
   // 2. Tự chuẩn hóa theo DAO_ANH_BBOX khi forceAuto === true HOẶC khi chưa có chỉnh tay
   const bb = getDaoAnhBBox(daoAnhDef, currentKiep);
   if (bb && typeof bb.w === 'number' && bb.w > 0 && typeof bb.h === 'number' && bb.h > 0) {
-    const TARGET = (typeof options?.target === 'number' && options.target > 0)
+    const BASE_TARGET = (typeof options?.target === 'number' && options.target > 0)
       ? options.target
-      : (forceAuto ? (DAO_ANH_UNIFORM.target ?? 1.0) : 0.80);
+      : (forceAuto ? (DAO_ANH_UNIFORM.target ?? 0.84) : 0.80);
     const minScale = (typeof options?.minScale === 'number')
       ? options.minScale
       : (options?.fit === 'contain' ? 0.5 : (forceAuto ? (DAO_ANH_UNIFORM.minScale ?? 0.6) : 0.85));
@@ -2443,27 +2443,34 @@ export function getDaoAnhTransformConfig(daoAnhDef, currentKiep = 1, options = {
       ? options.maxScale
       : (options?.fit === 'contain' ? 2.2 : (forceAuto ? (DAO_ANH_UNIFORM.maxScale ?? 2.0) : 1.9));
 
-    const BODY_TARGET = (typeof options?.bodyTarget === 'number' && options.bodyTarget > 0)
-      ? options.bodyTarget
-      : (DAO_ANH_UNIFORM.bodyTarget ?? 0.62);
     const FIT_MAX = (typeof options?.fitMax === 'number' && options.fitMax > 0)
       ? options.fitMax
-      : (options?.fit === 'contain' ? 1.0 : (DAO_ANH_UNIFORM.fitMax ?? 1.15));
+      : (options?.fit === 'contain' ? 0.88 : (DAO_ANH_UNIFORM.fitMax ?? 0.88));
 
-    let rawScale;
-    if (typeof bb.m === 'number' && bb.m > 0 && options?.fit !== 'contain') {
-      const scaleBody = BODY_TARGET / Math.sqrt(bb.m);
-      const scaleFit  = FIT_MAX / Math.max(bb.w, bb.h);
-      rawScale = Math.min(scaleBody, scaleFit);
+    const maxDim = Math.max(bb.w, bb.h);
+    const minDim = Math.min(bb.w, bb.h);
+    const isVertical = bb.h >= bb.w;
+    const aspect = minDim / maxDim;
+
+    // Chuẩn hóa kích thước dựa trên vùng nội dung thực tế (bounding box):
+    // Lấy mốc ~84% kích thước khung làm mục tiêu, điều chỉnh nhẹ theo hình dạng từng ảnh:
+    // - Ảnh đứng (vertical, aspect hẹp): tăng nhẹ để diện tích thị giác cân đối
+    // - Ảnh ngang (horizontal, aspect bè): giảm nhẹ để không choán quá nhiều diện tích
+    let target = BASE_TARGET;
+    if (isVertical) {
+      target = BASE_TARGET + (1 - aspect) * 0.07;
     } else {
-      const maxDim = Math.max(bb.w, bb.h);
-      rawScale = TARGET / maxDim;
+      target = BASE_TARGET - (1 - aspect) * 0.03;
     }
+    target = Math.min(Math.max(target, 0.80), 0.88);
+
+    let rawScale = target / maxDim;
+    rawScale = Math.min(rawScale, FIT_MAX / maxDim);
 
     const scale = Math.min(Math.max(rawScale, minScale), maxScale);
     const roundedScale = Math.round(scale * 100) / 100;
 
-    // Dịch theo % của phần tử: tx = (0.5 - bb.cx) * scale * 100 (%)
+    // Căn giữa vùng nội dung nhân vật: Dịch theo % của phần tử: tx = (0.5 - bb.cx) * scale * 100 (%)
     const tx = (0.5 - bb.cx) * scale * 100;
     const ty = (0.5 - bb.cy) * scale * 100;
     const roundedTx = Math.round(tx * 10) / 10;
@@ -2524,12 +2531,12 @@ export function getDaoAnhSvgTransform(daoAnhDef, currentKiep = 1, options = {}) 
     const cfg = getDaoAnhTransformConfig(daoAnhDef, currentKiep, { ...options, uniform: true });
     const clampedSc = cfg.scale;
 
-    // mapBoost: tăng kích thước hiển thị ở sảnh Nguyên Anh (SVG), bù trừ vị trí để giữ tâm nội dung
+    // mapBoost: điều chỉnh tỷ lệ hiển thị ở trận pháp Nguyên Anh (SVG), mặc định 1.0 (loại bỏ phóng quá mức)
     const boost = typeof options.mapBoost === 'number' && options.mapBoost > 0
       ? options.mapBoost
       : (typeof DAO_ANH_UNIFORM.mapBoost === 'number' && DAO_ANH_UNIFORM.mapBoost > 0
           ? DAO_ANH_UNIFORM.mapBoost
-          : 1.15);
+          : 1.0);
 
     const sc = clampedSc * boost;
     const x = -sc * (bb.cx - 0.5) * box;

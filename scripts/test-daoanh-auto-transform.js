@@ -122,18 +122,19 @@ for (const da of DAO_ANH_LIST) {
 }
 console.log(`✓ PASS: Toàn bộ ${containTested} lượt (42 Đạo Anh x 5 Kiếp) ở fit: "contain" đều có bbox nằm trong [0,1]x[0,1] (sai số <= 0.02).`);
 
-// 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) theo khối lượng thân (bb.m)
-console.log('\n--- 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) theo khối lượng thân ---');
+// 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) chuẩn hóa ~84%
+console.log('\n--- 7. Kiểm tra chế độ đồng nhất DAO_ANH_UNIFORM (enabled: true) chuẩn hóa ~84% ---');
 DAO_ANH_UNIFORM.enabled = true;
-assert.strictEqual(DAO_ANH_UNIFORM.mapBoost, 1.15, 'DAO_ANH_UNIFORM.mapBoost phải có giá trị 1.15');
-assert.strictEqual(DAO_ANH_UNIFORM.bodyTarget, 0.62, 'DAO_ANH_UNIFORM.bodyTarget phải có giá trị 0.62');
-assert.strictEqual(DAO_ANH_UNIFORM.fitMax, 1.15, 'DAO_ANH_UNIFORM.fitMax phải có giá trị 1.15');
+assert.strictEqual(DAO_ANH_UNIFORM.target, 0.84, 'DAO_ANH_UNIFORM.target phải có giá trị 0.84');
+assert.strictEqual(DAO_ANH_UNIFORM.fitMax, 0.88, 'DAO_ANH_UNIFORM.fitMax phải có giá trị 0.88');
+assert.strictEqual(DAO_ANH_UNIFORM.mapBoost, 1.0, 'DAO_ANH_UNIFORM.mapBoost phải có giá trị 1.0 (loại bỏ phóng quá mức)');
 
 let totalUniformChecked = 0;
-const bodyMassList = [];
-const kiep1MaxDims = [];
+const allContentSizes = [];
+let maxJumpKiep = 0;
 
 for (const da of DAO_ANH_LIST) {
+  let prevKiepSize = null;
   for (let k = 1; k <= 5; k++) {
     const cfg = getDaoAnhTransformConfig(da, k);
     assert.strictEqual(cfg.isAuto, true, `${da.id} kiếp ${k} phải có isAuto === true khi uniform enabled`);
@@ -144,48 +145,40 @@ for (const da of DAO_ANH_LIST) {
       const maxDim = Math.max(bb.w, bb.h);
       const contentSize = maxDim * cfg.scale;
 
-      // Chiều lớn nhất sau biến đổi: không vượt quá 1.2 (ngăn tràn 144x144); ở Kiếp 1 nằm trong [0.9, 1.2]
-      assert(contentSize <= 1.2, `${da.id} kiếp ${k} chiều lớn nhất (${contentSize.toFixed(3)}) vượt quá 1.2`);
-      if (k === 1) {
-        assert(contentSize >= 0.9 && contentSize <= 1.2, `${da.id} kiếp 1 chiều lớn nhất (${contentSize.toFixed(3)}) phải trong [0.9, 1.2]`);
-        kiep1MaxDims.push(contentSize);
-      }
+      // Chiều lớn nhất sau biến đổi phải nằm gọn trong dải an toàn [0.78, 0.88]
+      assert(contentSize <= 0.88, `${da.id} kiếp ${k} chiều lớn nhất (${contentSize.toFixed(3)}) vượt quá 0.88`);
+      assert(contentSize >= 0.78, `${da.id} kiếp ${k} chiều lớn nhất (${contentSize.toFixed(3)}) nhỏ hơn 0.78`);
+      allContentSizes.push(contentSize);
 
-      if (typeof bb.m === 'number' && bb.m > 0) {
-        const bodyMass = Math.sqrt(bb.m) * cfg.scale;
-        bodyMassList.push({ id: da.id, k, bodyMass, scale: cfg.scale, m: bb.m });
+      if (prevKiepSize !== null) {
+        const jump = Math.abs(contentSize - prevKiepSize) / prevKiepSize * 100;
+        if (jump > maxJumpKiep) maxJumpKiep = jump;
+        assert(jump <= 5.0, `${da.id} kiếp ${k} nhảy cỡ ${jump.toFixed(1)}% vượt quá 5%`);
       }
+      prevKiepSize = contentSize;
     }
 
-    // Kiểm tra getDaoAnhSvgTransform (có nhân mapBoost mặc định 1.15)
+    // Kiểm tra getDaoAnhSvgTransform
     const svgStr = getDaoAnhSvgTransform(da, k);
     assert(svgStr.startsWith('translate(') && svgStr.includes('scale('), `${da.id} kiếp ${k} SVG transform không hợp lệ: ${svgStr}`);
     assert(!svgStr.includes('NaN') && !svgStr.includes('undefined'), `SVG transform chứa NaN/undefined: ${svgStr}`);
 
-    // Kiểm tra mapBoost được áp dụng vào scale của SVG
-    const svgUnboosted = getDaoAnhSvgTransform(da, k, { mapBoost: 1.0 });
-    const scBoosted = parseFloat(svgStr.match(/scale\(([^)]+)\)/)[1]);
-    const scUnboosted = parseFloat(svgUnboosted.match(/scale\(([^)]+)\)/)[1]);
-    const boostRatio = scBoosted / scUnboosted;
+    // Kiểm tra mapBoost tùy chọn vẫn hoạt động nếu được truyền vào
+    const svgBoosted = getDaoAnhSvgTransform(da, k, { mapBoost: 1.15 });
+    const scDefault = parseFloat(svgStr.match(/scale\(([^)]+)\)/)[1]);
+    const scBoosted = parseFloat(svgBoosted.match(/scale\(([^)]+)\)/)[1]);
+    const boostRatio = scBoosted / scDefault;
     assert(Math.abs(boostRatio - 1.15) <= 0.02, `${da.id} kiếp ${k} scale boost (${boostRatio}) phải xấp xỉ 1.15`);
 
     totalUniformChecked++;
   }
 }
 
-// Kiểm tra độ lệch max/min của sqrt(bb.m) * scale trên 42 Đạo Anh x Kiếp 1..5 phải <= 1.2
-const allBodyMasses = bodyMassList.map(b => b.bodyMass);
-const minBody = Math.min(...allBodyMasses);
-const maxBody = Math.max(...allBodyMasses);
-const bodyRatio = maxBody / minBody;
-console.log(`  Khối lượng thân sqrt(bb.m) * scale: min=${minBody.toFixed(4)}, max=${maxBody.toFixed(4)}, max/min=${bodyRatio.toFixed(4)} (yêu cầu <= 1.2)`);
-assert(bodyRatio <= 1.2, `Tỷ lệ lệch khối lượng thân max/min (${bodyRatio.toFixed(3)}) phải <= 1.2`);
-
-const minK1 = Math.min(...kiep1MaxDims);
-const maxK1 = Math.max(...kiep1MaxDims);
-console.log(`  Chiều lớn nhất sau biến đổi Kiếp 1: min=${minK1.toFixed(4)}, max=${maxK1.toFixed(4)} (nằm trong [0.98, 1.15])`);
-
-console.log(`✓ PASS: Toàn bộ ${totalUniformChecked} lượt (42 Đạo Anh x 5 Kiếp) đạt chuẩn đồng nhất khối lượng thân (lệch ${((bodyRatio - 1) * 100).toFixed(1)}% <= 20%) và không tràn viền.`);
+const minSize = Math.min(...allContentSizes);
+const maxSize = Math.max(...allContentSizes);
+console.log(`  Kích thước nội dung maxDim * scale: min=${minSize.toFixed(4)}, max=${maxSize.toFixed(4)} (chuẩn trong [0.80, 0.88])`);
+console.log(`  Độ nhảy kích thước tối đa giữa 2 kiếp liền kề: ${maxJumpKiep.toFixed(2)}% (yêu cầu <= 5%)`);
+console.log(`✓ PASS: Toàn bộ ${totalUniformChecked} lượt (42 Đạo Anh x 5 Kiếp) đạt chuẩn cân đối ~84%, không tràn viền và không nhảy kiếp.`);
 
 // 8. Kiểm tra khi DAO_ANH_UNIFORM.enabled = false: kết quả trùng khớp 100% bảng cũ
 console.log('\n--- 8. Kiểm tra khi DAO_ANH_UNIFORM.enabled = false ---');
