@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import LobbyTabs from '../../components/ui/LobbyTabs';
 import VideoCard from '../../components/videos/VideoCard';
-import VideoContinueWatching from '../../components/videos/VideoContinueWatching';
+import VideosBackdrop from '../../components/videos/VideosBackdrop';
 import VideoAdminModal from '../../components/videos/VideoAdminModal';
 import {
   IconFilm,
@@ -10,39 +10,19 @@ import {
   IconSettings,
   IconAlertTriangle,
   IconSparkles,
-  IconRefresh,
 } from '../../components/videos/VideoIcons';
 import { fetchVideoSeriesList, checkIsVideoAdmin } from '../../lib/video/videoApi';
-import { getLocalWatchHistory } from '../../lib/video/videoProgress';
 import { fetchStorageStats } from '../../lib/video/videoCloud';
 import styles from './VideosPage.module.css';
-
-const GENRE_LIST = [
-  'Tất cả',
-  'Tu Tiên',
-  'Huyền Huyễn',
-  'Kiếm Hiệp',
-  'Hành Động',
-  'Trùng Sinh',
-  'Hài Hước',
-  'Luyện Đan',
-];
 
 export default function VideosPage() {
   const [seriesList, setSeriesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [selectedGenre, setSelectedGenre] = useState('Tất cả');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [watchHistory, setWatchHistory] = useState([]);
   const [storageStats, setStorageStats] = useState(null);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
-
-  // Load user watch history from localStorage
-  useEffect(() => {
-    setWatchHistory(getLocalWatchHistory());
-  }, []);
 
   // Check admin status
   useEffect(() => {
@@ -55,7 +35,6 @@ export default function VideosPage() {
     try {
       const data = await fetchVideoSeriesList({
         search,
-        genre: selectedGenre === 'Tất cả' ? '' : selectedGenre,
         status: selectedStatus === 'all' ? '' : selectedStatus,
         includeUnpublished: isAdmin,
       });
@@ -65,7 +44,7 @@ export default function VideosPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, selectedGenre, selectedStatus, isAdmin]);
+  }, [search, selectedStatus, isAdmin]);
 
   useEffect(() => {
     loadSeries();
@@ -80,6 +59,7 @@ export default function VideosPage() {
 
   return (
     <div className={styles.page}>
+      <VideosBackdrop />
       <div className={styles.container}>
         {/* Navigation Tabs */}
         <LobbyTabs active="videos" />
@@ -119,12 +99,8 @@ export default function VideosPage() {
           </div>
         )}
 
-        {/* Continue Watching Row */}
-        <VideoContinueWatching history={watchHistory} />
-
-        {/* Filter Section */}
+        {/* Search Filter Section */}
         <div className={styles.filterSection}>
-          {/* Search bar */}
           <div className={styles.searchRow}>
             <div className={styles.searchBox}>
               <IconSearch size={16} className={styles.searchIcon} />
@@ -136,19 +112,6 @@ export default function VideosPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-          </div>
-
-          {/* Genre chips */}
-          <div className={styles.tagRow}>
-            {GENRE_LIST.map((g) => (
-              <button
-                key={g}
-                className={`${styles.tagBtn} ${selectedGenre === g ? styles.tagBtnActive : ''}`}
-                onClick={() => setSelectedGenre(g)}
-              >
-                {g}
-              </button>
-            ))}
           </div>
         </div>
 

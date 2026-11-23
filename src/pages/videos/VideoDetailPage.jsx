@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import VideoEpisodeList from '../../components/videos/VideoEpisodeList';
 import VideoAdminModal from '../../components/videos/VideoAdminModal';
+import VideosBackdrop from '../../components/videos/VideosBackdrop';
 import {
   IconArrowLeft,
   IconPlay,
@@ -109,6 +110,7 @@ export default function VideoDetailPage() {
   if (loading) {
     return (
       <div className={styles.page}>
+        <VideosBackdrop />
         <div className={styles.container} style={{ textAlign: 'center', padding: '100px 0' }}>
           <IconSparkles size={32} style={{ color: '#fbbf24', animation: 'spin 1s linear infinite' }} />
           <p style={{ marginTop: 12, color: '#94a3b8' }}>Đang tải thông tin bộ phim...</p>
@@ -120,11 +122,12 @@ export default function VideoDetailPage() {
   if (!series) {
     return (
       <div className={styles.page}>
+        <VideosBackdrop />
         <div className={styles.container} style={{ textAlign: 'center', padding: '100px 0' }}>
           <h2>Không tìm thấy bộ phim</h2>
           <p style={{ color: '#94a3b8' }}>Bộ phim không tồn tại hoặc đã bị gỡ bỏ.</p>
           <Link to="/videos" className={styles.backBtn} style={{ marginTop: 16 }}>
-            <IconArrowLeft size={16} /> Quay về Thư viện Video
+            <IconArrowLeft size={16} /> Quay về Thần Thông Ảnh Họa
           </Link>
         </div>
       </div>
@@ -147,6 +150,7 @@ export default function VideoDetailPage() {
 
   return (
     <div className={styles.page}>
+      <VideosBackdrop />
       <div className={styles.container}>
         {/* Back Link */}
         <Link to="/videos" className={styles.backBtn}>

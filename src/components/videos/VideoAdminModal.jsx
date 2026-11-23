@@ -8,6 +8,12 @@ import {
   IconSubtitles,
   IconHardDrive,
   IconTrash,
+  IconRotateCcw,
+  IconRotateCw,
+  IconPlay,
+  IconPause,
+  IconClock,
+  IconImage,
 } from './VideoIcons';
 import {
   createVideoSeries,
@@ -26,6 +32,7 @@ import {
   fetchStorageStats,
   testR2Connection,
   verifyEpisodeUpload,
+  getPlaybackUrl,
 } from '../../lib/video/videoCloud';
 import styles from './VideoAdminModal.module.css';
 
@@ -36,6 +43,13 @@ function formatBytes(bytes) {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+}
+
+function formatTime(seconds) {
+  if (!seconds || isNaN(seconds)) return '00:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
 export default function VideoAdminModal({
@@ -52,11 +66,19 @@ export default function VideoAdminModal({
   // Series form state
   const [seriesTitle, setSeriesTitle] = useState('');
   const [seriesDescription, setSeriesDescription] = useState('');
-  const [seriesGenres, setSeriesGenres] = useState('');
   const [seriesStatus, setSeriesStatus] = useState('ongoing');
   const [seriesPublished, setSeriesPublished] = useState(false);
   const [posterFile, setPosterFile] = useState(null);
   const [posterPreview, setPosterPreview] = useState('');
+
+  // Poster extraction state (Phương án B: Trích khung hình trực tiếp từ MP4)
+  const [posterMode, setPosterMode] = useState('upload'); // 'upload' | 'extract'
+  const [extractEpisodeId, setExtractEpisodeId] = useState('');
+  const [extractVideoUrl, setExtractVideoUrl] = useState('');
+  const [extractDuration, setExtractDuration] = useState(0);
+  const [extractCurrentTime, setExtractCurrentTime] = useState(0);
+  const [extractLoading, setExtractLoading] = useState(false);
+  const extractVideoRef = useRef(null);
 
   // Episode form state
   const [createdSeriesId, setCreatedSeriesId] = useState(null);
@@ -244,7 +266,6 @@ export default function VideoAdminModal({
         setCreatedSeriesId(initialSeries.id);
         setSeriesTitle(initialSeries.title || '');
         setSeriesDescription(initialSeries.description || '');
-        setSeriesGenres(Array.isArray(initialSeries.genres) ? initialSeries.genres.join(', ') : '');
         setSeriesStatus(initialSeries.status || 'ongoing');
         setSeriesPublished(Boolean(initialSeries.published));
         setPosterPreview(initialSeries.poster_key || '');
@@ -253,7 +274,6 @@ export default function VideoAdminModal({
         setCreatedSeriesId(null);
         setSeriesTitle('');
         setSeriesDescription('');
-        setSeriesGenres('');
         setSeriesStatus('ongoing');
         setSeriesPublished(false);
         setPosterFile(null);
@@ -267,12 +287,78 @@ export default function VideoAdminModal({
 
   if (!isOpen) return null;
 
-  // Handle poster file selection
+  // Handle poster file selection (Phương án A)
   const handlePosterSelect = (e) => {
     const file = e.target.files?.[0];
     if (file) {
       setPosterFile(file);
       setPosterPreview(URL.createObjectURL(file));
+      setErrorMsg('');
+    }
+  };
+
+  // Handle selecting an episode or local file to extract frame (Phương án B)
+  const handleSelectExtractEpisode = async (epId) => {
+    setExtractEpisodeId(epId);
+    if (!epId) {
+      setExtractVideoUrl('');
+      return;
+    }
+
+    if (epId === '__local_file__' && videoFile) {
+      setExtractVideoUrl(URL.createObjectURL(videoFile));
+      return;
+    }
+
+    setExtractLoading(true);
+    setErrorMsg('');
+    try {
+      const sId = initialSeries?.id || createdSeriesId;
+      const { playbackUrl } = await getPlaybackUrl(sId, epId);
+      setExtractVideoUrl(playbackUrl);
+    } catch (err) {
+      console.error('[FrameExtract] Failed to get playback url:', err);
+      setErrorMsg(`Không thể tải video để trích khung hình: ${err.message || 'Lỗi mạng'}`);
+    } finally {
+      setExtractLoading(false);
+    }
+  };
+
+  const handleStepExtractFrame = (delta) => {
+    const video = extractVideoRef.current;
+    if (!video) return;
+    const nextTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + delta));
+    video.currentTime = nextTime;
+    setExtractCurrentTime(nextTime);
+  };
+
+  const handleCaptureFrame = () => {
+    const video = extractVideoRef.current;
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      setErrorMsg('Video chưa tải xong khung hình để trích xuất.');
+      return;
+    }
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          setErrorMsg('Không thể xuất ảnh từ video canvas.');
+          return;
+        }
+        const file = new File([blob], `poster-frame-${Math.round(video.currentTime)}s.webp`, { type: 'image/webp' });
+        setPosterFile(file);
+        setPosterPreview(URL.createObjectURL(blob));
+        setSuccessMsg(`Đã trích xuất khung hình tại ${formatTime(video.currentTime)} thành công! Hãy bấm "Lưu bộ phim" để cập nhật ảnh bìa.`);
+      }, 'image/webp', 0.92);
+    } catch (err) {
+      console.error('[FrameExtract] Canvas tainted or CORS restriction:', err);
+      setErrorMsg('Không thể đọc pixel từ video do chính sách bảo mật CORS của trình duyệt. Vui lòng chuyển sang Phương án A để tải ảnh trực tiếp từ máy tính.');
     }
   };
 
@@ -324,17 +410,12 @@ export default function VideoAdminModal({
     setSuccessMsg('');
 
     try {
-      const genresArray = seriesGenres
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-
       let savedSeries;
       if (initialSeries) {
         savedSeries = await updateVideoSeries(initialSeries.id, {
           title: seriesTitle.trim(),
           description: seriesDescription.trim(),
-          genres: genresArray,
+          genres: initialSeries.genres || [],
           status: seriesStatus,
           published: seriesPublished,
         });
@@ -342,7 +423,7 @@ export default function VideoAdminModal({
         savedSeries = await createVideoSeries({
           title: seriesTitle.trim(),
           description: seriesDescription.trim(),
-          genres: genresArray,
+          genres: [],
           status: seriesStatus,
           published: seriesPublished,
         });
@@ -588,30 +669,17 @@ export default function VideoAdminModal({
               />
             </div>
 
-            <div className={styles.row}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Thể loại (cách nhau bằng dấu phẩy)</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={seriesGenres}
-                  onChange={(e) => setSeriesGenres(e.target.value)}
-                  placeholder="Tu Tiên, Huyền Huyễn, Hành Động"
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Trạng thái</label>
-                <select
-                  className={styles.select}
-                  value={seriesStatus}
-                  onChange={(e) => setSeriesStatus(e.target.value)}
-                >
-                  <option value="ongoing">Đang tiến hành (ongoing)</option>
-                  <option value="completed">Đã hoàn thành (completed)</option>
-                  <option value="upcoming">Sắp ra mắt (upcoming)</option>
-                </select>
-              </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Trạng thái</label>
+              <select
+                className={styles.select}
+                value={seriesStatus}
+                onChange={(e) => setSeriesStatus(e.target.value)}
+              >
+                <option value="ongoing">Đang tiến hành (ongoing)</option>
+                <option value="completed">Đã hoàn thành (completed)</option>
+                <option value="upcoming">Sắp ra mắt (upcoming)</option>
+              </select>
             </div>
 
             <div className={styles.formGroup}>
@@ -626,23 +694,193 @@ export default function VideoAdminModal({
 
             <div className={styles.formGroup}>
               <label className={styles.label}>Ảnh bìa / Poster (WebP, JPG, PNG)</label>
-              <label className={styles.dropZone}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePosterSelect}
-                  style={{ display: 'none' }}
-                />
-                <IconUpload size={24} style={{ color: '#fbbf24' }} />
-                <p className={styles.dropZoneText}>
-                  {posterFile ? posterFile.name : 'Bấm để chọn ảnh bìa từ máy tính'}
-                </p>
-                <p className={styles.dropZoneHint}>Tỷ lệ khuyến nghị 16:9, tối đa 10 MB</p>
-              </label>
 
+              {/* Chuyển đổi phương thức ảnh bìa */}
+              <div className={styles.posterModeTabs}>
+                <button
+                  type="button"
+                  className={`${styles.posterModeTab} ${posterMode === 'upload' ? styles.posterModeTabActive : ''}`}
+                  onClick={() => setPosterMode('upload')}
+                >
+                  <IconUpload size={14} />
+                  Phương án A: Tải file từ máy tính
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.posterModeTab} ${posterMode === 'extract' ? styles.posterModeTabActive : ''}`}
+                  onClick={() => {
+                    setPosterMode('extract');
+                    if (videoFile && !extractEpisodeId) {
+                      handleSelectExtractEpisode('__local_file__');
+                    } else if (episodesList.length > 0 && !extractEpisodeId) {
+                      handleSelectExtractEpisode(episodesList[0].id);
+                    }
+                  }}
+                >
+                  <IconFilm size={14} />
+                  Phương án B: Trích từ video MP4
+                </button>
+              </div>
+
+              {/* PHƯƠNG ÁN A: Tải file từ máy tính */}
+              {posterMode === 'upload' && (
+                <label className={styles.dropZone}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePosterSelect}
+                    style={{ display: 'none' }}
+                  />
+                  <IconUpload size={24} style={{ color: '#fbbf24' }} />
+                  <p className={styles.dropZoneText}>
+                    {posterFile ? posterFile.name : 'Bấm để chọn ảnh bìa từ máy tính'}
+                  </p>
+                  <p className={styles.dropZoneHint}>Tỷ lệ khuyến nghị 16:9 (1920x1080), tối đa 10 MB</p>
+                </label>
+              )}
+
+              {/* PHƯƠNG ÁN B: Trích khung hình trực tiếp từ video */}
+              {posterMode === 'extract' && (
+                <div className={styles.frameScrubberWrap}>
+                  <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                    <label className={styles.label} style={{ fontSize: 12 }}>
+                      Nguồn video trích xuất:
+                    </label>
+                    <select
+                      className={styles.select}
+                      value={extractEpisodeId}
+                      onChange={(e) => handleSelectExtractEpisode(e.target.value)}
+                    >
+                      <option value="">-- Chọn video nguồn --</option>
+                      {videoFile && (
+                        <option value="__local_file__">
+                          File vừa chọn ở tab Tập phim ({videoFile.name})
+                        </option>
+                      )}
+                      {episodesList.map((ep) => (
+                        <option key={ep.id} value={ep.id}>
+                          Tập {ep.episode_number}: {ep.title || 'Không có tên'} ({ep.upload_status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {extractLoading && (
+                    <div style={{ padding: '16px', textAlign: 'center', color: '#fbbf24', fontSize: 13 }}>
+                      Đang lấy URL video để phát...
+                    </div>
+                  )}
+
+                  {extractVideoUrl && (
+                    <>
+                      <video
+                        ref={extractVideoRef}
+                        src={extractVideoUrl}
+                        crossOrigin="anonymous"
+                        playsInline
+                        preload="metadata"
+                        className={styles.frameVideoPreview}
+                        onLoadedMetadata={(e) => {
+                          setExtractDuration(e.target.duration || 0);
+                        }}
+                        onTimeUpdate={(e) => {
+                          setExtractCurrentTime(e.target.currentTime);
+                        }}
+                      />
+
+                      <div className={styles.frameTimelineRow}>
+                        <input
+                          type="range"
+                          min="0"
+                          max={extractDuration || 100}
+                          step="0.05"
+                          value={extractCurrentTime}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (extractVideoRef.current) {
+                              extractVideoRef.current.currentTime = val;
+                            }
+                            setExtractCurrentTime(val);
+                          }}
+                          className={styles.frameTimelineSlider}
+                        />
+                        <span className={styles.frameTimeDisplay}>
+                          {formatTime(extractCurrentTime)} / {formatTime(extractDuration)}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                        <div className={styles.frameStepButtons}>
+                          <button
+                            type="button"
+                            className={styles.frameStepBtn}
+                            onClick={() => handleStepExtractFrame(-1)}
+                            title="Lùi 1 giây"
+                          >
+                            -1s
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.frameStepBtn}
+                            onClick={() => handleStepExtractFrame(-0.1)}
+                            title="Lùi 0.1 giây (từng khung hình)"
+                          >
+                            -0.1s
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.frameStepBtn}
+                            onClick={() => handleStepExtractFrame(0.1)}
+                            title="Tiến 0.1 giây (từng khung hình)"
+                          >
+                            +0.1s
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.frameStepBtn}
+                            onClick={() => handleStepExtractFrame(1)}
+                            title="Tiến 1 giây"
+                          >
+                            +1s
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          className={styles.frameCaptureBtn}
+                          onClick={handleCaptureFrame}
+                        >
+                          <IconImage size={15} />
+                          Dùng khung hình này làm ảnh bìa
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {!extractVideoUrl && !extractLoading && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>
+                      {videoFile || episodesList.length > 0
+                        ? 'Vui lòng chọn video nguồn ở trên để bắt đầu trích khung hình.'
+                        : 'Chưa có tập phim nào. Bạn có thể chọn file MP4 ở tab "2. Tải tập phim" trước, hoặc dùng Phương án A để tải ảnh.'}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Xem trước ảnh bìa hiện tại / vừa trích xuất */}
               {posterPreview && (
-                <div style={{ marginTop: 8, maxWidth: 160, borderRadius: 6, overflow: 'hidden' }}>
-                  <img src={posterPreview} alt="Preview" style={{ width: '100%', display: 'block' }} />
+                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 140, aspectRatio: '16 / 9', borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(251, 191, 36, 0.4)', background: '#000' }}>
+                    <img src={posterPreview} alt="Poster Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 12, color: '#fbbf24', fontWeight: 600, display: 'block' }}>
+                      Ảnh bìa đã chọn ({posterFile ? posterFile.name : 'từ URL'})
+                    </span>
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                      Bấm "Lưu bộ phim" bên dưới để hoàn tất cập nhật.
+                    </span>
+                  </div>
                 </div>
               )}
             </div>

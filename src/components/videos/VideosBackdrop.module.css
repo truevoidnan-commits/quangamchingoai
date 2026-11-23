@@ -1,0 +1,53 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  transform: translateZ(0);
+  background-color: #070913;
+  overflow: hidden;
+}
+
+/* Base image layer */
+.imageLayer {
+  position: absolute;
+  inset: 0;
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transition: opacity 300ms ease;
+  will-change: opacity;
+}
+
+/* Mobile vertical default (portrait / smartphone) */
+.defaultBg {
+  background-image: url('../../assets/images/bg-than-thong-anh-hoa.webp');
+}
+
+/* Desktop landscape (min-width: 900px and landscape) */
+@media (min-width: 900px) and (orientation: landscape), (min-aspect-ratio: 4/3) {
+  .defaultBg {
+    background-position: center center;
+    background-image: url('../../assets/images/bg-than-thong-anh-hoa-wide.webp');
+  }
+}
+
+/* Ambient gradient overlay for optimal text and card contrast */
+.overlayLayer {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 25%, transparent 20%, rgba(6, 9, 18, 0.72) 100%),
+    linear-gradient(180deg, rgba(7, 9, 19, 0.5) 0%, rgba(6, 8, 16, 0.8) 45%, rgba(4, 6, 14, 0.96) 100%);
+  pointer-events: none;
+}
+
+/* Subtle noise layer to eliminate gradient banding */
+.noiseLayer {
+  position: absolute;
+  inset: 0;
+  background-image: url('../../assets/images/noise-subtle.png');
+  background-repeat: repeat;
+  opacity: 0.035;
+  pointer-events: none;
+}

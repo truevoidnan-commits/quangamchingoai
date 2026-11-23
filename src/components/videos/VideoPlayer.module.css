@@ -6,12 +6,13 @@
   border-radius: 12px;
   overflow: hidden;
   outline: none;
-  border: 1px solid rgba(255, 204, 0, 0.2);
+  border: 1px solid rgba(255, 204, 0, 0.22);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   user-select: none;
+  box-sizing: border-box;
 }
 
 .playerContainer:fullscreen {
@@ -21,12 +22,55 @@
   height: 100vh;
 }
 
+/* Video Surface with Tap layer */
+.videoSurface {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .videoElement {
   width: 100%;
   height: 100%;
   display: block;
   object-fit: contain;
   background: #000;
+}
+
+/* Center flash play/pause feedback */
+.centerFlashWrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 15;
+  animation: flashFade 0.65s ease-out forwards;
+}
+
+.centerFlashIcon {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.75);
+  border: 2px solid rgba(251, 191, 36, 0.85);
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 24px rgba(251, 191, 36, 0.5);
+}
+
+@keyframes flashFade {
+  0% { opacity: 0; transform: scale(0.7); }
+  30% { opacity: 1; transform: scale(1.1); }
+  70% { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.2); }
 }
 
 /* Big center play button overlay when paused */
@@ -79,13 +123,14 @@
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 14px 16px 12px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.5) 70%, transparent 100%);
+  padding: 12px 16px 10px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.94) 0%, rgba(0, 0, 0, 0.6) 75%, transparent 100%);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   z-index: 20;
   transition: opacity 0.3s ease, transform 0.3s ease;
+  box-sizing: border-box;
 }
 
 .controlsHidden {
@@ -98,23 +143,25 @@
 .timelineWrapper {
   position: relative;
   width: 100%;
-  height: 18px;
+  height: 24px;
   display: flex;
   align-items: center;
   cursor: pointer;
+  touch-action: none;
 }
 
 .timelineTrack {
   position: relative;
   width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 3px;
   transition: height 0.15s ease;
 }
 
-.timelineWrapper:hover .timelineTrack {
-  height: 7px;
+.timelineWrapper:hover .timelineTrack,
+.timelineScrubbing .timelineTrack {
+  height: 8px;
 }
 
 .bufferedBar {
@@ -123,7 +170,7 @@
   top: 0;
   bottom: 0;
   background: rgba(255, 255, 255, 0.4);
-  border-radius: 2px;
+  border-radius: 3px;
   pointer-events: none;
 }
 
@@ -133,8 +180,8 @@
   top: 0;
   bottom: 0;
   background: #fbbf24;
-  border-radius: 2px;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+  border-radius: 3px;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.7);
   pointer-events: none;
 }
 
@@ -147,14 +194,33 @@
   border: 2px solid #fbbf24;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  opacity: 0.85;
+  transition: transform 0.1s ease, opacity 0.15s ease;
 }
 
-.timelineWrapper:hover .scrubberThumb {
+.timelineWrapper:hover .scrubberThumb,
+.timelineScrubbing .scrubberThumb {
   opacity: 1;
+  transform: translate(-50%, -50%) scale(1.25);
+}
+
+.timelineTooltip {
+  position: absolute;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
 }
 
 /* Button Row */
@@ -162,14 +228,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
+  width: 100%;
 }
 
 .leftControls,
 .rightControls {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .btn {
@@ -177,23 +245,39 @@
   border: none;
   color: #f1f5f9;
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: color 0.15s ease, transform 0.15s ease;
+  min-width: 32px;
+  min-height: 32px;
 }
 
 .btn:hover {
   color: #fbbf24;
-  transform: scale(1.1);
+  transform: scale(1.08);
 }
 
 .btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
   transform: none;
+}
+
+.btnMainAction {
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+}
+
+.btnMainAction:hover {
+  background: rgba(251, 191, 36, 0.3);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
 }
 
 .timeDisplay {
@@ -207,11 +291,11 @@
 .volumeWrapper {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .volumeSlider {
-  width: 64px;
+  width: 60px;
   height: 4px;
   -webkit-appearance: none;
   appearance: none;
@@ -223,65 +307,181 @@
 
 .volumeSlider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: #fbbf24;
   cursor: pointer;
 }
 
-/* Dropdown / Select Menus */
-.selectMenu {
-  background: rgba(15, 23, 42, 0.85);
-  color: #f1f5f9;
-  border: 1px solid rgba(255, 204, 0, 0.25);
-  border-radius: 4px;
-  font-size: 11px;
-  padding: 3px 6px;
-  outline: none;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-}
-
-.selectMenu:hover {
-  border-color: rgba(255, 204, 0, 0.5);
-}
-
-/* Auto-next Toggle */
 .autoNextToggle {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: 12px;
+  color: #cbd5e1;
   cursor: pointer;
+  user-select: none;
   white-space: nowrap;
 }
 
 .autoNextToggle input {
+  accent-color: #fbbf24;
   cursor: pointer;
+}
+
+.subtitlesWrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.selectMenu {
+  background: rgba(15, 23, 42, 0.85);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.selectMenu:hover,
+.selectMenu:focus {
+  border-color: #fbbf24;
+  color: #fbbf24;
+}
+
+.selectMenu option {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Mobile Options Sheet Popup */
+.mobileOptionsToggleBtn {
+  display: none;
+}
+
+.mobileOptionsSheet {
+  position: absolute;
+  bottom: 60px;
+  right: 12px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 240px;
+  max-width: calc(100vw - 32px);
+  z-index: 30;
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mobileOptionsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+.mobileOptionsClose {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.mobileOptionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mobileOptionLabel {
+  font-size: 12px;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.speedPills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.speedPill {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  border-radius: 12px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.speedPillActive {
+  background: rgba(251, 191, 36, 0.25);
+  border-color: #fbbf24;
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.mobileSelectMenu {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e2e8f0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+.mobileToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.mobileToggle input {
   accent-color: #fbbf24;
 }
 
-/* Resume prompt banner */
+/* Toast & Error */
 .resumeToast {
   position: absolute;
   top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(255, 204, 0, 0.4);
+  left: 16px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid #fbbf24;
   border-radius: 8px;
-  padding: 8px 16px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #f1f5f9;
   display: flex;
   align-items: center;
-  gap: 12px;
-  color: #f1f5f9;
-  font-size: 13px;
-  z-index: 30;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-  animation: fadeIn 0.3s ease;
+  gap: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+  z-index: 25;
 }
 
 .resumeBtn {
@@ -289,8 +489,7 @@
   color: #0f172a;
   border: none;
   border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 12px;
+  padding: 4px 8px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -300,79 +499,116 @@
   border: none;
   color: #94a3b8;
   cursor: pointer;
-  display: flex;
+  padding: 2px;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translate(-50%, -10px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
-}
-
-/* Error Overlay */
 .errorOverlay {
   position: absolute;
   inset: 0;
-  background: rgba(10, 14, 23, 0.95);
+  background: rgba(15, 23, 42, 0.95);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
   padding: 24px;
   text-align: center;
-  z-index: 40;
+  z-index: 30;
 }
 
 .errorIcon {
   color: #ef4444;
+  margin-bottom: 12px;
 }
 
 .errorTitle {
   font-size: 18px;
-  font-weight: 600;
-  color: #f8fafc;
-  margin: 0;
+  color: #f1f5f9;
+  margin-bottom: 8px;
 }
 
 .errorMsg {
-  font-size: 13px;
+  font-size: 14px;
   color: #94a3b8;
-  max-width: 480px;
-  margin: 0;
-  line-height: 1.5;
+  margin-bottom: 16px;
 }
 
 .retryBtn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 20px;
-  background: rgba(245, 158, 11, 0.9);
+  gap: 6px;
+  background: #fbbf24;
   color: #0f172a;
   border: none;
   border-radius: 6px;
+  padding: 8px 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.retryBtn:hover {
-  background: #fbbf24;
-  box-shadow: 0 0 12px rgba(251, 191, 36, 0.5);
-}
-
-@media (max-width: 640px) {
-  .volumeWrapper {
-    display: none;
-  }
+/* ==========================================================================
+   RESPONSIVE MOBILE BREAKPOINTS (<= 768px, <= 480px, <= 360px)
+   ========================================================================== */
+@media (max-width: 768px) {
   .controlsBar {
-    padding: 8px 10px;
-    gap: 6px;
+    padding: 8px 10px 8px;
+    gap: 4px;
   }
-  .buttonsRow {
-    gap: 6px;
+
+  /* Two rows layout: Row 1 is timeline, Row 2 is buttons */
+  .timelineWrapper {
+    height: 28px; /* Extra generous finger touch area */
   }
+
+  .desktopOnly,
+  .desktopOnlyBtn,
+  .volumeSlider {
+    display: none !important;
+  }
+
+  .mobileOptionsToggleBtn {
+    display: flex;
+  }
+
+  .leftControls,
+  .rightControls {
+    gap: 4px;
+  }
+
+  .btn {
+    padding: 6px 4px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
   .timeDisplay {
     font-size: 11px;
+    letter-spacing: -0.02em;
+  }
+}
+
+@media (max-width: 480px) {
+  .timeDisplay {
+    font-size: 10px;
+  }
+
+  .btn {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 4px 2px;
+  }
+
+  .btnMainAction {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 360px) {
+  .timeDisplay {
+    font-size: 9px;
+  }
+
+  .controlsBar {
+    padding: 6px 6px 6px;
   }
 }

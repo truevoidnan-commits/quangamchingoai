@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import VideoPlayer from '../../components/videos/VideoPlayer';
 import VideoEpisodeList from '../../components/videos/VideoEpisodeList';
+import VideosBackdrop from '../../components/videos/VideosBackdrop';
 import {
   IconArrowLeft,
   IconFilm,
@@ -135,6 +136,7 @@ export default function VideoPlayerPage() {
 
   return (
     <div className={styles.page}>
+      <VideosBackdrop />
       <div className={styles.container}>
         {/* Top Bar */}
         <div className={styles.topBar}>

@@ -1,22 +1,23 @@
-import Icon, { IconBook } from '../ui/Icon';
-import { useState, useEffect } from 'react';
+import Icon, { IconBook, IconVideo, IconBookOpen } from '../ui/Icon';
+import { useState, useEffect, useRef } from 'react';
 import { getSyncStatus } from '../../lib/sync/autoSync.js';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { isVaultSessionUnlocked } from '../../lib/storage.js';
 import { useCultivationContext } from '../../context/CultivationContext';
+import { unlockComics, unlockVideos } from '../../lib/secretNav.js';
 import styles from './Header.module.css';
-
-
 
 export default function Header() {
   const location = useLocation();
-  const isLobby = location.pathname === '/' || location.pathname === '/comics';
+  const navigate = useNavigate();
+  const isVideos = location.pathname.startsWith('/videos');
+  const isComics = location.pathname.startsWith('/comics');
+  const isLobby = location.pathname === '/' || isComics || isVideos;
   const { displayName, cultivation } = useCultivationContext();
   const [syncStatus, setSyncStatusState] = useState(() => getSyncStatus());
 
   const searchParams = new URLSearchParams(location.search);
   const isVault = (location.pathname === '/' || location.pathname === '/add-novel') && searchParams.get('vault') === '1' && isVaultSessionUnlocked();
-  const isComics = location.pathname.startsWith('/comics');
 
   let headerTitle = 'THIÊN CƠ LÂU';
   let logoStyleClass = styles.logoThienCoLau;
@@ -30,6 +31,10 @@ export default function Header() {
     headerTitle = 'TÀNG KINH HỌA CÁC';
     logoStyleClass = styles.logoComics;
     homeLink = '/comics';
+  } else if (isVideos) {
+    headerTitle = 'THẦN THÔNG ẢNH HỌA';
+    logoStyleClass = styles.logoVideos;
+    homeLink = '/videos';
   }
 
   useEffect(() => {
@@ -37,10 +42,76 @@ export default function Header() {
       document.title = 'Tàng Kinh Mật Thất · Thiên Cơ Lâu';
     } else if (isComics) {
       document.title = 'Tàng Kinh Họa Các · Thiên Cơ Lâu';
+    } else if (isVideos) {
+      document.title = 'Thần Thông Ảnh Họa · Thiên Cơ Lâu';
     } else {
       document.title = 'Thiên Cơ Lâu · Trình Đọc Truyện';
     }
-  }, [isVault, isComics]);
+  }, [isVault, isComics, isVideos]);
+
+  // Secret Gestures Tracker (4 taps -> Comics, Long-press 2s or 5 taps -> Videos)
+  const tapCountRef = useRef(0);
+  const tapTimerRef = useRef(null);
+  const holdIntervalRef = useRef(null);
+  const [holdingProgress, setHoldingProgress] = useState(0);
+
+  const startHold = (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    cancelHold();
+    let elapsed = 0;
+    holdIntervalRef.current = setInterval(() => {
+      elapsed += 50;
+      const pct = Math.min(100, Math.round((elapsed / 2000) * 100));
+      setHoldingProgress(pct);
+      if (pct >= 100) {
+        clearInterval(holdIntervalRef.current);
+        holdIntervalRef.current = null;
+        unlockVideos();
+        setHoldingProgress(0);
+        navigate('/videos');
+      }
+    }, 50);
+  };
+
+  const cancelHold = () => {
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+    setHoldingProgress(0);
+  };
+
+  const handleLogoClick = (e) => {
+    if (holdingProgress >= 100) {
+      e.preventDefault();
+      cancelHold();
+      return;
+    }
+    cancelHold();
+
+    tapCountRef.current += 1;
+    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+
+    if (tapCountRef.current === 4) {
+      e.preventDefault();
+      tapCountRef.current = 0;
+      unlockComics();
+      navigate('/comics');
+      return;
+    }
+
+    if (tapCountRef.current >= 5) {
+      e.preventDefault();
+      tapCountRef.current = 0;
+      unlockVideos();
+      navigate('/videos');
+      return;
+    }
+
+    tapTimerRef.current = setTimeout(() => {
+      tapCountRef.current = 0;
+    }, 1500);
+  };
 
   useEffect(() => {
     const handleStatus = (e) => {
@@ -108,10 +179,28 @@ export default function Header() {
     <>
       <header className={`${styles.header} ${!isLobby ? styles.compact : ''}`}>
         <div className={styles.inner}>
-          <Link to={homeLink} className={`${styles.logo} ${logoStyleClass}`} aria-label={`${headerTitle} - Trang chủ`}>
-            <Icon name="star" size={13} className={styles.logoIcon} />
-            <span className={styles.logoText}>{headerTitle}</span>
-          </Link>
+          <div className={styles.logoWrap}>
+            {holdingProgress > 0 && <div className={styles.holdRing} />}
+            <Link
+              to={homeLink}
+              className={`${styles.logo} ${logoStyleClass}`}
+              aria-label={`${headerTitle} - Trang chủ`}
+              onClick={handleLogoClick}
+              onPointerDown={startHold}
+              onPointerUp={cancelHold}
+              onPointerLeave={cancelHold}
+              onPointerCancel={cancelHold}
+            >
+              {isVideos ? (
+                <IconVideo size={15} className={styles.logoIcon} />
+              ) : isComics ? (
+                <IconBookOpen size={15} className={styles.logoIcon} />
+              ) : (
+                <Icon name="star" size={13} className={styles.logoIcon} />
+              )}
+              <span className={styles.logoText}>{headerTitle}</span>
+            </Link>
+          </div>
 
           <div className={styles.headerRight}>
             {/* Cloud Sync Button & Status Indicator */}
@@ -171,7 +260,7 @@ export default function Header() {
           </div>
         </div>
         {/* Neon divider line */}
-        <div className={`${styles.neonLine} ${isComics ? styles.neonLineComics : ''}`} />
+        <div className={`${styles.neonLine} ${isComics ? styles.neonLineComics : isVideos ? styles.neonLineVideos : ''}`} />
       </header>
     </>
   );

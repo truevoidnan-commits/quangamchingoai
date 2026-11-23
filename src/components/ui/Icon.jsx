@@ -584,5 +584,6 @@ export const IconSkipForward = (props) => <Icon name="skip-forward" {...props} /
 export const IconSkipBack = (props) => <Icon name="skip-back" {...props} />;
 export const IconSubtitles = (props) => <Icon name="subtitles" {...props} />;
 export const IconSparkles = (props) => <Icon name="sparkles" {...props} />;
+export const IconImage = (props) => <Icon name="image" {...props} />;
 
 export { ICON_REGISTRY };

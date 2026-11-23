@@ -23,6 +23,7 @@ export {
   IconPlus,
   IconUpload,
   IconDownload,
+  IconImage,
   IconTrash,
   IconEdit,
   IconClock,

@@ -1,6 +1,6 @@
 .page {
   min-height: 100vh;
-  background-color: var(--bg-primary, #060911);
+  background-color: transparent;
   color: var(--text-primary, #e2e8f0);
   padding: 16px 20px 60px;
 }
