@@ -545,7 +545,7 @@ export default function GlobalReplaceModal({
               </div>
 
               <div className={styles.confirmWarningBox}>
-                Bảo vệ dữ liệu: Hệ thống sẽ tự động tạo một bản sao lưu an toàn (snapshot) trước khi ghi. Bạn có thể bấm "Hoàn tác" để khôi phục lại bất cứ lúc nào.
+                Bảo vệ dữ liệu: Hệ thống sẽ tự động tạo bản sao lưu an toàn (snapshot) trước khi ghi. Bản sao lưu được lưu trữ có thời hạn (mặc định tối đa 7 ngày, có thể bị dọn sớm nếu vượt giới hạn số lượng snapshot).
               </div>
 
               <div className={styles.confirmActions}>

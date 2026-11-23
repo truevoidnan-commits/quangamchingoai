@@ -596,7 +596,7 @@ export default function ChapterTextEditModal({
 
               <div className={styles.confirmWarningBox}>
                 {confirmAction.scope === 'novel'
-                  ? 'Bảo vệ dữ liệu: Hệ thống sẽ tự động tạo một bản sao lưu an toàn (snapshot) trước khi ghi. Bạn có thể bấm "Hoàn tác" ở thông báo sau khi lưu để phục hồi nguyên bản các chương.'
+                  ? 'Bảo vệ dữ liệu: Hệ thống sẽ tự động tạo bản sao lưu an toàn (snapshot) trước khi ghi. Bản sao lưu được lưu trữ có thời hạn (mặc định tối đa 7 ngày, có thể bị dọn sớm nếu vượt giới hạn snapshot).'
                   : 'Thao tác sẽ thay thế toàn bộ các lần xuất hiện của cụm từ này trong chương hiện tại.'}
               </div>
 

@@ -74,6 +74,7 @@ class MockDBInstance {
     };
     this.simulateError = null;
     this.simulateTransactionError = null;
+    this.openedTransactions = [];
   }
 
   clear() {
@@ -82,6 +83,7 @@ class MockDBInstance {
     this.stores.snapshots.clear();
     this.simulateError = null;
     this.simulateTransactionError = null;
+    this.openedTransactions = [];
   }
 
   async get(storeName, id) {
@@ -104,13 +106,27 @@ class MockDBInstance {
     return Array.from(this.stores[storeName]?.values() || []).map((v) => JSON.parse(JSON.stringify(v)));
   }
 
-  transaction(storeNames) {
+  transaction(storeNames, mode = 'readonly') {
     if (this.simulateTransactionError) throw this.simulateTransactionError;
     const name = Array.isArray(storeNames) ? storeNames[0] : storeNames;
     const store = new MockObjectStore(this.stores[name], this);
+    const txRecord = {
+      storeName: name,
+      mode,
+      aborted: false,
+    };
+    this.openedTransactions.push(txRecord);
+
     return {
+      mode,
       store,
       objectStore: () => store,
+      abort: () => {
+        txRecord.aborted = true;
+      },
+      get aborted() {
+        return txRecord.aborted;
+      },
       done: Promise.resolve(),
     };
   }
@@ -771,5 +787,83 @@ describe('Novel-wide Snapshot Backup & Atomic Restoration', () => {
       ),
       { ok: false, reason: 'COUNT_MISMATCH', expected: 5, actual: 4 }
     );
+  });
+
+  test('TOCTOU elimination & concurrent write simulation during rollback', async () => {
+    const novelId = 'novel-toctou-test';
+    const ch1 = { id: 'toctou-1', novelId, order: 1, title: 'Chương 1', content: 'Vạn Cổ Đệ Nhất Tông: Cực phẩm linh căn.' };
+    const ch2 = { id: 'toctou-2', novelId, order: 2, title: 'Chương 2', content: 'Luyện chế Cực phẩm linh đan.' };
+    const ch3 = { id: 'toctou-3', novelId, order: 3, title: 'Chương 3', content: 'Cực phẩm phi kiếm phá không.' };
+    await mockMainDB.put('chapters', ch1);
+    await mockMainDB.put('chapters', ch2);
+    await mockMainDB.put('chapters', ch3);
+
+    // Initial replace: 'Cực phẩm' -> 'Thần phẩm'
+    const replaceRes = await replaceTextInNovel(novelId, 'Cực phẩm', 'Thần phẩm');
+    assert.ok(replaceRes.snapshotId);
+    assert.equal(replaceRes.modifiedChaptersCount, 3);
+
+    // 1. Verify that restoreNovelSnapshot opens ONLY A SINGLE readwrite transaction (eliminating TOCTOU window)
+    mockMainDB.openedTransactions = [];
+    const restoreRes = await restoreNovelSnapshot(replaceRes.snapshotId);
+    assert.equal(restoreRes.restoredChaptersCount, 3);
+
+    const chapterTx = mockMainDB.openedTransactions.filter((tx) => tx.storeName === 'chapters');
+    assert.equal(
+      chapterTx.length,
+      1,
+      'Must use exactly ONE transaction on chapters store (no separate readonly pre-check transaction)'
+    );
+    assert.equal(chapterTx[0].mode, 'readwrite', 'Transaction mode must be readwrite');
+
+    // 2. Now test concurrent write race condition during rollback
+    // Re-apply replace to get a fresh snapshot
+    const replaceRes2 = await replaceTextInNovel(novelId, 'Cực phẩm', 'Thần phẩm');
+    assert.ok(replaceRes2.snapshotId);
+
+    // Simulate concurrent write occurring right while rollback is processing:
+    // A cloud sync or user edit updates ch2 to a new state
+    const concurrentEdit = {
+      id: 'toctou-2',
+      novelId,
+      order: 2,
+      title: 'Chương 2',
+      content: 'Luyện chế Thần phẩm linh đan kèm theo dị hỏa thần bí.',
+    };
+    await mockMainDB.put('chapters', concurrentEdit);
+
+    mockMainDB.openedTransactions = [];
+    // Attempt rollback: the atomic transaction encounters the concurrent modification
+    await assert.rejects(
+      async () => {
+        await restoreNovelSnapshot(replaceRes2.snapshotId);
+      },
+      (err) => {
+        assert.equal(err.code, 'SNAPSHOT_CONFLICT');
+        assert.equal(err.conflicts.length, 1);
+        assert.equal(err.conflicts[0].id, 'toctou-2');
+        return true;
+      }
+    );
+
+    // Verify transaction abort was invoked
+    const abortedTx = mockMainDB.openedTransactions.find((tx) => tx.storeName === 'chapters');
+    assert.ok(abortedTx, 'Chapters transaction must have been opened');
+    assert.equal(abortedTx.aborted, true, 'Transaction must be aborted on conflict');
+
+    // Verify ZERO chapters were partially restored:
+    // ch1 should still have 'Thần phẩm' (not restored to Cực phẩm)
+    // ch2 should still have the concurrent edit
+    // ch3 should still have 'Thần phẩm' (not restored)
+    const check1 = await mockMainDB.get('chapters', 'toctou-1');
+    const check2 = await mockMainDB.get('chapters', 'toctou-2');
+    const check3 = await mockMainDB.get('chapters', 'toctou-3');
+    assert.equal(check1.content, 'Vạn Cổ Đệ Nhất Tông: Thần phẩm linh căn.', 'Chapter 1 must NOT be partially restored');
+    assert.equal(check2.content, concurrentEdit.content, 'Chapter 2 must preserve concurrent edit');
+    assert.equal(check3.content, 'Thần phẩm phi kiếm phá không.', 'Chapter 3 must NOT be partially restored');
+
+    // Verify snapshot was NOT deleted
+    const preservedSnap = await getNovelSnapshot(replaceRes2.snapshotId);
+    assert.ok(preservedSnap, 'Snapshot must be preserved when rollback aborts');
   });
 });

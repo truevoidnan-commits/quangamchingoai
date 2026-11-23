@@ -182,13 +182,13 @@ export async function deleteNovelSnapshot(snapshotId) {
  * Restores all original chapters from a snapshot in a single atomic transaction.
  *
  * Guarantees:
- * 1. Pre-restoration conflict check: compares current database chapters with
- *    expected post-replacement states. If any chapter was further modified
- *    or synced from another device, rollback is completely aborted.
- * 2. Does NOT delete snapshot if restoration fails or conflict is detected.
- * 3. Preserves all other chapter metadata (audioUrl, readProgress, custom tags, etc.)
+ * 1. Single readwrite transaction: Eliminates TOCTOU race conditions by performing
+ *    pre-restoration conflict check, validation, and content restoration within
+ *    the exact same 'readwrite' transaction on the 'chapters' store.
+ * 2. If any conflict or modification is detected, the transaction is immediately aborted.
+ * 3. Does NOT perform partial writes and does NOT delete snapshot if restoration fails or conflict is detected.
+ * 4. Preserves all other chapter metadata (audioUrl, readProgress, custom tags, etc.)
  *    by only reverting modified title and content fields.
- * 4. Atomic transaction on the 'chapters' store.
  *
  * @param {string} snapshotId - ID of the snapshot to restore
  * @param {Function} [getMainDBFn] - Function returning main IndexedDB instance
@@ -211,15 +211,16 @@ export async function restoreNovelSnapshot(snapshotId, getMainDBFn) {
     mainDB = await getDB();
   }
 
-  // Phase 1: Pre-restoration conflict check
+  // Single atomic readwrite transaction eliminating any TOCTOU window:
+  // Both conflict check and restoration writes share this exact same transaction.
+  const tx = mainDB.transaction('chapters', 'readwrite');
+  const store = tx.objectStore ? tx.objectStore('chapters') : tx.store;
+
   const conflicts = [];
   const chaptersToRestore = [];
 
-  const readTx = mainDB.transaction('chapters', 'readonly');
-  const readStore = readTx.objectStore ? readTx.objectStore('chapters') : readTx.store;
-
   for (const ch of originalChapters) {
-    const currentCh = await readStore.get(ch.id);
+    const currentCh = await store.get(ch.id);
     if (!currentCh) {
       conflicts.push({
         id: ch.id,
@@ -259,10 +260,14 @@ export async function restoreNovelSnapshot(snapshotId, getMainDBFn) {
       originalContent: ch.originalContent !== undefined ? ch.originalContent : ch.content,
     });
   }
-  await readTx.done;
 
-  // If any conflicts detected: abort rollback completely, do not write, do not delete snapshot!
+  // If any conflicts detected: abort transaction immediately, do not write, do not delete snapshot!
   if (conflicts.length > 0) {
+    if (typeof tx.abort === 'function') {
+      try {
+        tx.abort();
+      } catch (e) {}
+    }
     const conflictErr = new Error(
       `Phát hiện xung đột nội dung: ${conflicts.length} chương đã được chỉnh sửa hoặc đồng bộ từ thiết bị khác sau thời điểm thay thế. Thao tác hoàn tác đã bị hủy để bảo vệ dữ liệu.`
     );
@@ -271,26 +276,23 @@ export async function restoreNovelSnapshot(snapshotId, getMainDBFn) {
     throw conflictErr;
   }
 
-  // Phase 2: Atomic restoration preserving all existing metadata
-  const writeTx = mainDB.transaction('chapters', 'readwrite');
-  const writeStore = writeTx.objectStore ? writeTx.objectStore('chapters') : writeTx.store;
+  // Perform restoration writes within the SAME transaction, preserving existing metadata
   const restoredChapters = [];
-
   for (const item of chaptersToRestore) {
     const { targetChapter, originalTitle, originalContent } = item;
-    // Preserve existing metadata, only revert title and content
     const updatedChapter = {
       ...targetChapter,
       title: originalTitle,
       content: originalContent,
       updatedAt: Date.now(),
     };
-    await writeStore.put(updatedChapter);
+    await store.put(updatedChapter);
     restoredChapters.push(updatedChapter);
   }
-  await writeTx.done;
 
-  // Phase 3: Mark dirty for sync ledger and delete applied snapshot
+  await tx.done;
+
+  // Mark dirty for sync ledger
   try {
     const { markNovelDirty } = await import('./sync/syncLedger.js');
     markNovelDirty(novelId, Date.now(), 'snapshot_restore');
