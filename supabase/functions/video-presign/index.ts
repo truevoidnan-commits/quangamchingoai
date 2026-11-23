@@ -15,12 +15,14 @@ import {
   DeleteObjectCommand,
 } from 'npm:@aws-sdk/client-s3@3.714.0';
 import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3.714.0';
+import { FetchHttpHandler } from 'npm:@smithy/fetch-http-handler@4.1.2';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import {
   buildPosterKey,
   buildVideoSourceKey,
   buildSubtitleKey,
   validateVideoPresignRequest,
+  classifyS3Error,
   cleanEtag,
   getCorsHeaders,
   PUT_EXPIRATION_SECONDS,
@@ -160,7 +162,8 @@ Deno.serve(async (req: Request) => {
     const { action, seriesId, episodeId } = validation.data;
 
     // 5. Initialize S3 Client configured specifically for Cloudflare R2
-    // endpoint uses Account ID format, region is 'auto', forcePathStyle ensures path-style routing
+    // Uses FetchHttpHandler backed by standard Fetch API (native in Deno)
+    // to avoid Node http stream issues (e.g. IncomingMessageForClient unexpected end of file).
     const s3 = new S3Client({
       region: 'auto',
       endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -170,6 +173,9 @@ Deno.serve(async (req: Request) => {
       },
       forcePathStyle: true,
       maxAttempts: 2, // Limit retries to prevent unbounded backoff and worker timeouts on Supabase Edge Functions
+      requestHandler: new FetchHttpHandler({
+        requestTimeout: 25000, // 25s per HTTP request timeout
+      }),
     });
 
     // Helper: Admin Guard
@@ -206,7 +212,8 @@ Deno.serve(async (req: Request) => {
             Bucket: R2_BUCKET,
             Prefix: 'videos/',
             MaxKeys: 1,
-          })
+          }),
+          { abortSignal: AbortSignal.timeout(10000) }
         );
 
         return new Response(
@@ -218,29 +225,37 @@ Deno.serve(async (req: Request) => {
             endpoint,
             keyHint,
             authSource,
+            transport: 'FetchHttpHandler (Fetch API)',
             runtimeDiagnostics,
             keyCount: probeRes.KeyCount || 0,
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } catch (err: any) {
-        const httpStatus = err.$metadata?.httpStatusCode;
-        const errName = err.name || 'UnknownError';
-        let stage = 'UNKNOWN';
+        const classified = classifyS3Error(err);
+        const httpStatus = classified.httpStatus;
+        const errName = classified.errName;
+        let stage: string = classified.category;
         let diagnosticMessage = '';
 
         if (errName === 'InvalidAccessKeyId' || errName === 'SignatureDoesNotMatch') {
           stage = 'CREDENTIAL_INVALID';
           diagnosticMessage = `Khóa xác thực R2 không hợp lệ (${errName}). Vui lòng kiểm tra lại R2_VIDEO_ACCESS_KEY_ID và R2_VIDEO_SECRET_ACCESS_KEY trong Supabase Secrets.`;
-        } else if (httpStatus === 403 || errName === 'AccessDenied') {
+        } else if (classified.category === 'HTTP_403') {
           stage = 'PERMISSIONS_OR_BUCKET_MISMATCH';
           diagnosticMessage =
             `Cloudflare R2 từ chối truy cập (HTTP 403 AccessDenied). ` +
             `Nguyên nhân: Token R2_VIDEO_ACCESS_KEY_ID (${R2_ACCESS_KEY_ID.length} ký tự) không có quyền Object Read & Write trên bucket '${R2_BUCKET}', ` +
             `hoặc Account ID '${R2_ACCOUNT_ID}' không khớp với tài khoản sở hữu token.`;
-        } else if (httpStatus === 404 || errName === 'NoSuchBucket') {
+        } else if (classified.category === 'HTTP_404') {
           stage = 'BUCKET_NOT_FOUND';
           diagnosticMessage = `Bucket '${R2_BUCKET}' không tồn tại trên tài khoản Cloudflare R2 '${R2_ACCOUNT_ID}'.`;
+        } else if (classified.category === 'CONNECTION_CLOSED') {
+          stage = 'CONNECTION_CLOSED';
+          diagnosticMessage = `Kết nối HTTP tới R2 bị ngắt giữa chừng hoặc gặp sự cố socket/EOF (${classified.message}).`;
+        } else if (classified.category === 'TIMEOUT') {
+          stage = 'TIMEOUT';
+          diagnosticMessage = `Hết thời gian kết nối tới Cloudflare R2 (${endpoint}).`;
         } else if (err.code === 'ENOTFOUND' || err.message?.includes('fetch failed') || err.message?.includes('getaddrinfo')) {
           stage = 'ENDPOINT_UNREACHABLE';
           diagnosticMessage = `Không thể kết nối đến endpoint R2: ${endpoint}. Vui lòng kiểm tra Account ID '${R2_ACCOUNT_ID}'.`;
@@ -261,6 +276,7 @@ Deno.serve(async (req: Request) => {
             endpoint,
             keyHint,
             authSource,
+            transport: 'FetchHttpHandler (Fetch API)',
             runtimeDiagnostics,
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -656,7 +672,16 @@ Deno.serve(async (req: Request) => {
           actualSize = preSize;
         }
       } catch (err: any) {
-        logStage('HEAD_DONE', { phase: 'idempotent_pre_check', durationMs: Date.now() - preHeadStartTime, notFound: true, errName: err.name });
+        const classified = classifyS3Error(err);
+        logStage('HEAD_DONE', {
+          phase: 'idempotent_pre_check',
+          durationMs: Date.now() - preHeadStartTime,
+          notFound: classified.category === 'HTTP_404',
+          errCategory: classified.category,
+          errName: classified.errName,
+          httpStatus: classified.httpStatus,
+          message: classified.message,
+        });
       }
 
       // If already finalized on R2, ensure DB state is updated and return success immediately
@@ -771,11 +796,14 @@ Deno.serve(async (req: Request) => {
         logStage('COMPLETE_DONE', { durationMs: Date.now() - completeStartTime, status: 'ok' });
       } catch (err: any) {
         completeErr = err;
+        const classified = classifyS3Error(err);
         logStage('COMPLETE_DONE', {
           durationMs: Date.now() - completeStartTime,
           status: 'error',
-          errName: err.name,
-          httpStatus: err.$metadata?.httpStatusCode,
+          errCategory: classified.category,
+          errName: classified.errName,
+          httpStatus: classified.httpStatus,
+          message: classified.message,
         });
       }
 
@@ -796,25 +824,59 @@ Deno.serve(async (req: Request) => {
         logStage('HEAD_DONE', { phase: 'post_complete_verify', durationMs: Date.now() - headStartTime, actualSize, status: 'ok' });
       } catch (err: any) {
         headErr = err;
+        const classified = classifyS3Error(err);
         logStage('HEAD_DONE', {
           phase: 'post_complete_verify',
           durationMs: Date.now() - headStartTime,
           status: 'error',
-          errName: err.name,
-          httpStatus: err.$metadata?.httpStatusCode,
+          errCategory: classified.category,
+          errName: classified.errName,
+          httpStatus: classified.httpStatus,
+          message: classified.message,
         });
       }
 
       // If Complete threw an error AND Head failed to find object:
+      // When complete-multipart-upload has an undetermined outcome (e.g. connection closed or timeout),
+      // DO NOT abort session or mark episode failed. Keep DB intact and allow recovery via verify-episode-upload.
       if (actualSize <= 0) {
-        console.error('[R2 Complete Failed & HEAD Not Found]:', completeErr?.message || headErr?.message);
+        const primaryErr = completeErr || headErr;
+        const classified = classifyS3Error(primaryErr);
+        console.error('[R2 Complete Failed & HEAD Not Found]:', classified);
+
+        let errCode = 'R2_COMPLETE_FAILED';
+        let statusCode = 502;
+        let userMessage = `Hoàn tất multipart upload thất bại trên R2 (${classified.errName}): ${classified.message}`;
+
+        if (classified.category === 'CONNECTION_CLOSED') {
+          errCode = 'R2_CONNECTION_CLOSED';
+          statusCode = 502;
+          userMessage = `Kết nối HTTP tới R2 bị ngắt giữa chừng khi hoàn tất tệp (${classified.message}). Tất cả các phần đã tải lên đầy đủ, phiên upload được bảo lưu. Quản trị viên có thể bấm "Kiểm tra & Khôi phục từ R2" để hoàn tất.`;
+        } else if (classified.category === 'TIMEOUT') {
+          errCode = 'R2_TIMEOUT';
+          statusCode = 504;
+          userMessage = `Hết thời gian chờ phản hồi từ Cloudflare R2 khi hoàn tất tập phim. R2 có thể đang xử lý ghép tệp ngầm. Quản trị viên có thể bấm "Kiểm tra & Khôi phục từ R2" để hoàn tất.`;
+        } else if (classified.category === 'HTTP_403') {
+          errCode = 'R2_ACCESS_DENIED';
+          statusCode = 403;
+          userMessage = `Cloudflare R2 từ chối quyền truy cập (HTTP 403 AccessDenied) khi hoàn tất multipart upload.`;
+        } else if (classified.category === 'HTTP_5XX') {
+          errCode = 'R2_SERVER_ERROR';
+          statusCode = 502;
+          userMessage = `Máy chủ Cloudflare R2 gặp sự cố tạm thời (HTTP ${classified.httpStatus || 500}). Quản trị viên có thể bấm "Kiểm tra & Khôi phục từ R2" để kiểm tra lại.`;
+        }
+
         return new Response(
           JSON.stringify({
-            error: `Hoàn tất multipart upload thất bại trên R2 (${completeErr?.name || headErr?.name || 'UnknownError'}): ${completeErr?.message || headErr?.message}`,
-            code: 'R2_COMPLETE_FAILED',
+            error: userMessage,
+            code: errCode,
+            stage: classified.category,
+            recoverable: classified.isRecoverable,
             uploadId,
+            seriesId,
+            episodeId,
           }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: statusCode, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -1004,10 +1066,11 @@ Deno.serve(async (req: Request) => {
           { abortSignal: AbortSignal.timeout(10000) }
         );
       } catch (err: any) {
-        const httpStatus = err.$metadata?.httpStatusCode;
-        const errName = err.name || 'UnknownError';
+        const classified = classifyS3Error(err);
+        const httpStatus = classified.httpStatus;
+        const errName = classified.errName;
 
-        if (httpStatus === 404 || errName === 'NotFound' || errName === 'NoSuchKey') {
+        if (classified.category === 'HTTP_404') {
           return new Response(
             JSON.stringify({
               ok: false,
@@ -1023,7 +1086,7 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        if (httpStatus === 403 || errName === 'AccessDenied') {
+        if (classified.category === 'HTTP_403') {
           return new Response(
             JSON.stringify({
               ok: false,
@@ -1039,7 +1102,7 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        if (errName === 'TimeoutError' || errName === 'AbortError' || err.message?.toLowerCase().includes('timeout')) {
+        if (classified.category === 'TIMEOUT') {
           return new Response(
             JSON.stringify({
               ok: false,
@@ -1055,11 +1118,43 @@ Deno.serve(async (req: Request) => {
           );
         }
 
+        if (classified.category === 'CONNECTION_CLOSED') {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              verified: false,
+              error: `Kết nối HTTP tới R2 bị ngắt giữa chừng khi kiểm tra tệp video (${classified.message}). Vui lòng thử lại.`,
+              code: 'R2_CONNECTION_CLOSED',
+              httpStatus: 502,
+              seriesId,
+              episodeId,
+              key,
+            }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (classified.category === 'HTTP_5XX') {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              verified: false,
+              error: `Máy chủ Cloudflare R2 gặp sự cố tạm thời (HTTP ${httpStatus || 500}): ${classified.message}`,
+              code: 'R2_SERVER_ERROR',
+              httpStatus: httpStatus || 502,
+              seriesId,
+              episodeId,
+              key,
+            }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         return new Response(
           JSON.stringify({
             ok: false,
             verified: false,
-            error: `Lỗi kết nối mạng hoặc lỗi R2 S3 API (${errName}): ${err.message}`,
+            error: `Lỗi kết nối mạng hoặc lỗi R2 S3 API (${errName}): ${classified.message}`,
             code: 'R2_NETWORK_ERROR',
             httpStatus: httpStatus || 502,
             seriesId,
@@ -1599,11 +1694,18 @@ Deno.serve(async (req: Request) => {
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
-    console.error('[video-presign Error]:', err);
+    const classified = classifyS3Error(err);
+    console.error('[video-presign Uncaught Exception]:', {
+      name: err?.name,
+      message: err?.message,
+      stack: err?.stack,
+      classified,
+    });
     return new Response(
       JSON.stringify({
-        error: 'Lỗi máy chủ khi xử lý chữ ký video Cloudflare R2',
-        code: 'INTERNAL_ERROR',
+        error: `Lỗi máy chủ khi xử lý chữ ký video Cloudflare R2 (${classified.errName}): ${classified.message}`,
+        code: classified.category === 'CONNECTION_CLOSED' ? 'R2_CONNECTION_CLOSED' : 'INTERNAL_ERROR',
+        stage: classified.category,
         details: err?.message || String(err),
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

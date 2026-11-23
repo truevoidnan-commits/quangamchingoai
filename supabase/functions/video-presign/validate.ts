@@ -229,3 +229,171 @@ export function validateVideoPresignRequest(body: any): { ok: boolean; error?: s
 
   return { ok: true, data: { action, seriesId, episodeId } };
 }
+
+export type S3ErrorCategory =
+  | 'CONNECTION_CLOSED'
+  | 'TIMEOUT'
+  | 'HTTP_403'
+  | 'HTTP_404'
+  | 'HTTP_5XX'
+  | 'RUNTIME_ERROR'
+  | 'UNKNOWN_ERROR';
+
+export interface ClassifiedS3Error {
+  category: S3ErrorCategory;
+  httpStatus?: number;
+  errName: string;
+  message: string;
+  isConnectionDropped: boolean;
+  isTimeout: boolean;
+  isRecoverable: boolean;
+}
+
+/**
+ * Classifies an error from S3/R2 operations or HTTP transport into actionable categories:
+ * - CONNECTION_CLOSED: Premature socket drop, unexpected EOF, connection reset (recoverable)
+ * - TIMEOUT: Request or abort timeout exceeded (recoverable)
+ * - HTTP_403: Cloudflare R2 AccessDenied / token permissions mismatch (non-recoverable without admin action)
+ * - HTTP_404: Object or bucket not found (deterministic missing)
+ * - HTTP_5XX: Cloudflare / R2 server error (recoverable via retry/verify)
+ * - RUNTIME_ERROR: Uncaught TypeError / ReferenceError
+ * - UNKNOWN_ERROR: Generic error
+ */
+export function classifyS3Error(err: any): ClassifiedS3Error {
+  if (!err) {
+    return {
+      category: 'UNKNOWN_ERROR',
+      errName: 'UnknownError',
+      message: 'Unknown error occurred',
+      isConnectionDropped: false,
+      isTimeout: false,
+      isRecoverable: false,
+    };
+  }
+
+  const httpStatus = Number(err.$metadata?.httpStatusCode || err.status || err.statusCode) || undefined;
+  const errName = String(err.name || err.code || 'Error');
+  const message = String(err.message || '');
+  const lowerMsg = message.toLowerCase();
+  const lowerName = errName.toLowerCase();
+  const stack = String(err.stack || '').toLowerCase();
+  const causeMsg = String(err.cause?.message || '').toLowerCase();
+
+  // 1. Connection dropped / unexpected EOF / premature close / stream abort / socket hung up
+  const isConnectionDropped =
+    lowerMsg.includes('unexpected end of file') ||
+    causeMsg.includes('unexpected end of file') ||
+    stack.includes('unexpected end of file') ||
+    lowerMsg.includes('premature close') ||
+    causeMsg.includes('premature close') ||
+    lowerMsg.includes('socket hang up') ||
+    lowerMsg.includes('socket hung up') ||
+    lowerMsg.includes('econnreset') ||
+    err.code === 'ECONNRESET' ||
+    err.code === 'ECONNABORTED' ||
+    err.code === 'UND_ERR_SOCKET' ||
+    lowerMsg.includes('connection reset') ||
+    lowerMsg.includes('connection closed') ||
+    lowerMsg.includes('stream closed') ||
+    lowerMsg.includes('network connection was lost') ||
+    lowerMsg.includes('other side closed') ||
+    (lowerMsg.includes('fetch failed') && !lowerMsg.includes('timeout') && !lowerMsg.includes('abort'));
+
+  if (isConnectionDropped) {
+    return {
+      category: 'CONNECTION_CLOSED',
+      httpStatus,
+      errName,
+      message,
+      isConnectionDropped: true,
+      isTimeout: false,
+      isRecoverable: true,
+    };
+  }
+
+  // 2. Timeout / AbortError
+  const isTimeout =
+    errName === 'TimeoutError' ||
+    errName === 'AbortError' ||
+    errName === 'RequestTimeout' ||
+    lowerMsg.includes('timeout') ||
+    lowerMsg.includes('timed out') ||
+    lowerMsg.includes('request timed out') ||
+    causeMsg.includes('timeout');
+
+  if (isTimeout) {
+    return {
+      category: 'TIMEOUT',
+      httpStatus: httpStatus || 504,
+      errName,
+      message,
+      isConnectionDropped: false,
+      isTimeout: true,
+      isRecoverable: true,
+    };
+  }
+
+  // 3. HTTP 403 Forbidden / AccessDenied
+  if (httpStatus === 403 || errName === 'AccessDenied' || lowerName.includes('accessdenied') || lowerMsg.includes('access denied')) {
+    return {
+      category: 'HTTP_403',
+      httpStatus: 403,
+      errName: 'AccessDenied',
+      message,
+      isConnectionDropped: false,
+      isTimeout: false,
+      isRecoverable: false,
+    };
+  }
+
+  // 4. HTTP 404 Not Found / NoSuchKey / NoSuchBucket
+  if (httpStatus === 404 || errName === 'NotFound' || errName === 'NoSuchKey' || errName === 'NoSuchBucket') {
+    return {
+      category: 'HTTP_404',
+      httpStatus: 404,
+      errName: errName || 'NotFound',
+      message,
+      isConnectionDropped: false,
+      isTimeout: false,
+      isRecoverable: false,
+    };
+  }
+
+  // 5. HTTP 5xx Server Error
+  if ((httpStatus && httpStatus >= 500 && httpStatus <= 599) || errName === 'InternalError' || errName === 'BadGateway' || errName === 'ServiceUnavailable') {
+    return {
+      category: 'HTTP_5XX',
+      httpStatus: httpStatus || 502,
+      errName,
+      message,
+      isConnectionDropped: false,
+      isTimeout: false,
+      isRecoverable: true,
+    };
+  }
+
+  // 6. Runtime errors (TypeError, ReferenceError) not related to connection drop
+  if (err instanceof TypeError || errName === 'TypeError' || err instanceof ReferenceError || errName === 'ReferenceError') {
+    return {
+      category: 'RUNTIME_ERROR',
+      httpStatus,
+      errName,
+      message,
+      isConnectionDropped: false,
+      isTimeout: false,
+      isRecoverable: false,
+    };
+  }
+
+  // 7. Generic fallback
+  return {
+    category: 'UNKNOWN_ERROR',
+    httpStatus,
+    errName,
+    message,
+    isConnectionDropped: false,
+    isTimeout: false,
+    isRecoverable: false,
+  };
+}
+
