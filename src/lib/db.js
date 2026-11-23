@@ -345,23 +345,34 @@ export async function replaceTextInNovel(novelId, searchText, replaceText = '', 
 
   let snapshotId = null;
   if (modifiedChapters.length > 0) {
-    // 1. Create restorable backup snapshot before writing
+    // 1. Create restorable backup snapshot before writing - STRICT FAIL-CLOSED!
+    const { saveNovelSnapshot } = await import('./novelSnapshot.js');
+    let snap;
     try {
-      const { saveNovelSnapshot } = await import('./novelSnapshot.js');
-      const snap = await saveNovelSnapshot({
+      snap = await saveNovelSnapshot({
         novelId,
         searchText,
         replaceText,
         options: { matchCase, wholeWord, inTitle },
         totalReplacements,
         originalChapters,
+        modifiedChapters,
       });
-      snapshotId = snap.id;
     } catch (snapErr) {
-      console.warn('Không thể lưu snapshot sao lưu trước khi thay thế:', snapErr);
+      console.error('Lỗi nghiêm trọng: Không thể lưu snapshot an toàn trước khi thay thế:', snapErr);
+      throw new Error(
+        `Không thể tạo bản sao lưu an toàn trước khi thay thế (${snapErr.message || snapErr}). Thao tác đã bị dừng để bảo vệ dữ liệu truyện.`
+      );
     }
 
-    // 2. Atomic write of all modified chapters in IndexedDB
+    if (!snap || !snap.id) {
+      throw new Error(
+        'Lỗi tạo bản sao lưu an toàn: ID bản sao lưu không hợp lệ. Thao tác đã bị dừng để bảo vệ dữ liệu truyện.'
+      );
+    }
+    snapshotId = snap.id;
+
+    // 2. Atomic write of all modified chapters in IndexedDB - ONLY executed after snapshot is verified!
     await saveChaptersBulk(modifiedChapters);
   }
 

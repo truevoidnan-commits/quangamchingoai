@@ -23,11 +23,13 @@ export default function GlobalReplaceModal({
   const [isUndoing, setIsUndoing] = useState(false);
   const [lastResult, setLastResult] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmSnapshot, setConfirmSnapshot] = useState(null);
 
   const searchInputRef = useRef(null);
   const debounceTimerRef = useRef(null);
   const activeRequestIdRef = useRef(0);
   const isExecutingRef = useRef(false);
+  const confirmedParamsRef = useRef(null);
 
   // Focus and init when opening
   useEffect(() => {
@@ -36,6 +38,8 @@ export default function GlobalReplaceModal({
       setReplaceText('');
       setLastResult(null);
       setShowConfirmModal(false);
+      setConfirmSnapshot(null);
+      confirmedParamsRef.current = null;
       setIsReplacing(false);
       setIsUndoing(false);
       isExecutingRef.current = false;
@@ -118,6 +122,19 @@ export default function GlobalReplaceModal({
         return;
       }
 
+      // Snapshot parameters at confirmation time
+      const snapParams = {
+        searchText,
+        replaceText,
+        matchCase,
+        wholeWord,
+        inTitle,
+        expectedCount: freshStats.matchCount,
+        matchingChapters: freshStats.matchingChapters,
+        totalChapters: freshStats.totalChapters,
+      };
+      confirmedParamsRef.current = snapParams;
+      setConfirmSnapshot(snapParams);
       setShowConfirmModal(true);
     } catch (err) {
       setLoadingStats(false);
@@ -126,10 +143,26 @@ export default function GlobalReplaceModal({
     }
   };
 
-  // Re-verify matches before write with anti double-submit
+  // Re-verify matches before write with anti double-submit and parameter drift guard
   const handleExecuteReplace = async () => {
     if (!novelId || !searchText.trim()) return;
     if (isExecutingRef.current || isReplacing) return; // Strict double-submit guard
+
+    const confirmed = confirmedParamsRef.current;
+    if (
+      !confirmed ||
+      confirmed.searchText !== searchText ||
+      confirmed.replaceText !== replaceText ||
+      confirmed.matchCase !== matchCase ||
+      confirmed.wholeWord !== wholeWord ||
+      confirmed.inTitle !== inTitle
+    ) {
+      setShowConfirmModal(false);
+      setConfirmSnapshot(null);
+      alert('Điều kiện tìm kiếm hoặc nội dung thay thế đã bị thay đổi so với lúc mở xác nhận. Vui lòng mở lại hộp xác nhận với thông tin mới.');
+      return;
+    }
+
     isExecutingRef.current = true;
     setIsReplacing(true);
 
@@ -144,8 +177,15 @@ export default function GlobalReplaceModal({
       if (!preCheckStats || preCheckStats.matchCount === 0) {
         alert('Không tìm thấy vị trí khớp nào để thay thế. Thao tác đã bị hủy.');
         setShowConfirmModal(false);
-        setIsReplacing(false);
-        isExecutingRef.current = false;
+        setConfirmSnapshot(null);
+        return;
+      }
+
+      if (preCheckStats.matchCount !== confirmed.expectedCount) {
+        setShowConfirmModal(false);
+        setConfirmSnapshot(null);
+        setStats(preCheckStats);
+        alert(`Số lượng kết quả khớp đã thay đổi (từ ${confirmed.expectedCount} thành ${preCheckStats.matchCount}). Vui lòng xác nhận lại với thông tin mới nhất.`);
         return;
       }
 
@@ -156,6 +196,7 @@ export default function GlobalReplaceModal({
       });
 
       setShowConfirmModal(false);
+      setConfirmSnapshot(null);
       setLastResult(res);
 
       if (onSuccess) {
@@ -178,7 +219,7 @@ export default function GlobalReplaceModal({
     }
   };
 
-  // Safe undo handler restoring from snapshot
+  // Safe undo handler restoring from snapshot with conflict detection
   const handleUndoLastResult = async () => {
     if (!lastResult?.snapshotId || isUndoing) return;
     setIsUndoing(true);
@@ -208,7 +249,14 @@ export default function GlobalReplaceModal({
       alert(`Đã khôi phục thành công ${restoreRes.restoredChaptersCount} chương về trạng thái ban đầu!`);
     } catch (err) {
       console.error('Lỗi hoàn tác toàn truyện:', err);
-      alert('Không thể hoàn tác: ' + (err.message || err));
+      if (err.code === 'SNAPSHOT_CONFLICT' && Array.isArray(err.conflicts)) {
+        const conflictDetails = err.conflicts
+          .map((c) => `- ${c.title || `Chương ${c.order}`}: ${c.reason}`)
+          .join('\n');
+        alert(`HOÀN TÁC BỊ HỦY DO XUNG ĐỘT DỮ LIỆU:\n\n${err.message}\n\nDanh sách xung đột:\n${conflictDetails}\n\nBản sao lưu vẫn được bảo toàn an toàn.`);
+      } else {
+        alert('Không thể hoàn tác: ' + (err.message || err));
+      }
     } finally {
       setIsUndoing(false);
     }
@@ -260,6 +308,7 @@ export default function GlobalReplaceModal({
                   type="button"
                   className={styles.toolMiniBtn}
                   onClick={() => setSearchText('')}
+                  disabled={loadingStats || isReplacing || showConfirmModal}
                 >
                   Xóa
                 </button>
@@ -273,6 +322,7 @@ export default function GlobalReplaceModal({
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               placeholder="Nhập từ hoặc cụm từ cần tìm trong toàn bộ truyện..."
+              disabled={loadingStats || isReplacing || showConfirmModal}
             />
           </div>
 
@@ -287,6 +337,7 @@ export default function GlobalReplaceModal({
                   type="button"
                   className={styles.toolMiniBtn}
                   onClick={() => setReplaceText('')}
+                  disabled={loadingStats || isReplacing || showConfirmModal}
                 >
                   Xóa
                 </button>
@@ -299,6 +350,7 @@ export default function GlobalReplaceModal({
               value={replaceText}
               onChange={(e) => setReplaceText(e.target.value)}
               placeholder="Nhập cụm từ mới (hoặc để trống để xóa hoàn toàn)..."
+              disabled={loadingStats || isReplacing || showConfirmModal}
             />
           </div>
 
@@ -310,6 +362,7 @@ export default function GlobalReplaceModal({
                 className={styles.checkboxInput}
                 checked={wholeWord}
                 onChange={(e) => setWholeWord(e.target.checked)}
+                disabled={loadingStats || isReplacing || showConfirmModal}
               />
               <span className={styles.customCheck} aria-hidden="true">
                 <IconCheck size={11} />
@@ -323,6 +376,7 @@ export default function GlobalReplaceModal({
                 className={styles.checkboxInput}
                 checked={matchCase}
                 onChange={(e) => setMatchCase(e.target.checked)}
+                disabled={loadingStats || isReplacing || showConfirmModal}
               />
               <span className={styles.customCheck} aria-hidden="true">
                 <IconCheck size={11} />
@@ -336,6 +390,7 @@ export default function GlobalReplaceModal({
                 className={styles.checkboxInput}
                 checked={inTitle}
                 onChange={(e) => setInTitle(e.target.checked)}
+                disabled={loadingStats || isReplacing || showConfirmModal}
               />
               <span className={styles.customCheck} aria-hidden="true">
                 <IconCheck size={11} />
@@ -464,24 +519,26 @@ export default function GlobalReplaceModal({
                 <div className={styles.confirmDetailRow}>
                   <span className={styles.confirmDetailLabel}>Số chương bị ảnh hưởng:</span>
                   <span className={styles.confirmDetailValue}>
-                    {stats?.matchingChapters ?? 0} chương
+                    {confirmSnapshot?.matchingChapters ?? stats?.matchingChapters ?? 0} chương
                   </span>
                 </div>
                 <div className={styles.confirmDetailRow}>
                   <span className={styles.confirmDetailLabel}>Tổng số lần khớp:</span>
-                  <span className={styles.confirmDetailValue}>{matchCount} lần</span>
+                  <span className={styles.confirmDetailValue}>
+                    {confirmSnapshot?.expectedCount ?? matchCount} lần
+                  </span>
                 </div>
                 <div className={styles.confirmDetailRow}>
                   <span className={styles.confirmDetailLabel}>Cụm từ tìm kiếm:</span>
-                  <span className={styles.confirmDetailValue}>"{searchText}"</span>
+                  <span className={styles.confirmDetailValue}>"{confirmSnapshot?.searchText ?? searchText}"</span>
                 </div>
                 <div className={styles.confirmDetailRow}>
                   <span className={styles.confirmDetailLabel}>Cụm từ thay thế:</span>
                   <span className={styles.confirmDetailValue}>
-                    {isPureDelete ? (
+                    {!(confirmSnapshot ? confirmSnapshot.replaceText : replaceText) ? (
                       <em style={{ color: '#f87171' }}>(XÓA BỎ HOÀN TOÀN)</em>
                     ) : (
-                      `"${replaceText}"`
+                      `"${confirmSnapshot?.replaceText ?? replaceText}"`
                     )}
                   </span>
                 </div>
@@ -495,7 +552,10 @@ export default function GlobalReplaceModal({
                 <button
                   type="button"
                   className={styles.confirmBtnBack}
-                  onClick={() => setShowConfirmModal(false)}
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setConfirmSnapshot(null);
+                  }}
                   disabled={isReplacing}
                 >
                   Quay lại

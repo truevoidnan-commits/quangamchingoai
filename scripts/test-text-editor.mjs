@@ -21,26 +21,32 @@ import { setDBPromiseForTesting, replaceTextInNovel, restoreNovelSnapshot } from
 // 1. Mock In-Memory Databases for Main DB and Snapshot DB
 // -------------------------------------------------------------
 class MockObjectStore {
-  constructor(map) {
+  constructor(map, db) {
     this.map = map;
+    this.db = db;
   }
   async get(id) {
+    if (this.db?.simulateError) throw this.db.simulateError;
     const val = this.map.get(id);
     return val ? JSON.parse(JSON.stringify(val)) : undefined;
   }
   async put(val) {
+    if (this.db?.simulateError) throw this.db.simulateError;
     this.map.set(val.id, JSON.parse(JSON.stringify(val)));
   }
   async delete(id) {
+    if (this.db?.simulateError) throw this.db.simulateError;
     this.map.delete(id);
   }
   async getAll() {
+    if (this.db?.simulateError) throw this.db.simulateError;
     return Array.from(this.map.values()).map((v) => JSON.parse(JSON.stringify(v)));
   }
   index(name) {
     const self = this;
     return {
       async getAll(range) {
+        if (self.db?.simulateError) throw self.db.simulateError;
         const all = Array.from(self.map.values());
         if (!range || !range.lower) return all;
         const targetNovelId = Array.isArray(range.lower) ? range.lower[0] : range.lower;
@@ -49,6 +55,7 @@ class MockObjectStore {
           .sort((a, b) => (a.order || 0) - (b.order || 0));
       },
       async count(range) {
+        if (self.db?.simulateError) throw self.db.simulateError;
         const all = Array.from(self.map.values());
         if (!range || !range.lower) return all.length;
         const targetNovelId = Array.isArray(range.lower) ? range.lower[0] : range.lower;
@@ -65,33 +72,42 @@ class MockDBInstance {
       chapters: new Map(),
       snapshots: new Map(),
     };
+    this.simulateError = null;
+    this.simulateTransactionError = null;
   }
 
   clear() {
     this.stores.novels.clear();
     this.stores.chapters.clear();
     this.stores.snapshots.clear();
+    this.simulateError = null;
+    this.simulateTransactionError = null;
   }
 
   async get(storeName, id) {
+    if (this.simulateError) throw this.simulateError;
     return this.stores[storeName]?.get(id);
   }
 
   async put(storeName, val) {
+    if (this.simulateError) throw this.simulateError;
     this.stores[storeName]?.set(val.id, JSON.parse(JSON.stringify(val)));
   }
 
   async delete(storeName, id) {
+    if (this.simulateError) throw this.simulateError;
     this.stores[storeName]?.delete(id);
   }
 
   async getAll(storeName) {
+    if (this.simulateError) throw this.simulateError;
     return Array.from(this.stores[storeName]?.values() || []).map((v) => JSON.parse(JSON.stringify(v)));
   }
 
   transaction(storeNames) {
+    if (this.simulateTransactionError) throw this.simulateTransactionError;
     const name = Array.isArray(storeNames) ? storeNames[0] : storeNames;
-    const store = new MockObjectStore(this.stores[name]);
+    const store = new MockObjectStore(this.stores[name], this);
     return {
       store,
       objectStore: () => store,
@@ -505,5 +521,255 @@ describe('Novel-wide Snapshot Backup & Atomic Restoration', () => {
     assert.ok(!ids.includes('snap-1'), 'Oldest excess snapshot must be pruned');
     assert.ok(!ids.includes('snap-2'), 'Second oldest excess snapshot must be pruned');
     assert.ok(ids.includes('snap-7'), 'Newest snapshot must be preserved');
+  });
+
+  test('fail-closed: stops replacement and writes zero chapters if snapshot creation fails (quota exceeded, db error)', async () => {
+    const novelId = 'novel-fail-closed-test';
+    const ch1 = { id: 'fc-1', novelId, order: 1, title: 'Chương 1', content: 'Ma Tôn xuất thế thiên hạ đại loạn.' };
+    const ch2 = { id: 'fc-2', novelId, order: 2, title: 'Chương 2', content: 'Ai có thể ngăn cản Ma Tôn?' };
+    await mockMainDB.put('chapters', ch1);
+    await mockMainDB.put('chapters', ch2);
+
+    // 1. Simulate QuotaExceededError when saving snapshot
+    mockSnapshotDB.simulateError = new Error('QuotaExceededError: Storage quota exceeded');
+
+    await assert.rejects(
+      async () => {
+        await replaceTextInNovel(novelId, 'Ma Tôn', 'Thiên Tôn');
+      },
+      (err) => {
+        assert.ok(
+          err.message.includes('Không thể tạo bản sao lưu an toàn trước khi thay thế'),
+          'Error must explain failure to create snapshot'
+        );
+        assert.ok(
+          err.message.includes('Thao tác đã bị dừng để bảo vệ dữ liệu truyện'),
+          'Error must confirm operation was aborted'
+        );
+        return true;
+      }
+    );
+
+    // Verify main DB was NOT modified: ZERO chapters written!
+    const check1 = await mockMainDB.get('chapters', 'fc-1');
+    const check2 = await mockMainDB.get('chapters', 'fc-2');
+    assert.equal(check1.content, 'Ma Tôn xuất thế thiên hạ đại loạn.', 'Chapter 1 must NOT be touched');
+    assert.equal(check2.content, 'Ai có thể ngăn cản Ma Tôn?', 'Chapter 2 must NOT be touched');
+
+    mockSnapshotDB.simulateError = null;
+
+    // 2. Simulate snapshot database inaccessible / promise rejection
+    setSnapshotDBPromiseForTesting(Promise.reject(new Error('Snapshot database connection lost')));
+
+    await assert.rejects(
+      async () => {
+        await replaceTextInNovel(novelId, 'Ma Tôn', 'Thiên Tôn');
+      },
+      (err) => {
+        assert.ok(err.message.includes('Không thể tạo bản sao lưu an toàn'));
+        return true;
+      }
+    );
+
+    // Re-verify main DB remains completely untouched
+    const check1After = await mockMainDB.get('chapters', 'fc-1');
+    assert.equal(check1After.content, 'Ma Tôn xuất thế thiên hạ đại loạn.');
+
+    // Restore snapshot DB promise
+    setSnapshotDBPromiseForTesting(Promise.resolve(mockSnapshotDB));
+  });
+
+  test('conflict detection: aborts rollback and preserves snapshot if content was modified post-snapshot', async () => {
+    const novelId = 'novel-conflict-test';
+    const ch1 = { id: 'cf-1', novelId, order: 1, title: 'Chương 1', content: 'Nguyên Anh kỳ đại viên mãn.' };
+    const ch2 = { id: 'cf-2', novelId, order: 2, title: 'Chương 2', content: 'Đột phá Nguyên Anh cảnh giới.' };
+    await mockMainDB.put('chapters', ch1);
+    await mockMainDB.put('chapters', ch2);
+
+    // Run replace
+    const replaceRes = await replaceTextInNovel(novelId, 'Nguyên Anh', 'Hóa Thần');
+    assert.ok(replaceRes.snapshotId);
+
+    // Verify chapters were replaced
+    const ch2Replaced = await mockMainDB.get('chapters', 'cf-2');
+    assert.equal(ch2Replaced.content, 'Đột phá Hóa Thần cảnh giới.');
+
+    // Now simulate an edit on Chapter 2 after the snapshot was created
+    const furtherEditedContent = 'Đột phá Hóa Thần cảnh giới và thu được linh bảo thượng phẩm.';
+    await mockMainDB.put('chapters', {
+      ...ch2Replaced,
+      content: furtherEditedContent,
+    });
+
+    // Attempt to restore snapshot -> Must detect conflict and ABORT!
+    await assert.rejects(
+      async () => {
+        await restoreNovelSnapshot(replaceRes.snapshotId);
+      },
+      (err) => {
+        assert.equal(err.code, 'SNAPSHOT_CONFLICT', 'Error code must be SNAPSHOT_CONFLICT');
+        assert.ok(Array.isArray(err.conflicts), 'Must contain conflicts list');
+        assert.equal(err.conflicts.length, 1);
+        assert.equal(err.conflicts[0].id, 'cf-2');
+        assert.ok(err.conflicts[0].reason.includes('đã được chỉnh sửa hoặc đồng bộ'));
+        return true;
+      }
+    );
+
+    // Verify Chapter 2 content was NOT overwritten
+    const ch2AfterFailedRestore = await mockMainDB.get('chapters', 'cf-2');
+    assert.equal(
+      ch2AfterFailedRestore.content,
+      furtherEditedContent,
+      'Modified chapter must NOT be overwritten on conflict'
+    );
+
+    // Verify snapshot was NOT deleted (still preserved for future inspection)
+    const preservedSnapshot = await getNovelSnapshot(replaceRes.snapshotId);
+    assert.ok(preservedSnapshot, 'Snapshot must be preserved when rollback is aborted due to conflict');
+  });
+
+  test('preserves all chapter metadata (audioUrl, readProgress, custom tags) during rollback', async () => {
+    const novelId = 'novel-metadata-test';
+    const richChapter = {
+      id: 'meta-ch-1',
+      novelId,
+      order: 1,
+      title: 'Chương 1 Tiên Kiếm',
+      content: 'Bạch y thiếu niên cầm Tiên Kiếm.',
+      audioUrl: 'https://r2.storage.example/audio/ch1.mp3',
+      audioDuration: 520,
+      readProgress: 0.85,
+      customTags: ['kiem_hiep', 'hot'],
+      editorNotes: 'Kiểm tra kỹ đoạn kết chương',
+      createdAt: 1700000000,
+    };
+    await mockMainDB.put('chapters', richChapter);
+
+    // Replace in title and content
+    const replaceRes = await replaceTextInNovel(novelId, 'Tiên Kiếm', 'Thần Kiếm', { inTitle: true });
+    assert.equal(replaceRes.totalReplacements, 2);
+
+    // Verify metadata still intact after replace
+    const postReplace = await mockMainDB.get('chapters', 'meta-ch-1');
+    assert.equal(postReplace.title, 'Chương 1 Thần Kiếm');
+    assert.equal(postReplace.content, 'Bạch y thiếu niên cầm Thần Kiếm.');
+    assert.equal(postReplace.audioUrl, 'https://r2.storage.example/audio/ch1.mp3');
+
+    // Restore snapshot
+    const restoreRes = await restoreNovelSnapshot(replaceRes.snapshotId);
+    assert.equal(restoreRes.restoredChaptersCount, 1);
+
+    // Verify chapter after restore
+    const restored = await mockMainDB.get('chapters', 'meta-ch-1');
+    assert.equal(restored.title, 'Chương 1 Tiên Kiếm', 'Title must be restored to original');
+    assert.equal(restored.content, 'Bạch y thiếu niên cầm Tiên Kiếm.', 'Content must be restored to original');
+    assert.equal(restored.audioUrl, 'https://r2.storage.example/audio/ch1.mp3', 'audioUrl must be preserved');
+    assert.equal(restored.audioDuration, 520, 'audioDuration must be preserved');
+    assert.equal(restored.readProgress, 0.85, 'readProgress must be preserved');
+    assert.deepEqual(restored.customTags, ['kiem_hiep', 'hot'], 'customTags array must be preserved');
+    assert.equal(restored.editorNotes, 'Kiểm tra kỹ đoạn kết chương', 'editorNotes must be preserved');
+    assert.equal(restored.createdAt, 1700000000, 'createdAt must be preserved');
+  });
+
+  test('multi-device conflict simulation: concurrent edit and deletion aborts rollback', async () => {
+    const novelId = 'novel-multidevice-test';
+    const ch1 = { id: 'md-1', novelId, order: 1, title: 'Chương 1', content: 'Luyện khí tầng một.' };
+    const ch2 = { id: 'md-2', novelId, order: 2, title: 'Chương 2', content: 'Luyện khí tầng hai.' };
+    const ch3 = { id: 'md-3', novelId, order: 3, title: 'Chương 3', content: 'Luyện khí tầng ba.' };
+    await mockMainDB.put('chapters', ch1);
+    await mockMainDB.put('chapters', ch2);
+    await mockMainDB.put('chapters', ch3);
+
+    // Device A: runs replace across novel -> snapshot S1
+    const replaceRes = await replaceTextInNovel(novelId, 'Luyện khí', 'Trúc cơ');
+    assert.ok(replaceRes.snapshotId);
+
+    // Device B syncs or user in another tab:
+    // 1) Modifies Chapter 1
+    const ch1ModByDevB = await mockMainDB.get('chapters', 'md-1');
+    await mockMainDB.put('chapters', {
+      ...ch1ModByDevB,
+      content: 'Trúc cơ thành công sau khi nuốt Trúc Cơ Đan.',
+    });
+    // 2) Deletes Chapter 3
+    await mockMainDB.delete('chapters', 'md-3');
+
+    // Device A attempts to restore Snapshot S1
+    await assert.rejects(
+      async () => {
+        await restoreNovelSnapshot(replaceRes.snapshotId);
+      },
+      (err) => {
+        assert.equal(err.code, 'SNAPSHOT_CONFLICT');
+        assert.equal(err.conflicts.length, 2, 'Must report both conflicting chapters');
+        const ids = err.conflicts.map((c) => c.id);
+        assert.ok(ids.includes('md-1'), 'Must include modified chapter md-1');
+        assert.ok(ids.includes('md-3'), 'Must include deleted chapter md-3');
+        return true;
+      }
+    );
+
+    // Verify snapshot was NOT removed
+    const snapshotStillExists = await getNovelSnapshot(replaceRes.snapshotId);
+    assert.ok(snapshotStillExists);
+  });
+
+  test('confirmation guard: blocks execution if search params drift or match count changed before write', () => {
+    const confirmedParams = {
+      searchText: 'Huyền Thiên',
+      replaceText: 'Cửu U',
+      matchCase: false,
+      wholeWord: true,
+      inTitle: true,
+      expectedCount: 5,
+    };
+
+    const validateBeforeExecute = (current, confirmed, freshCount) => {
+      if (
+        !confirmed ||
+        confirmed.searchText !== current.searchText ||
+        confirmed.replaceText !== current.replaceText ||
+        confirmed.matchCase !== current.matchCase ||
+        confirmed.wholeWord !== current.wholeWord ||
+        confirmed.inTitle !== current.inTitle
+      ) {
+        return { ok: false, reason: 'PARAMS_DRIFT' };
+      }
+      if (freshCount !== confirmed.expectedCount) {
+        return { ok: false, reason: 'COUNT_MISMATCH', expected: confirmed.expectedCount, actual: freshCount };
+      }
+      return { ok: true };
+    };
+
+    // Case 1: Identical params and matching count -> OK
+    assert.deepEqual(
+      validateBeforeExecute(
+        { searchText: 'Huyền Thiên', replaceText: 'Cửu U', matchCase: false, wholeWord: true, inTitle: true },
+        confirmedParams,
+        5
+      ),
+      { ok: true }
+    );
+
+    // Case 2: User changed searchText while confirmation was open -> BLOCKED
+    assert.deepEqual(
+      validateBeforeExecute(
+        { searchText: 'Huyền Thiên Đan', replaceText: 'Cửu U', matchCase: false, wholeWord: true, inTitle: true },
+        confirmedParams,
+        5
+      ),
+      { ok: false, reason: 'PARAMS_DRIFT' }
+    );
+
+    // Case 3: Match count changed between opening modal and confirming -> BLOCKED
+    assert.deepEqual(
+      validateBeforeExecute(
+        { searchText: 'Huyền Thiên', replaceText: 'Cửu U', matchCase: false, wholeWord: true, inTitle: true },
+        confirmedParams,
+        4
+      ),
+      { ok: false, reason: 'COUNT_MISMATCH', expected: 5, actual: 4 }
+    );
   });
 });

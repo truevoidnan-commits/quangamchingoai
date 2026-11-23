@@ -886,7 +886,16 @@ export default function ReaderPage() {
               });
             } catch (undoErr) {
               console.error('Lỗi hoàn tác toàn bộ truyện:', undoErr);
-              alert('Không thể hoàn tác: ' + (undoErr.message || undoErr));
+              if (undoErr.code === 'SNAPSHOT_CONFLICT' && Array.isArray(undoErr.conflicts)) {
+                const conflictDetails = undoErr.conflicts
+                  .map((c) => `- ${c.title || `Chương ${c.order}`}: ${c.reason}`)
+                  .join('\n');
+                alert(
+                  `HOÀN TÁC BỊ HỦY DO XUNG ĐỘT DỮ LIỆU:\n\n${undoErr.message}\n\nDanh sách xung đột:\n${conflictDetails}\n\nBản sao lưu vẫn được bảo toàn an toàn.`
+                );
+              } else {
+                alert('Không thể hoàn tác: ' + (undoErr.message || undoErr));
+              }
             }
           } : undefined,
         });
