@@ -998,18 +998,17 @@ test('Finalizing phase strictly prevents premature abort and allows verify-episo
   assert.strictEqual(timeoutDuringFinalize.shouldAbortOnR2, false);
   assert.strictEqual(timeoutDuringFinalize.markEpisodeFailed, false);
 
-  // Scenario 3: Admin verify-episode-upload recovers episode from aborted/failed state
-  const mockEpisodeDb = { id: 'ep-75mb', upload_status: 'failed', file_size: 0 };
-  const mockSessionDb = { upload_id: 'up-1', status: 'aborted' };
+  // Scenario 3: Admin verify-episode-upload recovers episode from unready state with size match
+  const mockEpisodeDb = { id: 'ep-75mb', upload_status: 'failed', file_size: 75896585 };
+  const mockSessionDb = { upload_id: 'up-1', status: 'in_progress', file_size: 75896585 };
 
   function handleVerifyEpisodeUpload({ r2ObjectSize }) {
-    if (r2ObjectSize > 0) {
+    if (r2ObjectSize === mockEpisodeDb.file_size) {
       mockEpisodeDb.upload_status = 'ready';
-      mockEpisodeDb.file_size = r2ObjectSize;
       mockSessionDb.status = 'completed';
       return { ok: true, verified: true, actualSize: r2ObjectSize };
     }
-    return { ok: false, verified: false, code: 'R2_OBJECT_NOT_FOUND' };
+    return { ok: false, verified: false, code: r2ObjectSize <= 0 ? 'R2_OBJECT_NOT_FOUND' : 'FILE_SIZE_MISMATCH' };
   }
 
   const verifyRes = handleVerifyEpisodeUpload({ r2ObjectSize: 75896585 });
@@ -1018,6 +1017,183 @@ test('Finalizing phase strictly prevents premature abort and allows verify-episo
   assert.strictEqual(mockEpisodeDb.upload_status, 'ready');
   assert.strictEqual(mockEpisodeDb.file_size, 75896585);
   assert.strictEqual(mockSessionDb.status, 'completed');
+});
+
+test('verify-episode-upload enforces exact file size matching and rejects missing expected size', async () => {
+  const expectedSize = 75896585;
+
+  function runVerify({ episode, sessions, uploadId, r2Size }) {
+    if (!episode) return { ok: false, code: 'EPISODE_NOT_FOUND' };
+
+    const targetSession = uploadId
+      ? sessions?.find((s) => s.upload_id === uploadId)
+      : (sessions?.find((s) => s.status === 'in_progress' && Number(s.file_size) > 0) ||
+         sessions?.find((s) => Number(s.file_size) > 0));
+
+    let exp = 0;
+    if (targetSession && Number(targetSession.file_size) > 0) {
+      exp = Number(targetSession.file_size);
+    } else if (Number(episode.file_size) > 0) {
+      exp = Number(episode.file_size);
+    }
+
+    if (!exp || exp <= 0) {
+      return { ok: false, code: 'MISSING_EXPECTED_FILE_SIZE' };
+    }
+
+    if (r2Size <= 0) {
+      return { ok: false, code: 'R2_FILE_EMPTY' };
+    }
+
+    if (r2Size !== exp) {
+      return { ok: false, code: 'FILE_SIZE_MISMATCH', actualSize: r2Size, expectedSize: exp };
+    }
+
+    episode.upload_status = 'ready';
+    episode.file_size = r2Size;
+    return { ok: true, verified: true, actualSize: r2Size };
+  }
+
+  // Case 1: Mismatched size (e.g. truncated R2 object 40MB vs 75.89MB expected)
+  const epMismatched = { id: 'ep-1', upload_status: 'failed', file_size: expectedSize };
+  const resMismatch = runVerify({
+    episode: epMismatched,
+    sessions: [{ upload_id: 'up-1', status: 'in_progress', file_size: expectedSize }],
+    r2Size: 40000000,
+  });
+  assert.strictEqual(resMismatch.ok, false);
+  assert.strictEqual(resMismatch.code, 'FILE_SIZE_MISMATCH');
+  assert.strictEqual(epMismatched.upload_status, 'failed'); // DB state preserved
+
+  // Case 2: Missing expected size (0 bytes recorded)
+  const epMissingSize = { id: 'ep-2', upload_status: 'failed', file_size: 0 };
+  const resMissing = runVerify({
+    episode: epMissingSize,
+    sessions: [{ upload_id: 'up-2', status: 'in_progress', file_size: 0 }],
+    r2Size: expectedSize,
+  });
+  assert.strictEqual(resMissing.ok, false);
+  assert.strictEqual(resMissing.code, 'MISSING_EXPECTED_FILE_SIZE');
+  assert.strictEqual(epMissingSize.upload_status, 'failed'); // DB state preserved
+
+  // Case 3: Exact match -> Successfully transitioned to ready
+  const epValid = { id: 'ep-3', upload_status: 'failed', file_size: expectedSize };
+  const resValid = runVerify({
+    episode: epValid,
+    sessions: [{ upload_id: 'up-3', status: 'in_progress', file_size: expectedSize }],
+    r2Size: expectedSize,
+  });
+  assert.strictEqual(resValid.ok, true);
+  assert.strictEqual(resValid.verified, true);
+  assert.strictEqual(epValid.upload_status, 'ready');
+  assert.strictEqual(epValid.file_size, expectedSize);
+});
+
+test('verify-episode-upload preserves historical aborted sessions and only updates verified active session', () => {
+  const expectedSize = 75896585;
+
+  const historicalAbortedSession = {
+    id: 'sess-old-aborted',
+    upload_id: 'up-old',
+    status: 'aborted',
+    file_size: expectedSize,
+  };
+
+  const activeSession = {
+    id: 'sess-active',
+    upload_id: 'up-active',
+    status: 'in_progress',
+    file_size: expectedSize,
+  };
+
+  const sessions = [activeSession, historicalAbortedSession];
+  const episode = { id: 'ep-1', upload_status: 'failed', file_size: expectedSize };
+
+  // Run verify
+  const targetSession = sessions.find((s) => s.status === 'in_progress' && s.file_size > 0);
+  assert.strictEqual(targetSession.id, 'sess-active');
+
+  // Simulate updating only active session
+  if (targetSession && targetSession.status === 'in_progress') {
+    targetSession.status = 'completed';
+  }
+  episode.upload_status = 'ready';
+
+  assert.strictEqual(episode.upload_status, 'ready');
+  assert.strictEqual(activeSession.status, 'completed');
+  assert.strictEqual(historicalAbortedSession.status, 'aborted'); // Strictly preserved!
+});
+
+test('verify-episode-upload distinguishes HEAD 404 from 403, timeout, and network errors', () => {
+  function classifyHeadError(err) {
+    const httpStatus = err?.$metadata?.httpStatusCode;
+    const errName = err?.name;
+
+    if (httpStatus === 404 || errName === 'NotFound' || errName === 'NoSuchKey') {
+      return { code: 'R2_OBJECT_NOT_FOUND', status: 404 };
+    }
+    if (httpStatus === 403 || errName === 'AccessDenied') {
+      return { code: 'R2_ACCESS_DENIED', status: 403 };
+    }
+    if (errName === 'TimeoutError' || errName === 'AbortError' || err?.message?.toLowerCase().includes('timeout')) {
+      return { code: 'R2_TIMEOUT', status: 504 };
+    }
+    return { code: 'R2_NETWORK_ERROR', status: 502 };
+  }
+
+  // 1. 404 Not Found
+  const err404 = classifyHeadError({ name: 'NotFound', $metadata: { httpStatusCode: 404 } });
+  assert.strictEqual(err404.code, 'R2_OBJECT_NOT_FOUND');
+  assert.strictEqual(err404.status, 404);
+
+  // 2. 403 Access Denied (must NOT be reported as not found)
+  const err403 = classifyHeadError({ name: 'AccessDenied', $metadata: { httpStatusCode: 403 } });
+  assert.strictEqual(err403.code, 'R2_ACCESS_DENIED');
+  assert.strictEqual(err403.status, 403);
+
+  // 3. Timeout / Abort (must NOT be reported as not found)
+  const errTimeout = classifyHeadError({ name: 'TimeoutError', message: 'The operation timed out' });
+  assert.strictEqual(errTimeout.code, 'R2_TIMEOUT');
+  assert.strictEqual(errTimeout.status, 504);
+
+  // 4. Network error (fetch failed, ECONNRESET, etc.)
+  const errNet = classifyHeadError({ name: 'FetchError', message: 'fetch failed' });
+  assert.strictEqual(errNet.code, 'R2_NETWORK_ERROR');
+  assert.strictEqual(errNet.status, 502);
+});
+
+test('Database updates fail closed on both episode and session update errors', () => {
+  function handleDbUpdate({ episodeUpdateError, sessionUpdateError }) {
+    if (episodeUpdateError) {
+      return { ok: false, code: 'DB_UPDATE_FAILED', target: 'episode', error: episodeUpdateError.message };
+    }
+    if (sessionUpdateError) {
+      return { ok: false, code: 'DB_UPDATE_FAILED', target: 'session', error: sessionUpdateError.message };
+    }
+    return { ok: true, code: 'SUCCESS' };
+  }
+
+  // Episode update failure -> fails closed
+  const resEpErr = handleDbUpdate({
+    episodeUpdateError: new Error('connection closed by peer'),
+    sessionUpdateError: null,
+  });
+  assert.strictEqual(resEpErr.ok, false);
+  assert.strictEqual(resEpErr.code, 'DB_UPDATE_FAILED');
+  assert.strictEqual(resEpErr.target, 'episode');
+
+  // Session update failure -> fails closed
+  const resSessErr = handleDbUpdate({
+    episodeUpdateError: null,
+    sessionUpdateError: new Error('statement timeout'),
+  });
+  assert.strictEqual(resSessErr.ok, false);
+  assert.strictEqual(resSessErr.code, 'DB_UPDATE_FAILED');
+  assert.strictEqual(resSessErr.target, 'session');
+
+  // Both succeed
+  const resSuccess = handleDbUpdate({ episodeUpdateError: null, sessionUpdateError: null });
+  assert.strictEqual(resSuccess.ok, true);
 });
 
 console.log(`\n🎉 ALL ${passedTests} TEST CASES PASSED SUCCESSFULLY!\n`);

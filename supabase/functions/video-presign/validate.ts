@@ -131,7 +131,8 @@ export function validateVideoPresignRequest(body: any): { ok: boolean; error?: s
   }
 
   if (action === 'verify-episode-upload') {
-    return { ok: true, data: { action, seriesId, episodeId } };
+    const uploadId = typeof body.uploadId === 'string' && body.uploadId.trim() ? body.uploadId.trim() : undefined;
+    return { ok: true, data: { action, seriesId, episodeId, uploadId } };
   }
 
   if (action === 'init-multipart-upload') {

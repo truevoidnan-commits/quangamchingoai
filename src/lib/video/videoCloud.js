@@ -446,7 +446,7 @@ export async function testR2Connection() {
  * ADMIN: Verify if video file exists on R2 and sync episode status to ready.
  * Idempotent recovery function after unexpected timeouts or network loss.
  */
-export async function verifyEpisodeUpload({ seriesId, episodeId }) {
+export async function verifyEpisodeUpload({ seriesId, episodeId, uploadId = null }) {
   if (!seriesId || !episodeId) {
     throw new Error('Thiếu seriesId hoặc episodeId để xác minh');
   }
@@ -454,6 +454,7 @@ export async function verifyEpisodeUpload({ seriesId, episodeId }) {
     action: 'verify-episode-upload',
     seriesId,
     episodeId,
+    ...(uploadId ? { uploadId } : {}),
   });
   playbackCache.delete(episodeId);
   return res;
