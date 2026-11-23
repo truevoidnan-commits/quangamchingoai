@@ -292,6 +292,34 @@
   line-height: 1.5;
 }
 
+.btnUndoNovel {
+  background: rgba(255, 204, 0, 0.15);
+  border: 1px solid rgba(255, 204, 0, 0.4);
+  color: #ffcc00;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.btnUndoNovel:hover:not(:disabled) {
+  background: rgba(255, 204, 0, 0.25);
+  border-color: #ffcc00;
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.3);
+}
+
+.btnUndoNovel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .modalActions {
   padding: 16px 22px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);

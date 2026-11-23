@@ -20,11 +20,14 @@ export default function GlobalReplaceModal({
   const [loadingStats, setLoadingStats] = useState(false);
   const [stats, setStats] = useState(null);
   const [isReplacing, setIsReplacing] = useState(false);
+  const [isUndoing, setIsUndoing] = useState(false);
   const [lastResult, setLastResult] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const searchInputRef = useRef(null);
   const debounceTimerRef = useRef(null);
+  const activeRequestIdRef = useRef(0);
+  const isExecutingRef = useRef(false);
 
   // Focus and init when opening
   useEffect(() => {
@@ -33,6 +36,9 @@ export default function GlobalReplaceModal({
       setReplaceText('');
       setLastResult(null);
       setShowConfirmModal(false);
+      setIsReplacing(false);
+      setIsUndoing(false);
+      isExecutingRef.current = false;
       setTimeout(() => {
         if (searchInputRef.current) {
           searchInputRef.current.focus();
@@ -44,11 +50,12 @@ export default function GlobalReplaceModal({
     }
   }, [isOpen, initialSearchText]);
 
-  // Live count matches across the novel
+  // Live count matches across the novel with race condition guard
   useEffect(() => {
     if (!isOpen || !novelId) return;
 
     if (!searchText.trim()) {
+      activeRequestIdRef.current += 1;
       setStats(null);
       setLoadingStats(false);
       return;
@@ -58,7 +65,10 @@ export default function GlobalReplaceModal({
       clearTimeout(debounceTimerRef.current);
     }
 
+    // Immediately disable execution while counting
     setLoadingStats(true);
+    const requestId = ++activeRequestIdRef.current;
+
     debounceTimerRef.current = setTimeout(async () => {
       try {
         const result = await countMatchesInNovel(novelId, searchText, {
@@ -66,12 +76,17 @@ export default function GlobalReplaceModal({
           wholeWord,
           inTitle,
         });
-        setStats(result);
+        // Discard result if query conditions changed in the meantime
+        if (requestId === activeRequestIdRef.current) {
+          setStats(result);
+          setLoadingStats(false);
+        }
       } catch (err) {
-        console.error('Lỗi đếm số lượng xuất hiện toàn truyện:', err);
-        setStats(null);
-      } finally {
-        setLoadingStats(false);
+        if (requestId === activeRequestIdRef.current) {
+          console.error('Lỗi đếm số lượng xuất hiện toàn truyện:', err);
+          setStats(null);
+          setLoadingStats(false);
+        }
       }
     }, 250);
 
@@ -84,22 +99,63 @@ export default function GlobalReplaceModal({
 
   if (!isOpen) return null;
 
-  const handleOpenConfirm = () => {
-    if (!novelId || !searchText.trim() || !hasMatches) return;
-    setShowConfirmModal(true);
+  // Re-verify matches before opening confirmation dialog
+  const handleOpenConfirm = async () => {
+    if (!novelId || !searchText.trim() || loadingStats || isReplacing) return;
+
+    setLoadingStats(true);
+    try {
+      const freshStats = await countMatchesInNovel(novelId, searchText, {
+        matchCase,
+        wholeWord,
+        inTitle,
+      });
+      setStats(freshStats);
+      setLoadingStats(false);
+
+      if (!freshStats || freshStats.matchCount === 0) {
+        alert(`Không tìm thấy kết quả phù hợp cho cụm từ "${searchText}" với thiết lập hiện tại.`);
+        return;
+      }
+
+      setShowConfirmModal(true);
+    } catch (err) {
+      setLoadingStats(false);
+      console.error('Lỗi kiểm tra số lượng trước khi xác nhận:', err);
+      alert('Không thể kiểm tra số lượng khớp: ' + (err.message || err));
+    }
   };
 
+  // Re-verify matches before write with anti double-submit
   const handleExecuteReplace = async () => {
     if (!novelId || !searchText.trim()) return;
-    setShowConfirmModal(false);
-
+    if (isExecutingRef.current || isReplacing) return; // Strict double-submit guard
+    isExecutingRef.current = true;
     setIsReplacing(true);
+
     try {
+      // Re-check matches one last time immediately prior to database write
+      const preCheckStats = await countMatchesInNovel(novelId, searchText, {
+        matchCase,
+        wholeWord,
+        inTitle,
+      });
+
+      if (!preCheckStats || preCheckStats.matchCount === 0) {
+        alert('Không tìm thấy vị trí khớp nào để thay thế. Thao tác đã bị hủy.');
+        setShowConfirmModal(false);
+        setIsReplacing(false);
+        isExecutingRef.current = false;
+        return;
+      }
+
       const res = await replaceTextInNovel(novelId, searchText, replaceText, {
         matchCase,
         wholeWord,
         inTitle,
       });
+
+      setShowConfirmModal(false);
       setLastResult(res);
 
       if (onSuccess) {
@@ -118,6 +174,43 @@ export default function GlobalReplaceModal({
       alert('Không thể thực hiện thay thế: ' + (err.message || err));
     } finally {
       setIsReplacing(false);
+      isExecutingRef.current = false;
+    }
+  };
+
+  // Safe undo handler restoring from snapshot
+  const handleUndoLastResult = async () => {
+    if (!lastResult?.snapshotId || isUndoing) return;
+    setIsUndoing(true);
+    try {
+      const { restoreNovelSnapshot } = await import('../../lib/db');
+      const restoreRes = await restoreNovelSnapshot(lastResult.snapshotId);
+      setLastResult(null);
+
+      if (onSuccess) {
+        onSuccess(
+          {
+            totalReplacements: 0,
+            modifiedChaptersCount: restoreRes.restoredChaptersCount,
+            modifiedChapters: restoreRes.restoredChapters,
+          },
+          { searchText, replaceText }
+        );
+      }
+
+      // Re-scan matches after restore
+      const updatedStats = await countMatchesInNovel(novelId, searchText, {
+        matchCase,
+        wholeWord,
+        inTitle,
+      });
+      setStats(updatedStats);
+      alert(`Đã khôi phục thành công ${restoreRes.restoredChaptersCount} chương về trạng thái ban đầu!`);
+    } catch (err) {
+      console.error('Lỗi hoàn tác toàn truyện:', err);
+      alert('Không thể hoàn tác: ' + (err.message || err));
+    } finally {
+      setIsUndoing(false);
     }
   };
 
@@ -284,7 +377,7 @@ export default function GlobalReplaceModal({
             </div>
           )}
 
-          {/* Báo cáo sau khi thay thế thành công */}
+          {/* Báo cáo sau khi thay thế thành công kèm nút Hoàn tác an toàn */}
           {lastResult && (
             <div className={styles.resultBoxSuccess}>
               <strong>Hoàn tất cập nhật toàn bộ!</strong>
@@ -292,6 +385,20 @@ export default function GlobalReplaceModal({
                 Đã cập nhật <strong>{lastResult.totalReplacements}</strong> vị trí tại{' '}
                 <strong>{lastResult.modifiedChaptersCount}</strong> chương của truyện.
               </div>
+              {lastResult.snapshotId && (
+                <div>
+                  <button
+                    type="button"
+                    className={styles.btnUndoNovel}
+                    onClick={handleUndoLastResult}
+                    disabled={isUndoing}
+                    title="Khôi phục nguyên bản các chương từ bản sao lưu an toàn"
+                  >
+                    <IconReplace size={14} />
+                    <span>{isUndoing ? 'Đang khôi phục...' : 'Hoàn tác thay thế này (Khôi phục toàn bộ)'}</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -302,7 +409,7 @@ export default function GlobalReplaceModal({
             type="button"
             className={styles.btnCancel}
             onClick={onClose}
-            disabled={isReplacing}
+            disabled={isReplacing || isUndoing}
           >
             Đóng
           </button>
@@ -312,7 +419,7 @@ export default function GlobalReplaceModal({
               type="button"
               className={isPureDelete ? styles.btnSubmitDelete : styles.btnSubmitReplace}
               onClick={handleOpenConfirm}
-              disabled={isReplacing || !hasMatches}
+              disabled={isReplacing || loadingStats || !hasMatches || isUndoing}
               id="btn-execute-replace"
             >
               {isPureDelete && <IconTrash size={15} />}
@@ -322,6 +429,8 @@ export default function GlobalReplaceModal({
                   ? isPureDelete
                     ? 'Đang xóa...'
                     : 'Đang thay thế...'
+                  : loadingStats
+                  ? 'Đang kiểm tra...'
                   : isPureDelete
                   ? `Xóa ${matchCount} chỗ`
                   : `Thay thế ${matchCount} chỗ`}
@@ -379,7 +488,7 @@ export default function GlobalReplaceModal({
               </div>
 
               <div className={styles.confirmWarningBox}>
-                Cảnh báo: Thao tác này sẽ ghi đè nội dung trên toàn bộ các chương đã lưu trong cơ sở dữ liệu. Thao tác toàn truyện không thể hoàn tác tự động!
+                Bảo vệ dữ liệu: Hệ thống sẽ tự động tạo một bản sao lưu an toàn (snapshot) trước khi ghi. Bạn có thể bấm "Hoàn tác" để khôi phục lại bất cứ lúc nào.
               </div>
 
               <div className={styles.confirmActions}>
@@ -387,6 +496,7 @@ export default function GlobalReplaceModal({
                   type="button"
                   className={styles.confirmBtnBack}
                   onClick={() => setShowConfirmModal(false)}
+                  disabled={isReplacing}
                 >
                   Quay lại
                 </button>
@@ -396,8 +506,11 @@ export default function GlobalReplaceModal({
                     isPureDelete ? styles.btnSubmitDelete : styles.btnSubmitReplace
                   }
                   onClick={handleExecuteReplace}
+                  disabled={isReplacing}
                 >
-                  {isPureDelete
+                  {isReplacing
+                    ? 'Đang thực hiện...'
+                    : isPureDelete
                     ? 'Xác nhận xóa khỏi toàn bộ truyện'
                     : 'Xác nhận thay thế toàn bộ truyện'}
                 </button>

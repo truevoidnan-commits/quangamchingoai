@@ -869,7 +869,27 @@ export default function ReaderPage() {
           ? `Đã xóa ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`
           : `Đã thay thế ${res.totalReplacements} vị trí trong ${res.modifiedChaptersCount} chương toàn bộ truyện!`;
 
-        setEditorToast({ message });
+        setEditorToast({
+          message,
+          onUndo: res.snapshotId ? async () => {
+            try {
+              const { restoreNovelSnapshot } = await import('../lib/db');
+              const restoreRes = await restoreNovelSnapshot(res.snapshotId);
+              if (restoreRes.restoredChapters && restoreRes.restoredChapters.length > 0 && chapter) {
+                const restoredCur = restoreRes.restoredChapters.find(c => c.id === chapter.id);
+                if (restoredCur) {
+                  setChapter(restoredCur);
+                }
+              }
+              setEditorToast({
+                message: `Đã khôi phục thành công ${restoreRes.restoredChaptersCount} chương về trạng thái ban đầu!`,
+              });
+            } catch (undoErr) {
+              console.error('Lỗi hoàn tác toàn bộ truyện:', undoErr);
+              alert('Không thể hoàn tác: ' + (undoErr.message || undoErr));
+            }
+          } : undefined,
+        });
       } catch (err) {
         console.error('Lỗi thay thế toàn bộ truyện:', err);
         alert('Không thể thực hiện thay thế toàn truyện: ' + (err.message || err));

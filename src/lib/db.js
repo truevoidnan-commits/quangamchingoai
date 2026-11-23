@@ -18,7 +18,7 @@ export function setDBPromiseForTesting(p) {
   dbPromise = p;
 }
 
-function getDB() {
+export function getDB() {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
       upgrade(db) {
@@ -302,6 +302,7 @@ export async function replaceTextInNovel(novelId, searchText, replaceText = '', 
   }
 
   let totalReplacements = 0;
+  const originalChapters = [];
   const modifiedChapters = [];
 
   for (const ch of chapters) {
@@ -327,6 +328,13 @@ export async function replaceTextInNovel(novelId, searchText, replaceText = '', 
     }
 
     if (contentChanged || titleChanged) {
+      originalChapters.push({
+        id: ch.id,
+        novelId: ch.novelId || novelId,
+        order: ch.order,
+        title: ch.title || '',
+        content: ch.content || '',
+      });
       modifiedChapters.push({
         ...ch,
         content: newContent,
@@ -335,7 +343,25 @@ export async function replaceTextInNovel(novelId, searchText, replaceText = '', 
     }
   }
 
+  let snapshotId = null;
   if (modifiedChapters.length > 0) {
+    // 1. Create restorable backup snapshot before writing
+    try {
+      const { saveNovelSnapshot } = await import('./novelSnapshot.js');
+      const snap = await saveNovelSnapshot({
+        novelId,
+        searchText,
+        replaceText,
+        options: { matchCase, wholeWord, inTitle },
+        totalReplacements,
+        originalChapters,
+      });
+      snapshotId = snap.id;
+    } catch (snapErr) {
+      console.warn('Không thể lưu snapshot sao lưu trước khi thay thế:', snapErr);
+    }
+
+    // 2. Atomic write of all modified chapters in IndexedDB
     await saveChaptersBulk(modifiedChapters);
   }
 
@@ -344,7 +370,16 @@ export async function replaceTextInNovel(novelId, searchText, replaceText = '', 
     modifiedChaptersCount: modifiedChapters.length,
     totalReplacements,
     modifiedChapters,
+    snapshotId,
   };
+}
+
+/**
+ * Khôi phục trạng thái các chương truyện từ bản sao lưu an toàn (snapshot).
+ */
+export async function restoreNovelSnapshot(snapshotId) {
+  const { restoreNovelSnapshot: restore } = await import('./novelSnapshot.js');
+  return restore(snapshotId, getDB);
 }
 
 /**

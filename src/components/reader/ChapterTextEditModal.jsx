@@ -22,7 +22,13 @@ export default function ChapterTextEditModal({
   const [confirmAction, setConfirmAction] = useState(null); // null | { type: 'save' | 'delete', scope: 'all' | 'novel' }
 
   const textareaRef = useRef(null);
-  const caretPositionRef = useRef(null);
+  const caretStateRef = useRef({
+    start: 0,
+    end: 0,
+    direction: 'none',
+    needsRestore: false,
+  });
+  const isComposingRef = useRef(false);
 
   const selectedText = snapshotOriginal || targetData?.selectedText || '';
   const matchCount = targetData?.matchCount || 1;
@@ -62,7 +68,13 @@ export default function ChapterTextEditModal({
       setNewText(orig);
       setScope('single');
       setConfirmAction(null);
-      caretPositionRef.current = null;
+      isComposingRef.current = false;
+      caretStateRef.current = {
+        start: orig.length,
+        end: orig.length,
+        direction: 'none',
+        needsRestore: false,
+      };
 
       setTimeout(() => {
         if (textareaRef.current) {
@@ -70,17 +82,34 @@ export default function ChapterTextEditModal({
           // Only select text on desktop; on mobile, select() causes tap-to-erase glitches
           if (typeof window !== 'undefined' && window.innerWidth > 768) {
             textareaRef.current.select();
+            caretStateRef.current = {
+              start: 0,
+              end: orig.length,
+              direction: 'forward',
+              needsRestore: false,
+            };
           }
         }
       }, 70);
     }
   }, [isOpen]);
 
-  // Caret tracking: restore selection start/end after state update without jumping
+  // Caret & selection range tracking:
+  // Only restore programmatically when needed (e.g. quick tool transformations).
+  // Never disrupt Vietnamese IME composition.
   useLayoutEffect(() => {
-    if (textareaRef.current && caretPositionRef.current !== null) {
-      const pos = Math.min(caretPositionRef.current, textareaRef.current.value.length);
-      textareaRef.current.setSelectionRange(pos, pos);
+    if (!textareaRef.current) return;
+    if (isComposingRef.current) return; // Do not touch DOM selection while IME is composing
+
+    if (caretStateRef.current.needsRestore) {
+      const len = textareaRef.current.value.length;
+      const start = Math.min(Math.max(0, caretStateRef.current.start), len);
+      const end = Math.min(Math.max(0, caretStateRef.current.end), len);
+      const direction = caretStateRef.current.direction || 'none';
+      try {
+        textareaRef.current.setSelectionRange(start, end, direction);
+      } catch (e) {}
+      caretStateRef.current.needsRestore = false;
     }
   }, [newText]);
 
@@ -111,9 +140,42 @@ export default function ChapterTextEditModal({
 
   if (!isOpen) return null;
 
+  // Track selection changes made by mouse, keyboard arrows, or tap
+  const syncCaretState = () => {
+    if (textareaRef.current && !isComposingRef.current) {
+      caretStateRef.current = {
+        start: textareaRef.current.selectionStart,
+        end: textareaRef.current.selectionEnd,
+        direction: textareaRef.current.selectionDirection,
+        needsRestore: false,
+      };
+    }
+  };
+
+  const handleCompositionStart = () => {
+    isComposingRef.current = true;
+  };
+
+  const handleCompositionEnd = (e) => {
+    isComposingRef.current = false;
+    if (textareaRef.current) {
+      caretStateRef.current = {
+        start: textareaRef.current.selectionStart,
+        end: textareaRef.current.selectionEnd,
+        direction: textareaRef.current.selectionDirection,
+        needsRestore: false,
+      };
+    }
+  };
+
   const handleTextChange = (e) => {
-    const pos = e.target.selectionStart;
-    caretPositionRef.current = pos;
+    // Ordinary typing manages its own caret natively.
+    caretStateRef.current = {
+      start: e.target.selectionStart,
+      end: e.target.selectionEnd,
+      direction: e.target.selectionDirection,
+      needsRestore: false,
+    };
     setNewText(e.target.value);
   };
 
@@ -153,44 +215,71 @@ export default function ChapterTextEditModal({
     }
   };
 
-  // Quick text formatting helpers that preserve cursor position
+  // Quick formatting helper that preserves active selection range or cursor index
+  const applyTextTransformation = (transformFn) => {
+    if (!textareaRef.current) return;
+    const { selectionStart, selectionEnd, selectionDirection } = textareaRef.current;
+
+    if (selectionStart !== selectionEnd) {
+      // User has selected a substring inside textarea
+      const before = newText.slice(0, selectionStart);
+      const selected = newText.slice(selectionStart, selectionEnd);
+      const after = newText.slice(selectionEnd);
+      const transformedPart = transformFn(selected);
+      const nextText = before + transformedPart + after;
+
+      caretStateRef.current = {
+        start: selectionStart,
+        end: selectionStart + transformedPart.length,
+        direction: selectionDirection,
+        needsRestore: true,
+      };
+      setNewText(nextText);
+    } else {
+      // Entire text transformation, preserving cursor position
+      const transformed = transformFn(newText);
+      caretStateRef.current = {
+        start: selectionStart,
+        end: selectionEnd,
+        direction: selectionDirection,
+        needsRestore: true,
+      };
+      setNewText(transformed);
+    }
+  };
+
   const handleClear = () => {
-    caretPositionRef.current = 0;
+    caretStateRef.current = { start: 0, end: 0, direction: 'none', needsRestore: true };
     setNewText('');
   };
 
   const handleReset = () => {
-    caretPositionRef.current = selectedText.length;
+    caretStateRef.current = {
+      start: selectedText.length,
+      end: selectedText.length,
+      direction: 'none',
+      needsRestore: true,
+    };
     setNewText(selectedText);
   };
 
   const handleCapitalize = () => {
-    if (!newText) return;
-    const pos = textareaRef.current ? textareaRef.current.selectionStart : newText.length;
-    caretPositionRef.current = pos;
-    setNewText(newText.charAt(0).toUpperCase() + newText.slice(1));
+    applyTextTransformation((txt) => {
+      if (!txt) return '';
+      return txt.charAt(0).toUpperCase() + txt.slice(1);
+    });
   };
 
   const handleTitleCase = () => {
-    if (!newText) return;
-    const pos = textareaRef.current ? textareaRef.current.selectionStart : 0;
-    const transformed = toTitleCaseVi(newText);
-    caretPositionRef.current = pos;
-    setNewText(transformed);
+    applyTextTransformation(toTitleCaseVi);
   };
 
   const handleUppercase = () => {
-    if (!newText) return;
-    const pos = textareaRef.current ? textareaRef.current.selectionStart : 0;
-    caretPositionRef.current = pos;
-    setNewText(newText.toUpperCase());
+    applyTextTransformation((txt) => txt.toUpperCase());
   };
 
   const handleLowercase = () => {
-    if (!newText) return;
-    const pos = textareaRef.current ? textareaRef.current.selectionStart : 0;
-    caretPositionRef.current = pos;
-    setNewText(newText.toLowerCase());
+    applyTextTransformation((txt) => txt.toLowerCase());
   };
 
   const wordCount = selectedText.trim() ? selectedText.trim().split(/\s+/).filter(Boolean).length : 0;
@@ -291,6 +380,12 @@ export default function ChapterTextEditModal({
               className={styles.editTextarea}
               value={newText}
               onChange={handleTextChange}
+              onSelect={syncCaretState}
+              onKeyUp={syncCaretState}
+              onMouseUp={syncCaretState}
+              onTouchEnd={syncCaretState}
+              onCompositionStart={handleCompositionStart}
+              onCompositionEnd={handleCompositionEnd}
               placeholder="Nhập nội dung mới cần sửa hoặc thay..."
               rows={3}
             />
@@ -501,7 +596,7 @@ export default function ChapterTextEditModal({
 
               <div className={styles.confirmWarningBox}>
                 {confirmAction.scope === 'novel'
-                  ? 'Cảnh báo: Thao tác này sẽ ghi đè nội dung trên toàn bộ các chương đã lưu trong cơ sở dữ liệu. Thao tác toàn truyện không thể hoàn tác tự động!'
+                  ? 'Bảo vệ dữ liệu: Hệ thống sẽ tự động tạo một bản sao lưu an toàn (snapshot) trước khi ghi. Bạn có thể bấm "Hoàn tác" ở thông báo sau khi lưu để phục hồi nguyên bản các chương.'
                   : 'Thao tác sẽ thay thế toàn bộ các lần xuất hiện của cụm từ này trong chương hiện tại.'}
               </div>
 
