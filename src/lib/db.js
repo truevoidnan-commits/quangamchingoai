@@ -5,6 +5,7 @@
 import { openDB } from 'idb';
 import { getHiddenLibrary, notifyLibraryChanged } from './storage.js';
 import { markNovelDirty, recordNovelTombstone, setSyncBypassDirty } from './sync/syncLedger.js';
+import { countOccurrences, replaceOccurrences } from './textSearch.js';
 
 export { setSyncBypassDirty };
 
@@ -17,7 +18,7 @@ export function setDBPromiseForTesting(p) {
   dbPromise = p;
 }
 
-function getDB() {
+export function getDB() {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
       upgrade(db) {
@@ -249,7 +250,7 @@ export async function countMatchesInNovel(novelId, searchText, options = {}) {
   if (!novelId || !searchText || !searchText.trim()) {
     return { matchCount: 0, matchingChapters: 0, totalChapters: 0 };
   }
-  const { matchCase = true, inTitle = true } = options;
+  const { matchCase = false, wholeWord = true, inTitle = true } = options;
   const chapters = await getChapters(novelId);
   if (!chapters || chapters.length === 0) {
     return { matchCount: 0, matchingChapters: 0, totalChapters: 0 };
@@ -263,23 +264,12 @@ export async function countMatchesInNovel(novelId, searchText, options = {}) {
     const content = ch.content || '';
     const title = ch.title || '';
 
-    if (matchCase) {
-      if (content.includes(searchText)) {
-        chMatches += content.split(searchText).length - 1;
-      }
-      if (inTitle && title.includes(searchText)) {
-        chMatches += title.split(searchText).length - 1;
-      }
-    } else {
-      const escaped = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(escaped, 'gi');
-      const contentMatches = content.match(regex);
-      if (contentMatches) chMatches += contentMatches.length;
+    const contentMatches = countOccurrences(content, searchText, { matchCase, wholeWord });
+    chMatches += contentMatches;
 
-      if (inTitle) {
-        const titleMatches = title.match(regex);
-        if (titleMatches) chMatches += titleMatches.length;
-      }
+    if (inTitle && title) {
+      const titleMatches = countOccurrences(title, searchText, { matchCase, wholeWord });
+      chMatches += titleMatches;
     }
 
     if (chMatches > 0) {
@@ -296,11 +286,11 @@ export async function countMatchesInNovel(novelId, searchText, options = {}) {
 }
 
 export async function replaceTextInNovel(novelId, searchText, replaceText = '', options = {}) {
-  if (!novelId || !searchText) {
+  if (!novelId || !searchText || !searchText.trim()) {
     throw new Error('Thiếu thông tin truyện hoặc cụm từ tìm kiếm.');
   }
 
-  const { matchCase = true, inTitle = true } = options;
+  const { matchCase = false, wholeWord = true, inTitle = true } = options;
   const chapters = await getChapters(novelId);
   if (!chapters || chapters.length === 0) {
     return {
@@ -312,6 +302,7 @@ export async function replaceTextInNovel(novelId, searchText, replaceText = '', 
   }
 
   let totalReplacements = 0;
+  const originalChapters = [];
   const modifiedChapters = [];
 
   for (const ch of chapters) {
@@ -320,41 +311,30 @@ export async function replaceTextInNovel(novelId, searchText, replaceText = '', 
     let newContent = ch.content || '';
     let newTitle = ch.title || '';
 
-    if (matchCase) {
-      if (newContent.includes(searchText)) {
-        const count = newContent.split(searchText).length - 1;
-        totalReplacements += count;
-        newContent = newContent.replaceAll(searchText, replaceText);
-        contentChanged = true;
-      }
-      if (inTitle && newTitle.includes(searchText)) {
-        const count = newTitle.split(searchText).length - 1;
-        totalReplacements += count;
-        newTitle = newTitle.replaceAll(searchText, replaceText);
+    const contentRes = replaceOccurrences(newContent, searchText, replaceText, { matchCase, wholeWord });
+    if (contentRes.count > 0) {
+      newContent = contentRes.newText;
+      totalReplacements += contentRes.count;
+      contentChanged = true;
+    }
+
+    if (inTitle && newTitle) {
+      const titleRes = replaceOccurrences(newTitle, searchText, replaceText, { matchCase, wholeWord });
+      if (titleRes.count > 0) {
+        newTitle = titleRes.newText;
+        totalReplacements += titleRes.count;
         titleChanged = true;
-      }
-    } else {
-      const escaped = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(escaped, 'gi');
-
-      const contentMatches = newContent.match(regex);
-      if (contentMatches && contentMatches.length > 0) {
-        totalReplacements += contentMatches.length;
-        newContent = newContent.replace(regex, replaceText);
-        contentChanged = true;
-      }
-
-      if (inTitle) {
-        const titleMatches = newTitle.match(regex);
-        if (titleMatches && titleMatches.length > 0) {
-          totalReplacements += titleMatches.length;
-          newTitle = newTitle.replace(regex, replaceText);
-          titleChanged = true;
-        }
       }
     }
 
     if (contentChanged || titleChanged) {
+      originalChapters.push({
+        id: ch.id,
+        novelId: ch.novelId || novelId,
+        order: ch.order,
+        title: ch.title || '',
+        content: ch.content || '',
+      });
       modifiedChapters.push({
         ...ch,
         content: newContent,
@@ -363,7 +343,36 @@ export async function replaceTextInNovel(novelId, searchText, replaceText = '', 
     }
   }
 
+  let snapshotId = null;
   if (modifiedChapters.length > 0) {
+    // 1. Create restorable backup snapshot before writing - STRICT FAIL-CLOSED!
+    const { saveNovelSnapshot } = await import('./novelSnapshot.js');
+    let snap;
+    try {
+      snap = await saveNovelSnapshot({
+        novelId,
+        searchText,
+        replaceText,
+        options: { matchCase, wholeWord, inTitle },
+        totalReplacements,
+        originalChapters,
+        modifiedChapters,
+      });
+    } catch (snapErr) {
+      console.error('Lỗi nghiêm trọng: Không thể lưu snapshot an toàn trước khi thay thế:', snapErr);
+      throw new Error(
+        `Không thể tạo bản sao lưu an toàn trước khi thay thế (${snapErr.message || snapErr}). Thao tác đã bị dừng để bảo vệ dữ liệu truyện.`
+      );
+    }
+
+    if (!snap || !snap.id) {
+      throw new Error(
+        'Lỗi tạo bản sao lưu an toàn: ID bản sao lưu không hợp lệ. Thao tác đã bị dừng để bảo vệ dữ liệu truyện.'
+      );
+    }
+    snapshotId = snap.id;
+
+    // 2. Atomic write of all modified chapters in IndexedDB - ONLY executed after snapshot is verified!
     await saveChaptersBulk(modifiedChapters);
   }
 
@@ -372,7 +381,16 @@ export async function replaceTextInNovel(novelId, searchText, replaceText = '', 
     modifiedChaptersCount: modifiedChapters.length,
     totalReplacements,
     modifiedChapters,
+    snapshotId,
   };
+}
+
+/**
+ * Khôi phục trạng thái các chương truyện từ bản sao lưu an toàn (snapshot).
+ */
+export async function restoreNovelSnapshot(snapshotId) {
+  const { restoreNovelSnapshot: restore } = await import('./novelSnapshot.js');
+  return restore(snapshotId, getDB);
 }
 
 /**

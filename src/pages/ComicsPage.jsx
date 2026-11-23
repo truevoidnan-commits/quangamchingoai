@@ -27,7 +27,6 @@ import { supabase } from '../lib/supabaseClient.js';
 import ComicImportModal from '../components/comics/ComicImportModal.jsx';
 
 import Footer from '../components/layout/Footer.jsx';
-import LobbyTabs from '../components/ui/LobbyTabs.jsx';
 import ComicsBackdrop from '../components/comics/ComicsBackdrop.jsx';
 import Icon from '../components/ui/Icon.jsx';
 import {
@@ -255,9 +254,6 @@ export default function ComicsPage() {
           <div className={styles.neonBar} aria-hidden="true" />
         </div>
       </section>
-
-      {/* ===== TAB SWITCHER ===== */}
-      <LobbyTabs activeTab="comics" />
 
       <div className={styles.container}>
         {/* ===== TOOLBAR ===== */}

@@ -13,12 +13,13 @@
     "compute-daoanh-fit": "node scripts/compute-daoanh-fit.mjs",
     "compute-daoanh-bbox": "node scripts/compute-daoanh-bbox.mjs",
     "check:jsx-undefined": "node scripts/check-undefined-jsx.mjs",
-    "test:occ": "node --test scripts/test-cultivation-occ.test.mjs",
+    "test:occ": "node --test --test-force-exit scripts/test-cultivation-occ.test.mjs",
     "test:pg:local": "node scripts/test-postgres-concurrent-psql.mjs",
     "test:supabase:local": "node scripts/test-supabase-local-e2e.mjs",
     "test:frontend:occ": "node scripts/test-frontend-occ-local.mjs",
     "report:daoanh-fit": "node scripts/report-daoanh-fit.mjs",
     "sheet:daoanh": "node scripts/make-daoanh-contact-sheet.mjs",
+    "test:editor": "node --test scripts/test-text-editor.mjs",
     "test:video": "node scripts/test-video-system.mjs"
   },
   "dependencies": {

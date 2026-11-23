@@ -20,7 +20,6 @@ import { addToLibrary } from '../lib/storage';
 import { useCultivation } from '../hooks/useCultivation';
 import { runMigrationV2 } from '../lib/migration';
 import { clearPersistedSort } from '../hooks/usePersistedSort';
-import LobbyTabs from '../components/ui/LobbyTabs';
 import {
   IconSearch,
   IconLock,
@@ -285,9 +284,6 @@ export default function LibraryPage() {
           <div className={styles.neonBar} aria-hidden="true" />
         </div>
       </section>
-
-      {/* ===== TAB SWITCHER ===== */}
-      {!isVaultMode && <LobbyTabs activeTab="novels" />}
 
       {/* ===== VAULT TOP BAR (If in Vault Mode) ===== */}
       {isVaultMode && (
