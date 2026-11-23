@@ -14,6 +14,7 @@ import {
   IconAlertTriangle,
   IconX,
   IconSubtitles,
+  IconSettings,
 } from './VideoIcons';
 import { recordWatchProgress } from '../../lib/video/videoProgress';
 import styles from './VideoPlayer.module.css';
@@ -54,6 +55,8 @@ export default function VideoPlayer({
   const videoRef = useRef(null);
   const timelineRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
+  const flashTimeoutRef = useRef(null);
+  const isScrubbingRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -69,6 +72,17 @@ export default function VideoPlayer({
   const [resumePromptTime, setResumePromptTime] = useState(null);
   const [activeSubtitle, setActiveSubtitle] = useState('off');
 
+  // Smooth Scrubbing state
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubTime, setScrubTime] = useState(0);
+  const [scrubTooltip, setScrubTooltip] = useState({ visible: false, x: 0, time: 0 });
+
+  // Center play/pause flash feedback
+  const [centerFlash, setCenterFlash] = useState(null);
+
+  // Mobile options popup sheet
+  const [isMobileOptionsOpen, setIsMobileOptionsOpen] = useState(false);
+
   // 1. Initial Seek / Resume Prompt
   useEffect(() => {
     if (initialPosition && initialPosition > 10) {
@@ -82,12 +96,12 @@ export default function VideoPlayer({
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
-    if (isPlaying) {
+    if (isPlaying && !isScrubbingRef.current && !isMobileOptionsOpen) {
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false);
       }, 3500);
     }
-  }, [isPlaying]);
+  }, [isPlaying, isMobileOptionsOpen]);
 
   const handleMouseMove = () => {
     resetControlsTimer();
@@ -98,39 +112,120 @@ export default function VideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
+    if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+
     if (video.paused || video.ended) {
-      video.play().catch((err) => {
+      video.play().then(() => {
+        setIsPlaying(true);
+        setCenterFlash('play');
+        resetControlsTimer();
+      }).catch((err) => {
         console.warn('[VideoPlayer] Play interrupted:', err);
       });
     } else {
       video.pause();
-      // Record progress immediately on pause
+      setIsPlaying(false);
+      setCenterFlash('pause');
+      setShowControls(true);
       recordWatchProgress(seriesId, episodeId, video.currentTime, video.duration, {
         immediate: true,
         extraMeta: { seriesTitle, episodeTitle, episodeNumber, posterKey },
       });
     }
+
+    flashTimeoutRef.current = setTimeout(() => {
+      setCenterFlash(null);
+    }, 650);
   };
 
-  // 4. Seek Handler
-  const handleTimelineClick = (e) => {
+  // Tap directly on video canvas to Play/Pause
+  const handleSurfaceTap = (e) => {
+    if (isScrubbingRef.current) return;
+    togglePlay();
+  };
+
+  // 4. Smooth Pointer-Events Timeline Scrubber
+  const calculateTimeFromPointer = (e) => {
     const timeline = timelineRef.current;
-    const video = videoRef.current;
-    if (!timeline || !video || !duration) return;
-
+    if (!timeline || !duration) return { time: 0, x: 0 };
     const rect = timeline.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percent = Math.max(0, Math.min(1, clickX / rect.width));
-    const targetTime = percent * duration;
+    const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0]?.clientX) || 0;
+    const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const percent = rect.width > 0 ? x / rect.width : 0;
+    return { time: percent * duration, x };
+  };
 
-    video.currentTime = targetTime;
-    setCurrentTime(targetTime);
+  const handlePointerDown = (e) => {
+    if (!duration || duration <= 0) return;
+    if (e.button !== undefined && e.button !== 0) return;
 
-    // Save seek point immediately
-    recordWatchProgress(seriesId, episodeId, targetTime, duration, {
-      immediate: true,
-      extraMeta: { seriesTitle, episodeTitle, episodeNumber, posterKey },
-    });
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+
+    isScrubbingRef.current = true;
+    setIsScrubbing(true);
+    const { time, x } = calculateTimeFromPointer(e);
+    setScrubTime(time);
+    setScrubTooltip({ visible: true, x, time });
+  };
+
+  const handlePointerMove = (e) => {
+    if (isScrubbingRef.current && duration > 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      const { time, x } = calculateTimeFromPointer(e);
+      setScrubTime(time);
+      setScrubTooltip({ visible: true, x, time });
+    } else if (duration > 0 && timelineRef.current) {
+      const { time, x } = calculateTimeFromPointer(e);
+      setScrubTooltip({ visible: true, x, time });
+    }
+  };
+
+  const handlePointerUp = (e) => {
+    if (isScrubbingRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      isScrubbingRef.current = false;
+      setIsScrubbing(false);
+      setScrubTooltip({ visible: false, x: 0, time: 0 });
+
+      const { time } = calculateTimeFromPointer(e);
+      if (videoRef.current) {
+        videoRef.current.currentTime = time;
+        setCurrentTime(time);
+      }
+
+      recordWatchProgress(seriesId, episodeId, time, duration, {
+        immediate: true,
+        extraMeta: { seriesTitle, episodeTitle, episodeNumber, posterKey },
+      });
+
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {}
+    }
+  };
+
+  const handlePointerCancel = (e) => {
+    if (isScrubbingRef.current) {
+      isScrubbingRef.current = false;
+      setIsScrubbing(false);
+      setScrubTooltip({ visible: false, x: 0, time: 0 });
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {}
+    }
+  };
+
+  const handlePointerLeave = () => {
+    if (!isScrubbingRef.current) {
+      setScrubTooltip({ visible: false, x: 0, time: 0 });
+    }
   };
 
   // 5. Skip 10 seconds
@@ -204,7 +299,6 @@ export default function VideoPlayer({
   // 9. Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Don't intercept if user is typing in an input
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
         return;
       }
@@ -268,16 +362,14 @@ export default function VideoPlayer({
   // 10. Video Event Listeners
   const onTimeUpdate = () => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || isScrubbingRef.current) return;
 
     setCurrentTime(video.currentTime);
 
-    // Update buffered
     if (video.buffered && video.buffered.length > 0) {
       setBufferedEnd(video.buffered.end(video.buffered.length - 1));
     }
 
-    // Debounced watch progress
     recordWatchProgress(seriesId, episodeId, video.currentTime, video.duration, {
       immediate: false,
       extraMeta: { seriesTitle, episodeTitle, episodeNumber, posterKey },
@@ -296,7 +388,6 @@ export default function VideoPlayer({
     setIsPlaying(false);
     setShowControls(true);
 
-    // Save 100% completion
     recordWatchProgress(seriesId, episodeId, duration, duration, {
       immediate: true,
       completed: true,
@@ -340,7 +431,8 @@ export default function VideoPlayer({
   };
 
   // Calculations for timeline
-  const playedPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const displayCurrentTime = isScrubbing ? scrubTime : currentTime;
+  const playedPercent = duration > 0 ? (displayCurrentTime / duration) * 100 : 0;
   const bufferedPercent = duration > 0 ? Math.min(100, (bufferedEnd / duration) * 100) : 0;
 
   return (
@@ -350,37 +442,40 @@ export default function VideoPlayer({
       onMouseMove={handleMouseMove}
       tabIndex={0}
     >
-      <video
-        ref={videoRef}
-        src={src}
-        className={styles.videoElement}
-        onTimeUpdate={onTimeUpdate}
-        onLoadedMetadata={onLoadedMetadata}
-        onPlay={() => {
-          setIsPlaying(true);
-          resetControlsTimer();
-        }}
-        onPause={() => {
-          setIsPlaying(false);
-          setShowControls(true);
-        }}
-        onWaiting={() => setIsLoading(true)}
-        onPlaying={() => setIsLoading(false)}
-        onEnded={onEnded}
-        onError={onError}
-        playsInline
-      >
-        {subtitles.map((sub) => (
-          <track
-            key={sub.id || sub.languageCode}
-            kind="subtitles"
-            src={sub.url}
-            srcLang={sub.languageCode || 'vi'}
-            label={sub.label || 'Tiếng Việt'}
-            default={sub.isDefault}
-          />
-        ))}
-      </video>
+      {/* Video Surface Tap Layer */}
+      <div className={styles.videoSurface} onClick={handleSurfaceTap}>
+        <video
+          ref={videoRef}
+          src={src}
+          className={styles.videoElement}
+          onTimeUpdate={onTimeUpdate}
+          onLoadedMetadata={onLoadedMetadata}
+          onPlay={() => {
+            setIsPlaying(true);
+            resetControlsTimer();
+          }}
+          onPause={() => {
+            setIsPlaying(false);
+            setShowControls(true);
+          }}
+          onWaiting={() => setIsLoading(true)}
+          onPlaying={() => setIsLoading(false)}
+          onEnded={onEnded}
+          onError={onError}
+          playsInline
+        >
+          {subtitles.map((sub) => (
+            <track
+              key={sub.id || sub.languageCode}
+              kind="subtitles"
+              src={sub.url}
+              srcLang={sub.languageCode || 'vi'}
+              label={sub.label || 'Tiếng Việt'}
+              default={sub.isDefault}
+            />
+          ))}
+        </video>
+      </div>
 
       {/* Loading Spinner */}
       {isLoading && !errorMsg && (
@@ -389,7 +484,16 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* Big Center Play Button when paused */}
+      {/* Animated Center Flash Feedback (Play / Pause tap) */}
+      {centerFlash && (
+        <div className={styles.centerFlashWrap}>
+          <div className={styles.centerFlashIcon}>
+            {centerFlash === 'play' ? <IconPlay size={36} /> : <IconPause size={36} />}
+          </div>
+        </div>
+      )}
+
+      {/* Big Center Play Button when paused & controls visible */}
       {!isPlaying && !isLoading && !errorMsg && (
         <div className={styles.centerOverlay} onClick={togglePlay}>
           <div className={styles.centerPlayBtn}>
@@ -438,13 +542,29 @@ export default function VideoPlayer({
       )}
 
       {/* Custom Bottom Controls Bar */}
-      <div className={`${styles.controlsBar} ${!showControls && isPlaying ? styles.controlsHidden : ''}`}>
-        {/* Timeline */}
+      <div
+        className={`${styles.controlsBar} ${!showControls && isPlaying && !isScrubbing && !isMobileOptionsOpen ? styles.controlsHidden : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* ROW 1: Timeline Scrubber with Smooth Pointer Dragging */}
         <div
           ref={timelineRef}
-          className={styles.timelineWrapper}
-          onClick={handleTimelineClick}
+          className={`${styles.timelineWrapper} ${isScrubbing ? styles.timelineScrubbing : ''}`}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          onPointerLeave={handlePointerLeave}
         >
+          {/* Tooltip on scrub or hover */}
+          {scrubTooltip.visible && (
+            <div
+              className={styles.timelineTooltip}
+              style={{ left: `${scrubTooltip.x}px` }}
+            >
+              {formatTime(scrubTooltip.time)}
+            </div>
+          )}
           <div className={styles.timelineTrack}>
             <div
               className={styles.bufferedBar}
@@ -461,43 +581,60 @@ export default function VideoPlayer({
           </div>
         </div>
 
-        {/* Buttons Row */}
+        {/* ROW 2: Control Buttons Row */}
         <div className={styles.buttonsRow}>
           <div className={styles.leftControls}>
             {/* Play/Pause */}
-            <button className={styles.btn} onClick={togglePlay} title={isPlaying ? 'Tạm dừng (Space)' : 'Phát (Space)'}>
+            <button
+              className={`${styles.btn} ${styles.btnMainAction}`}
+              onClick={togglePlay}
+              title={isPlaying ? 'Tạm dừng (Space)' : 'Phát (Space)'}
+              aria-label={isPlaying ? 'Tạm dừng' : 'Phát'}
+            >
               {isPlaying ? <IconPause size={18} /> : <IconPlay size={18} />}
             </button>
 
             {/* Prev Episode */}
             {onPrev && (
               <button
-                className={styles.btn}
+                className={`${styles.btn} ${styles.desktopOnlyBtn}`}
                 onClick={onPrev}
                 disabled={!hasPrev}
                 title="Tập trước"
+                aria-label="Tập trước"
               >
                 <IconSkipBack size={16} />
               </button>
             )}
 
             {/* Rewind 10s */}
-            <button className={styles.btn} onClick={() => skipTime(-10)} title="Tua lùi 10 giây (←)">
+            <button
+              className={styles.btn}
+              onClick={() => skipTime(-10)}
+              title="Tua lùi 10 giây (←)"
+              aria-label="Tua lùi 10 giây"
+            >
               <IconRotateCcw size={16} />
             </button>
 
             {/* Forward 10s */}
-            <button className={styles.btn} onClick={() => skipTime(10)} title="Tua tới 10 giây (→)">
+            <button
+              className={styles.btn}
+              onClick={() => skipTime(10)}
+              title="Tua tới 10 giây (→)"
+              aria-label="Tua tới 10 giây"
+            >
               <IconRotateCw size={16} />
             </button>
 
             {/* Next Episode */}
             {onNext && (
               <button
-                className={styles.btn}
+                className={`${styles.btn} ${styles.desktopOnlyBtn}`}
                 onClick={onNext}
                 disabled={!hasNext}
                 title="Tập kế tiếp"
+                aria-label="Tập kế tiếp"
               >
                 <IconSkipForward size={16} />
               </button>
@@ -505,7 +642,7 @@ export default function VideoPlayer({
 
             {/* Volume */}
             <div className={styles.volumeWrapper}>
-              <button className={styles.btn} onClick={toggleMute} title="Âm lượng (M)">
+              <button className={styles.btn} onClick={toggleMute} title="Âm lượng (M)" aria-label="Âm lượng">
                 {isMuted || volume === 0 ? <IconVolumeMute size={18} /> : <IconVolume size={18} />}
               </button>
               <input
@@ -516,19 +653,20 @@ export default function VideoPlayer({
                 value={isMuted ? 0 : volume}
                 onChange={handleVolumeChange}
                 className={styles.volumeSlider}
+                aria-label="Thanh điều chỉnh âm lượng"
               />
             </div>
 
             {/* Time Display */}
             <span className={styles.timeDisplay}>
-              {formatTime(currentTime)} / {formatTime(duration)}
+              {formatTime(displayCurrentTime)} / {formatTime(duration)}
             </span>
           </div>
 
           <div className={styles.rightControls}>
-            {/* Auto-next toggle */}
+            {/* Desktop: Auto-next toggle */}
             {onToggleAutoNext && (
-              <label className={styles.autoNextToggle} title="Tự động chuyển sang tập kế tiếp khi xem xong">
+              <label className={`${styles.autoNextToggle} ${styles.desktopOnly}`} title="Tự động chuyển sang tập kế tiếp khi xem xong">
                 <input
                   type="checkbox"
                   checked={autoNext}
@@ -538,15 +676,16 @@ export default function VideoPlayer({
               </label>
             )}
 
-            {/* Subtitles dropdown */}
+            {/* Desktop: Subtitles dropdown */}
             {subtitles && subtitles.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div className={`${styles.subtitlesWrap} ${styles.desktopOnly}`}>
                 <IconSubtitles size={14} style={{ color: '#94a3b8' }} />
                 <select
                   value={activeSubtitle}
                   onChange={handleSubtitleChange}
                   className={styles.selectMenu}
                   title="Chọn phụ đề"
+                  aria-label="Chọn phụ đề"
                 >
                   <option value="off">Tắt phụ đề</option>
                   {subtitles.map((s) => (
@@ -558,12 +697,13 @@ export default function VideoPlayer({
               </div>
             )}
 
-            {/* Playback speed */}
+            {/* Desktop: Playback speed dropdown */}
             <select
               value={playbackRate}
               onChange={handleSpeedChange}
-              className={styles.selectMenu}
+              className={`${styles.selectMenu} ${styles.desktopOnly}`}
               title="Tốc độ phát"
+              aria-label="Tốc độ phát"
             >
               <option value="0.5">0.5x</option>
               <option value="0.75">0.75x</option>
@@ -573,12 +713,96 @@ export default function VideoPlayer({
               <option value="2">2.0x</option>
             </select>
 
+            {/* Mobile: Options Sheet Toggle Button */}
+            <button
+              className={`${styles.btn} ${styles.mobileOptionsToggleBtn}`}
+              onClick={() => setIsMobileOptionsOpen((prev) => !prev)}
+              title="Tùy chọn cài đặt"
+              aria-label="Tùy chọn cài đặt"
+            >
+              <IconSettings size={18} />
+            </button>
+
             {/* Fullscreen */}
-            <button className={styles.btn} onClick={toggleFullscreen} title="Toàn màn hình (F)">
+            <button
+              className={styles.btn}
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Thu nhỏ (F)' : 'Toàn màn hình (F)'}
+              aria-label={isFullscreen ? 'Thu nhỏ' : 'Toàn màn hình'}
+            >
               {isFullscreen ? <IconMinimize size={18} /> : <IconMaximize size={18} />}
             </button>
           </div>
         </div>
+
+        {/* Mobile Options Menu Sheet Overlay */}
+        {isMobileOptionsOpen && (
+          <div className={styles.mobileOptionsSheet}>
+            <div className={styles.mobileOptionsHeader}>
+              <span>Cài Đặt Trình Phát</span>
+              <button
+                className={styles.mobileOptionsClose}
+                onClick={() => setIsMobileOptionsOpen(false)}
+                aria-label="Đóng cài đặt"
+              >
+                <IconX size={16} />
+              </button>
+            </div>
+
+            {/* Speed Pills */}
+            <div className={styles.mobileOptionRow}>
+              <span className={styles.mobileOptionLabel}>Tốc độ:</span>
+              <div className={styles.speedPills}>
+                {[0.5, 0.75, 1, 1.25, 1.5, 2].map((s) => (
+                  <button
+                    key={s}
+                    className={`${styles.speedPill} ${playbackRate === s ? styles.speedPillActive : ''}`}
+                    onClick={() => {
+                      setPlaybackRate(s);
+                      if (videoRef.current) videoRef.current.playbackRate = s;
+                    }}
+                  >
+                    {s}x
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Subtitles Option */}
+            {subtitles && subtitles.length > 0 && (
+              <div className={styles.mobileOptionRow}>
+                <span className={styles.mobileOptionLabel}>Phụ đề:</span>
+                <select
+                  value={activeSubtitle}
+                  onChange={handleSubtitleChange}
+                  className={styles.mobileSelectMenu}
+                >
+                  <option value="off">Tắt phụ đề</option>
+                  {subtitles.map((s) => (
+                    <option key={s.id || s.languageCode} value={s.languageCode || 'vi'}>
+                      {s.label || 'Tiếng Việt'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Auto Next Option */}
+            {onToggleAutoNext && (
+              <div className={styles.mobileOptionRow}>
+                <span className={styles.mobileOptionLabel}>Tự chuyển tập:</span>
+                <label className={styles.mobileToggle}>
+                  <input
+                    type="checkbox"
+                    checked={autoNext}
+                    onChange={(e) => onToggleAutoNext(e.target.checked)}
+                  />
+                  <span>Tự động phát tập tiếp theo</span>
+                </label>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
