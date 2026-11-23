@@ -19,6 +19,7 @@
     "test:frontend:occ": "node scripts/test-frontend-occ-local.mjs",
     "report:daoanh-fit": "node scripts/report-daoanh-fit.mjs",
     "sheet:daoanh": "node scripts/make-daoanh-contact-sheet.mjs",
+    "test:editor": "node --test scripts/test-text-editor.mjs",
     "test:video": "node scripts/test-video-system.mjs"
   },
   "dependencies": {

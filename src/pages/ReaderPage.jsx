@@ -32,6 +32,7 @@ import { DaoAnh80Modal, DaoAnhFullModal } from '../components/cultivation/DaoAnh
 import SelectionToolbar from '../components/reader/SelectionToolbar';
 import ChapterTextEditModal from '../components/reader/ChapterTextEditModal';
 import GlobalReplaceModal from '../components/reader/GlobalReplaceModal';
+import { countOccurrences, replaceOccurrences } from '../lib/textSearch';
 import {
   expandSelectionToWordBoundaries,
   getPreciseSelectionSetting,
@@ -747,14 +748,10 @@ export default function ReaderPage() {
       placement = 'bottom';
     }
 
-    // Đếm số lần xuất hiện trong chương
+    // Đếm số lần xuất hiện trong chương theo Unicode word boundary
     let matchCount = 0;
     if (chapter?.content) {
-      const escaped = escapeRegExp(rawText);
-      try {
-        const matches = chapter.content.match(new RegExp(escaped, 'g'));
-        matchCount = matches ? matches.length : 0;
-      } catch (e) {}
+      matchCount = countOccurrences(chapter.content, rawText, { matchCase: false, wholeWord: true });
     }
 
     // Xác định đoạn văn cụ thể hoặc tiêu đề
@@ -846,7 +843,8 @@ export default function ReaderPage() {
       try {
         const { replaceTextInNovel } = await import('../lib/db');
         const res = await replaceTextInNovel(activeNovelId, selectedText, newText, {
-          matchCase: true,
+          matchCase: false,
+          wholeWord: true,
           inTitle: true,
         });
 
@@ -880,10 +878,19 @@ export default function ReaderPage() {
     }
 
     if (scope === 'all') {
-      // Thay thế hoặc xóa toàn bộ lần xuất hiện trong chương
-      updatedContent = updatedContent.replaceAll(selectedText, newText);
-      if (updatedTitle.includes(selectedText)) {
-        updatedTitle = updatedTitle.replaceAll(selectedText, newText);
+      // Thay thế hoặc xóa toàn bộ lần xuất hiện trong chương theo Unicode word boundary
+      const contentRes = replaceOccurrences(updatedContent, selectedText, newText, {
+        matchCase: false,
+        wholeWord: true,
+      });
+      updatedContent = contentRes.newText;
+
+      if (updatedTitle) {
+        const titleRes = replaceOccurrences(updatedTitle, selectedText, newText, {
+          matchCase: false,
+          wholeWord: true,
+        });
+        updatedTitle = titleRes.newText;
       }
     } else {
       if (isTitle) {
@@ -1443,6 +1450,7 @@ export default function ReaderPage() {
         targetData={activeEditTarget}
         initialScope={initialEditScope}
         novelId={activeNovelId}
+        novelTitle={novel?.title}
         onSave={applyTextChange}
         onDelete={({ scope }) => applyTextChange({ newText: '', scope })}
         onClose={() => {

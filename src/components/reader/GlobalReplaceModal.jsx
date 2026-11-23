@@ -13,13 +13,15 @@ export default function GlobalReplaceModal({
 }) {
   const [searchText, setSearchText] = useState(initialSearchText || '');
   const [replaceText, setReplaceText] = useState('');
-  const [matchCase, setMatchCase] = useState(true);
+  const [matchCase, setMatchCase] = useState(false);
+  const [wholeWord, setWholeWord] = useState(true);
   const [inTitle, setInTitle] = useState(true);
 
   const [loadingStats, setLoadingStats] = useState(false);
   const [stats, setStats] = useState(null);
   const [isReplacing, setIsReplacing] = useState(false);
   const [lastResult, setLastResult] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const searchInputRef = useRef(null);
   const debounceTimerRef = useRef(null);
@@ -30,6 +32,7 @@ export default function GlobalReplaceModal({
       setSearchText(initialSearchText || '');
       setReplaceText('');
       setLastResult(null);
+      setShowConfirmModal(false);
       setTimeout(() => {
         if (searchInputRef.current) {
           searchInputRef.current.focus();
@@ -60,6 +63,7 @@ export default function GlobalReplaceModal({
       try {
         const result = await countMatchesInNovel(novelId, searchText, {
           matchCase,
+          wholeWord,
           inTitle,
         });
         setStats(result);
@@ -76,27 +80,24 @@ export default function GlobalReplaceModal({
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [isOpen, novelId, searchText, matchCase, inTitle]);
+  }, [isOpen, novelId, searchText, matchCase, wholeWord, inTitle]);
 
   if (!isOpen) return null;
 
+  const handleOpenConfirm = () => {
+    if (!novelId || !searchText.trim() || !hasMatches) return;
+    setShowConfirmModal(true);
+  };
+
   const handleExecuteReplace = async () => {
     if (!novelId || !searchText.trim()) return;
-
-    const count = stats?.matchCount || 0;
-    const isDelete = !replaceText;
-    const confirmMsg = isDelete
-      ? `Bạn có chắc chắn muốn XÓA HẲN cụm từ "${searchText}" khỏi toàn bộ ${stats?.matchingChapters || ''} chương (${count} vị trí) trong truyện?`
-      : `Bạn có chắc chắn muốn thay thế cụm từ "${searchText}" thành "${replaceText}" trong toàn bộ truyện (${count} vị trí)?`;
-
-    if (!window.confirm(confirmMsg)) {
-      return;
-    }
+    setShowConfirmModal(false);
 
     setIsReplacing(true);
     try {
       const res = await replaceTextInNovel(novelId, searchText, replaceText, {
         matchCase,
+        wholeWord,
         inTitle,
       });
       setLastResult(res);
@@ -108,6 +109,7 @@ export default function GlobalReplaceModal({
       // Re-scan matches
       const updatedStats = await countMatchesInNovel(novelId, searchText, {
         matchCase,
+        wholeWord,
         inTitle,
       });
       setStats(updatedStats);
@@ -125,7 +127,13 @@ export default function GlobalReplaceModal({
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modalCard} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+      <div
+        className={styles.modalCard}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        style={{ position: 'relative' }}
+      >
         {/* Header */}
         <div className={styles.modalHeader}>
           <div className={styles.modalTitleWrap}>
@@ -207,6 +215,19 @@ export default function GlobalReplaceModal({
               <input
                 type="checkbox"
                 className={styles.checkboxInput}
+                checked={wholeWord}
+                onChange={(e) => setWholeWord(e.target.checked)}
+              />
+              <span className={styles.customCheck} aria-hidden="true">
+                <IconCheck size={11} />
+              </span>
+              <span>Chỉ khớp từ hoàn chỉnh (nguyên từ)</span>
+            </label>
+
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                className={styles.checkboxInput}
                 checked={matchCase}
                 onChange={(e) => setMatchCase(e.target.checked)}
               />
@@ -215,6 +236,7 @@ export default function GlobalReplaceModal({
               </span>
               <span>Phân biệt chữ hoa / chữ thường</span>
             </label>
+
             <label className={styles.checkboxLabel}>
               <input
                 type="checkbox"
@@ -289,7 +311,7 @@ export default function GlobalReplaceModal({
             <button
               type="button"
               className={isPureDelete ? styles.btnSubmitDelete : styles.btnSubmitReplace}
-              onClick={handleExecuteReplace}
+              onClick={handleOpenConfirm}
               disabled={isReplacing || !hasMatches}
               id="btn-execute-replace"
             >
@@ -297,16 +319,92 @@ export default function GlobalReplaceModal({
               {!isPureDelete && <IconReplace size={15} />}
               <span>
                 {isReplacing
-                  ? (isPureDelete ? 'Đang xóa...' : 'Đang thay thế...')
-                  : (isPureDelete
-                      ? `Xóa ${matchCount} chỗ`
-                      : `Thay thế ${matchCount} chỗ`
-                    )
-                }
+                  ? isPureDelete
+                    ? 'Đang xóa...'
+                    : 'Đang thay thế...'
+                  : isPureDelete
+                  ? `Xóa ${matchCount} chỗ`
+                  : `Thay thế ${matchCount} chỗ`}
               </span>
             </button>
           </div>
         </div>
+
+        {/* Dedicated Modal Confirmation Dialog */}
+        {showConfirmModal && (
+          <div className={styles.confirmSubModalOverlay}>
+            <div
+              className={`${styles.confirmCard} ${
+                isPureDelete ? styles.confirmCardWarning : ''
+              }`}
+            >
+              <h4 className={styles.confirmTitle}>
+                {isPureDelete ? (
+                  <IconTrash size={18} />
+                ) : (
+                  <IconAlert size={18} />
+                )}
+                Xác nhận áp dụng cho TOÀN BỘ TRUYỆN
+              </h4>
+
+              <div className={styles.confirmDetails}>
+                <div className={styles.confirmDetailRow}>
+                  <span className={styles.confirmDetailLabel}>Bộ truyện:</span>
+                  <span className={styles.confirmDetailValue}>{novelTitle || 'Bộ truyện'}</span>
+                </div>
+                <div className={styles.confirmDetailRow}>
+                  <span className={styles.confirmDetailLabel}>Số chương bị ảnh hưởng:</span>
+                  <span className={styles.confirmDetailValue}>
+                    {stats?.matchingChapters ?? 0} chương
+                  </span>
+                </div>
+                <div className={styles.confirmDetailRow}>
+                  <span className={styles.confirmDetailLabel}>Tổng số lần khớp:</span>
+                  <span className={styles.confirmDetailValue}>{matchCount} lần</span>
+                </div>
+                <div className={styles.confirmDetailRow}>
+                  <span className={styles.confirmDetailLabel}>Cụm từ tìm kiếm:</span>
+                  <span className={styles.confirmDetailValue}>"{searchText}"</span>
+                </div>
+                <div className={styles.confirmDetailRow}>
+                  <span className={styles.confirmDetailLabel}>Cụm từ thay thế:</span>
+                  <span className={styles.confirmDetailValue}>
+                    {isPureDelete ? (
+                      <em style={{ color: '#f87171' }}>(XÓA BỎ HOÀN TOÀN)</em>
+                    ) : (
+                      `"${replaceText}"`
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              <div className={styles.confirmWarningBox}>
+                Cảnh báo: Thao tác này sẽ ghi đè nội dung trên toàn bộ các chương đã lưu trong cơ sở dữ liệu. Thao tác toàn truyện không thể hoàn tác tự động!
+              </div>
+
+              <div className={styles.confirmActions}>
+                <button
+                  type="button"
+                  className={styles.confirmBtnBack}
+                  onClick={() => setShowConfirmModal(false)}
+                >
+                  Quay lại
+                </button>
+                <button
+                  type="button"
+                  className={
+                    isPureDelete ? styles.btnSubmitDelete : styles.btnSubmitReplace
+                  }
+                  onClick={handleExecuteReplace}
+                >
+                  {isPureDelete
+                    ? 'Xác nhận xóa khỏi toàn bộ truyện'
+                    : 'Xác nhận thay thế toàn bộ truyện'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

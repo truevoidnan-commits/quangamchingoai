@@ -4,7 +4,7 @@ import { getSyncStatus } from '../../lib/sync/autoSync.js';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { isVaultSessionUnlocked } from '../../lib/storage.js';
 import { useCultivationContext } from '../../context/CultivationContext';
-import { unlockComics, unlockVideos } from '../../lib/secretNav.js';
+import { unlockComics, unlockVideos, lockSecretModes } from '../../lib/secretNav.js';
 import styles from './Header.module.css';
 
 export default function Header() {
@@ -321,7 +321,36 @@ export default function Header() {
               <span className={styles.badgeText}>{displayName}</span>
             </Link>
 
-            {!isLobby && (
+            {(isComics || isVideos) ? (
+              <nav className={styles.nav}>
+                <Link
+                  to="/"
+                  className={styles.navBtn}
+                  title="Về Thiên Cơ Lâu (Truyện Chữ)"
+                  aria-label="Thiên Cơ Lâu"
+                >
+                  <span className={styles.navBtnIcon}>
+                    <IconBook size={13} />
+                  </span>
+                  <span className={styles.navBtnText}>Thiên Cơ Lâu</span>
+                </Link>
+                <button
+                  type="button"
+                  className={`${styles.navBtn} ${styles.lockSecretBtn}`}
+                  onClick={() => {
+                    lockSecretModes();
+                    navigate('/');
+                  }}
+                  title="Khóa mật thất & Trở về Thiên Cơ Lâu"
+                  aria-label="Khóa mật thất & Trở về Thiên Cơ Lâu"
+                >
+                  <span className={styles.navBtnIcon}>
+                    <Icon name="lock" size={13} />
+                  </span>
+                  <span className={styles.navBtnText}>Khóa</span>
+                </button>
+              </nav>
+            ) : !isLobby && (
               <nav className={styles.nav}>
                 <Link
                   to="/"

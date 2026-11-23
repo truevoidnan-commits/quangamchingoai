@@ -305,6 +305,22 @@
   transform: translateY(-1px);
 }
 
+.lockSecretBtn {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.lockSecretBtn:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: #ef4444;
+  color: #fee2e2;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+}
+
 .navBtnIcon {
   display: inline-flex;
   align-items: center;

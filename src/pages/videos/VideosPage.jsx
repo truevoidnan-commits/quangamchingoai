@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import LobbyTabs from '../../components/ui/LobbyTabs';
 import VideoCard from '../../components/videos/VideoCard';
 import VideosBackdrop from '../../components/videos/VideosBackdrop';
 import VideoAdminModal from '../../components/videos/VideoAdminModal';
@@ -61,9 +60,6 @@ export default function VideosPage() {
     <div className={styles.page}>
       <VideosBackdrop />
       <div className={styles.container}>
-        {/* Navigation Tabs */}
-        <LobbyTabs active="videos" />
-
         {/* Hero Header */}
         <div className={styles.heroHeader}>
           <h1 className={styles.heroTitle}>
