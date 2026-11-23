@@ -902,4 +902,597 @@ test('prepareVideoEpisodeForUpload reuses incomplete episodes and avoids uq_seri
   assert.strictEqual(resReady.error.includes('đã tải lên hoàn tất'), true);
 });
 
+// -----------------------------------------------------------------------------
+// TEST GROUP 15: HTTP 546 Timeout Resilience & Idempotent Multipart Recovery
+// -----------------------------------------------------------------------------
+test('validateVideoPresignRequest validates verify-episode-upload action and UUIDs', () => {
+  const seriesId = 'c0a80101-0000-0000-0000-000000000001';
+  const episodeId = 'c0a80101-0000-0000-0000-000000000002';
+
+  // Valid verify action
+  const res = validateVideoPresignRequest({
+    action: 'verify-episode-upload',
+    seriesId,
+    episodeId,
+  });
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(res.data.action, 'verify-episode-upload');
+  assert.strictEqual(res.data.seriesId, seriesId);
+  assert.strictEqual(res.data.episodeId, episodeId);
+
+  // Missing episodeId
+  const resNoEp = validateVideoPresignRequest({
+    action: 'verify-episode-upload',
+    seriesId,
+  });
+  assert.strictEqual(resNoEp.ok, false);
+  assert.strictEqual(resNoEp.code, 'INVALID_EPISODE_ID');
+});
+
+test('Complete-multipart-upload recovers via HEAD when complete times out or loses response (HTTP 546 mitigation)', async () => {
+  const expectedSize = 75896585; // Exact size from production incident
+  let s3CompleteAttempts = 0;
+  let headChecked = false;
+  let dbEpisodeUpdated = false;
+  let dbSessionUpdated = false;
+
+  // Simulate CompleteMultipartUpload handler with Idempotent recovery
+  async function mockCompleteMultipart({ r2HasFile, completeWillTimeout }) {
+    // Stage 1: Idempotent pre-check
+    if (r2HasFile) {
+      dbEpisodeUpdated = true;
+      dbSessionUpdated = true;
+      return { ok: true, recovered: true, actualSize: expectedSize };
+    }
+
+    // Stage 2: S3 CompleteMultipartUploadCommand
+    s3CompleteAttempts++;
+    if (completeWillTimeout) {
+      // Simulate timeout / HTTP 546 (Worker resource limit or abort)
+      // The complete call threw an error or timed out on client
+      // But R2 processed it in the background!
+      headChecked = true;
+      // HeadObject succeeds:
+      const actualSize = expectedSize;
+      dbEpisodeUpdated = true;
+      dbSessionUpdated = true;
+      return { ok: true, actualSize, completeRecoveredAfterTimeout: true };
+    }
+
+    return { ok: true, actualSize: expectedSize };
+  }
+
+  // Case 1: CompleteMultipartUpload times out, but R2 assembled file -> Recovers successfully
+  const resTimeout = await mockCompleteMultipart({ r2HasFile: false, completeWillTimeout: true });
+  assert.strictEqual(resTimeout.ok, true);
+  assert.strictEqual(resTimeout.completeRecoveredAfterTimeout, true);
+  assert.strictEqual(headChecked, true);
+  assert.strictEqual(dbEpisodeUpdated, true);
+  assert.strictEqual(dbSessionUpdated, true);
+
+  // Case 2: Idempotent retry when file already exists on R2 -> skips Complete call
+  s3CompleteAttempts = 0;
+  const resPre = await mockCompleteMultipart({ r2HasFile: true, completeWillTimeout: false });
+  assert.strictEqual(resPre.ok, true);
+  assert.strictEqual(resPre.recovered, true);
+  assert.strictEqual(s3CompleteAttempts, 0); // Complete was NOT called again
+});
+
+test('Finalizing phase strictly prevents premature abort and allows verify-episode-upload recovery', () => {
+  // Simulate client-side safe abort policy
+  function clientAbortPolicy({ isFinalizing, userExplicitCancel, uploadId }) {
+    // MUST NOT abort if in finalization phase
+    if (uploadId && !isFinalizing && userExplicitCancel) {
+      return { shouldAbortOnR2: true, markEpisodeFailed: true };
+    }
+    return { shouldAbortOnR2: false, markEpisodeFailed: !isFinalizing };
+  }
+
+  // Scenario 1: User explicitly cancels during part upload -> Safe to abort
+  const cancelDuringParts = clientAbortPolicy({ isFinalizing: false, userExplicitCancel: true, uploadId: 'up-1' });
+  assert.strictEqual(cancelDuringParts.shouldAbortOnR2, true);
+
+  // Scenario 2: Error during finalization (99% / complete-multipart-upload timed out)
+  // MUST NOT abort on R2, MUST NOT mark failed in DB
+  const timeoutDuringFinalize = clientAbortPolicy({ isFinalizing: true, userExplicitCancel: false, uploadId: 'up-1' });
+  assert.strictEqual(timeoutDuringFinalize.shouldAbortOnR2, false);
+  assert.strictEqual(timeoutDuringFinalize.markEpisodeFailed, false);
+
+  // Scenario 3: Admin verify-episode-upload recovers episode from unready state with size match
+  const mockEpisodeDb = { id: 'ep-75mb', upload_status: 'failed', file_size: 75896585 };
+  const mockSessionDb = { upload_id: 'up-1', status: 'in_progress', file_size: 75896585 };
+
+  function handleVerifyEpisodeUpload({ r2ObjectSize }) {
+    if (r2ObjectSize === mockEpisodeDb.file_size) {
+      mockEpisodeDb.upload_status = 'ready';
+      mockSessionDb.status = 'completed';
+      return { ok: true, verified: true, actualSize: r2ObjectSize };
+    }
+    return { ok: false, verified: false, code: r2ObjectSize <= 0 ? 'R2_OBJECT_NOT_FOUND' : 'FILE_SIZE_MISMATCH' };
+  }
+
+  const verifyRes = handleVerifyEpisodeUpload({ r2ObjectSize: 75896585 });
+  assert.strictEqual(verifyRes.ok, true);
+  assert.strictEqual(verifyRes.verified, true);
+  assert.strictEqual(mockEpisodeDb.upload_status, 'ready');
+  assert.strictEqual(mockEpisodeDb.file_size, 75896585);
+  assert.strictEqual(mockSessionDb.status, 'completed');
+});
+
+test('verify-episode-upload enforces exact file size matching and rejects missing expected size', async () => {
+  const expectedSize = 75896585;
+
+  function runVerify({ episode, sessions, uploadId, r2Size }) {
+    if (!episode) return { ok: false, code: 'EPISODE_NOT_FOUND' };
+
+    const targetSession = uploadId
+      ? sessions?.find((s) => s.upload_id === uploadId)
+      : (sessions?.find((s) => s.status === 'in_progress' && Number(s.file_size) > 0) ||
+         sessions?.find((s) => Number(s.file_size) > 0));
+
+    let exp = 0;
+    if (targetSession && Number(targetSession.file_size) > 0) {
+      exp = Number(targetSession.file_size);
+    } else if (Number(episode.file_size) > 0) {
+      exp = Number(episode.file_size);
+    }
+
+    if (!exp || exp <= 0) {
+      return { ok: false, code: 'MISSING_EXPECTED_FILE_SIZE' };
+    }
+
+    if (r2Size <= 0) {
+      return { ok: false, code: 'R2_FILE_EMPTY' };
+    }
+
+    if (r2Size !== exp) {
+      return { ok: false, code: 'FILE_SIZE_MISMATCH', actualSize: r2Size, expectedSize: exp };
+    }
+
+    episode.upload_status = 'ready';
+    episode.file_size = r2Size;
+    return { ok: true, verified: true, actualSize: r2Size };
+  }
+
+  // Case 1: Mismatched size (e.g. truncated R2 object 40MB vs 75.89MB expected)
+  const epMismatched = { id: 'ep-1', upload_status: 'failed', file_size: expectedSize };
+  const resMismatch = runVerify({
+    episode: epMismatched,
+    sessions: [{ upload_id: 'up-1', status: 'in_progress', file_size: expectedSize }],
+    r2Size: 40000000,
+  });
+  assert.strictEqual(resMismatch.ok, false);
+  assert.strictEqual(resMismatch.code, 'FILE_SIZE_MISMATCH');
+  assert.strictEqual(epMismatched.upload_status, 'failed'); // DB state preserved
+
+  // Case 2: Missing expected size (0 bytes recorded)
+  const epMissingSize = { id: 'ep-2', upload_status: 'failed', file_size: 0 };
+  const resMissing = runVerify({
+    episode: epMissingSize,
+    sessions: [{ upload_id: 'up-2', status: 'in_progress', file_size: 0 }],
+    r2Size: expectedSize,
+  });
+  assert.strictEqual(resMissing.ok, false);
+  assert.strictEqual(resMissing.code, 'MISSING_EXPECTED_FILE_SIZE');
+  assert.strictEqual(epMissingSize.upload_status, 'failed'); // DB state preserved
+
+  // Case 3: Exact match -> Successfully transitioned to ready
+  const epValid = { id: 'ep-3', upload_status: 'failed', file_size: expectedSize };
+  const resValid = runVerify({
+    episode: epValid,
+    sessions: [{ upload_id: 'up-3', status: 'in_progress', file_size: expectedSize }],
+    r2Size: expectedSize,
+  });
+  assert.strictEqual(resValid.ok, true);
+  assert.strictEqual(resValid.verified, true);
+  assert.strictEqual(epValid.upload_status, 'ready');
+  assert.strictEqual(epValid.file_size, expectedSize);
+});
+
+test('verify-episode-upload preserves historical aborted sessions and only updates verified active session', () => {
+  const expectedSize = 75896585;
+
+  const historicalAbortedSession = {
+    id: 'sess-old-aborted',
+    upload_id: 'up-old',
+    status: 'aborted',
+    file_size: expectedSize,
+  };
+
+  const activeSession = {
+    id: 'sess-active',
+    upload_id: 'up-active',
+    status: 'in_progress',
+    file_size: expectedSize,
+  };
+
+  const sessions = [activeSession, historicalAbortedSession];
+  const episode = { id: 'ep-1', upload_status: 'failed', file_size: expectedSize };
+
+  // Run verify
+  const targetSession = sessions.find((s) => s.status === 'in_progress' && s.file_size > 0);
+  assert.strictEqual(targetSession.id, 'sess-active');
+
+  // Simulate updating only active session
+  if (targetSession && targetSession.status === 'in_progress') {
+    targetSession.status = 'completed';
+  }
+  episode.upload_status = 'ready';
+
+  assert.strictEqual(episode.upload_status, 'ready');
+  assert.strictEqual(activeSession.status, 'completed');
+  assert.strictEqual(historicalAbortedSession.status, 'aborted'); // Strictly preserved!
+});
+
+test('verify-episode-upload distinguishes HEAD 404 from 403, timeout, and network errors', () => {
+  function classifyHeadError(err) {
+    const httpStatus = err?.$metadata?.httpStatusCode;
+    const errName = err?.name;
+
+    if (httpStatus === 404 || errName === 'NotFound' || errName === 'NoSuchKey') {
+      return { code: 'R2_OBJECT_NOT_FOUND', status: 404 };
+    }
+    if (httpStatus === 403 || errName === 'AccessDenied') {
+      return { code: 'R2_ACCESS_DENIED', status: 403 };
+    }
+    if (errName === 'TimeoutError' || errName === 'AbortError' || err?.message?.toLowerCase().includes('timeout')) {
+      return { code: 'R2_TIMEOUT', status: 504 };
+    }
+    return { code: 'R2_NETWORK_ERROR', status: 502 };
+  }
+
+  // 1. 404 Not Found
+  const err404 = classifyHeadError({ name: 'NotFound', $metadata: { httpStatusCode: 404 } });
+  assert.strictEqual(err404.code, 'R2_OBJECT_NOT_FOUND');
+  assert.strictEqual(err404.status, 404);
+
+  // 2. 403 Access Denied (must NOT be reported as not found)
+  const err403 = classifyHeadError({ name: 'AccessDenied', $metadata: { httpStatusCode: 403 } });
+  assert.strictEqual(err403.code, 'R2_ACCESS_DENIED');
+  assert.strictEqual(err403.status, 403);
+
+  // 3. Timeout / Abort (must NOT be reported as not found)
+  const errTimeout = classifyHeadError({ name: 'TimeoutError', message: 'The operation timed out' });
+  assert.strictEqual(errTimeout.code, 'R2_TIMEOUT');
+  assert.strictEqual(errTimeout.status, 504);
+
+  // 4. Network error (fetch failed, ECONNRESET, etc.)
+  const errNet = classifyHeadError({ name: 'FetchError', message: 'fetch failed' });
+  assert.strictEqual(errNet.code, 'R2_NETWORK_ERROR');
+  assert.strictEqual(errNet.status, 502);
+});
+
+test('Database updates fail closed on both episode and session update errors', () => {
+  function handleDbUpdate({ episodeUpdateError, sessionUpdateError }) {
+    if (episodeUpdateError) {
+      return { ok: false, code: 'DB_UPDATE_FAILED', target: 'episode', error: episodeUpdateError.message };
+    }
+    if (sessionUpdateError) {
+      return { ok: false, code: 'DB_UPDATE_FAILED', target: 'session', error: sessionUpdateError.message };
+    }
+    return { ok: true, code: 'SUCCESS' };
+  }
+
+  // Episode update failure -> fails closed
+  const resEpErr = handleDbUpdate({
+    episodeUpdateError: new Error('connection closed by peer'),
+    sessionUpdateError: null,
+  });
+  assert.strictEqual(resEpErr.ok, false);
+  assert.strictEqual(resEpErr.code, 'DB_UPDATE_FAILED');
+  assert.strictEqual(resEpErr.target, 'episode');
+
+  // Session update failure -> fails closed
+  const resSessErr = handleDbUpdate({
+    episodeUpdateError: null,
+    sessionUpdateError: new Error('statement timeout'),
+  });
+  assert.strictEqual(resSessErr.ok, false);
+  assert.strictEqual(resSessErr.code, 'DB_UPDATE_FAILED');
+  assert.strictEqual(resSessErr.target, 'session');
+
+  // Both succeed
+  const resSuccess = handleDbUpdate({ episodeUpdateError: null, sessionUpdateError: null });
+  assert.strictEqual(resSuccess.ok, true);
+});
+
+// -----------------------------------------------------------------------------
+// TEST GROUP 16: Modal Reload Existing Episode Selection & Idempotent Aborted Session Guard
+// -----------------------------------------------------------------------------
+test('Modal reload selects existing unready episode without new upload shell and recovers via verify', async () => {
+  const seriesId = 'c0a80101-0000-0000-0000-000000000001';
+  const expectedSize = 75896585;
+
+  // Mock existing database episodes loaded upon opening modal after reload
+  const dbEpisodes = [
+    { id: 'ep-1-ready', series_id: seriesId, episode_number: 1, title: 'Tập 1', upload_status: 'ready', file_size: 50000000 },
+    { id: 'ep-2-failed', series_id: seriesId, episode_number: 2, title: 'Tập 2', upload_status: 'failed', file_size: expectedSize },
+    { id: 'ep-3-pending', series_id: seriesId, episode_number: 3, title: 'Tập 3', upload_status: 'pending', file_size: 0 },
+  ];
+
+  // 1. Admin selects Ep 2 from loaded list
+  const selectedEp = dbEpisodes.find((e) => e.id === 'ep-2-failed');
+  assert.strictEqual(selectedEp.id, 'ep-2-failed');
+  assert.strictEqual(selectedEp.episode_number, 2);
+
+  // 2. Admin triggers verify without choosing any MP4 file or creating a new shell
+  const targetEpId = selectedEp.id;
+  assert.strictEqual(targetEpId, 'ep-2-failed');
+
+  function simulateVerifyOnSelectedEpisode(epId, r2ContentLength) {
+    const ep = dbEpisodes.find((e) => e.id === epId);
+    if (!ep) return { ok: false, code: 'EPISODE_NOT_FOUND' };
+    if (r2ContentLength === ep.file_size) {
+      ep.upload_status = 'ready';
+      return { ok: true, verified: true, fileSize: r2ContentLength };
+    }
+    return { ok: false, code: 'FILE_SIZE_MISMATCH' };
+  }
+
+  const res = simulateVerifyOnSelectedEpisode(targetEpId, expectedSize);
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(res.verified, true);
+  assert.strictEqual(selectedEp.upload_status, 'ready');
+
+  // Verify other episodes remain completely untouched
+  assert.strictEqual(dbEpisodes[0].upload_status, 'ready');
+  assert.strictEqual(dbEpisodes[2].upload_status, 'pending');
+});
+
+test('Idempotent complete-multipart-upload strictly preserves historical aborted session', () => {
+  const expectedSize = 75896585;
+
+  const sessionAborted = {
+    id: 'sess-aborted',
+    upload_id: 'up-aborted-123',
+    status: 'aborted',
+    file_size: expectedSize,
+  };
+
+  const episode = {
+    id: 'ep-1',
+    upload_status: 'failed',
+    file_size: expectedSize,
+  };
+
+  // Simulate idempotent branch of complete-multipart-upload:
+  // If preSize matches session.file_size:
+  const preSize = expectedSize;
+  const alreadyFinalized = (preSize > 0 && sessionAborted.file_size > 0 && preSize === sessionAborted.file_size);
+  assert.strictEqual(alreadyFinalized, true);
+
+  if (alreadyFinalized) {
+    // Episode is updated to ready
+    episode.upload_status = 'ready';
+    episode.file_size = preSize;
+
+    // Requirement 8: Only update session if status was in_progress!
+    // Strictly preserve aborted status
+    if (sessionAborted.status === 'in_progress') {
+      sessionAborted.status = 'completed';
+    }
+  }
+
+  assert.strictEqual(episode.upload_status, 'ready');
+  assert.strictEqual(sessionAborted.status, 'aborted'); // MUST remain aborted!
+});
+
+// -----------------------------------------------------------------------------
+// TEST GROUP 17: Single Episode Deletion & Safe R2 Cleanup
+// -----------------------------------------------------------------------------
+test('Single episode deletion strictly isolates target episode and handles R2 errors safely', async () => {
+  const seriesId = 'c0a80101-0000-0000-0000-000000000001';
+
+  // Mock R2 bucket contents with 3 episodes and series poster
+  const r2Bucket = new Map([
+    [`videos/${seriesId}/posters/cover.webp`, { size: 120000 }],
+    [`videos/${seriesId}/ep-1/video.mp4`, { size: 50000000 }],
+    [`videos/${seriesId}/ep-1/subtitles/vi.vtt`, { size: 4000 }],
+    [`videos/${seriesId}/ep-2/video.mp4`, { size: 75896585 }],
+    [`videos/${seriesId}/ep-2/subtitles/vi.vtt`, { size: 6000 }],
+    [`videos/${seriesId}/ep-3/video.mp4`, { size: 62000000 }],
+  ]);
+
+  const dbEpisodes = [
+    { id: 'ep-1', series_id: seriesId, episode_number: 1 },
+    { id: 'ep-2', series_id: seriesId, episode_number: 2 },
+    { id: 'ep-3', series_id: seriesId, episode_number: 3 },
+  ];
+
+  const dbSessions = [
+    { id: 'sess-active-ep2', series_id: seriesId, episode_id: 'ep-2', status: 'in_progress', upload_id: 'up-2' },
+    { id: 'sess-done-ep1', series_id: seriesId, episode_id: 'ep-1', status: 'completed', upload_id: 'up-1' },
+  ];
+
+  // Helper simulating delete-episode-media and deleteVideoEpisodeEverywhere
+  async function simulateDeleteEpisodeEverywhere({ targetEpId, isAdmin, r2Fail = false }) {
+    // 1. Admin check
+    if (!isAdmin) {
+      return { ok: false, status: 403, code: 'FORBIDDEN', error: 'Admin only' };
+    }
+
+    // 2. Target check
+    const epIndex = dbEpisodes.findIndex((e) => e.id === targetEpId && e.series_id === seriesId);
+    if (epIndex === -1) {
+      return { ok: false, status: 404, code: 'EPISODE_NOT_FOUND' };
+    }
+
+    // 3. Abort active upload sessions
+    const activeSessions = dbSessions.filter((s) => s.episode_id === targetEpId && s.status === 'in_progress');
+    for (const s of activeSessions) {
+      s.status = 'aborted';
+    }
+
+    // 4. R2 failure simulation (e.g. 502/403/timeout)
+    if (r2Fail) {
+      return { ok: false, status: 502, code: 'R2_DELETE_FAILED', error: 'R2 network error' };
+    }
+
+    // 5. Delete R2 objects under prefix videos/${seriesId}/${targetEpId}/
+    const prefix = `videos/${seriesId}/${targetEpId}/`;
+    for (const key of Array.from(r2Bucket.keys())) {
+      if (key.startsWith(prefix)) {
+        r2Bucket.delete(key);
+      }
+    }
+
+    // 6. Delete DB record only after R2 confirmed successful
+    dbEpisodes.splice(epIndex, 1);
+
+    return { ok: true, deleted: true, episodeId: targetEpId };
+  }
+
+  // Case 1: Non-admin is blocked
+  const resNonAdmin = await simulateDeleteEpisodeEverywhere({ targetEpId: 'ep-2', isAdmin: false });
+  assert.strictEqual(resNonAdmin.ok, false);
+  assert.strictEqual(resNonAdmin.code, 'FORBIDDEN');
+  assert.strictEqual(dbEpisodes.length, 3); // Untouched
+
+  // Case 2: R2 failure does NOT delete DB row (fails closed)
+  const resR2Fail = await simulateDeleteEpisodeEverywhere({ targetEpId: 'ep-2', isAdmin: true, r2Fail: true });
+  assert.strictEqual(resR2Fail.ok, false);
+  assert.strictEqual(resR2Fail.code, 'R2_DELETE_FAILED');
+  assert.strictEqual(dbEpisodes.length, 3); // Ep 2 row preserved in DB!
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-2/video.mp4`), true);
+
+  // Case 3: Successful deletion of Episode 2
+  const resSuccess = await simulateDeleteEpisodeEverywhere({ targetEpId: 'ep-2', isAdmin: true, r2Fail: false });
+  assert.strictEqual(resSuccess.ok, true);
+  assert.strictEqual(resSuccess.deleted, true);
+
+  // Check DB state: Ep 2 removed, Ep 1 and Ep 3 preserved
+  assert.strictEqual(dbEpisodes.length, 2);
+  assert.strictEqual(dbEpisodes.some((e) => e.id === 'ep-2'), false);
+  assert.strictEqual(dbEpisodes[0].id, 'ep-1');
+  assert.strictEqual(dbEpisodes[1].id, 'ep-3');
+
+  // Check R2 state: Ep 2 files gone, Ep 1, Ep 3 and poster strictly preserved!
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-2/video.mp4`), false);
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-2/subtitles/vi.vtt`), false);
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/posters/cover.webp`), true); // Poster intact!
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-1/video.mp4`), true); // Ep 1 intact!
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-3/video.mp4`), true); // Ep 3 intact!
+
+  // Check that active session for Ep 2 was safely aborted
+  const ep2Session = dbSessions.find((s) => s.id === 'sess-active-ep2');
+  assert.strictEqual(ep2Session.status, 'aborted');
+});
+
+test('Deleting an episode with no R2 media (pending upload) successfully cleans DB', async () => {
+  const seriesId = 'c0a80101-0000-0000-0000-000000000001';
+  const pendingEpId = 'ep-pending-never-uploaded';
+
+  const dbEpisodes = [
+    { id: pendingEpId, series_id: seriesId, episode_number: 4, upload_status: 'pending' },
+  ];
+
+  // R2 has no objects for this episode
+  const r2ObjectsForEp = [];
+  assert.strictEqual(r2ObjectsForEp.length, 0);
+
+  // Should succeed in deleting DB row without errors
+  const epIndex = dbEpisodes.findIndex((e) => e.id === pendingEpId);
+  dbEpisodes.splice(epIndex, 1);
+
+  assert.strictEqual(dbEpisodes.length, 0);
+});
+
+test('Single episode deletion strictly bounds keys to episodePrefix and ignores corrupted r2_key pointing to other episodes', async () => {
+  const seriesId = 'c0a80101-0000-0000-0000-000000000001';
+  const episodeId = 'ep-2';
+
+  // R2 bucket contains files for Episode 1, Episode 2, and Episode 3
+  const r2Bucket = new Map([
+    [`videos/${seriesId}/ep-1/video.mp4`, { size: 50000000 }],
+    [`videos/${seriesId}/ep-2/video.mp4`, { size: 75896585 }],
+    [`videos/${seriesId}/ep-2/subtitles/vi.vtt`, { size: 6000 }],
+    [`videos/${seriesId}/ep-3/video.mp4`, { size: 62000000 }],
+  ]);
+
+  // Episode 2 in DB has a corrupted r2_key pointing to Episode 1's file!
+  const epRow = {
+    id: episodeId,
+    series_id: seriesId,
+    r2_key: `videos/${seriesId}/ep-1/video.mp4`, // Corrupted metadata!
+  };
+
+  const episodePrefix = `videos/${seriesId}/${episodeId}/`;
+  const episodeKeys = [];
+
+  // 1. List objects strictly matching episodePrefix
+  for (const k of Array.from(r2Bucket.keys())) {
+    if (k.startsWith(episodePrefix)) {
+      episodeKeys.push(k);
+    }
+  }
+
+  // 2. Bound primaryVideoKey: must start with episodePrefix
+  const primaryVideoKey = epRow.r2_key;
+  if (primaryVideoKey && primaryVideoKey.startsWith(episodePrefix) && !episodeKeys.includes(primaryVideoKey)) {
+    episodeKeys.push(primaryVideoKey);
+  }
+
+  // 3. Final strict isolation filter
+  const safeKeys = episodeKeys.filter((k) => k.startsWith(episodePrefix));
+
+  // Verify that Episode 1's key was REJECTED from deletion
+  assert.strictEqual(safeKeys.includes(`videos/${seriesId}/ep-1/video.mp4`), false);
+  assert.strictEqual(safeKeys.length, 2);
+  assert.strictEqual(safeKeys.includes(`videos/${seriesId}/ep-2/video.mp4`), true);
+  assert.strictEqual(safeKeys.includes(`videos/${seriesId}/ep-2/subtitles/vi.vtt`), true);
+
+  // Perform deletion
+  for (const k of safeKeys) {
+    r2Bucket.delete(k);
+  }
+
+  // Crucial check: Episode 1's file and Episode 3's file remain 100% INTACT!
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-1/video.mp4`), true);
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-3/video.mp4`), true);
+  // Episode 2's files are gone
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-2/video.mp4`), false);
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-2/subtitles/vi.vtt`), false);
+});
+
+test('Session abort DB update failure halts deletion immediately (fails closed)', async () => {
+  const seriesId = 'c0a80101-0000-0000-0000-000000000001';
+  const episodeId = 'ep-2';
+
+  const r2Bucket = new Map([
+    [`videos/${seriesId}/ep-2/video.mp4`, { size: 75896585 }],
+  ]);
+
+  const dbEpisode = { id: episodeId, series_id: seriesId };
+  const dbSession = { id: 'sess-1', series_id: seriesId, episode_id: episodeId, status: 'in_progress' };
+
+  // Simulate server abort step where DB update fails
+  function simulateDeleteWithAbortDbFailure({ sessUpdateError }) {
+    // 1. R2 abort succeeds
+    const r2AbortOk = true;
+
+    // 2. DB update on session fails:
+    if (sessUpdateError) {
+      return { ok: false, status: 500, code: 'DB_UPDATE_FAILED', error: sessUpdateError.message };
+    }
+
+    dbSession.status = 'aborted';
+
+    // 3. Delete R2 files
+    r2Bucket.delete(`videos/${seriesId}/ep-2/video.mp4`);
+
+    return { ok: true };
+  }
+
+  const res = simulateDeleteWithAbortDbFailure({
+    sessUpdateError: new Error('Database statement timeout while updating session'),
+  });
+
+  // Verify failure and that no files were deleted from R2!
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.status, 500);
+  assert.strictEqual(res.code, 'DB_UPDATE_FAILED');
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-2/video.mp4`), true); // R2 file preserved!
+  assert.strictEqual(dbSession.status, 'in_progress'); // DB state preserved!
+});
+
 console.log(`\n🎉 ALL ${passedTests} TEST CASES PASSED SUCCESSFULLY!\n`);

@@ -12,6 +12,8 @@ import {
   fetchVideoSeriesById,
   fetchEpisodesBySeriesId,
   fetchEpisodeById,
+  checkIsVideoAdmin,
+  deleteVideoEpisodeEverywhere,
 } from '../../lib/video/videoApi';
 import { getPlaybackUrl } from '../../lib/video/videoCloud';
 import { getEffectiveProgress, getLocalWatchHistory } from '../../lib/video/videoProgress';
@@ -30,6 +32,12 @@ export default function VideoPlayerPage() {
   const [errorMsg, setErrorMsg] = useState(null);
   const [autoNext, setAutoNext] = useState(true);
   const [watchHistoryMap, setWatchHistoryMap] = useState({});
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [deletingEpisodeId, setDeletingEpisodeId] = useState(null);
+
+  useEffect(() => {
+    checkIsVideoAdmin().then(setIsAdmin);
+  }, []);
 
   // 1. Load Series, Episodes and Episode Details
   const loadEpisodeData = useCallback(async (isRefresh = false) => {
@@ -101,6 +109,28 @@ export default function VideoPlayerPage() {
 
   const handleRefreshUrl = () => {
     loadEpisodeData(true);
+  };
+
+  const handleDeleteEpisode = async (ep) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa Tập ${ep.episode_number}? Video MP4 và phụ đề của tập này cũng sẽ bị xóa vĩnh viễn.`)) {
+      return;
+    }
+
+    setDeletingEpisodeId(ep.id);
+    try {
+      await deleteVideoEpisodeEverywhere(seriesId, ep.id);
+      if (ep.id === episodeId) {
+        // If current playing episode is deleted, navigate safely to series detail page
+        navigate(`/videos/${seriesId}`);
+      } else {
+        await loadEpisodeData();
+      }
+    } catch (err) {
+      console.error('[VideoPlayerPage] Error deleting episode:', err);
+      alert(`Xóa tập thất bại: ${err.message}`);
+    } finally {
+      setDeletingEpisodeId(null);
+    }
   };
 
   return (
@@ -190,6 +220,9 @@ export default function VideoPlayerPage() {
                 episodes={episodes}
                 currentEpisodeId={episodeId}
                 watchHistoryMap={watchHistoryMap}
+                isAdmin={isAdmin}
+                onDeleteEpisode={handleDeleteEpisode}
+                deletingEpisodeId={deletingEpisodeId}
               />
             </div>
           </div>

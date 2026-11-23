@@ -169,6 +169,7 @@ Deno.serve(async (req: Request) => {
         secretAccessKey: R2_SECRET_ACCESS_KEY,
       },
       forcePathStyle: true,
+      maxAttempts: 2, // Limit retries to prevent unbounded backoff and worker timeouts on Supabase Edge Functions
     });
 
     // Helper: Admin Guard
@@ -599,6 +600,19 @@ Deno.serve(async (req: Request) => {
       const { uploadId, parts } = validation.data;
       const key = buildVideoSourceKey(seriesId, episodeId);
 
+      // Helper for structured logging (Requirement 2)
+      // Only logs stage timing, uploadId, episodeId, error codes; strictly zero credentials or signed URLs
+      const logStage = (stageName: string, meta: Record<string, any> = {}) => {
+        console.log(JSON.stringify({
+          stage: stageName,
+          uploadId,
+          seriesId,
+          episodeId,
+          timestamp: new Date().toISOString(),
+          ...meta,
+        }));
+      };
+
       // Verify upload session in database server-side
       const { data: session, error: sessErr } = await supabaseAdmin
         .from('video_upload_sessions')
@@ -620,6 +634,92 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // Idempotent Check: If session is already completed or if R2 already has the completed file
+      let actualSize = 0;
+      let alreadyFinalized = false;
+
+      logStage('HEAD_START', { phase: 'idempotent_pre_check', key });
+      const preHeadStartTime = Date.now();
+      try {
+        const preHeadRes = await s3.send(
+          new HeadObjectCommand({
+            Bucket: R2_BUCKET,
+            Key: key,
+          }),
+          { abortSignal: AbortSignal.timeout(10000) }
+        );
+        const preSize = preHeadRes.ContentLength || 0;
+        logStage('HEAD_DONE', { phase: 'idempotent_pre_check', durationMs: Date.now() - preHeadStartTime, actualSize: preSize });
+
+        if (preSize > 0 && Number(session.file_size) > 0 && preSize === Number(session.file_size)) {
+          alreadyFinalized = true;
+          actualSize = preSize;
+        }
+      } catch (err: any) {
+        logStage('HEAD_DONE', { phase: 'idempotent_pre_check', durationMs: Date.now() - preHeadStartTime, notFound: true, errName: err.name });
+      }
+
+      // If already finalized on R2, ensure DB state is updated and return success immediately
+      if (alreadyFinalized) {
+        logStage('DB_UPDATE_START', { phase: 'idempotent_sync', actualSize });
+        const dbSyncStartTime = Date.now();
+
+        const { error: epSyncErr } = await supabaseAdmin
+          .from('video_episodes')
+          .update({
+            upload_status: 'ready',
+            file_size: actualSize,
+          })
+          .eq('id', episodeId);
+
+        if (epSyncErr) {
+          logStage('DB_UPDATE_DONE', { phase: 'idempotent_sync', durationMs: Date.now() - dbSyncStartTime, error: epSyncErr.message });
+          return new Response(
+            JSON.stringify({
+              error: `Lỗi cập nhật trạng thái tập phim vào cơ sở dữ liệu: ${epSyncErr.message}`,
+              code: 'DB_UPDATE_FAILED',
+              actualSize,
+            }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Requirement 8: Only update session if it was in_progress. Do NOT change aborted sessions.
+        if (session.status === 'in_progress') {
+          const { error: sessSyncErr } = await supabaseAdmin
+            .from('video_upload_sessions')
+            .update({ status: 'completed' })
+            .eq('id', session.id);
+
+          if (sessSyncErr) {
+            logStage('DB_UPDATE_DONE', { phase: 'idempotent_sync', durationMs: Date.now() - dbSyncStartTime, error: sessSyncErr.message });
+            return new Response(
+              JSON.stringify({
+                error: `Lỗi cập nhật trạng thái phiên upload vào cơ sở dữ liệu: ${sessSyncErr.message}`,
+                code: 'DB_UPDATE_FAILED',
+                actualSize,
+              }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+
+        logStage('DB_UPDATE_DONE', { phase: 'idempotent_sync', durationMs: Date.now() - dbSyncStartTime });
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            idempotent: true,
+            episodeId,
+            r2Key: key,
+            fileSize: actualSize,
+            message: 'Tệp video đã hoàn tất trên R2 và đồng bộ trạng thái thành công.',
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // If not already finalized, session must be in_progress
       if (session.status !== 'in_progress') {
         return new Response(
           JSON.stringify({ error: `Phiên upload không ở trạng thái in_progress (trạng thái: ${session.status})`, code: 'SESSION_NOT_ACTIVE' }),
@@ -648,7 +748,11 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // Complete Multipart Upload via AWS SDK v3
+      // Complete Multipart Upload via AWS SDK v3 with strict timeout (25s)
+      logStage('COMPLETE_START', { partsCount: sortedParts.length });
+      const completeStartTime = Date.now();
+      let completeErr: any = null;
+
       try {
         await s3.send(
           new CompleteMultipartUploadCommand({
@@ -661,42 +765,61 @@ Deno.serve(async (req: Request) => {
                 ETag: cleanEtag(p.ETag),
               })),
             },
-          })
-        );
-      } catch (completeErr: any) {
-        console.error('[R2 Complete Multipart Error]:', completeErr.name, completeErr.message);
-        return new Response(
-          JSON.stringify({
-            error: `Hoàn tất multipart upload thất bại trên R2: ${completeErr.message}`,
-            code: 'R2_COMPLETE_FAILED',
           }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { abortSignal: AbortSignal.timeout(25000) }
         );
+        logStage('COMPLETE_DONE', { durationMs: Date.now() - completeStartTime, status: 'ok' });
+      } catch (err: any) {
+        completeErr = err;
+        logStage('COMPLETE_DONE', {
+          durationMs: Date.now() - completeStartTime,
+          status: 'error',
+          errName: err.name,
+          httpStatus: err.$metadata?.httpStatusCode,
+        });
       }
 
-      // Verify object exists and get actual size via HEAD
-      let actualSize = 0;
+      // Verify object exists and get actual size via HEAD (10s timeout)
+      logStage('HEAD_START', { phase: 'post_complete_verify', key });
+      const headStartTime = Date.now();
+      let headErr: any = null;
+
       try {
         const headRes = await s3.send(
           new HeadObjectCommand({
             Bucket: R2_BUCKET,
             Key: key,
-          })
+          }),
+          { abortSignal: AbortSignal.timeout(10000) }
         );
         actualSize = headRes.ContentLength || 0;
-      } catch (headErr: any) {
-        console.error('[R2 HEAD Verify Error]:', headErr.name, headErr.message);
+        logStage('HEAD_DONE', { phase: 'post_complete_verify', durationMs: Date.now() - headStartTime, actualSize, status: 'ok' });
+      } catch (err: any) {
+        headErr = err;
+        logStage('HEAD_DONE', {
+          phase: 'post_complete_verify',
+          durationMs: Date.now() - headStartTime,
+          status: 'error',
+          errName: err.name,
+          httpStatus: err.$metadata?.httpStatusCode,
+        });
+      }
+
+      // If Complete threw an error AND Head failed to find object:
+      if (actualSize <= 0) {
+        console.error('[R2 Complete Failed & HEAD Not Found]:', completeErr?.message || headErr?.message);
         return new Response(
           JSON.stringify({
-            error: `Không thể xác minh tệp video trên R2 sau khi hoàn tất multipart (${headErr.name}). Không đánh dấu tập phim sẵn sàng.`,
-            code: 'R2_HEAD_FAILED',
+            error: `Hoàn tất multipart upload thất bại trên R2 (${completeErr?.name || headErr?.name || 'UnknownError'}): ${completeErr?.message || headErr?.message}`,
+            code: 'R2_COMPLETE_FAILED',
+            uploadId,
           }),
           { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       // Verify size matches session file_size
-      if (actualSize <= 0 || (session.file_size > 0 && actualSize !== session.file_size)) {
+      if (session.file_size > 0 && actualSize !== session.file_size) {
         console.error(`[R2 Size Mismatch]: actual=${actualSize}, expected=${session.file_size}`);
         return new Response(
           JSON.stringify({
@@ -710,6 +833,9 @@ Deno.serve(async (req: Request) => {
       }
 
       // Update episode record to 'ready'
+      logStage('DB_UPDATE_START', { episodeId, actualSize });
+      const dbStartTime = Date.now();
+
       const { error: epUpdateErr } = await supabaseAdmin
         .from('video_episodes')
         .update({
@@ -720,24 +846,42 @@ Deno.serve(async (req: Request) => {
 
       if (epUpdateErr) {
         console.error('[video-presign] Failed to update episode ready status:', epUpdateErr);
+        logStage('DB_UPDATE_DONE', { durationMs: Date.now() - dbStartTime, error: epUpdateErr.message });
         return new Response(
           JSON.stringify({
             error: `Lỗi cập nhật trạng thái tập phim vào cơ sở dữ liệu: ${epUpdateErr.message}`,
             code: 'DB_UPDATE_FAILED',
+            actualSize,
           }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Update session record to completed
-      const { error: sessUpdateErr } = await supabaseAdmin
-        .from('video_upload_sessions')
-        .update({ status: 'completed' })
-        .eq('upload_id', uploadId);
+      // Update session record to completed only if in_progress
+      if (session.status === 'in_progress') {
+        const { error: sessUpdateErr } = await supabaseAdmin
+          .from('video_upload_sessions')
+          .update({ status: 'completed' })
+          .eq('id', session.id);
 
-      if (sessUpdateErr) {
-        console.error('[video-presign] Failed to mark session completed:', sessUpdateErr);
+        if (sessUpdateErr) {
+          console.error('[video-presign] Failed to update session completed status:', sessUpdateErr);
+          logStage('DB_UPDATE_DONE', { durationMs: Date.now() - dbStartTime, error: sessUpdateErr.message });
+          return new Response(
+            JSON.stringify({
+              error: `Lỗi cập nhật trạng thái phiên upload vào cơ sở dữ liệu: ${sessUpdateErr.message}`,
+              code: 'DB_UPDATE_FAILED',
+              actualSize,
+            }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
+
+      logStage('DB_UPDATE_DONE', {
+        durationMs: Date.now() - dbStartTime,
+        hasSessError: false,
+      });
 
       return new Response(
         JSON.stringify({
@@ -745,6 +889,277 @@ Deno.serve(async (req: Request) => {
           episodeId,
           r2Key: key,
           fileSize: actualSize,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // --------------------------------------------------------------------------
+    // ACTION: verify-episode-upload (Admin Only - Idempotent Check & State Sync)
+    // --------------------------------------------------------------------------
+    if (action === 'verify-episode-upload') {
+      const adminErr = requireAdmin();
+      if (adminErr) return adminErr;
+
+      const { uploadId } = validation.data;
+      const key = buildVideoSourceKey(seriesId, episodeId);
+
+      // Step 1: Query episode from database
+      const { data: episode, error: epFetchErr } = await supabaseAdmin
+        .from('video_episodes')
+        .select('id, series_id, upload_status, file_size, r2_key')
+        .eq('id', episodeId)
+        .eq('series_id', seriesId)
+        .maybeSingle();
+
+      if (epFetchErr) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: `Lỗi truy vấn thông tin tập phim từ CSDL: ${epFetchErr.message}`,
+            code: 'DB_QUERY_FAILED',
+            seriesId,
+            episodeId,
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!episode) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: 'Tập phim không tồn tại hoặc không thuộc bộ phim này',
+            code: 'EPISODE_NOT_FOUND',
+            seriesId,
+            episodeId,
+          }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Step 2: Query upload session(s) to verify related session and retrieve expected size
+      let sessionQuery = supabaseAdmin
+        .from('video_upload_sessions')
+        .select('id, upload_id, file_size, status, created_at, r2_key')
+        .eq('series_id', seriesId)
+        .eq('episode_id', episodeId);
+
+      if (uploadId) {
+        sessionQuery = sessionQuery.eq('upload_id', uploadId);
+      } else {
+        sessionQuery = sessionQuery.order('created_at', { ascending: false });
+      }
+
+      const { data: sessions, error: sessFetchErr } = await sessionQuery;
+
+      if (sessFetchErr) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: `Lỗi truy vấn phiên upload từ CSDL: ${sessFetchErr.message}`,
+            code: 'DB_QUERY_FAILED',
+            seriesId,
+            episodeId,
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Step 3: Determine expected file size from trusted session or episode record
+      // Find the specific session to verify: prefer active in_progress session, or most recent valid session
+      const targetSession = uploadId
+        ? sessions?.find((s) => s.upload_id === uploadId)
+        : (sessions?.find((s) => s.status === 'in_progress' && Number(s.file_size) > 0) ||
+           sessions?.find((s) => Number(s.file_size) > 0));
+
+      let expectedSize = 0;
+      if (targetSession && Number(targetSession.file_size) > 0) {
+        expectedSize = Number(targetSession.file_size);
+      } else if (Number(episode.file_size) > 0) {
+        expectedSize = Number(episode.file_size);
+      }
+
+      // Requirement 2: If no valid positive expected size exists, do NOT auto-transition to ready
+      if (!expectedSize || expectedSize <= 0) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            verified: false,
+            error: 'Không tìm thấy dung lượng dự kiến hợp lệ trong cơ sở dữ liệu để đối chiếu an toàn.',
+            code: 'MISSING_EXPECTED_FILE_SIZE',
+            seriesId,
+            episodeId,
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Step 4: Check R2 via HeadObject with 10s timeout and strict error classification
+      // Requirement 5: Distinguish 404 from 403, timeout, and network errors
+      let headRes;
+      try {
+        headRes = await s3.send(
+          new HeadObjectCommand({ Bucket: R2_BUCKET, Key: key }),
+          { abortSignal: AbortSignal.timeout(10000) }
+        );
+      } catch (err: any) {
+        const httpStatus = err.$metadata?.httpStatusCode;
+        const errName = err.name || 'UnknownError';
+
+        if (httpStatus === 404 || errName === 'NotFound' || errName === 'NoSuchKey') {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              verified: false,
+              error: `Tệp video chưa tồn tại trên Cloudflare R2 (khóa: ${key}).`,
+              code: 'R2_OBJECT_NOT_FOUND',
+              httpStatus: 404,
+              seriesId,
+              episodeId,
+              key,
+            }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (httpStatus === 403 || errName === 'AccessDenied') {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              verified: false,
+              error: `Cloudflare R2 từ chối quyền truy cập (HTTP 403 AccessDenied) khi kiểm tra tệp video.`,
+              code: 'R2_ACCESS_DENIED',
+              httpStatus: 403,
+              seriesId,
+              episodeId,
+              key,
+            }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (errName === 'TimeoutError' || errName === 'AbortError' || err.message?.toLowerCase().includes('timeout')) {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              verified: false,
+              error: `Hết thời gian kết nối (Timeout) khi kiểm tra tệp video trên Cloudflare R2. Vui lòng thử lại.`,
+              code: 'R2_TIMEOUT',
+              httpStatus: 504,
+              seriesId,
+              episodeId,
+              key,
+            }),
+            { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            verified: false,
+            error: `Lỗi kết nối mạng hoặc lỗi R2 S3 API (${errName}): ${err.message}`,
+            code: 'R2_NETWORK_ERROR',
+            httpStatus: httpStatus || 502,
+            seriesId,
+            episodeId,
+            key,
+          }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Step 5: Validate actual ContentLength vs expectedSize
+      // Requirement 1 & 3: ContentLength must match expectedSize exactly; if not, return FILE_SIZE_MISMATCH and preserve DB
+      const actualSize = headRes?.ContentLength || 0;
+
+      if (actualSize <= 0) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            verified: false,
+            error: 'Tệp video trên Cloudflare R2 có kích thước 0 bytes.',
+            code: 'R2_FILE_EMPTY',
+            actualSize,
+            expectedSize,
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (actualSize !== expectedSize) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            verified: false,
+            error: `Dung lượng tệp trên R2 (${actualSize} bytes) không khớp với dung lượng dự kiến (${expectedSize} bytes). Trạng thái cơ sở dữ liệu được giữ nguyên.`,
+            code: 'FILE_SIZE_MISMATCH',
+            actualSize,
+            expectedSize,
+            episodeId,
+            seriesId,
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Step 6: Update database with strict error checking on BOTH episode and session
+      // Requirement 6: Check DB error for both episode and session
+      const { error: epUpdateErr } = await supabaseAdmin
+        .from('video_episodes')
+        .update({
+          upload_status: 'ready',
+          file_size: actualSize,
+          r2_key: key,
+        })
+        .eq('id', episodeId);
+
+      if (epUpdateErr) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: `Tìm thấy file trên R2 (${actualSize} bytes) nhưng lỗi cập nhật CSDL tập phim: ${epUpdateErr.message}`,
+            code: 'DB_UPDATE_FAILED',
+            actualSize,
+            expectedSize,
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Requirement 4: Strictly update ONLY the verified related session if its status is 'in_progress'.
+      // DO NOT update historical aborted, failed, or completed sessions.
+      if (targetSession && targetSession.status === 'in_progress') {
+        const { error: sessUpdateErr } = await supabaseAdmin
+          .from('video_upload_sessions')
+          .update({ status: 'completed' })
+          .eq('id', targetSession.id);
+
+        if (sessUpdateErr) {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              error: `Đã cập nhật tập phim nhưng lỗi cập nhật trạng thái phiên upload vào CSDL: ${sessUpdateErr.message}`,
+              code: 'DB_UPDATE_FAILED',
+              actualSize,
+              expectedSize,
+            }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          success: true,
+          verified: true,
+          episodeId,
+          seriesId,
+          r2Key: key,
+          fileSize: actualSize,
+          message: `Đã xác minh tệp video (${(actualSize / (1024 * 1024)).toFixed(2)} MB) tồn tại trên R2 và đồng bộ trạng thái thành công!`,
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -951,75 +1366,157 @@ Deno.serve(async (req: Request) => {
       const adminErr = requireAdmin();
       if (adminErr) return adminErr;
 
-      const videoKey = buildVideoSourceKey(seriesId, episodeId);
-      const subPrefix = `videos/${seriesId}/${episodeId}/subtitles/`;
+      // 1. Verify episode belongs to this series
+      const { data: epRow, error: epCheckErr } = await supabaseAdmin
+        .from('video_episodes')
+        .select('id, series_id, r2_key, upload_status')
+        .eq('id', episodeId)
+        .eq('series_id', seriesId)
+        .maybeSingle();
 
-      // 1. Delete video file
-      try {
-        await s3.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: videoKey }));
-      } catch (delErr: any) {
-        const httpStatus = delErr.$metadata?.httpStatusCode;
-        if (httpStatus !== 204 && httpStatus !== 404 && delErr.name !== 'NoSuchKey') {
-          return new Response(
-            JSON.stringify({ error: `Xóa video trên R2 thất bại: ${delErr.message}`, code: 'R2_DELETE_FAILED' }),
-            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+      if (epCheckErr) {
+        return new Response(
+          JSON.stringify({ error: `Lỗi truy vấn tập phim từ CSDL: ${epCheckErr.message}`, code: 'DB_QUERY_FAILED' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!epRow) {
+        return new Response(
+          JSON.stringify({ error: 'Tập phim không tồn tại hoặc không thuộc bộ phim này', code: 'EPISODE_NOT_FOUND' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // 2. Abort any active multipart upload sessions on R2 safely before deleting
+      const { data: activeSessions, error: sessErr } = await supabaseAdmin
+        .from('video_upload_sessions')
+        .select('id, upload_id, r2_key, status')
+        .eq('series_id', seriesId)
+        .eq('episode_id', episodeId)
+        .eq('status', 'in_progress');
+
+      if (sessErr) {
+        return new Response(
+          JSON.stringify({ error: `Lỗi truy vấn phiên upload từ CSDL: ${sessErr.message}`, code: 'DB_QUERY_FAILED' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (activeSessions && activeSessions.length > 0) {
+        for (const sess of activeSessions) {
+          try {
+            await s3.send(
+              new AbortMultipartUploadCommand({
+                Bucket: R2_BUCKET,
+                Key: sess.r2_key,
+                UploadId: sess.upload_id,
+              }),
+              { abortSignal: AbortSignal.timeout(10000) }
+            );
+          } catch (abortErr: any) {
+            if (abortErr.name !== 'NoSuchUpload' && abortErr.$metadata?.httpStatusCode !== 404) {
+              return new Response(
+                JSON.stringify({
+                  error: `Không thể hủy phiên upload đang hoạt động trên R2 (${sess.upload_id}): ${abortErr.message}`,
+                  code: 'R2_ABORT_FAILED',
+                }),
+                { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          }
+
+          const { error: sessUpdateErr } = await supabaseAdmin
+            .from('video_upload_sessions')
+            .update({ status: 'aborted' })
+            .eq('id', sess.id);
+
+          if (sessUpdateErr) {
+            return new Response(
+              JSON.stringify({
+                error: `Lỗi cập nhật trạng thái phiên upload sau khi hủy trên R2: ${sessUpdateErr.message}`,
+                code: 'DB_UPDATE_FAILED',
+              }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
         }
       }
 
-      // 2. List all subtitles with full S3 ListObjectsV2 pagination
-      const subKeys: string[] = [];
+      // 3. List all R2 objects strictly belonging to this episode (video + subtitles)
+      const episodePrefix = `videos/${seriesId}/${episodeId}/`;
+      const episodeKeys: string[] = [];
       let continuationToken: string | undefined = undefined;
+
       try {
         do {
           const listRes = await s3.send(
             new ListObjectsV2Command({
               Bucket: R2_BUCKET,
-              Prefix: subPrefix,
+              Prefix: episodePrefix,
               ContinuationToken: continuationToken,
-            })
+            }),
+            { abortSignal: AbortSignal.timeout(10000) }
           );
           for (const item of listRes.Contents || []) {
-            if (item.Key) subKeys.push(item.Key);
+            if (item.Key) episodeKeys.push(item.Key);
           }
           continuationToken = listRes.IsTruncated ? listRes.NextContinuationToken : undefined;
         } while (continuationToken);
       } catch (listErr: any) {
+        const httpStatus = listErr.$metadata?.httpStatusCode;
+        const errName = listErr.name || 'UnknownError';
         return new Response(
           JSON.stringify({
-            error: `Liệt kê phụ đề trên R2 để xóa thất bại: ${listErr.message}`,
-            code: 'R2_LIST_FAILED',
+            error: `Liệt kê tệp của tập phim trên R2 để xóa thất bại (${errName}): ${listErr.message}`,
+            code: httpStatus === 403 ? 'R2_ACCESS_DENIED' : 'R2_LIST_FAILED',
           }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: httpStatus === 403 ? 403 : 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // 3. Delete each subtitle file and strictly verify response status
-      const failedSubtitles: string[] = [];
-      for (const k of subKeys) {
+      // Strictly bound deletion to videos/${seriesId}/${episodeId}/
+      // Never delete any object belonging to other episodes or series even if metadata r2_key is corrupted or points elsewhere
+      const primaryVideoKey = epRow.r2_key;
+      if (primaryVideoKey && primaryVideoKey.startsWith(episodePrefix) && !episodeKeys.includes(primaryVideoKey)) {
+        episodeKeys.push(primaryVideoKey);
+      }
+
+      // Final strict isolation filter: only keys with episodePrefix are permitted to be deleted
+      const safeKeys = episodeKeys.filter((k) => k.startsWith(episodePrefix));
+
+      // 4. Delete each object strictly verifying response status
+      const failedKeys: string[] = [];
+      let deletedCount = 0;
+      for (const k of safeKeys) {
         try {
-          await s3.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: k }));
-        } catch (delSubErr: any) {
-          const httpStatus = delSubErr.$metadata?.httpStatusCode;
-          if (httpStatus !== 204 && httpStatus !== 404 && delSubErr.name !== 'NoSuchKey') {
-            failedSubtitles.push(k);
+          await s3.send(
+            new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: k }),
+            { abortSignal: AbortSignal.timeout(10000) }
+          );
+          deletedCount++;
+        } catch (delErr: any) {
+          const httpStatus = delErr.$metadata?.httpStatusCode;
+          if (httpStatus !== 204 && httpStatus !== 404 && delErr.name !== 'NoSuchKey') {
+            failedKeys.push(k);
           }
         }
       }
 
-      if (failedSubtitles.length > 0) {
+      if (failedKeys.length > 0) {
         return new Response(
           JSON.stringify({
-            error: `Xóa phụ đề trên R2 không hoàn tất: ${failedSubtitles.length} tệp thất bại (${failedSubtitles.join(', ')})`,
+            error: `Xóa tệp tập phim trên R2 không hoàn tất: ${failedKeys.length} tệp thất bại (${failedKeys.join(', ')})`,
             code: 'R2_DELETE_FAILED',
-            failedSubtitles,
+            failedKeys,
+            deletedCount,
           }),
           { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       return new Response(
-        JSON.stringify({ success: true, deleted: true, episodeId }),
+        JSON.stringify({ success: true, deleted: true, episodeId, seriesId, deletedCount }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

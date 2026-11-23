@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   IconFilm,
   IconUpload,
@@ -7,6 +7,7 @@ import {
   IconX,
   IconSubtitles,
   IconHardDrive,
+  IconTrash,
 } from './VideoIcons';
 import {
   createVideoSeries,
@@ -15,6 +16,8 @@ import {
   prepareVideoEpisodeForUpload,
   updateVideoEpisode,
   addVideoSubtitle,
+  fetchEpisodesBySeriesId,
+  deleteVideoEpisodeEverywhere,
 } from '../../lib/video/videoApi';
 import {
   uploadSeriesPoster,
@@ -22,6 +25,7 @@ import {
   uploadEpisodeSubtitle,
   fetchStorageStats,
   testR2Connection,
+  verifyEpisodeUpload,
 } from '../../lib/video/videoCloud';
 import styles from './VideoAdminModal.module.css';
 
@@ -62,6 +66,12 @@ export default function VideoAdminModal({
   const [videoFile, setVideoFile] = useState(null);
   const [episodePublished, setEpisodePublished] = useState(false);
 
+  // Episodes List & Selected Episode for Recovery / Management
+  const [episodesList, setEpisodesList] = useState([]);
+  const [selectedEpisode, setSelectedEpisode] = useState(null);
+  const [loadingEpisodes, setLoadingEpisodes] = useState(false);
+  const [deletingEpisodeId, setDeletingEpisodeId] = useState(null);
+
   // Subtitle form state
   const [createdEpisodeId, setCreatedEpisodeId] = useState(null);
   const [subtitleFile, setSubtitleFile] = useState(null);
@@ -73,7 +83,136 @@ export default function VideoAdminModal({
   const [uploadProgress, setUploadProgress] = useState(null); // { percent, loaded, total, partIndex, totalParts, speedBytesPerSec }
   const [r2TestResult, setR2TestResult] = useState(null);
   const [r2Testing, setR2Testing] = useState(false);
+  const [verifyingR2, setVerifyingR2] = useState(false);
   const abortControllerRef = useRef(null);
+  const isFinalizingRef = useRef(false);
+
+  // Warn when user tries to leave page while upload or finalization is active
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (submitting || uploadProgress) {
+        e.preventDefault();
+        e.returnValue = 'Quá trình tải lên hoặc xác nhận video đang diễn ra. Bạn có chắc muốn rời đi?';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [submitting, uploadProgress]);
+
+  const handleBackdropClick = () => {
+    if (submitting || uploadProgress) {
+      return; // Do not close while upload or finalization is active
+    }
+    onClose();
+  };
+
+  // Load existing episodes from Supabase for this series
+  const loadEpisodes = useCallback(async (sId) => {
+    if (!sId) {
+      setEpisodesList([]);
+      return;
+    }
+    setLoadingEpisodes(true);
+    try {
+      const data = await fetchEpisodesBySeriesId(sId, true);
+      setEpisodesList(data || []);
+      // Calculate next episode number if not currently selecting an existing episode
+      if (data && data.length > 0) {
+        const maxNum = Math.max(...data.map((d) => Number(d.episode_number) || 0));
+        setEpisodeNumber((prev) => (selectedEpisode ? prev : maxNum + 1));
+      } else {
+        setEpisodeNumber(1);
+      }
+    } catch (err) {
+      console.error('[AdminModal] Error fetching episodes:', err);
+    } finally {
+      setLoadingEpisodes(false);
+    }
+  }, [selectedEpisode]);
+
+  const handleSelectEpisode = (ep) => {
+    setSelectedEpisode(ep);
+    setCreatedEpisodeId(ep.id);
+    setEpisodeNumber(Number(ep.episode_number));
+    setEpisodeTitle(ep.title || `Tập ${ep.episode_number}`);
+    setEpisodeDescription(ep.description || '');
+    setEpisodePublished(Boolean(ep.published));
+    setErrorMsg('');
+    setSuccessMsg(`Đang chọn Tập ${ep.episode_number} (${ep.upload_status}). Bạn có thể khôi phục từ R2 hoặc tải lại.`);
+  };
+
+  const handleClearSelectedEpisode = () => {
+    setSelectedEpisode(null);
+    setCreatedEpisodeId(null);
+    setEpisodeTitle('');
+    setEpisodeDescription('');
+    setVideoFile(null);
+    if (episodesList.length > 0) {
+      const maxNum = Math.max(...episodesList.map((d) => Number(d.episode_number) || 0));
+      setEpisodeNumber(maxNum + 1);
+    } else {
+      setEpisodeNumber(1);
+    }
+    setErrorMsg('');
+    setSuccessMsg('');
+  };
+
+  const handleVerifyEpisodeOnR2 = async (targetEpId = null) => {
+    const seriesId = createdSeriesId || initialSeries?.id;
+    const epId = targetEpId || selectedEpisode?.id || createdEpisodeId;
+    if (!seriesId || !epId) {
+      setErrorMsg('Vui lòng chọn một tập phim để xác minh và khôi phục.');
+      return;
+    }
+
+    setVerifyingR2(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      const res = await verifyEpisodeUpload({ seriesId, episodeId: epId });
+      if (res.verified || res.success) {
+        setSuccessMsg(`Xác minh thành công! Tệp video (${(res.fileSize / (1024 * 1024)).toFixed(2)} MB) đã sẵn sàng trên R2.`);
+        await loadEpisodes(seriesId);
+        if (onSuccess) onSuccess();
+      } else {
+        setErrorMsg(res.error || 'Tệp video chưa tồn tại trên R2.');
+      }
+    } catch (err) {
+      setErrorMsg(`Lỗi khi xác minh file trên R2: ${err.message}`);
+    } finally {
+      setVerifyingR2(false);
+    }
+  };
+
+  const handleDeleteEpisodeInModal = async (ep) => {
+    const seriesId = createdSeriesId || initialSeries?.id;
+    if (!seriesId || !ep) return;
+
+    if (!window.confirm(`Bạn có chắc muốn xóa Tập ${ep.episode_number}? Video MP4 và phụ đề của tập này cũng sẽ bị xóa vĩnh viễn.`)) {
+      return;
+    }
+
+    setDeletingEpisodeId(ep.id);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      await deleteVideoEpisodeEverywhere(seriesId, ep.id);
+      setSuccessMsg(`Đã xóa Tập ${ep.episode_number} thành công.`);
+      if (selectedEpisode?.id === ep.id || createdEpisodeId === ep.id) {
+        handleClearSelectedEpisode();
+      }
+      await loadEpisodes(seriesId);
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      console.error('[AdminModal] Error deleting episode:', err);
+      setErrorMsg(`Xóa tập thất bại: ${err.message}`);
+    } finally {
+      setDeletingEpisodeId(null);
+    }
+  };
 
   const handleTestR2Connection = async () => {
     setR2Testing(true);
@@ -109,6 +248,7 @@ export default function VideoAdminModal({
         setSeriesStatus(initialSeries.status || 'ongoing');
         setSeriesPublished(Boolean(initialSeries.published));
         setPosterPreview(initialSeries.poster_key || '');
+        loadEpisodes(initialSeries.id);
       } else {
         setCreatedSeriesId(null);
         setSeriesTitle('');
@@ -118,9 +258,12 @@ export default function VideoAdminModal({
         setSeriesPublished(false);
         setPosterFile(null);
         setPosterPreview('');
+        setEpisodesList([]);
+        setSelectedEpisode(null);
+        setCreatedEpisodeId(null);
       }
     }
-  }, [isOpen, initialSeries]);
+  }, [isOpen, initialSeries, loadEpisodes]);
 
   if (!isOpen) return null;
 
@@ -274,6 +417,9 @@ export default function VideoAdminModal({
         file: videoFile,
         signal: controller.signal,
         onProgress: (prog) => {
+          if (prog?.isFinalizing) {
+            isFinalizingRef.current = true;
+          }
           setUploadProgress(prog);
         },
       });
@@ -286,23 +432,32 @@ export default function VideoAdminModal({
       });
 
       setSuccessMsg(`Tải lên tập ${episodeNumber} thành công và đã sẵn sàng!`);
+      await loadEpisodes(seriesId);
       if (onSuccess) onSuccess();
 
       // Reset episode form for next upload
+      setSelectedEpisode(null);
       setVideoFile(null);
       setEpisodeNumber((prev) => Number(prev) + 1);
       setEpisodeTitle('');
       setUploadProgress(null);
     } catch (err) {
       console.error('[AdminModal] Upload error:', err);
-      setErrorMsg(err.message || 'Lỗi khi tải tập phim lên R2');
+      const errCode = err.code || (err.message?.includes('546') ? 'WORKER_RESOURCE_LIMIT' : 'UPLOAD_ERROR');
+      setErrorMsg(`[${errCode}] ${err.message || 'Lỗi khi tải tập phim lên R2'}`);
       setUploadProgress(null);
-      if (episode?.id) {
+
+      // Only mark failed if error occurred BEFORE finalization (i.e. during part uploads).
+      // If error occurred during complete-multipart-upload, keep episode shell to allow
+      // the Admin to click "Kiểm tra & Khôi phục từ R2" without re-uploading all parts.
+      if (episode?.id && !isFinalizingRef.current) {
         updateVideoEpisode(seriesId, episode.id, { upload_status: 'failed' }).catch(() => {});
       }
+      loadEpisodes(seriesId).catch(() => {});
     } finally {
       setSubmitting(false);
       abortControllerRef.current = null;
+      isFinalizingRef.current = false;
     }
   };
 
@@ -357,7 +512,7 @@ export default function VideoAdminModal({
   };
 
   return (
-    <div className={styles.backdrop} onClick={onClose}>
+    <div className={styles.backdrop} onClick={handleBackdropClick}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className={styles.header}>
@@ -365,7 +520,7 @@ export default function VideoAdminModal({
             <IconFilm size={20} />
             {initialSeries ? 'Chỉnh sửa bộ phim' : 'Thêm mới bộ phim'}
           </h2>
-          <button className={styles.closeBtn} onClick={onClose} disabled={submitting}>
+          <button className={styles.closeBtn} onClick={onClose} disabled={submitting || Boolean(uploadProgress)}>
             <IconX size={18} />
           </button>
         </div>
@@ -518,6 +673,107 @@ export default function VideoAdminModal({
         {/* TAB 2: EPISODE & MP4 UPLOAD */}
         {activeTab === 'episode' && (
           <form onSubmit={handleUploadEpisode} className={styles.content}>
+            {/* Existing Episodes List for Reload Recovery & Deletion */}
+            <div className={styles.epListSection}>
+              <div className={styles.epListHeader}>
+                <span>Danh sách tập phim đã có ({episodesList.length} tập)</span>
+                {selectedEpisode ? (
+                  <button
+                    type="button"
+                    onClick={handleClearSelectedEpisode}
+                    className={`${styles.btnActionSmall} ${styles.btnSelectSmall}`}
+                  >
+                    + Thêm tập mới
+                  </button>
+                ) : (
+                  <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 'normal' }}>
+                    Chọn tập để khôi phục hoặc xóa
+                  </span>
+                )}
+              </div>
+
+              {loadingEpisodes ? (
+                <div style={{ fontSize: 12, color: '#94a3b8', padding: '6px 0' }}>Đang tải danh sách tập...</div>
+              ) : episodesList.length === 0 ? (
+                <div style={{ fontSize: 12, color: '#64748b', padding: '6px 0' }}>Chưa có tập nào trong bộ phim này.</div>
+              ) : (
+                <div className={styles.epItemsList}>
+                  {episodesList.map((ep) => {
+                    const isCurrent = (selectedEpisode?.id === ep.id) || (createdEpisodeId === ep.id);
+                    return (
+                      <div
+                        key={ep.id}
+                        className={`${styles.epItemRow} ${isCurrent ? styles.epItemRowSelected : ''}`}
+                      >
+                        <div className={styles.epItemInfo}>
+                          <span className={styles.epItemBadge}>Tập {ep.episode_number}</span>
+                          <span className={styles.epItemTitle}>{ep.title || `Tập ${ep.episode_number}`}</span>
+                          <span
+                            className={`${styles.epStatusBadge} ${
+                              ep.upload_status === 'ready'
+                                ? styles.statusReady
+                                : ep.upload_status === 'failed'
+                                ? styles.statusFailed
+                                : ep.upload_status === 'uploading'
+                                ? styles.statusUploading
+                                : styles.statusPending
+                            }`}
+                          >
+                            {ep.upload_status === 'ready'
+                              ? 'Sẵn sàng'
+                              : ep.upload_status === 'failed'
+                              ? 'Lỗi tải lên'
+                              : ep.upload_status === 'uploading'
+                              ? 'Đang tải'
+                              : 'Chờ tải'}
+                          </span>
+                          {ep.file_size > 0 && (
+                            <span style={{ fontSize: 11, color: '#64748b' }}>
+                              ({formatBytes(ep.file_size)})
+                            </span>
+                          )}
+                        </div>
+
+                        <div className={styles.epItemActions}>
+                          <button
+                            type="button"
+                            className={`${styles.btnActionSmall} ${styles.btnSelectSmall}`}
+                            onClick={() => handleSelectEpisode(ep)}
+                            title="Chọn tập này để khôi phục hoặc cấu hình"
+                          >
+                            {isCurrent ? 'Đang chọn' : 'Chọn'}
+                          </button>
+
+                          {ep.upload_status !== 'ready' && (
+                            <button
+                              type="button"
+                              className={`${styles.btnActionSmall} ${styles.btnVerifySmall}`}
+                              onClick={() => handleVerifyEpisodeOnR2(ep.id)}
+                              disabled={verifyingR2}
+                              title="Kiểm tra & Khôi phục tập này từ R2"
+                            >
+                              Khôi phục R2
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            className={`${styles.btnActionSmall} ${styles.btnDeleteSmall}`}
+                            onClick={() => handleDeleteEpisodeInModal(ep)}
+                            disabled={deletingEpisodeId === ep.id || submitting}
+                            title="Xóa vĩnh viễn tập này và video trên R2"
+                          >
+                            <IconTrash size={11} />
+                            {deletingEpisodeId === ep.id ? 'Đang xóa...' : 'Xóa'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <div className={styles.row}>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Tập số *</label>
@@ -710,7 +966,9 @@ export default function VideoAdminModal({
               <div className={styles.progressBox}>
                 <div className={styles.progressInfo}>
                   <span>
-                    Đang tải lên: Phần {uploadProgress.partIndex}/{uploadProgress.totalParts} ({uploadProgress.percent}%)
+                    {uploadProgress.isFinalizing || uploadProgress.percent === 99
+                      ? 'Đã tải đủ dữ liệu, đang xác nhận file trên R2... (Vui lòng không đóng trang)'
+                      : `Đang tải lên: Phần ${uploadProgress.partIndex}/${uploadProgress.totalParts} (${uploadProgress.percent}%)`}
                   </span>
                   <span>
                     {formatBytes(uploadProgress.loaded)} / {formatBytes(uploadProgress.total)}
@@ -744,12 +1002,31 @@ export default function VideoAdminModal({
                   Hủy tải lên
                 </button>
               )}
+              {(selectedEpisode || createdEpisodeId) && !submitting && (
+                <button
+                  type="button"
+                  className={styles.tabBtn}
+                  onClick={() => handleVerifyEpisodeOnR2()}
+                  disabled={verifyingR2}
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.15)',
+                    border: '1px solid rgba(59, 130, 246, 0.4)',
+                    color: '#93c5fd',
+                    padding: '8px 14px',
+                    borderRadius: 4,
+                    cursor: verifyingR2 ? 'not-allowed' : 'pointer',
+                    fontSize: 13,
+                  }}
+                >
+                  {verifyingR2 ? 'Đang kiểm tra R2...' : 'Kiểm tra & Khôi phục từ R2'}
+                </button>
+              )}
               <button
                 type="submit"
                 className={styles.btnPrimary}
                 disabled={submitting || !videoFile}
               >
-                {submitting ? 'Đang tải lên R2...' : 'Bắt đầu tải lên R2'}
+                {submitting ? 'Đang tải lên R2...' : selectedEpisode ? 'Tải lại MP4 lên R2' : 'Bắt đầu tải lên R2'}
               </button>
             </div>
           </form>

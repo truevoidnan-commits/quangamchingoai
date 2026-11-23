@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { IconPlay, IconCheck, IconFilm, IconClock } from './VideoIcons';
+import { IconPlay, IconCheck, IconFilm, IconClock, IconTrash } from './VideoIcons';
 import styles from './VideoEpisodeList.module.css';
 
 function formatDuration(seconds) {
@@ -16,6 +16,9 @@ export default function VideoEpisodeList({
   currentEpisodeId = null,
   onSelectEpisode = null,
   watchHistoryMap = {},
+  isAdmin = false,
+  onDeleteEpisode = null,
+  deletingEpisodeId = null,
 }) {
   return (
     <div className={styles.container}>
@@ -51,10 +54,14 @@ export default function VideoEpisodeList({
                           {formatDuration(ep.duration_seconds)}
                         </span>
                       )}
-                      {ep.upload_status !== 'ready' && (
-                        <span className={styles.statusPending}>
-                          {ep.upload_status === 'uploading' ? 'Đang tải...' : 'Chờ tải'}
-                        </span>
+                      {ep.upload_status === 'failed' && (
+                        <span className={styles.statusFailed}>Lỗi tải lên</span>
+                      )}
+                      {ep.upload_status === 'uploading' && (
+                        <span className={styles.statusPending}>Đang tải...</span>
+                      )}
+                      {ep.upload_status === 'pending' && (
+                        <span className={styles.statusPending}>Chờ tải</span>
                       )}
                     </div>
                   </div>
@@ -65,6 +72,22 @@ export default function VideoEpisodeList({
                     <div className={styles.progressCircle} title="Đã xem xong">
                       <IconCheck size={10} />
                     </div>
+                  )}
+                  {isAdmin && onDeleteEpisode && (
+                    <button
+                      type="button"
+                      className={styles.deleteBtn}
+                      title={`Xóa Tập ${ep.episode_number}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onDeleteEpisode(ep);
+                      }}
+                      disabled={deletingEpisodeId === ep.id}
+                    >
+                      <IconTrash size={12} />
+                      {deletingEpisodeId === ep.id ? 'Đang xóa...' : 'Xóa tập'}
+                    </button>
                   )}
                 </div>
               </>

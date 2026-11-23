@@ -16,6 +16,7 @@ import {
   fetchEpisodesBySeriesId,
   checkIsVideoAdmin,
   deleteVideoSeries,
+  deleteVideoEpisodeEverywhere,
 } from '../../lib/video/videoApi';
 import { deleteSeriesMedia } from '../../lib/video/videoCloud';
 import { getLocalWatchHistory } from '../../lib/video/videoProgress';
@@ -31,6 +32,7 @@ export default function VideoDetailPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [watchHistoryMap, setWatchHistoryMap] = useState({});
+  const [deletingEpisodeId, setDeletingEpisodeId] = useState(null);
 
   // Check admin
   useEffect(() => {
@@ -83,6 +85,24 @@ export default function VideoDetailPage() {
     } catch (err) {
       console.error('[VideoDetailPage] Error deleting series:', err);
       alert(`Xóa bộ phim thất bại: ${err.message}`);
+    }
+  };
+
+  // Handle Delete Single Episode
+  const handleDeleteEpisode = async (ep) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa Tập ${ep.episode_number}? Video MP4 và phụ đề của tập này cũng sẽ bị xóa vĩnh viễn.`)) {
+      return;
+    }
+
+    setDeletingEpisodeId(ep.id);
+    try {
+      await deleteVideoEpisodeEverywhere(seriesId, ep.id);
+      await loadData();
+    } catch (err) {
+      console.error('[VideoDetailPage] Error deleting episode:', err);
+      alert(`Xóa tập thất bại: ${err.message}`);
+    } finally {
+      setDeletingEpisodeId(null);
     }
   };
 
@@ -225,6 +245,9 @@ export default function VideoDetailPage() {
           seriesId={series.id}
           episodes={episodes}
           watchHistoryMap={watchHistoryMap}
+          isAdmin={isAdmin}
+          onDeleteEpisode={handleDeleteEpisode}
+          deletingEpisodeId={deletingEpisodeId}
         />
 
         {/* Admin Modal */}
