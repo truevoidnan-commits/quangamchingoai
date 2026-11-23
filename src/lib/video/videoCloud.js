@@ -223,6 +223,7 @@ export async function uploadVideoMultipart({ seriesId, episodeId, file, onProgre
   let uploadedBytes = 0;
   const completedParts = [];
   const startTime = Date.now();
+  let isFinalizing = false;
 
   try {
     // 2. Upload parts sequentially
@@ -320,6 +321,20 @@ export async function uploadVideoMultipart({ seriesId, episodeId, file, onProgre
     }
 
     // 3. Complete Multipart Upload via Edge Function
+    isFinalizing = true;
+    if (onProgress) {
+      onProgress({
+        percent: 99,
+        loaded: fileSize,
+        total: fileSize,
+        partIndex: totalParts,
+        totalParts,
+        speedBytesPerSec: 0,
+        isThresholdExceeded,
+        isFinalizing: true,
+      });
+    }
+
     const completeRes = await callVideoPresign({
       action: 'complete-multipart-upload',
       seriesId,
@@ -337,6 +352,7 @@ export async function uploadVideoMultipart({ seriesId, episodeId, file, onProgre
         totalParts,
         speedBytesPerSec: 0,
         isThresholdExceeded,
+        isFinalizing: false,
       });
     }
 
@@ -350,8 +366,10 @@ export async function uploadVideoMultipart({ seriesId, episodeId, file, onProgre
       episodeId,
     };
   } catch (err) {
-    // 4. Abort Multipart session if error occurs or user cancels
-    if (uploadId) {
+    // 4. Abort Multipart session ONLY if error occurred before all parts were uploaded,
+    // or if the user explicitly clicked Cancel during part transfer.
+    // NEVER abort once all parts are sent and we are in finalization phase.
+    if (uploadId && !isFinalizing && signal?.aborted) {
       try {
         await callVideoPresign({
           action: 'abort-multipart-upload',
@@ -422,6 +440,23 @@ export async function testR2Connection() {
   return callVideoPresign({
     action: 'test-r2-connection',
   });
+}
+
+/**
+ * ADMIN: Verify if video file exists on R2 and sync episode status to ready.
+ * Idempotent recovery function after unexpected timeouts or network loss.
+ */
+export async function verifyEpisodeUpload({ seriesId, episodeId }) {
+  if (!seriesId || !episodeId) {
+    throw new Error('Thiếu seriesId hoặc episodeId để xác minh');
+  }
+  const res = await callVideoPresign({
+    action: 'verify-episode-upload',
+    seriesId,
+    episodeId,
+  });
+  playbackCache.delete(episodeId);
+  return res;
 }
 
 /**

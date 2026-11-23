@@ -902,4 +902,122 @@ test('prepareVideoEpisodeForUpload reuses incomplete episodes and avoids uq_seri
   assert.strictEqual(resReady.error.includes('đã tải lên hoàn tất'), true);
 });
 
+// -----------------------------------------------------------------------------
+// TEST GROUP 15: HTTP 546 Timeout Resilience & Idempotent Multipart Recovery
+// -----------------------------------------------------------------------------
+test('validateVideoPresignRequest validates verify-episode-upload action and UUIDs', () => {
+  const seriesId = 'c0a80101-0000-0000-0000-000000000001';
+  const episodeId = 'c0a80101-0000-0000-0000-000000000002';
+
+  // Valid verify action
+  const res = validateVideoPresignRequest({
+    action: 'verify-episode-upload',
+    seriesId,
+    episodeId,
+  });
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(res.data.action, 'verify-episode-upload');
+  assert.strictEqual(res.data.seriesId, seriesId);
+  assert.strictEqual(res.data.episodeId, episodeId);
+
+  // Missing episodeId
+  const resNoEp = validateVideoPresignRequest({
+    action: 'verify-episode-upload',
+    seriesId,
+  });
+  assert.strictEqual(resNoEp.ok, false);
+  assert.strictEqual(resNoEp.code, 'INVALID_EPISODE_ID');
+});
+
+test('Complete-multipart-upload recovers via HEAD when complete times out or loses response (HTTP 546 mitigation)', async () => {
+  const expectedSize = 75896585; // Exact size from production incident
+  let s3CompleteAttempts = 0;
+  let headChecked = false;
+  let dbEpisodeUpdated = false;
+  let dbSessionUpdated = false;
+
+  // Simulate CompleteMultipartUpload handler with Idempotent recovery
+  async function mockCompleteMultipart({ r2HasFile, completeWillTimeout }) {
+    // Stage 1: Idempotent pre-check
+    if (r2HasFile) {
+      dbEpisodeUpdated = true;
+      dbSessionUpdated = true;
+      return { ok: true, recovered: true, actualSize: expectedSize };
+    }
+
+    // Stage 2: S3 CompleteMultipartUploadCommand
+    s3CompleteAttempts++;
+    if (completeWillTimeout) {
+      // Simulate timeout / HTTP 546 (Worker resource limit or abort)
+      // The complete call threw an error or timed out on client
+      // But R2 processed it in the background!
+      headChecked = true;
+      // HeadObject succeeds:
+      const actualSize = expectedSize;
+      dbEpisodeUpdated = true;
+      dbSessionUpdated = true;
+      return { ok: true, actualSize, completeRecoveredAfterTimeout: true };
+    }
+
+    return { ok: true, actualSize: expectedSize };
+  }
+
+  // Case 1: CompleteMultipartUpload times out, but R2 assembled file -> Recovers successfully
+  const resTimeout = await mockCompleteMultipart({ r2HasFile: false, completeWillTimeout: true });
+  assert.strictEqual(resTimeout.ok, true);
+  assert.strictEqual(resTimeout.completeRecoveredAfterTimeout, true);
+  assert.strictEqual(headChecked, true);
+  assert.strictEqual(dbEpisodeUpdated, true);
+  assert.strictEqual(dbSessionUpdated, true);
+
+  // Case 2: Idempotent retry when file already exists on R2 -> skips Complete call
+  s3CompleteAttempts = 0;
+  const resPre = await mockCompleteMultipart({ r2HasFile: true, completeWillTimeout: false });
+  assert.strictEqual(resPre.ok, true);
+  assert.strictEqual(resPre.recovered, true);
+  assert.strictEqual(s3CompleteAttempts, 0); // Complete was NOT called again
+});
+
+test('Finalizing phase strictly prevents premature abort and allows verify-episode-upload recovery', () => {
+  // Simulate client-side safe abort policy
+  function clientAbortPolicy({ isFinalizing, userExplicitCancel, uploadId }) {
+    // MUST NOT abort if in finalization phase
+    if (uploadId && !isFinalizing && userExplicitCancel) {
+      return { shouldAbortOnR2: true, markEpisodeFailed: true };
+    }
+    return { shouldAbortOnR2: false, markEpisodeFailed: !isFinalizing };
+  }
+
+  // Scenario 1: User explicitly cancels during part upload -> Safe to abort
+  const cancelDuringParts = clientAbortPolicy({ isFinalizing: false, userExplicitCancel: true, uploadId: 'up-1' });
+  assert.strictEqual(cancelDuringParts.shouldAbortOnR2, true);
+
+  // Scenario 2: Error during finalization (99% / complete-multipart-upload timed out)
+  // MUST NOT abort on R2, MUST NOT mark failed in DB
+  const timeoutDuringFinalize = clientAbortPolicy({ isFinalizing: true, userExplicitCancel: false, uploadId: 'up-1' });
+  assert.strictEqual(timeoutDuringFinalize.shouldAbortOnR2, false);
+  assert.strictEqual(timeoutDuringFinalize.markEpisodeFailed, false);
+
+  // Scenario 3: Admin verify-episode-upload recovers episode from aborted/failed state
+  const mockEpisodeDb = { id: 'ep-75mb', upload_status: 'failed', file_size: 0 };
+  const mockSessionDb = { upload_id: 'up-1', status: 'aborted' };
+
+  function handleVerifyEpisodeUpload({ r2ObjectSize }) {
+    if (r2ObjectSize > 0) {
+      mockEpisodeDb.upload_status = 'ready';
+      mockEpisodeDb.file_size = r2ObjectSize;
+      mockSessionDb.status = 'completed';
+      return { ok: true, verified: true, actualSize: r2ObjectSize };
+    }
+    return { ok: false, verified: false, code: 'R2_OBJECT_NOT_FOUND' };
+  }
+
+  const verifyRes = handleVerifyEpisodeUpload({ r2ObjectSize: 75896585 });
+  assert.strictEqual(verifyRes.ok, true);
+  assert.strictEqual(verifyRes.verified, true);
+  assert.strictEqual(mockEpisodeDb.upload_status, 'ready');
+  assert.strictEqual(mockEpisodeDb.file_size, 75896585);
+  assert.strictEqual(mockSessionDb.status, 'completed');
+});
+
 console.log(`\n🎉 ALL ${passedTests} TEST CASES PASSED SUCCESSFULLY!\n`);

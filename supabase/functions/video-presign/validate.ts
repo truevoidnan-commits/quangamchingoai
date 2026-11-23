@@ -98,6 +98,7 @@ export function validateVideoPresignRequest(body: any): { ok: boolean; error?: s
     'get-part-url',
     'complete-multipart-upload',
     'abort-multipart-upload',
+    'verify-episode-upload',
     'get-playback-url',
     'get-storage-stats',
     'test-r2-connection',
@@ -123,10 +124,14 @@ export function validateVideoPresignRequest(body: any): { ok: boolean; error?: s
     return { ok: false, error: 'seriesId không hợp lệ (phải là UUID)', code: 'INVALID_SERIES_ID' };
   }
 
-  if (['init-multipart-upload', 'get-part-url', 'complete-multipart-upload', 'abort-multipart-upload', 'get-playback-url', 'delete-episode-media'].includes(action)) {
+  if (['init-multipart-upload', 'get-part-url', 'complete-multipart-upload', 'abort-multipart-upload', 'verify-episode-upload', 'get-playback-url', 'delete-episode-media'].includes(action)) {
     if (!episodeId || !isValidUuid(episodeId)) {
       return { ok: false, error: 'episodeId không hợp lệ (phải là UUID)', code: 'INVALID_EPISODE_ID' };
     }
+  }
+
+  if (action === 'verify-episode-upload') {
+    return { ok: true, data: { action, seriesId, episodeId } };
   }
 
   if (action === 'init-multipart-upload') {

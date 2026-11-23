@@ -169,6 +169,7 @@ Deno.serve(async (req: Request) => {
         secretAccessKey: R2_SECRET_ACCESS_KEY,
       },
       forcePathStyle: true,
+      maxAttempts: 2, // Limit retries to prevent unbounded backoff and worker timeouts on Supabase Edge Functions
     });
 
     // Helper: Admin Guard
@@ -599,6 +600,19 @@ Deno.serve(async (req: Request) => {
       const { uploadId, parts } = validation.data;
       const key = buildVideoSourceKey(seriesId, episodeId);
 
+      // Helper for structured logging (Requirement 2)
+      // Only logs stage timing, uploadId, episodeId, error codes; strictly zero credentials or signed URLs
+      const logStage = (stageName: string, meta: Record<string, any> = {}) => {
+        console.log(JSON.stringify({
+          stage: stageName,
+          uploadId,
+          seriesId,
+          episodeId,
+          timestamp: new Date().toISOString(),
+          ...meta,
+        }));
+      };
+
       // Verify upload session in database server-side
       const { data: session, error: sessErr } = await supabaseAdmin
         .from('video_upload_sessions')
@@ -620,6 +634,65 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // Idempotent Check: If session is already completed or if R2 already has the completed file
+      let actualSize = 0;
+      let alreadyFinalized = false;
+
+      logStage('HEAD_START', { phase: 'idempotent_pre_check', key });
+      const preHeadStartTime = Date.now();
+      try {
+        const preHeadRes = await s3.send(
+          new HeadObjectCommand({
+            Bucket: R2_BUCKET,
+            Key: key,
+          }),
+          { abortSignal: AbortSignal.timeout(10000) }
+        );
+        const preSize = preHeadRes.ContentLength || 0;
+        logStage('HEAD_DONE', { phase: 'idempotent_pre_check', durationMs: Date.now() - preHeadStartTime, actualSize: preSize });
+
+        if (preSize > 0 && (session.file_size <= 0 || preSize === session.file_size)) {
+          alreadyFinalized = true;
+          actualSize = preSize;
+        }
+      } catch (err: any) {
+        logStage('HEAD_DONE', { phase: 'idempotent_pre_check', durationMs: Date.now() - preHeadStartTime, notFound: true, errName: err.name });
+      }
+
+      // If already finalized on R2, ensure DB state is updated and return success immediately
+      if (alreadyFinalized) {
+        logStage('DB_UPDATE_START', { phase: 'idempotent_sync', actualSize });
+        const dbSyncStartTime = Date.now();
+
+        await supabaseAdmin
+          .from('video_episodes')
+          .update({
+            upload_status: 'ready',
+            file_size: actualSize,
+          })
+          .eq('id', episodeId);
+
+        await supabaseAdmin
+          .from('video_upload_sessions')
+          .update({ status: 'completed' })
+          .eq('upload_id', uploadId);
+
+        logStage('DB_UPDATE_DONE', { phase: 'idempotent_sync', durationMs: Date.now() - dbSyncStartTime });
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            idempotent: true,
+            episodeId,
+            r2Key: key,
+            fileSize: actualSize,
+            message: 'Tệp video đã hoàn tất trên R2 và đồng bộ trạng thái thành công.',
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // If not already finalized, session must be in_progress
       if (session.status !== 'in_progress') {
         return new Response(
           JSON.stringify({ error: `Phiên upload không ở trạng thái in_progress (trạng thái: ${session.status})`, code: 'SESSION_NOT_ACTIVE' }),
@@ -648,7 +721,11 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // Complete Multipart Upload via AWS SDK v3
+      // Complete Multipart Upload via AWS SDK v3 with strict timeout (25s)
+      logStage('COMPLETE_START', { partsCount: sortedParts.length });
+      const completeStartTime = Date.now();
+      let completeErr: any = null;
+
       try {
         await s3.send(
           new CompleteMultipartUploadCommand({
@@ -661,42 +738,61 @@ Deno.serve(async (req: Request) => {
                 ETag: cleanEtag(p.ETag),
               })),
             },
-          })
-        );
-      } catch (completeErr: any) {
-        console.error('[R2 Complete Multipart Error]:', completeErr.name, completeErr.message);
-        return new Response(
-          JSON.stringify({
-            error: `Hoàn tất multipart upload thất bại trên R2: ${completeErr.message}`,
-            code: 'R2_COMPLETE_FAILED',
           }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { abortSignal: AbortSignal.timeout(25000) }
         );
+        logStage('COMPLETE_DONE', { durationMs: Date.now() - completeStartTime, status: 'ok' });
+      } catch (err: any) {
+        completeErr = err;
+        logStage('COMPLETE_DONE', {
+          durationMs: Date.now() - completeStartTime,
+          status: 'error',
+          errName: err.name,
+          httpStatus: err.$metadata?.httpStatusCode,
+        });
       }
 
-      // Verify object exists and get actual size via HEAD
-      let actualSize = 0;
+      // Verify object exists and get actual size via HEAD (10s timeout)
+      logStage('HEAD_START', { phase: 'post_complete_verify', key });
+      const headStartTime = Date.now();
+      let headErr: any = null;
+
       try {
         const headRes = await s3.send(
           new HeadObjectCommand({
             Bucket: R2_BUCKET,
             Key: key,
-          })
+          }),
+          { abortSignal: AbortSignal.timeout(10000) }
         );
         actualSize = headRes.ContentLength || 0;
-      } catch (headErr: any) {
-        console.error('[R2 HEAD Verify Error]:', headErr.name, headErr.message);
+        logStage('HEAD_DONE', { phase: 'post_complete_verify', durationMs: Date.now() - headStartTime, actualSize, status: 'ok' });
+      } catch (err: any) {
+        headErr = err;
+        logStage('HEAD_DONE', {
+          phase: 'post_complete_verify',
+          durationMs: Date.now() - headStartTime,
+          status: 'error',
+          errName: err.name,
+          httpStatus: err.$metadata?.httpStatusCode,
+        });
+      }
+
+      // If Complete threw an error AND Head failed to find object:
+      if (actualSize <= 0) {
+        console.error('[R2 Complete Failed & HEAD Not Found]:', completeErr?.message || headErr?.message);
         return new Response(
           JSON.stringify({
-            error: `Không thể xác minh tệp video trên R2 sau khi hoàn tất multipart (${headErr.name}). Không đánh dấu tập phim sẵn sàng.`,
-            code: 'R2_HEAD_FAILED',
+            error: `Hoàn tất multipart upload thất bại trên R2 (${completeErr?.name || headErr?.name || 'UnknownError'}): ${completeErr?.message || headErr?.message}`,
+            code: 'R2_COMPLETE_FAILED',
+            uploadId,
           }),
           { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       // Verify size matches session file_size
-      if (actualSize <= 0 || (session.file_size > 0 && actualSize !== session.file_size)) {
+      if (session.file_size > 0 && actualSize !== session.file_size) {
         console.error(`[R2 Size Mismatch]: actual=${actualSize}, expected=${session.file_size}`);
         return new Response(
           JSON.stringify({
@@ -710,6 +806,9 @@ Deno.serve(async (req: Request) => {
       }
 
       // Update episode record to 'ready'
+      logStage('DB_UPDATE_START', { episodeId, actualSize });
+      const dbStartTime = Date.now();
+
       const { error: epUpdateErr } = await supabaseAdmin
         .from('video_episodes')
         .update({
@@ -720,10 +819,12 @@ Deno.serve(async (req: Request) => {
 
       if (epUpdateErr) {
         console.error('[video-presign] Failed to update episode ready status:', epUpdateErr);
+        logStage('DB_UPDATE_DONE', { durationMs: Date.now() - dbStartTime, error: epUpdateErr.message });
         return new Response(
           JSON.stringify({
             error: `Lỗi cập nhật trạng thái tập phim vào cơ sở dữ liệu: ${epUpdateErr.message}`,
             code: 'DB_UPDATE_FAILED',
+            actualSize,
           }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -735,9 +836,10 @@ Deno.serve(async (req: Request) => {
         .update({ status: 'completed' })
         .eq('upload_id', uploadId);
 
-      if (sessUpdateErr) {
-        console.error('[video-presign] Failed to mark session completed:', sessUpdateErr);
-      }
+      logStage('DB_UPDATE_DONE', {
+        durationMs: Date.now() - dbStartTime,
+        hasSessError: Boolean(sessUpdateErr),
+      });
 
       return new Response(
         JSON.stringify({
@@ -748,6 +850,92 @@ Deno.serve(async (req: Request) => {
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // --------------------------------------------------------------------------
+    // ACTION: verify-episode-upload (Admin Only - Idempotent Check & State Sync)
+    // --------------------------------------------------------------------------
+    if (action === 'verify-episode-upload') {
+      const adminErr = requireAdmin();
+      if (adminErr) return adminErr;
+
+      const key = buildVideoSourceKey(seriesId, episodeId);
+
+      // Check R2 via HeadObject with 10s timeout
+      let actualSize = 0;
+      try {
+        const headRes = await s3.send(
+          new HeadObjectCommand({ Bucket: R2_BUCKET, Key: key }),
+          { abortSignal: AbortSignal.timeout(10000) }
+        );
+        actualSize = headRes.ContentLength || 0;
+      } catch (err: any) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            verified: false,
+            error: `Không tìm thấy tệp video hoàn chỉnh trên Cloudflare R2 (${err.name || 'NotFound'}): ${err.message}`,
+            code: 'R2_OBJECT_NOT_FOUND',
+            seriesId,
+            episodeId,
+            key,
+          }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (actualSize <= 0) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            verified: false,
+            error: 'Tệp video trên Cloudflare R2 có kích thước 0 bytes.',
+            code: 'R2_FILE_EMPTY',
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Sync episode in database to ready
+      const { error: epErr } = await supabaseAdmin
+        .from('video_episodes')
+        .update({
+          upload_status: 'ready',
+          file_size: actualSize,
+        })
+        .eq('id', episodeId);
+
+      if (epErr) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: `Tìm thấy file trên R2 (${actualSize} bytes) nhưng lỗi cập nhật CSDL: ${epErr.message}`,
+            code: 'DB_UPDATE_FAILED',
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Mark any upload session for this episode as completed
+      await supabaseAdmin
+        .from('video_upload_sessions')
+        .update({ status: 'completed' })
+        .eq('episode_id', episodeId)
+        .neq('status', 'completed');
+
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          success: true,
+          verified: true,
+          episodeId,
+          r2Key: key,
+          fileSize: actualSize,
+          message: `Đã xác minh tệp video (${(actualSize / (1024 * 1024)).toFixed(2)} MB) tồn tại trên R2 và đồng bộ trạng thái thành công!`,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     }
 
     // --------------------------------------------------------------------------

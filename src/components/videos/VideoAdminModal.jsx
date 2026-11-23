@@ -22,6 +22,7 @@ import {
   uploadEpisodeSubtitle,
   fetchStorageStats,
   testR2Connection,
+  verifyEpisodeUpload,
 } from '../../lib/video/videoCloud';
 import styles from './VideoAdminModal.module.css';
 
@@ -73,7 +74,56 @@ export default function VideoAdminModal({
   const [uploadProgress, setUploadProgress] = useState(null); // { percent, loaded, total, partIndex, totalParts, speedBytesPerSec }
   const [r2TestResult, setR2TestResult] = useState(null);
   const [r2Testing, setR2Testing] = useState(false);
+  const [verifyingR2, setVerifyingR2] = useState(false);
   const abortControllerRef = useRef(null);
+  const isFinalizingRef = useRef(false);
+
+  // Warn when user tries to leave page while upload or finalization is active
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (submitting || uploadProgress) {
+        e.preventDefault();
+        e.returnValue = 'Quá trình tải lên hoặc xác nhận video đang diễn ra. Bạn có chắc muốn rời đi?';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [submitting, uploadProgress]);
+
+  const handleBackdropClick = () => {
+    if (submitting || uploadProgress) {
+      return; // Do not close while upload or finalization is active
+    }
+    onClose();
+  };
+
+  const handleVerifyEpisodeOnR2 = async () => {
+    const seriesId = createdSeriesId || initialSeries?.id;
+    const epId = createdEpisodeId;
+    if (!seriesId || !epId) {
+      setErrorMsg('Thiếu thông tin bộ phim hoặc tập phim để xác minh.');
+      return;
+    }
+
+    setVerifyingR2(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      const res = await verifyEpisodeUpload({ seriesId, episodeId: epId });
+      if (res.verified || res.success) {
+        setSuccessMsg(`Xác minh thành công! Tệp video (${(res.fileSize / (1024 * 1024)).toFixed(2)} MB) đã sẵn sàng trên R2.`);
+        if (onSuccess) onSuccess();
+      } else {
+        setErrorMsg(res.error || 'Tệp video chưa tồn tại trên R2.');
+      }
+    } catch (err) {
+      setErrorMsg(`Lỗi khi xác minh file trên R2: ${err.message}`);
+    } finally {
+      setVerifyingR2(false);
+    }
+  };
 
   const handleTestR2Connection = async () => {
     setR2Testing(true);
@@ -274,6 +324,9 @@ export default function VideoAdminModal({
         file: videoFile,
         signal: controller.signal,
         onProgress: (prog) => {
+          if (prog?.isFinalizing) {
+            isFinalizingRef.current = true;
+          }
           setUploadProgress(prog);
         },
       });
@@ -295,14 +348,20 @@ export default function VideoAdminModal({
       setUploadProgress(null);
     } catch (err) {
       console.error('[AdminModal] Upload error:', err);
-      setErrorMsg(err.message || 'Lỗi khi tải tập phim lên R2');
+      const errCode = err.code || (err.message?.includes('546') ? 'WORKER_RESOURCE_LIMIT' : 'UPLOAD_ERROR');
+      setErrorMsg(`[${errCode}] ${err.message || 'Lỗi khi tải tập phim lên R2'}`);
       setUploadProgress(null);
-      if (episode?.id) {
+
+      // Only mark failed if error occurred BEFORE finalization (i.e. during part uploads).
+      // If error occurred during complete-multipart-upload, keep episode shell to allow
+      // the Admin to click "Kiểm tra & Khôi phục từ R2" without re-uploading all parts.
+      if (episode?.id && !isFinalizingRef.current) {
         updateVideoEpisode(seriesId, episode.id, { upload_status: 'failed' }).catch(() => {});
       }
     } finally {
       setSubmitting(false);
       abortControllerRef.current = null;
+      isFinalizingRef.current = false;
     }
   };
 
@@ -357,7 +416,7 @@ export default function VideoAdminModal({
   };
 
   return (
-    <div className={styles.backdrop} onClick={onClose}>
+    <div className={styles.backdrop} onClick={handleBackdropClick}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className={styles.header}>
@@ -365,7 +424,7 @@ export default function VideoAdminModal({
             <IconFilm size={20} />
             {initialSeries ? 'Chỉnh sửa bộ phim' : 'Thêm mới bộ phim'}
           </h2>
-          <button className={styles.closeBtn} onClick={onClose} disabled={submitting}>
+          <button className={styles.closeBtn} onClick={onClose} disabled={submitting || Boolean(uploadProgress)}>
             <IconX size={18} />
           </button>
         </div>
@@ -710,7 +769,9 @@ export default function VideoAdminModal({
               <div className={styles.progressBox}>
                 <div className={styles.progressInfo}>
                   <span>
-                    Đang tải lên: Phần {uploadProgress.partIndex}/{uploadProgress.totalParts} ({uploadProgress.percent}%)
+                    {uploadProgress.isFinalizing || uploadProgress.percent === 99
+                      ? 'Đã tải đủ dữ liệu, đang xác nhận file trên R2... (Vui lòng không đóng trang)'
+                      : `Đang tải lên: Phần ${uploadProgress.partIndex}/${uploadProgress.totalParts} (${uploadProgress.percent}%)`}
                   </span>
                   <span>
                     {formatBytes(uploadProgress.loaded)} / {formatBytes(uploadProgress.total)}
@@ -742,6 +803,25 @@ export default function VideoAdminModal({
               {submitting && (
                 <button type="button" className={styles.btnDanger} onClick={handleCancelUpload}>
                   Hủy tải lên
+                </button>
+              )}
+              {createdEpisodeId && !submitting && (
+                <button
+                  type="button"
+                  className={styles.tabBtn}
+                  onClick={handleVerifyEpisodeOnR2}
+                  disabled={verifyingR2}
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.15)',
+                    border: '1px solid rgba(59, 130, 246, 0.4)',
+                    color: '#93c5fd',
+                    padding: '8px 14px',
+                    borderRadius: 4,
+                    cursor: verifyingR2 ? 'not-allowed' : 'pointer',
+                    fontSize: 13,
+                  }}
+                >
+                  {verifyingR2 ? 'Đang kiểm tra R2...' : 'Kiểm tra & Khôi phục từ R2'}
                 </button>
               )}
               <button
