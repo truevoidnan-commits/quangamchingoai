@@ -346,6 +346,15 @@ export default function VideoAdminModal({
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+      // Test reading pixels to detect tainted canvas immediately
+      try {
+        ctx.getImageData(0, 0, 1, 1);
+      } catch (taintErr) {
+        console.error('[FrameExtract] Canvas tainted by cross-origin video:', taintErr);
+        setErrorMsg('Không thể đọc pixel từ video do chính sách bảo mật CORS của trình duyệt. Vui lòng chuyển sang Phương án A để tải ảnh trực tiếp từ máy tính.');
+        return;
+      }
+
       canvas.toBlob((blob) => {
         if (!blob) {
           setErrorMsg('Không thể xuất ảnh từ video canvas.');

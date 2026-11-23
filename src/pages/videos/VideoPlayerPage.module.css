@@ -3,11 +3,15 @@
   background-color: transparent;
   color: var(--text-primary, #e2e8f0);
   padding: 16px 20px 60px;
+  position: relative;
+  isolation: isolate;
 }
 
 .container {
   max-width: 1400px;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 /* Top Navigation Bar */

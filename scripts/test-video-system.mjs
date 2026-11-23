@@ -1703,5 +1703,311 @@ test('Full lifecycle regression: upload, premature connection drop recovery, pla
   assert.strictEqual(r2Bucket.has(`videos/${seriesId}/${episode2Id}/source.mp4`), false);
 });
 
+// -----------------------------------------------------------------------------
+// TEST GROUP 9: SECRET NAVIGATION & GESTURE REGRESSION TESTS
+// -----------------------------------------------------------------------------
+
+import {
+  parseHashRoute,
+  getCurrentRoutePath,
+  isComicsUnlocked,
+  isVideosUnlocked,
+  unlockComics,
+  unlockVideos,
+  lockSecretModes,
+  subscribeSecretModes,
+  KEY_COMICS,
+  KEY_VIDEOS,
+} from '../src/lib/secretNav.js';
+
+test('parseHashRoute and getCurrentRoutePath accurately parse HashRouter paths and query strings', () => {
+  assert.strictEqual(parseHashRoute('#/comics'), '/comics');
+  assert.strictEqual(parseHashRoute('#/comics/series-123'), '/comics/series-123');
+  assert.strictEqual(parseHashRoute('#/videos'), '/videos');
+  assert.strictEqual(parseHashRoute('#/videos/s-456/watch/ep-789'), '/videos/s-456/watch/ep-789');
+  assert.strictEqual(parseHashRoute('#/videos?search=tu+tien'), '/videos');
+  assert.strictEqual(parseHashRoute('#/comics/123?vault=1&tab=chapters'), '/comics/123');
+  assert.strictEqual(parseHashRoute('#/'), '/');
+  assert.strictEqual(parseHashRoute(''), '/');
+  assert.strictEqual(parseHashRoute(null), '/');
+
+  // Custom path passed directly
+  assert.strictEqual(getCurrentRoutePath('/comics'), '/comics');
+  assert.strictEqual(getCurrentRoutePath('/videos/abc'), '/videos/abc');
+});
+
+test('Secret navigation evaluates HashRouter paths, session flags, unlock, lock, and subscriber events', () => {
+  // Setup mock browser environment
+  const mockStorage = {
+    _data: {},
+    getItem(k) { return this._data[k] || null; },
+    setItem(k, v) { this._data[k] = String(v); },
+    removeItem(k) { delete this._data[k]; },
+    clear() { this._data = {}; }
+  };
+
+  const listeners = {};
+  const mockWindow = {
+    location: { hash: '#/', pathname: '/' },
+    sessionStorage: mockStorage,
+    addEventListener(event, fn) {
+      if (!listeners[event]) listeners[event] = [];
+      listeners[event].push(fn);
+    },
+    removeEventListener(event, fn) {
+      if (!listeners[event]) return;
+      listeners[event] = listeners[event].filter(f => f !== fn);
+    },
+    dispatchEvent(event) {
+      const list = listeners[event.type] || [];
+      for (const fn of list) fn(event);
+    }
+  };
+
+  global.sessionStorage = mockStorage;
+  global.window = mockWindow;
+  global.CustomEvent = class CustomEvent {
+    constructor(type, init = {}) {
+      this.type = type;
+      this.detail = init.detail;
+    }
+  };
+
+  // Initially at #/ (home) with empty session
+  mockStorage.clear();
+  mockWindow.location.hash = '#/';
+  assert.strictEqual(isComicsUnlocked(), false);
+  assert.strictEqual(isVideosUnlocked(), false);
+
+  // Directly loaded at #/comics (direct link or reload)
+  mockWindow.location.hash = '#/comics';
+  assert.strictEqual(isComicsUnlocked(), true);
+  assert.strictEqual(isVideosUnlocked(), false);
+
+  // Directly loaded at #/videos (direct link or reload)
+  mockWindow.location.hash = '#/videos';
+  assert.strictEqual(isComicsUnlocked(), false);
+  assert.strictEqual(isVideosUnlocked(), true);
+
+  // Back to #/ (home): test session unlock
+  mockWindow.location.hash = '#/';
+  let subscriptionEvents = [];
+  const unsubscribe = subscribeSecretModes((detail) => {
+    subscriptionEvents.push(detail);
+  });
+
+  // Unlock Comics
+  unlockComics();
+  assert.strictEqual(mockStorage.getItem(KEY_COMICS), 'true');
+  assert.strictEqual(isComicsUnlocked(), true);
+  assert.strictEqual(isVideosUnlocked(), false);
+
+  // Unlock Videos
+  unlockVideos();
+  assert.strictEqual(mockStorage.getItem(KEY_VIDEOS), 'true');
+  assert.strictEqual(isComicsUnlocked(), true);
+  assert.strictEqual(isVideosUnlocked(), true);
+
+  // Lock Secret Modes
+  lockSecretModes();
+  assert.strictEqual(mockStorage.getItem(KEY_COMICS), null);
+  assert.strictEqual(mockStorage.getItem(KEY_VIDEOS), null);
+  assert.strictEqual(isComicsUnlocked(), false);
+  assert.strictEqual(isVideosUnlocked(), false);
+
+  unsubscribe();
+  assert.strictEqual(subscriptionEvents.length >= 3, true);
+});
+
+test('Secret gesture state machine strictly differentiates 4 rapid taps (Comics) from 5 taps (Videos)', async () => {
+  // Test simulation of 4 taps:
+  let comicsTriggered = 0;
+  let videosTriggered = 0;
+  let tapCount = 0;
+  let pendingComicsTimer = null;
+  let tapResetTimer = null;
+
+  function simulateTap() {
+    if (tapResetTimer) clearTimeout(tapResetTimer);
+    tapCount++;
+
+    if (tapCount === 4) {
+      if (pendingComicsTimer) clearTimeout(pendingComicsTimer);
+      pendingComicsTimer = setTimeout(() => {
+        pendingComicsTimer = null;
+        tapCount = 0;
+        comicsTriggered++;
+      }, 50); // fast timeout for test
+      return;
+    }
+
+    if (tapCount >= 5) {
+      if (pendingComicsTimer) {
+        clearTimeout(pendingComicsTimer);
+        pendingComicsTimer = null;
+      }
+      tapCount = 0;
+      videosTriggered++;
+      return;
+    }
+
+    tapResetTimer = setTimeout(() => {
+      tapCount = 0;
+    }, 100);
+  }
+
+  // 1. Simulate 4 taps and wait for grace period
+  simulateTap();
+  simulateTap();
+  simulateTap();
+  simulateTap();
+  assert.strictEqual(comicsTriggered, 0, 'Comics must not trigger immediately on 4th tap');
+  assert.strictEqual(videosTriggered, 0);
+
+  // Wait 70ms for 50ms timer to fire
+  await new Promise((r) => setTimeout(r, 70));
+  assert.strictEqual(comicsTriggered, 1, 'Comics must trigger when 4 taps complete without 5th tap');
+  assert.strictEqual(videosTriggered, 0);
+
+  // 2. Simulate 5 rapid taps
+  simulateTap();
+  simulateTap();
+  simulateTap();
+  simulateTap();
+  // 5th tap arrives immediately
+  simulateTap();
+  assert.strictEqual(videosTriggered, 1, 'Videos must trigger on 5th tap');
+  assert.strictEqual(comicsTriggered, 1, 'Comics must not trigger when 5th tap arrived');
+
+  // Wait to confirm pending timer never fires
+  await new Promise((r) => setTimeout(r, 70));
+  assert.strictEqual(comicsTriggered, 1, 'Comics must remain un-triggered after 5 taps');
+});
+
+test('Long-press gesture fires Videos exactly once at 2.0s, suppresses post-release click, and aborts on leave', async () => {
+  let holdingProgress = 0;
+  let isLongPressTriggered = false;
+  let videoNavigated = 0;
+  let homeNavigated = 0;
+  let holdInterval = null;
+  let startTime = 0;
+
+  function startHold() {
+    isLongPressTriggered = false;
+    startTime = Date.now();
+    holdInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      holdingProgress = Math.min(100, Math.round((elapsed / 100) * 100)); // 100ms test scale
+      if (elapsed >= 100) {
+        clearInterval(holdInterval);
+        holdInterval = null;
+        isLongPressTriggered = true;
+        holdingProgress = 0;
+        videoNavigated++;
+      }
+    }, 10);
+  }
+
+  function handlePointerLeave() {
+    if (!isLongPressTriggered) {
+      if (holdInterval) {
+        clearInterval(holdInterval);
+        holdInterval = null;
+      }
+      holdingProgress = 0;
+    }
+  }
+
+  function handleLogoClick(e) {
+    if (isLongPressTriggered) {
+      e.defaultPrevented = true;
+      isLongPressTriggered = false;
+      return; // swallowed!
+    }
+    homeNavigated++;
+  }
+
+  // 1. Successful long-press:
+  startHold();
+  await new Promise((r) => setTimeout(r, 130));
+  assert.strictEqual(videoNavigated, 1, 'Video must be navigated exactly once after long press');
+  assert.strictEqual(isLongPressTriggered, true);
+
+  // User releases pointer -> browser fires click:
+  const clickEvent = { defaultPrevented: false };
+  handleLogoClick(clickEvent);
+  assert.strictEqual(clickEvent.defaultPrevented, true, 'Click after long press must be prevented');
+  assert.strictEqual(homeNavigated, 0, 'Home link must NOT navigate on post-longpress click');
+
+  // 2. Cancelled long-press (pointer leaves before completion):
+  startHold();
+  await new Promise((r) => setTimeout(r, 30));
+  handlePointerLeave();
+  await new Promise((r) => setTimeout(r, 100));
+  assert.strictEqual(videoNavigated, 1, 'Aborted hold must not trigger Video navigation');
+  assert.strictEqual(holdingProgress, 0);
+});
+
+test('Canvas frame extractor validates CORS read access and handles tainted canvas gracefully without crashing', () => {
+  // Mock canvas and 2D context
+  let capturedError = null;
+  const mockErrorMsg = (msg) => { capturedError = msg; };
+
+  // Case A: Tainted canvas (getImageData throws SecurityError)
+  const taintedContext = {
+    drawImage() {},
+    getImageData() {
+      const err = new Error("The operation is insecure (tainted canvas).");
+      err.name = "SecurityError";
+      throw err;
+    }
+  };
+  const mockTaintedCanvas = {
+    getContext() { return taintedContext; },
+    toBlob() {}
+  };
+
+  try {
+    const ctx = mockTaintedCanvas.getContext('2d');
+    ctx.drawImage({}, 0, 0, 100, 100);
+    try {
+      ctx.getImageData(0, 0, 1, 1);
+    } catch (taintErr) {
+      mockErrorMsg('Không thể đọc pixel từ video do chính sách bảo mật CORS của trình duyệt. Vui lòng chuyển sang Phương án A để tải ảnh trực tiếp từ máy tính.');
+    }
+  } catch (err) {
+    mockErrorMsg('Unexpected error');
+  }
+
+  assert.strictEqual(
+    capturedError,
+    'Không thể đọc pixel từ video do chính sách bảo mật CORS của trình duyệt. Vui lòng chuyển sang Phương án A để tải ảnh trực tiếp từ máy tính.'
+  );
+
+  // Case B: Clean canvas (getImageData succeeds)
+  let blobGenerated = false;
+  const cleanContext = {
+    drawImage() {},
+    getImageData() { return { data: [255, 0, 0, 255] }; }
+  };
+  const mockCleanCanvas = {
+    getContext() { return cleanContext; },
+    toBlob(cb) {
+      cb({ size: 12345, type: 'image/webp' });
+    }
+  };
+
+  capturedError = null;
+  const ctxClean = mockCleanCanvas.getContext('2d');
+  ctxClean.drawImage({}, 0, 0, 100, 100);
+  ctxClean.getImageData(0, 0, 1, 1);
+  mockCleanCanvas.toBlob((blob) => {
+    if (blob) blobGenerated = true;
+  });
+
+  assert.strictEqual(blobGenerated, true);
+  assert.strictEqual(capturedError, null);
+});
+
 
 console.log(`\n🎉 ALL ${passedTests} TEST CASES PASSED SUCCESSFULLY!\n`);

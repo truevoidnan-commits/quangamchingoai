@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import styles from './LobbyTabs.module.css';
 import { IconBook, IconBookOpen, IconVideo, IconLock, IconArrowLeft } from './Icon';
 import { isComicsUnlocked, isVideosUnlocked, lockSecretModes, subscribeSecretModes } from '../../lib/secretNav';
@@ -7,23 +7,32 @@ import { isComicsUnlocked, isVideosUnlocked, lockSecretModes, subscribeSecretMod
 export default function LobbyTabs({ activeTab = 'novels', active }) {
   const current = active || activeTab;
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [unlocked, setUnlocked] = useState({
-    comics: isComicsUnlocked(),
-    videos: isVideosUnlocked(),
-  });
+  const [unlocked, setUnlocked] = useState(() => ({
+    comics: isComicsUnlocked(location.pathname),
+    videos: isVideosUnlocked(location.pathname),
+  }));
 
   useEffect(() => {
-    // Sync with secret navigation state
+    // Sync with secret navigation state and current route location
     setUnlocked({
-      comics: isComicsUnlocked(),
-      videos: isVideosUnlocked(),
+      comics: isComicsUnlocked(location.pathname),
+      videos: isVideosUnlocked(location.pathname),
     });
-    return subscribeSecretModes(setUnlocked);
-  }, []);
+    return subscribeSecretModes((detail) => {
+      setUnlocked(
+        detail || {
+          comics: isComicsUnlocked(location.pathname),
+          videos: isVideosUnlocked(location.pathname),
+        }
+      );
+    });
+  }, [location.pathname]);
 
   const handleLockSecretModes = () => {
     lockSecretModes();
+    setUnlocked({ comics: false, videos: false });
     navigate('/');
   };
 

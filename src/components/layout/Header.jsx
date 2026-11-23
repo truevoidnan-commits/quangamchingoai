@@ -51,27 +51,33 @@ export default function Header() {
 
   // Secret Gestures Tracker (4 taps -> Comics, Long-press 2s or 5 taps -> Videos)
   const tapCountRef = useRef(0);
-  const tapTimerRef = useRef(null);
+  const tapResetTimerRef = useRef(null);
+  const pendingComicsTimerRef = useRef(null);
   const holdIntervalRef = useRef(null);
+  const holdStartTimeRef = useRef(0);
+  const isLongPressTriggeredRef = useRef(false);
   const [holdingProgress, setHoldingProgress] = useState(0);
 
-  const startHold = (e) => {
-    if (e.button !== undefined && e.button !== 0) return;
-    cancelHold();
-    let elapsed = 0;
-    holdIntervalRef.current = setInterval(() => {
-      elapsed += 50;
-      const pct = Math.min(100, Math.round((elapsed / 2000) * 100));
-      setHoldingProgress(pct);
-      if (pct >= 100) {
-        clearInterval(holdIntervalRef.current);
-        holdIntervalRef.current = null;
-        unlockVideos();
-        setHoldingProgress(0);
-        navigate('/videos');
-      }
-    }, 50);
+  const clearAllTimers = () => {
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+    if (tapResetTimerRef.current) {
+      clearTimeout(tapResetTimerRef.current);
+      tapResetTimerRef.current = null;
+    }
+    if (pendingComicsTimerRef.current) {
+      clearTimeout(pendingComicsTimerRef.current);
+      pendingComicsTimerRef.current = null;
+    }
   };
+
+  useEffect(() => {
+    return () => {
+      clearAllTimers();
+    };
+  }, []);
 
   const cancelHold = () => {
     if (holdIntervalRef.current) {
@@ -81,36 +87,109 @@ export default function Header() {
     setHoldingProgress(0);
   };
 
+  const startHold = (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    cancelHold();
+    isLongPressTriggeredRef.current = false;
+    holdStartTimeRef.current = Date.now();
+
+    holdIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - holdStartTimeRef.current;
+      const pct = Math.min(100, Math.round((elapsed / 2000) * 100));
+      setHoldingProgress(pct);
+
+      if (elapsed >= 2000) {
+        clearInterval(holdIntervalRef.current);
+        holdIntervalRef.current = null;
+        isLongPressTriggeredRef.current = true;
+        setHoldingProgress(0);
+        tapCountRef.current = 0;
+        if (pendingComicsTimerRef.current) {
+          clearTimeout(pendingComicsTimerRef.current);
+          pendingComicsTimerRef.current = null;
+        }
+        if (tapResetTimerRef.current) {
+          clearTimeout(tapResetTimerRef.current);
+          tapResetTimerRef.current = null;
+        }
+        unlockVideos();
+        navigate('/videos');
+      }
+    }, 40);
+  };
+
+  const handlePointerUp = () => {
+    if (!isLongPressTriggeredRef.current) {
+      cancelHold();
+    }
+  };
+
+  const handlePointerCancel = () => {
+    if (!isLongPressTriggeredRef.current) {
+      cancelHold();
+    }
+  };
+
+  const handlePointerLeave = () => {
+    if (!isLongPressTriggeredRef.current) {
+      cancelHold();
+    }
+  };
+
   const handleLogoClick = (e) => {
-    if (holdingProgress >= 100) {
+    if (isLongPressTriggeredRef.current) {
       e.preventDefault();
+      e.stopPropagation();
+      isLongPressTriggeredRef.current = false;
       cancelHold();
       return;
     }
     cancelHold();
 
-    tapCountRef.current += 1;
-    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    if (tapResetTimerRef.current) {
+      clearTimeout(tapResetTimerRef.current);
+      tapResetTimerRef.current = null;
+    }
 
-    if (tapCountRef.current === 4) {
+    tapCountRef.current += 1;
+    const currentTap = tapCountRef.current;
+
+    // Prevent default Link action on multi-taps
+    if (currentTap > 1) {
       e.preventDefault();
-      tapCountRef.current = 0;
-      unlockComics();
-      navigate('/comics');
+    }
+
+    if (currentTap === 4) {
+      e.preventDefault();
+      if (pendingComicsTimerRef.current) {
+        clearTimeout(pendingComicsTimerRef.current);
+      }
+      // Wait 380ms grace window for possible 5th tap to Videos
+      pendingComicsTimerRef.current = setTimeout(() => {
+        pendingComicsTimerRef.current = null;
+        tapCountRef.current = 0;
+        unlockComics();
+        navigate('/comics');
+      }, 380);
       return;
     }
 
-    if (tapCountRef.current >= 5) {
+    if (currentTap >= 5) {
       e.preventDefault();
+      if (pendingComicsTimerRef.current) {
+        clearTimeout(pendingComicsTimerRef.current);
+        pendingComicsTimerRef.current = null;
+      }
       tapCountRef.current = 0;
       unlockVideos();
       navigate('/videos');
       return;
     }
 
-    tapTimerRef.current = setTimeout(() => {
+    tapResetTimerRef.current = setTimeout(() => {
       tapCountRef.current = 0;
-    }, 1500);
+      tapResetTimerRef.current = null;
+    }, 1200);
   };
 
   useEffect(() => {
@@ -187,9 +266,9 @@ export default function Header() {
               aria-label={`${headerTitle} - Trang chủ`}
               onClick={handleLogoClick}
               onPointerDown={startHold}
-              onPointerUp={cancelHold}
-              onPointerLeave={cancelHold}
-              onPointerCancel={cancelHold}
+              onPointerUp={handlePointerUp}
+              onPointerLeave={handlePointerLeave}
+              onPointerCancel={handlePointerCancel}
             >
               {isVideos ? (
                 <IconVideo size={15} className={styles.logoIcon} />
