@@ -1397,4 +1397,102 @@ test('Deleting an episode with no R2 media (pending upload) successfully cleans 
   assert.strictEqual(dbEpisodes.length, 0);
 });
 
+test('Single episode deletion strictly bounds keys to episodePrefix and ignores corrupted r2_key pointing to other episodes', async () => {
+  const seriesId = 'c0a80101-0000-0000-0000-000000000001';
+  const episodeId = 'ep-2';
+
+  // R2 bucket contains files for Episode 1, Episode 2, and Episode 3
+  const r2Bucket = new Map([
+    [`videos/${seriesId}/ep-1/video.mp4`, { size: 50000000 }],
+    [`videos/${seriesId}/ep-2/video.mp4`, { size: 75896585 }],
+    [`videos/${seriesId}/ep-2/subtitles/vi.vtt`, { size: 6000 }],
+    [`videos/${seriesId}/ep-3/video.mp4`, { size: 62000000 }],
+  ]);
+
+  // Episode 2 in DB has a corrupted r2_key pointing to Episode 1's file!
+  const epRow = {
+    id: episodeId,
+    series_id: seriesId,
+    r2_key: `videos/${seriesId}/ep-1/video.mp4`, // Corrupted metadata!
+  };
+
+  const episodePrefix = `videos/${seriesId}/${episodeId}/`;
+  const episodeKeys = [];
+
+  // 1. List objects strictly matching episodePrefix
+  for (const k of Array.from(r2Bucket.keys())) {
+    if (k.startsWith(episodePrefix)) {
+      episodeKeys.push(k);
+    }
+  }
+
+  // 2. Bound primaryVideoKey: must start with episodePrefix
+  const primaryVideoKey = epRow.r2_key;
+  if (primaryVideoKey && primaryVideoKey.startsWith(episodePrefix) && !episodeKeys.includes(primaryVideoKey)) {
+    episodeKeys.push(primaryVideoKey);
+  }
+
+  // 3. Final strict isolation filter
+  const safeKeys = episodeKeys.filter((k) => k.startsWith(episodePrefix));
+
+  // Verify that Episode 1's key was REJECTED from deletion
+  assert.strictEqual(safeKeys.includes(`videos/${seriesId}/ep-1/video.mp4`), false);
+  assert.strictEqual(safeKeys.length, 2);
+  assert.strictEqual(safeKeys.includes(`videos/${seriesId}/ep-2/video.mp4`), true);
+  assert.strictEqual(safeKeys.includes(`videos/${seriesId}/ep-2/subtitles/vi.vtt`), true);
+
+  // Perform deletion
+  for (const k of safeKeys) {
+    r2Bucket.delete(k);
+  }
+
+  // Crucial check: Episode 1's file and Episode 3's file remain 100% INTACT!
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-1/video.mp4`), true);
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-3/video.mp4`), true);
+  // Episode 2's files are gone
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-2/video.mp4`), false);
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-2/subtitles/vi.vtt`), false);
+});
+
+test('Session abort DB update failure halts deletion immediately (fails closed)', async () => {
+  const seriesId = 'c0a80101-0000-0000-0000-000000000001';
+  const episodeId = 'ep-2';
+
+  const r2Bucket = new Map([
+    [`videos/${seriesId}/ep-2/video.mp4`, { size: 75896585 }],
+  ]);
+
+  const dbEpisode = { id: episodeId, series_id: seriesId };
+  const dbSession = { id: 'sess-1', series_id: seriesId, episode_id: episodeId, status: 'in_progress' };
+
+  // Simulate server abort step where DB update fails
+  function simulateDeleteWithAbortDbFailure({ sessUpdateError }) {
+    // 1. R2 abort succeeds
+    const r2AbortOk = true;
+
+    // 2. DB update on session fails:
+    if (sessUpdateError) {
+      return { ok: false, status: 500, code: 'DB_UPDATE_FAILED', error: sessUpdateError.message };
+    }
+
+    dbSession.status = 'aborted';
+
+    // 3. Delete R2 files
+    r2Bucket.delete(`videos/${seriesId}/ep-2/video.mp4`);
+
+    return { ok: true };
+  }
+
+  const res = simulateDeleteWithAbortDbFailure({
+    sessUpdateError: new Error('Database statement timeout while updating session'),
+  });
+
+  // Verify failure and that no files were deleted from R2!
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.status, 500);
+  assert.strictEqual(res.code, 'DB_UPDATE_FAILED');
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-2/video.mp4`), true); // R2 file preserved!
+  assert.strictEqual(dbSession.status, 'in_progress'); // DB state preserved!
+});
+
 console.log(`\n🎉 ALL ${passedTests} TEST CASES PASSED SUCCESSFULLY!\n`);

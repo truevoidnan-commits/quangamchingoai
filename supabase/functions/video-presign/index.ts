@@ -1426,10 +1426,20 @@ Deno.serve(async (req: Request) => {
             }
           }
 
-          await supabaseAdmin
+          const { error: sessUpdateErr } = await supabaseAdmin
             .from('video_upload_sessions')
             .update({ status: 'aborted' })
             .eq('id', sess.id);
+
+          if (sessUpdateErr) {
+            return new Response(
+              JSON.stringify({
+                error: `Lỗi cập nhật trạng thái phiên upload sau khi hủy trên R2: ${sessUpdateErr.message}`,
+                code: 'DB_UPDATE_FAILED',
+              }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
         }
       }
 
@@ -1465,16 +1475,20 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Also ensure videoKey from epRow.r2_key is deleted if it was located elsewhere (e.g. legacy/pending)
+      // Strictly bound deletion to videos/${seriesId}/${episodeId}/
+      // Never delete any object belonging to other episodes or series even if metadata r2_key is corrupted or points elsewhere
       const primaryVideoKey = epRow.r2_key;
-      if (primaryVideoKey && primaryVideoKey.startsWith(`videos/${seriesId}/`) && !episodeKeys.includes(primaryVideoKey)) {
+      if (primaryVideoKey && primaryVideoKey.startsWith(episodePrefix) && !episodeKeys.includes(primaryVideoKey)) {
         episodeKeys.push(primaryVideoKey);
       }
+
+      // Final strict isolation filter: only keys with episodePrefix are permitted to be deleted
+      const safeKeys = episodeKeys.filter((k) => k.startsWith(episodePrefix));
 
       // 4. Delete each object strictly verifying response status
       const failedKeys: string[] = [];
       let deletedCount = 0;
-      for (const k of episodeKeys) {
+      for (const k of safeKeys) {
         try {
           await s3.send(
             new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: k }),
