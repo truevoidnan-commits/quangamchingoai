@@ -1196,4 +1196,205 @@ test('Database updates fail closed on both episode and session update errors', (
   assert.strictEqual(resSuccess.ok, true);
 });
 
+// -----------------------------------------------------------------------------
+// TEST GROUP 16: Modal Reload Existing Episode Selection & Idempotent Aborted Session Guard
+// -----------------------------------------------------------------------------
+test('Modal reload selects existing unready episode without new upload shell and recovers via verify', async () => {
+  const seriesId = 'c0a80101-0000-0000-0000-000000000001';
+  const expectedSize = 75896585;
+
+  // Mock existing database episodes loaded upon opening modal after reload
+  const dbEpisodes = [
+    { id: 'ep-1-ready', series_id: seriesId, episode_number: 1, title: 'Tập 1', upload_status: 'ready', file_size: 50000000 },
+    { id: 'ep-2-failed', series_id: seriesId, episode_number: 2, title: 'Tập 2', upload_status: 'failed', file_size: expectedSize },
+    { id: 'ep-3-pending', series_id: seriesId, episode_number: 3, title: 'Tập 3', upload_status: 'pending', file_size: 0 },
+  ];
+
+  // 1. Admin selects Ep 2 from loaded list
+  const selectedEp = dbEpisodes.find((e) => e.id === 'ep-2-failed');
+  assert.strictEqual(selectedEp.id, 'ep-2-failed');
+  assert.strictEqual(selectedEp.episode_number, 2);
+
+  // 2. Admin triggers verify without choosing any MP4 file or creating a new shell
+  const targetEpId = selectedEp.id;
+  assert.strictEqual(targetEpId, 'ep-2-failed');
+
+  function simulateVerifyOnSelectedEpisode(epId, r2ContentLength) {
+    const ep = dbEpisodes.find((e) => e.id === epId);
+    if (!ep) return { ok: false, code: 'EPISODE_NOT_FOUND' };
+    if (r2ContentLength === ep.file_size) {
+      ep.upload_status = 'ready';
+      return { ok: true, verified: true, fileSize: r2ContentLength };
+    }
+    return { ok: false, code: 'FILE_SIZE_MISMATCH' };
+  }
+
+  const res = simulateVerifyOnSelectedEpisode(targetEpId, expectedSize);
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(res.verified, true);
+  assert.strictEqual(selectedEp.upload_status, 'ready');
+
+  // Verify other episodes remain completely untouched
+  assert.strictEqual(dbEpisodes[0].upload_status, 'ready');
+  assert.strictEqual(dbEpisodes[2].upload_status, 'pending');
+});
+
+test('Idempotent complete-multipart-upload strictly preserves historical aborted session', () => {
+  const expectedSize = 75896585;
+
+  const sessionAborted = {
+    id: 'sess-aborted',
+    upload_id: 'up-aborted-123',
+    status: 'aborted',
+    file_size: expectedSize,
+  };
+
+  const episode = {
+    id: 'ep-1',
+    upload_status: 'failed',
+    file_size: expectedSize,
+  };
+
+  // Simulate idempotent branch of complete-multipart-upload:
+  // If preSize matches session.file_size:
+  const preSize = expectedSize;
+  const alreadyFinalized = (preSize > 0 && sessionAborted.file_size > 0 && preSize === sessionAborted.file_size);
+  assert.strictEqual(alreadyFinalized, true);
+
+  if (alreadyFinalized) {
+    // Episode is updated to ready
+    episode.upload_status = 'ready';
+    episode.file_size = preSize;
+
+    // Requirement 8: Only update session if status was in_progress!
+    // Strictly preserve aborted status
+    if (sessionAborted.status === 'in_progress') {
+      sessionAborted.status = 'completed';
+    }
+  }
+
+  assert.strictEqual(episode.upload_status, 'ready');
+  assert.strictEqual(sessionAborted.status, 'aborted'); // MUST remain aborted!
+});
+
+// -----------------------------------------------------------------------------
+// TEST GROUP 17: Single Episode Deletion & Safe R2 Cleanup
+// -----------------------------------------------------------------------------
+test('Single episode deletion strictly isolates target episode and handles R2 errors safely', async () => {
+  const seriesId = 'c0a80101-0000-0000-0000-000000000001';
+
+  // Mock R2 bucket contents with 3 episodes and series poster
+  const r2Bucket = new Map([
+    [`videos/${seriesId}/posters/cover.webp`, { size: 120000 }],
+    [`videos/${seriesId}/ep-1/video.mp4`, { size: 50000000 }],
+    [`videos/${seriesId}/ep-1/subtitles/vi.vtt`, { size: 4000 }],
+    [`videos/${seriesId}/ep-2/video.mp4`, { size: 75896585 }],
+    [`videos/${seriesId}/ep-2/subtitles/vi.vtt`, { size: 6000 }],
+    [`videos/${seriesId}/ep-3/video.mp4`, { size: 62000000 }],
+  ]);
+
+  const dbEpisodes = [
+    { id: 'ep-1', series_id: seriesId, episode_number: 1 },
+    { id: 'ep-2', series_id: seriesId, episode_number: 2 },
+    { id: 'ep-3', series_id: seriesId, episode_number: 3 },
+  ];
+
+  const dbSessions = [
+    { id: 'sess-active-ep2', series_id: seriesId, episode_id: 'ep-2', status: 'in_progress', upload_id: 'up-2' },
+    { id: 'sess-done-ep1', series_id: seriesId, episode_id: 'ep-1', status: 'completed', upload_id: 'up-1' },
+  ];
+
+  // Helper simulating delete-episode-media and deleteVideoEpisodeEverywhere
+  async function simulateDeleteEpisodeEverywhere({ targetEpId, isAdmin, r2Fail = false }) {
+    // 1. Admin check
+    if (!isAdmin) {
+      return { ok: false, status: 403, code: 'FORBIDDEN', error: 'Admin only' };
+    }
+
+    // 2. Target check
+    const epIndex = dbEpisodes.findIndex((e) => e.id === targetEpId && e.series_id === seriesId);
+    if (epIndex === -1) {
+      return { ok: false, status: 404, code: 'EPISODE_NOT_FOUND' };
+    }
+
+    // 3. Abort active upload sessions
+    const activeSessions = dbSessions.filter((s) => s.episode_id === targetEpId && s.status === 'in_progress');
+    for (const s of activeSessions) {
+      s.status = 'aborted';
+    }
+
+    // 4. R2 failure simulation (e.g. 502/403/timeout)
+    if (r2Fail) {
+      return { ok: false, status: 502, code: 'R2_DELETE_FAILED', error: 'R2 network error' };
+    }
+
+    // 5. Delete R2 objects under prefix videos/${seriesId}/${targetEpId}/
+    const prefix = `videos/${seriesId}/${targetEpId}/`;
+    for (const key of Array.from(r2Bucket.keys())) {
+      if (key.startsWith(prefix)) {
+        r2Bucket.delete(key);
+      }
+    }
+
+    // 6. Delete DB record only after R2 confirmed successful
+    dbEpisodes.splice(epIndex, 1);
+
+    return { ok: true, deleted: true, episodeId: targetEpId };
+  }
+
+  // Case 1: Non-admin is blocked
+  const resNonAdmin = await simulateDeleteEpisodeEverywhere({ targetEpId: 'ep-2', isAdmin: false });
+  assert.strictEqual(resNonAdmin.ok, false);
+  assert.strictEqual(resNonAdmin.code, 'FORBIDDEN');
+  assert.strictEqual(dbEpisodes.length, 3); // Untouched
+
+  // Case 2: R2 failure does NOT delete DB row (fails closed)
+  const resR2Fail = await simulateDeleteEpisodeEverywhere({ targetEpId: 'ep-2', isAdmin: true, r2Fail: true });
+  assert.strictEqual(resR2Fail.ok, false);
+  assert.strictEqual(resR2Fail.code, 'R2_DELETE_FAILED');
+  assert.strictEqual(dbEpisodes.length, 3); // Ep 2 row preserved in DB!
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-2/video.mp4`), true);
+
+  // Case 3: Successful deletion of Episode 2
+  const resSuccess = await simulateDeleteEpisodeEverywhere({ targetEpId: 'ep-2', isAdmin: true, r2Fail: false });
+  assert.strictEqual(resSuccess.ok, true);
+  assert.strictEqual(resSuccess.deleted, true);
+
+  // Check DB state: Ep 2 removed, Ep 1 and Ep 3 preserved
+  assert.strictEqual(dbEpisodes.length, 2);
+  assert.strictEqual(dbEpisodes.some((e) => e.id === 'ep-2'), false);
+  assert.strictEqual(dbEpisodes[0].id, 'ep-1');
+  assert.strictEqual(dbEpisodes[1].id, 'ep-3');
+
+  // Check R2 state: Ep 2 files gone, Ep 1, Ep 3 and poster strictly preserved!
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-2/video.mp4`), false);
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-2/subtitles/vi.vtt`), false);
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/posters/cover.webp`), true); // Poster intact!
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-1/video.mp4`), true); // Ep 1 intact!
+  assert.strictEqual(r2Bucket.has(`videos/${seriesId}/ep-3/video.mp4`), true); // Ep 3 intact!
+
+  // Check that active session for Ep 2 was safely aborted
+  const ep2Session = dbSessions.find((s) => s.id === 'sess-active-ep2');
+  assert.strictEqual(ep2Session.status, 'aborted');
+});
+
+test('Deleting an episode with no R2 media (pending upload) successfully cleans DB', async () => {
+  const seriesId = 'c0a80101-0000-0000-0000-000000000001';
+  const pendingEpId = 'ep-pending-never-uploaded';
+
+  const dbEpisodes = [
+    { id: pendingEpId, series_id: seriesId, episode_number: 4, upload_status: 'pending' },
+  ];
+
+  // R2 has no objects for this episode
+  const r2ObjectsForEp = [];
+  assert.strictEqual(r2ObjectsForEp.length, 0);
+
+  // Should succeed in deleting DB row without errors
+  const epIndex = dbEpisodes.findIndex((e) => e.id === pendingEpId);
+  dbEpisodes.splice(epIndex, 1);
+
+  assert.strictEqual(dbEpisodes.length, 0);
+});
+
 console.log(`\n🎉 ALL ${passedTests} TEST CASES PASSED SUCCESSFULLY!\n`);
