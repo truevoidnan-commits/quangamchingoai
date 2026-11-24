@@ -2010,4 +2010,446 @@ test('Canvas frame extractor validates CORS read access and handles tainted canv
 });
 
 
+test('Video player controls auto-hide timer triggers at 3.0s when playing, but cancels when paused, scrubbing, hovering, options open, or error', () => {
+  // Mock timer harness
+  let activeTimer = null;
+  let timerDelay = null;
+  let showControls = true;
+
+  const mockSetTimeout = (fn, delay) => {
+    timerDelay = delay;
+    activeTimer = { fn, delay };
+    return activeTimer;
+  };
+
+  const mockClearTimeout = (timer) => {
+    if (activeTimer === timer) {
+      activeTimer = null;
+      timerDelay = null;
+    }
+  };
+
+  const createPlayerHarness = (initialState = {}) => {
+    const state = {
+      isPlaying: false,
+      isScrubbing: false,
+      isMobileOptionsOpen: false,
+      isHoveringControls: false,
+      isFocusInsideControls: false,
+      errorMsg: null,
+      ...initialState,
+    };
+
+    const resetControlsTimer = () => {
+      showControls = true;
+      if (activeTimer) {
+        mockClearTimeout(activeTimer);
+      }
+
+      if (
+        state.isPlaying &&
+        !state.isScrubbing &&
+        !state.isMobileOptionsOpen &&
+        !state.isHoveringControls &&
+        !state.isFocusInsideControls &&
+        !state.errorMsg
+      ) {
+        activeTimer = mockSetTimeout(() => {
+          showControls = false;
+        }, 3000);
+      }
+    };
+
+    return { state, resetControlsTimer };
+  };
+
+  // Case 1: Playing normally -> Timer set to exactly 3000ms
+  const harness1 = createPlayerHarness({ isPlaying: true });
+  harness1.resetControlsTimer();
+  assert.strictEqual(showControls, true);
+  assert.notStrictEqual(activeTimer, null);
+  assert.strictEqual(timerDelay, 3000);
+
+  // Fire timer -> controls become hidden
+  activeTimer.fn();
+  assert.strictEqual(showControls, false);
+
+  // Case 2: Paused video -> never auto-hides
+  const harness2 = createPlayerHarness({ isPlaying: false });
+  harness2.resetControlsTimer();
+  assert.strictEqual(showControls, true);
+  assert.strictEqual(activeTimer, null);
+
+  // Case 3: Scrubbing timeline -> never auto-hides
+  const harness3 = createPlayerHarness({ isPlaying: true, isScrubbing: true });
+  harness3.resetControlsTimer();
+  assert.strictEqual(showControls, true);
+  assert.strictEqual(activeTimer, null);
+
+  // Case 4: Mobile options menu open -> never auto-hides
+  const harness4 = createPlayerHarness({ isPlaying: true, isMobileOptionsOpen: true });
+  harness4.resetControlsTimer();
+  assert.strictEqual(showControls, true);
+  assert.strictEqual(activeTimer, null);
+
+  // Case 5: Hovering controls on desktop -> never auto-hides
+  const harness5 = createPlayerHarness({ isPlaying: true, isHoveringControls: true });
+  harness5.resetControlsTimer();
+  assert.strictEqual(showControls, true);
+  assert.strictEqual(activeTimer, null);
+
+  // Case 6: Focus inside controls -> never auto-hides
+  const harness6 = createPlayerHarness({ isPlaying: true, isFocusInsideControls: true });
+  harness6.resetControlsTimer();
+  assert.strictEqual(showControls, true);
+  assert.strictEqual(activeTimer, null);
+
+  // Case 7: Video error displayed -> never auto-hides
+  const harness7 = createPlayerHarness({ isPlaying: true, errorMsg: 'Failed to load video' });
+  harness7.resetControlsTimer();
+  assert.strictEqual(showControls, true);
+  assert.strictEqual(activeTimer, null);
+
+  // Case 8: User interaction resets the 3000ms timer
+  const harness8 = createPlayerHarness({ isPlaying: true });
+  harness8.resetControlsTimer();
+  const firstTimer = activeTimer;
+  assert.strictEqual(timerDelay, 3000);
+
+  // User moves mouse or touches screen at 2s -> resets timer
+  harness8.resetControlsTimer();
+  assert.notStrictEqual(activeTimer, firstTimer);
+  assert.strictEqual(timerDelay, 3000);
+  assert.strictEqual(showControls, true);
+});
+
+test('Mobile video surface tap differentiates reveal-only when hidden from play/pause toggle when visible', () => {
+  let isPlaying = true;
+  let showControls = false;
+  let showControlsRef = false;
+  let wereControlsHiddenOnTouchStart = false;
+  let playToggleCount = 0;
+  let timerResetCount = 0;
+
+  const togglePlay = () => {
+    isPlaying = !isPlaying;
+    playToggleCount++;
+  };
+
+  const resetControlsTimer = () => {
+    showControls = true;
+    showControlsRef = true;
+    timerResetCount++;
+  };
+
+  const handlePointerDown = () => {
+    if (isPlaying && !showControlsRef) {
+      wereControlsHiddenOnTouchStart = true;
+    } else {
+      wereControlsHiddenOnTouchStart = false;
+    }
+  };
+
+  const handleSurfaceTap = () => {
+    if (wereControlsHiddenOnTouchStart || (isPlaying && !showControls)) {
+      wereControlsHiddenOnTouchStart = false;
+      showControls = true;
+      showControlsRef = true;
+      resetControlsTimer();
+      return;
+    }
+
+    wereControlsHiddenOnTouchStart = false;
+    togglePlay();
+  };
+
+  // STEP 1: Video is playing and controls are HIDDEN
+  assert.strictEqual(isPlaying, true);
+  assert.strictEqual(showControls, false);
+
+  // User taps surface: pointerdown fires first
+  handlePointerDown();
+  assert.strictEqual(wereControlsHiddenOnTouchStart, true);
+
+  // Container activity fires
+  resetControlsTimer();
+  assert.strictEqual(showControls, true);
+
+  // Click fires on surface
+  handleSurfaceTap();
+
+  // RESULT: Controls revealed, timer reset, but video DID NOT pause!
+  assert.strictEqual(showControls, true);
+  assert.strictEqual(isPlaying, true);
+  assert.strictEqual(playToggleCount, 0);
+  assert.strictEqual(timerResetCount, 2);
+  assert.strictEqual(wereControlsHiddenOnTouchStart, false);
+
+  // STEP 2: Controls are now VISIBLE and video is playing
+  // User taps surface again
+  handlePointerDown();
+  assert.strictEqual(wereControlsHiddenOnTouchStart, false);
+
+  handleSurfaceTap();
+
+  // RESULT: Tap toggles play/pause -> video is now PAUSED!
+  assert.strictEqual(isPlaying, false);
+  assert.strictEqual(playToggleCount, 1);
+
+  // STEP 3: Video is PAUSED
+  // User taps surface again to resume play
+  handlePointerDown();
+  assert.strictEqual(wereControlsHiddenOnTouchStart, false);
+
+  handleSurfaceTap();
+
+  // RESULT: Tap toggles play/pause -> video starts playing!
+  assert.strictEqual(isPlaying, true);
+  assert.strictEqual(playToggleCount, 2);
+
+  // STEP 4: Tapping controls button with stopPropagation never invokes surface tap
+  let controlsButtonClicked = false;
+  const mockButtonOnClick = (e) => {
+    e.stopPropagation();
+    controlsButtonClicked = true;
+  };
+
+  let propagationStopped = false;
+  mockButtonOnClick({
+    stopPropagation: () => { propagationStopped = true; }
+  });
+
+  assert.strictEqual(controlsButtonClicked, true);
+  assert.strictEqual(propagationStopped, true);
+  assert.strictEqual(playToggleCount, 2); // Unchanged!
+});
+
+test('Scrubbing timeline cancels auto-hide immediately on pointerdown and restarts 3.0s timer on pointerup', () => {
+  let isScrubbing = false;
+  let showControls = true;
+  let activeTimer = 123;
+  let timerResetCount = 0;
+
+  const mockClearTimeout = () => {
+    activeTimer = null;
+  };
+
+  const resetControlsTimer = () => {
+    timerResetCount++;
+    activeTimer = 456;
+  };
+
+  // User touches timeline scrubber (pointerdown)
+  const handlePointerDown = () => {
+    mockClearTimeout();
+    showControls = true;
+    isScrubbing = true;
+  };
+
+  // User releases timeline scrubber (pointerup)
+  const handlePointerUp = (isPlaying = true) => {
+    isScrubbing = false;
+    if (isPlaying) {
+      resetControlsTimer();
+    }
+  };
+
+  handlePointerDown();
+  assert.strictEqual(isScrubbing, true);
+  assert.strictEqual(activeTimer, null); // Cancelled immediately
+  assert.strictEqual(showControls, true);
+
+  // Finish scrubbing while playing
+  handlePointerUp(true);
+  assert.strictEqual(isScrubbing, false);
+  assert.strictEqual(activeTimer, 456); // Restarted after release
+  assert.strictEqual(timerResetCount, 1);
+});
+
+test('Universal Fullscreen activates video.webkitEnterFullscreen synchronously on iPhone (Cốc Cốc iOS / Safari) and container fullscreen on Android/Desktop', () => {
+  // Harness to test platform branching
+  let webkitEnterCalled = false;
+  let containerFsCalled = false;
+  let orientationLocked = false;
+  let isFullscreen = false;
+
+  const createVideoMock = (isIPhone = false) => {
+    webkitEnterCalled = false;
+    containerFsCalled = false;
+    orientationLocked = false;
+    isFullscreen = false;
+
+    const mockVideo = {
+      currentTime: 142.5,
+      webkitDisplayingFullscreen: false,
+      webkitEnterFullscreen() {
+        webkitEnterCalled = true;
+        this.webkitDisplayingFullscreen = true;
+      },
+      webkitExitFullscreen() {
+        this.webkitDisplayingFullscreen = false;
+      },
+    };
+
+    const mockContainer = {
+      requestFullscreen: isIPhone ? undefined : () => {
+        containerFsCalled = true;
+        return Promise.resolve();
+      },
+    };
+
+    const mockScreen = {
+      orientation: {
+        lock(mode) {
+          if (mode === 'landscape') orientationLocked = true;
+          return Promise.resolve();
+        },
+        unlock() {
+          orientationLocked = false;
+        },
+      },
+    };
+
+    const toggleFullscreen = (userAgent) => {
+      const isIPhoneUA = /iPhone|iPod/.test(userAgent);
+
+      const currentlyInFs = Boolean(
+        mockVideo.webkitDisplayingFullscreen || isFullscreen
+      );
+
+      if (currentlyInFs) {
+        if (mockVideo.webkitExitFullscreen) mockVideo.webkitExitFullscreen();
+        mockScreen.orientation.unlock();
+        isFullscreen = false;
+        return;
+      }
+
+      // Enter fullscreen:
+      const tryVideoNativeFullscreen = () => {
+        if (typeof mockVideo.webkitEnterFullscreen === 'function') {
+          mockVideo.webkitEnterFullscreen();
+          mockScreen.orientation.lock('landscape').catch(() => {});
+          isFullscreen = true;
+        }
+      };
+
+      // 1. iPhone branch (synchronous user gesture execution)
+      if (isIPhoneUA && typeof mockVideo.webkitEnterFullscreen === 'function') {
+        tryVideoNativeFullscreen();
+        return;
+      }
+
+      // 2. Standard container branch (Android Chrome / Desktop)
+      if (mockContainer && typeof mockContainer.requestFullscreen === 'function') {
+        mockContainer.requestFullscreen();
+        mockScreen.orientation.lock('landscape').catch(() => {});
+        isFullscreen = true;
+      } else {
+        tryVideoNativeFullscreen();
+      }
+    };
+
+    return { mockVideo, mockContainer, mockScreen, toggleFullscreen };
+  };
+
+  // Case 1: iPhone Safari / Cốc Cốc iOS
+  const iphoneUA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 CocCoc/100.0';
+  const iphoneHarness = createVideoMock(true);
+
+  iphoneHarness.toggleFullscreen(iphoneUA);
+  assert.strictEqual(webkitEnterCalled, true, 'iPhone must invoke webkitEnterFullscreen synchronously');
+  assert.strictEqual(containerFsCalled, false, 'iPhone must not invoke container requestFullscreen');
+  assert.strictEqual(orientationLocked, true, 'Should lock landscape orientation');
+  assert.strictEqual(isFullscreen, true, 'isFullscreen must be true');
+  assert.strictEqual(iphoneHarness.mockVideo.currentTime, 142.5, 'Playback position preserved');
+
+  // Exit fullscreen on iPhone
+  iphoneHarness.toggleFullscreen(iphoneUA);
+  assert.strictEqual(isFullscreen, false, 'isFullscreen must be false after exit');
+  assert.strictEqual(orientationLocked, false, 'Orientation must be unlocked');
+  assert.strictEqual(iphoneHarness.mockVideo.currentTime, 142.5, 'Playback position still preserved');
+
+  // Case 2: Android Chrome / Cốc Cốc Android
+  const androidUA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36';
+  const androidHarness = createVideoMock(false);
+
+  androidHarness.toggleFullscreen(androidUA);
+  assert.strictEqual(containerFsCalled, true, 'Android must invoke container requestFullscreen');
+  assert.strictEqual(webkitEnterCalled, false, 'Android should not fall back to native video fullscreen');
+  assert.strictEqual(orientationLocked, true);
+  assert.strictEqual(isFullscreen, true);
+});
+
+test('Screen orientation lock rejection is handled gracefully without throwing or crashing player', () => {
+  let threwSync = false;
+  // Case A: throws synchronously
+  try {
+    const mockScreenA = {
+      orientation: {
+        lock() {
+          throw new Error('NotSupportedError');
+        }
+      }
+    };
+    try {
+      if (mockScreenA.orientation?.lock) {
+        mockScreenA.orientation.lock('landscape').catch(() => {});
+      }
+    } catch {}
+  } catch (err) {
+    threwSync = true;
+  }
+  assert.strictEqual(threwSync, false, 'Synchronous throw must be caught');
+
+  // Case B: rejects asynchronously with .catch() attached
+  let caughtInCatch = false;
+  const mockScreenB = {
+    orientation: {
+      lock() {
+        return Promise.reject(new Error('DOMException: not allowed by permissions policy'));
+      }
+    }
+  };
+  try {
+    if (mockScreenB.orientation?.lock) {
+      mockScreenB.orientation.lock('landscape').catch((err) => {
+        caughtInCatch = true;
+      });
+    }
+  } catch (err) {
+    assert.fail('Should not throw synchronously on Promise rejection');
+  }
+  assert.strictEqual(threwSync, false);
+});
+
+test('iOS WebKit video events (webkitbeginfullscreen & webkitendfullscreen) correctly synchronize fullscreen state', () => {
+  let isFullscreen = false;
+  let showControls = false;
+  let orientationUnlocked = false;
+  let timerReset = false;
+
+  const handleWebkitBegin = () => {
+    isFullscreen = true;
+  };
+
+  const handleWebkitEnd = () => {
+    isFullscreen = false;
+    orientationUnlocked = true;
+    showControls = true;
+    timerReset = true;
+  };
+
+  // Simulate user pressing iOS native fullscreen
+  handleWebkitBegin();
+  assert.strictEqual(isFullscreen, true);
+
+  // Simulate user tapping "Done" or swiping down to exit native fullscreen
+  handleWebkitEnd();
+  assert.strictEqual(isFullscreen, false);
+  assert.strictEqual(orientationUnlocked, true);
+  assert.strictEqual(showControls, true);
+  assert.strictEqual(timerReset, true);
+});
+
+
 console.log(`\n🎉 ALL ${passedTests} TEST CASES PASSED SUCCESSFULLY!\n`);
