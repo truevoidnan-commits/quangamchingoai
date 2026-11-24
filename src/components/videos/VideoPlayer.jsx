@@ -58,9 +58,11 @@ export default function VideoPlayer({
   const flashTimeoutRef = useRef(null);
   const isScrubbingRef = useRef(false);
   const isHoveringControlsRef = useRef(false);
-  const isFocusInsideControlsRef = useRef(false);
   const showControlsRef = useRef(true);
   const wereControlsHiddenOnTouchStartRef = useRef(false);
+  const isPlayingRef = useRef(false);
+  const isMobileOptionsOpenRef = useRef(false);
+  const errorMsgRef = useRef(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -76,16 +78,29 @@ export default function VideoPlayer({
   const [resumePromptTime, setResumePromptTime] = useState(null);
   const [activeSubtitle, setActiveSubtitle] = useState('off');
 
-  // Smooth Scrubbing state
-  const [isScrubbing, setIsScrubbing] = useState(false);
-  const [scrubTime, setScrubTime] = useState(0);
-  const [scrubTooltip, setScrubTooltip] = useState({ visible: false, x: 0, time: 0 });
+  // Keep refs synchronized
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
-  // Center play/pause flash feedback
-  const [centerFlash, setCenterFlash] = useState(null);
+  useEffect(() => {
+    isMobileOptionsOpenRef.current = isMobileOptionsOpen;
+  }, [isMobileOptionsOpen]);
 
-  // Mobile options popup sheet
-  const [isMobileOptionsOpen, setIsMobileOptionsOpen] = useState(false);
+  useEffect(() => {
+    errorMsgRef.current = errorMsg;
+  }, [errorMsg]);
+
+  useEffect(() => {
+    showControlsRef.current = showControls;
+  }, [showControls]);
+
+  // Helper: check if device supports true fine-pointer hover (Desktop mouse)
+  // Touchscreens / phones (iPhone, Cốc Cốc iOS, Android) return false
+  const isTrueHoverDevice = useCallback(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false;
+    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  }, []);
 
   // 1. Initial Seek / Resume Prompt
   useEffect(() => {
@@ -103,32 +118,44 @@ export default function VideoPlayer({
       controlsTimeoutRef.current = null;
     }
 
+    const isActuallyPlaying =
+      isPlayingRef.current ||
+      Boolean(videoRef.current && !videoRef.current.paused && !videoRef.current.ended);
+
+    const isHovering = isHoveringControlsRef.current && isTrueHoverDevice();
+
     // Never auto-hide if:
-    // - Video is paused or ended (!isPlaying)
+    // - Video is paused or ended (!isActuallyPlaying)
     // - User is scrubbing timeline (isScrubbingRef.current)
-    // - Mobile options sheet is open (isMobileOptionsOpen)
-    // - User is hovering controls bar on desktop (isHoveringControlsRef.current)
-    // - Focus is currently inside controls bar (isFocusInsideControlsRef.current)
-    // - Video has error (errorMsg)
+    // - Mobile options sheet is open (isMobileOptionsOpenRef.current)
+    // - User is hovering controls bar with real mouse on desktop (isHovering)
+    // - Video has error (errorMsgRef.current)
+    // Notice: Button focus NEVER blocks auto-hide!
     if (
-      isPlaying &&
+      isActuallyPlaying &&
       !isScrubbingRef.current &&
-      !isMobileOptionsOpen &&
-      !isHoveringControlsRef.current &&
-      !isFocusInsideControlsRef.current &&
-      !errorMsg
+      !isMobileOptionsOpenRef.current &&
+      !isHovering &&
+      !errorMsgRef.current
     ) {
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false);
         showControlsRef.current = false;
+
+        // Cleanly blur active element if it's inside player controls (prevents sticky focus rings)
+        if (
+          typeof document !== 'undefined' &&
+          containerRef.current &&
+          containerRef.current.contains(document.activeElement) &&
+          document.activeElement !== containerRef.current
+        ) {
+          try {
+            document.activeElement.blur();
+          } catch {}
+        }
       }, 3000);
     }
-  }, [isPlaying, isMobileOptionsOpen, errorMsg]);
-
-  // Sync showControlsRef whenever showControls updates
-  useEffect(() => {
-    showControlsRef.current = showControls;
-  }, [showControls]);
+  }, [isTrueHoverDevice]);
 
   // React to isPlaying changes for auto-hide controls
   useEffect(() => {
@@ -140,6 +167,7 @@ export default function VideoPlayer({
         controlsTimeoutRef.current = null;
       }
       setShowControls(true);
+      showControlsRef.current = true;
     }
   }, [isPlaying, resetControlsTimer]);
 
@@ -151,6 +179,7 @@ export default function VideoPlayer({
         controlsTimeoutRef.current = null;
       }
       setShowControls(true);
+      showControlsRef.current = true;
     } else if (isPlaying) {
       resetControlsTimer();
     }
@@ -164,6 +193,7 @@ export default function VideoPlayer({
         controlsTimeoutRef.current = null;
       }
       setShowControls(true);
+      showControlsRef.current = true;
     } else if (isPlaying) {
       resetControlsTimer();
     }
@@ -224,7 +254,11 @@ export default function VideoPlayer({
   const handleSurfaceTap = (e) => {
     if (isScrubbingRef.current) return;
 
-    if (wereControlsHiddenOnTouchStartRef.current || (isPlaying && !showControls)) {
+    const isVideoPlaying =
+      isPlayingRef.current ||
+      Boolean(videoRef.current && !videoRef.current.paused && !videoRef.current.ended);
+
+    if (wereControlsHiddenOnTouchStartRef.current || (isVideoPlaying && !showControlsRef.current)) {
       wereControlsHiddenOnTouchStartRef.current = false;
       setShowControls(true);
       showControlsRef.current = true;
@@ -692,19 +726,36 @@ export default function VideoPlayer({
     <div
       ref={containerRef}
       className={`${styles.playerContainer} ${isPlaying && !showControls ? styles.cursorHidden : ''} ${isFullscreen ? styles.playerFullscreen : ''}`}
-      onMouseMove={handleUserActivity}
-      onTouchStart={handleUserActivity}
-      onPointerDown={handleUserActivity}
+      onMouseMove={() => {
+        if (!isTrueHoverDevice()) return;
+        resetControlsTimer();
+      }}
+      onTouchStart={() => {
+        isHoveringControlsRef.current = false;
+        resetControlsTimer();
+      }}
       tabIndex={0}
     >
       {/* Video Surface Tap Layer */}
       <div
         className={styles.videoSurface}
-        onPointerDown={() => {
-          if (isPlaying && !showControlsRef.current) {
+        onTouchStart={() => {
+          isHoveringControlsRef.current = false;
+          const isVideoPlaying =
+            isPlayingRef.current ||
+            Boolean(videoRef.current && !videoRef.current.paused && !videoRef.current.ended);
+          if (isVideoPlaying && !showControlsRef.current) {
             wereControlsHiddenOnTouchStartRef.current = true;
           } else {
             wereControlsHiddenOnTouchStartRef.current = false;
+          }
+        }}
+        onPointerDown={() => {
+          const isVideoPlaying =
+            isPlayingRef.current ||
+            Boolean(videoRef.current && !videoRef.current.paused && !videoRef.current.ended);
+          if (isVideoPlaying && !showControlsRef.current) {
+            wereControlsHiddenOnTouchStartRef.current = true;
           }
         }}
         onClick={handleSurfaceTap}
@@ -717,16 +768,25 @@ export default function VideoPlayer({
           onLoadedMetadata={onLoadedMetadata}
           onPlay={() => {
             setIsPlaying(true);
+            isPlayingRef.current = true;
             resetControlsTimer();
           }}
           onPause={() => {
             setIsPlaying(false);
+            isPlayingRef.current = false;
+            if (controlsTimeoutRef.current) {
+              clearTimeout(controlsTimeoutRef.current);
+              controlsTimeoutRef.current = null;
+            }
             setShowControls(true);
+            showControlsRef.current = true;
           }}
           onWaiting={() => setIsLoading(true)}
           onPlaying={() => {
             setIsLoading(false);
-            resetControlsTimer();
+            if (showControlsRef.current) {
+              resetControlsTimer();
+            }
           }}
           onEnded={onEnded}
           onError={onError}
@@ -830,9 +890,11 @@ export default function VideoPlayer({
         }}
         onTouchStart={(e) => {
           e.stopPropagation();
+          isHoveringControlsRef.current = false;
           resetControlsTimer();
         }}
         onMouseEnter={() => {
+          if (!isTrueHoverDevice()) return;
           isHoveringControlsRef.current = true;
           if (controlsTimeoutRef.current) {
             clearTimeout(controlsTimeoutRef.current);
@@ -841,22 +903,9 @@ export default function VideoPlayer({
           setShowControls(true);
         }}
         onMouseLeave={() => {
+          if (!isTrueHoverDevice()) return;
           isHoveringControlsRef.current = false;
           resetControlsTimer();
-        }}
-        onFocus={() => {
-          isFocusInsideControlsRef.current = true;
-          if (controlsTimeoutRef.current) {
-            clearTimeout(controlsTimeoutRef.current);
-            controlsTimeoutRef.current = null;
-          }
-          setShowControls(true);
-        }}
-        onBlur={(e) => {
-          if (!e.currentTarget.contains(e.relatedTarget)) {
-            isFocusInsideControlsRef.current = false;
-            resetControlsTimer();
-          }
         }}
       >
         {/* ROW 1: Timeline Scrubber with Smooth Pointer Dragging */}

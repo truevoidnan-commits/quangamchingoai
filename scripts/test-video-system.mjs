@@ -2035,10 +2035,13 @@ test('Video player controls auto-hide timer triggers at 3.0s when playing, but c
       isScrubbing: false,
       isMobileOptionsOpen: false,
       isHoveringControls: false,
-      isFocusInsideControls: false,
+      isFinePointer: true,
+      hasHover: true,
       errorMsg: null,
       ...initialState,
     };
+
+    const isTrueHoverDevice = () => state.isFinePointer && state.hasHover;
 
     const resetControlsTimer = () => {
       showControls = true;
@@ -2046,12 +2049,13 @@ test('Video player controls auto-hide timer triggers at 3.0s when playing, but c
         mockClearTimeout(activeTimer);
       }
 
+      const isHovering = state.isHoveringControls && isTrueHoverDevice();
+
       if (
         state.isPlaying &&
         !state.isScrubbing &&
         !state.isMobileOptionsOpen &&
-        !state.isHoveringControls &&
-        !state.isFocusInsideControls &&
+        !isHovering &&
         !state.errorMsg
       ) {
         activeTimer = mockSetTimeout(() => {
@@ -2063,7 +2067,7 @@ test('Video player controls auto-hide timer triggers at 3.0s when playing, but c
     return { state, resetControlsTimer };
   };
 
-  // Case 1: Playing normally -> Timer set to exactly 3000ms
+  // Case 1: Playing normally on desktop -> Timer set to exactly 3000ms
   const harness1 = createPlayerHarness({ isPlaying: true });
   harness1.resetControlsTimer();
   assert.strictEqual(showControls, true);
@@ -2092,17 +2096,23 @@ test('Video player controls auto-hide timer triggers at 3.0s when playing, but c
   assert.strictEqual(showControls, true);
   assert.strictEqual(activeTimer, null);
 
-  // Case 5: Hovering controls on desktop -> never auto-hides
+  // Case 5: Hovering controls with real mouse on desktop -> keeps controls visible
   const harness5 = createPlayerHarness({ isPlaying: true, isHoveringControls: true });
   harness5.resetControlsTimer();
   assert.strictEqual(showControls, true);
   assert.strictEqual(activeTimer, null);
 
-  // Case 6: Focus inside controls -> never auto-hides
-  const harness6 = createPlayerHarness({ isPlaying: true, isFocusInsideControls: true });
+  // Case 6: Hover flag on touch-only device (e.g. synthetic mouseenter on iPhone) is ignored -> auto-hides normally
+  const harness6 = createPlayerHarness({
+    isPlaying: true,
+    isHoveringControls: true,
+    isFinePointer: false,
+    hasHover: false,
+  });
   harness6.resetControlsTimer();
   assert.strictEqual(showControls, true);
-  assert.strictEqual(activeTimer, null);
+  assert.notStrictEqual(activeTimer, null, 'Synthetic hover on touch device must not block auto-hide');
+  assert.strictEqual(timerDelay, 3000);
 
   // Case 7: Video error displayed -> never auto-hides
   const harness7 = createPlayerHarness({ isPlaying: true, errorMsg: 'Failed to load video' });
@@ -2121,6 +2131,127 @@ test('Video player controls auto-hide timer triggers at 3.0s when playing, but c
   assert.notStrictEqual(activeTimer, firstTimer);
   assert.strictEqual(timerDelay, 3000);
   assert.strictEqual(showControls, true);
+});
+
+test('iPhone touch-only regression: synthetic mouseenter, sticky focus, and touch taps cleanly auto-hide controls after 3.0s without disruption', () => {
+  // Simulate iPhone WebKit DOM environment
+  let activeTimer = null;
+  let showControls = true;
+  let isPlaying = false;
+  let isHoveringControls = false;
+  let activeElement = null;
+
+  const mockSetTimeout = (fn, delay) => {
+    activeTimer = { fn, delay };
+    return activeTimer;
+  };
+
+  const mockClearTimeout = (timer) => {
+    if (activeTimer === timer) {
+      activeTimer = null;
+    }
+  };
+
+  // iPhone device characteristics: coarse touch pointer, no fine hover
+  const isTrueHoverDevice = () => false;
+
+  const resetControlsTimer = () => {
+    showControls = true;
+    if (activeTimer) {
+      mockClearTimeout(activeTimer);
+    }
+
+    const isHovering = isHoveringControls && isTrueHoverDevice();
+
+    if (isPlaying && !isHovering) {
+      activeTimer = mockSetTimeout(() => {
+        showControls = false;
+        // Blur active element to clear focus ring
+        if (activeElement) {
+          activeElement.isBlurred = true;
+          activeElement = null;
+        }
+      }, 3000);
+    }
+  };
+
+  // STEP 1: User on Cốc Cốc iPhone taps the Play button on controlsBar
+  const playButton = { id: 'btnPlay', isBlurred: false };
+
+  // 1a. touchstart on controlsBar clears lingering hover flag
+  isHoveringControls = false;
+  resetControlsTimer();
+
+  // 1b. WebKit synthesizes mouseenter on controlsBar -> guarded by isTrueHoverDevice()
+  if (isTrueHoverDevice()) {
+    isHoveringControls = true;
+  }
+  assert.strictEqual(isHoveringControls, false, 'Synthetic mouseenter on iPhone must NOT set hover flag');
+
+  // 1c. WebKit sets focus to playButton
+  activeElement = playButton;
+
+  // 1d. Button click starts playback
+  isPlaying = true;
+  resetControlsTimer();
+
+  // VERIFY: Focus on playButton does NOT block auto-hide timer!
+  assert.strictEqual(showControls, true);
+  assert.notStrictEqual(activeTimer, null, 'Timer must be scheduled after pressing Play on iPhone');
+  assert.strictEqual(activeTimer.delay, 3000);
+
+  // 1e. 3.0s passes with no further interaction
+  activeTimer.fn();
+  assert.strictEqual(showControls, false, 'Controls must auto-hide after 3.0s on iPhone');
+  assert.strictEqual(playButton.isBlurred, true, 'Sticky focus must be cleaned up on auto-hide');
+
+  // STEP 2: While controls are hidden, user taps the video surface once
+  let wereControlsHiddenOnTouchStart = false;
+  let playPauseToggled = false;
+
+  // 2a. touchstart on surface captures that controls WERE hidden
+  if (isPlaying && !showControls) {
+    wereControlsHiddenOnTouchStart = true;
+  }
+
+  // 2b. Surface click event fires
+  if (wereControlsHiddenOnTouchStart) {
+    wereControlsHiddenOnTouchStart = false;
+    showControls = true;
+    resetControlsTimer();
+    // Do NOT toggle play/pause!
+  } else {
+    playPauseToggled = true;
+  }
+
+  // VERIFY: Tap revealed controls, timer restarted, video NEVER paused!
+  assert.strictEqual(showControls, true);
+  assert.strictEqual(isPlaying, true);
+  assert.strictEqual(playPauseToggled, false, 'First tap to reveal controls must not pause video');
+  assert.notStrictEqual(activeTimer, null);
+
+  // 2c. 3.0s passes -> controls auto-hide again
+  activeTimer.fn();
+  assert.strictEqual(showControls, false);
+
+  // STEP 3: User exits native fullscreen on iPhone (webkitendfullscreen)
+  // handleWebkitEnd restores controls and starts 3.0s timer
+  showControls = true;
+  resetControlsTimer();
+  assert.strictEqual(showControls, true);
+  assert.notStrictEqual(activeTimer, null);
+
+  // 3.0s passes -> controls auto-hide
+  activeTimer.fn();
+  assert.strictEqual(showControls, false);
+
+  // STEP 4: Video paused by user
+  isPlaying = false;
+  mockClearTimeout(activeTimer);
+  showControls = true;
+  resetControlsTimer();
+  assert.strictEqual(showControls, true);
+  assert.strictEqual(activeTimer, null, 'Paused video must keep controls visible indefinitely');
 });
 
 test('Mobile video surface tap differentiates reveal-only when hidden from play/pause toggle when visible', () => {
