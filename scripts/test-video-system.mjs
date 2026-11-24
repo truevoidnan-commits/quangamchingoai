@@ -4,6 +4,17 @@
  */
 
 import assert from 'assert';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import * as parser from '@babel/parser';
+import traverseModule from '@babel/traverse';
+import { createServer } from 'vite';
+import { chromium } from 'playwright';
+
+const traverse = traverseModule.default || traverseModule;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(__dirname, '..');
 import {
   isValidUuid,
   isValidEtag,
@@ -27,6 +38,18 @@ let passedTests = 0;
 function test(name, fn) {
   try {
     fn();
+    console.log(`  ✅ PASS: ${name}`);
+    passedTests++;
+  } catch (err) {
+    console.error(`  ❌ FAIL: ${name}`);
+    console.error(err);
+    process.exit(1);
+  }
+}
+
+async function testAsync(name, fn) {
+  try {
+    await fn();
     console.log(`  ✅ PASS: ${name}`);
     passedTests++;
   } catch (err) {
@@ -2580,6 +2603,154 @@ test('iOS WebKit video events (webkitbeginfullscreen & webkitendfullscreen) corr
   assert.strictEqual(orientationUnlocked, true);
   assert.strictEqual(showControls, true);
   assert.strictEqual(timerReset, true);
+});
+
+// -----------------------------------------------------------------------------
+// TEST GROUP 9: VideoPlayer AST Scope & Browser Mount Verification
+// -----------------------------------------------------------------------------
+test('VideoPlayer component AST static scope analysis has zero undefined identifiers (no ReferenceError)', () => {
+  const playerCode = fs.readFileSync(path.join(projectRoot, 'src/components/videos/VideoPlayer.jsx'), 'utf-8');
+  const ast = parser.parse(playerCode, {
+    sourceType: 'module',
+    plugins: ['jsx', 'exportDefaultFrom'],
+    errorRecovery: true,
+  });
+
+  const KNOWN_GLOBALS = new Set([
+    'Array', 'Boolean', 'Date', 'Error', 'Function', 'JSON', 'Math', 'Number', 'Object', 'Promise', 'RegExp', 'String',
+    'window', 'document', 'console', 'navigator', 'location', 'history', 'localStorage', 'sessionStorage',
+    'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'requestAnimationFrame', 'cancelAnimationFrame',
+    'fetch', 'URL', 'URLSearchParams', 'Blob', 'File', 'DOMParser', 'DOMException', 'screen',
+    'MouseEvent', 'TouchEvent', 'KeyboardEvent', 'Event', 'CustomEvent',
+    'React', 'import'
+  ]);
+
+  const undefinedIdentifiers = [];
+  traverse(ast, {
+    Identifier(pathNode) {
+      if (!pathNode.isReferencedIdentifier()) return;
+      if (pathNode.parent.type === 'JSXAttribute') return;
+      if (pathNode.parent.type === 'MemberExpression' && pathNode.parent.property === pathNode.node && !pathNode.parent.computed) return;
+      if (pathNode.parent.type === 'ObjectProperty' && pathNode.parent.key === pathNode.node && !pathNode.parent.computed) return;
+      const name = pathNode.node.name;
+      if (name === 'undefined' || name === 'NaN' || name === 'Infinity') return;
+      if (!pathNode.scope.hasBinding(name) && !KNOWN_GLOBALS.has(name)) {
+        undefinedIdentifiers.push({
+          name,
+          line: pathNode.node.loc?.start?.line,
+          col: pathNode.node.loc?.start?.column
+        });
+      }
+    }
+  });
+
+  assert.strictEqual(undefinedIdentifiers.length, 0, `Found undefined identifiers in VideoPlayer.jsx: ${JSON.stringify(undefinedIdentifiers)}`);
+  
+  // Explicitly assert restored states are declared and bound
+  assert.ok(playerCode.includes('isMobileOptionsOpen'), 'Must contain isMobileOptionsOpen');
+  assert.ok(playerCode.includes('setIsMobileOptionsOpen'), 'Must contain setIsMobileOptionsOpen');
+  assert.ok(playerCode.includes('isScrubbing'), 'Must contain isScrubbing');
+  assert.ok(playerCode.includes('setIsScrubbing'), 'Must contain setIsScrubbing');
+  assert.ok(playerCode.includes('scrubTime'), 'Must contain scrubTime');
+  assert.ok(playerCode.includes('setScrubTime'), 'Must contain setScrubTime');
+  assert.ok(playerCode.includes('scrubTooltip'), 'Must contain scrubTooltip');
+  assert.ok(playerCode.includes('setScrubTooltip'), 'Must contain setScrubTooltip');
+  assert.ok(playerCode.includes('centerFlash'), 'Must contain centerFlash');
+  assert.ok(playerCode.includes('setCenterFlash'), 'Must contain setCenterFlash');
+});
+
+await testAsync('VideoPlayer mounts cleanly in Playwright Chromium without ReferenceError and handles mobile options drawer', async () => {
+  const devServer = await createServer({
+    server: { port: 5195, host: '127.0.0.1' },
+    appType: 'spa'
+  });
+  await devServer.listen();
+  const serverUrl = devServer.resolvedUrls.local[0];
+
+  const testHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <script type="module" src="/@vite/client"></script>
+</head>
+<body style="background: #111; color: #fff; margin: 0; padding: 0;">
+  <div id="root"></div>
+  <script type="module">
+    import React from '/node_modules/.vite/deps/react.js';
+    import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js';
+    import VideoPlayer from '/src/components/videos/VideoPlayer.jsx';
+
+    const mockEpisode = {
+      id: 'ep-001',
+      title: 'Tập 1: Khởi đầu',
+      source_url: 'https://example.com/video.mp4',
+      poster_url: 'https://example.com/poster.webp',
+      subtitles: [
+        { id: 'sub-1', label: 'Tiếng Việt', language: 'vi', file_url: 'https://example.com/sub.vtt' }
+      ]
+    };
+
+    try {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(React.createElement(VideoPlayer, {
+        episode: mockEpisode,
+        seriesId: 'series-001',
+        episodes: [mockEpisode],
+        onEpisodeChange: () => {},
+      }));
+      window.__MOUNT_STATUS = { success: true };
+    } catch (err) {
+      window.__MOUNT_STATUS = { success: false, error: err.message, stack: err.stack };
+    }
+  </script>
+</body>
+</html>`;
+
+  const tempHtmlPath = path.join(projectRoot, 'test-player-runner.html');
+  fs.writeFileSync(tempHtmlPath, testHtml);
+
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 844 }, // Mobile viewport (iPhone 12/13/14)
+  });
+  const pageErrors = [];
+  page.on('pageerror', err => pageErrors.push(err.message));
+
+  try {
+    await page.goto(serverUrl + 'test-player-runner.html');
+    await page.waitForFunction(() => window.__MOUNT_STATUS !== undefined, { timeout: 10000 });
+    const mountStatus = await page.evaluate(() => window.__MOUNT_STATUS);
+    assert.strictEqual(mountStatus.success, true, `Mount failed: ${mountStatus.error}`);
+    assert.strictEqual(pageErrors.length, 0, `Page errors encountered: ${pageErrors.join(', ')}`);
+
+    // Verify options button exists and clicking it opens the mobile options drawer
+    const optionsBtn = page.locator('button[aria-label="Tùy chọn cài đặt"]');
+    await optionsBtn.waitFor({ state: 'attached', timeout: 5000 });
+
+    // Before clicking, drawer is not open
+    const drawerBefore = page.locator('text=Cài Đặt Trình Phát');
+    assert.strictEqual(await drawerBefore.count(), 0, 'Mobile options drawer must be closed initially');
+
+    // Click options button
+    await optionsBtn.click();
+
+    // Now options drawer should be visible with speeds and subtitles
+    const drawerAfter = page.locator('text=Cài Đặt Trình Phát');
+    await drawerAfter.waitFor({ state: 'visible', timeout: 5000 });
+
+    // Check speed pills
+    const speedPill = page.locator('button:has-text("1.25x")');
+    await speedPill.waitFor({ state: 'visible', timeout: 5000 });
+
+    // Close drawer
+    const closeBtn = page.locator('button[aria-label="Đóng cài đặt"]');
+    await closeBtn.click();
+    await drawerAfter.waitFor({ state: 'hidden', timeout: 5000 });
+  } finally {
+    if (fs.existsSync(tempHtmlPath)) fs.unlinkSync(tempHtmlPath);
+    await browser.close();
+    await devServer.close();
+  }
 });
 
 

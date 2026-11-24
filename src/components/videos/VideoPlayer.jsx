@@ -78,6 +78,17 @@ export default function VideoPlayer({
   const [resumePromptTime, setResumePromptTime] = useState(null);
   const [activeSubtitle, setActiveSubtitle] = useState('off');
 
+  // Smooth Scrubbing state
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubTime, setScrubTime] = useState(0);
+  const [scrubTooltip, setScrubTooltip] = useState({ visible: false, x: 0, time: 0 });
+
+  // Center play/pause flash feedback
+  const [centerFlash, setCenterFlash] = useState(null);
+
+  // Mobile options popup sheet
+  const [isMobileOptionsOpen, setIsMobileOptionsOpen] = useState(false);
+
   // Keep refs synchronized
   useEffect(() => {
     isPlayingRef.current = isPlaying;
