@@ -57,6 +57,10 @@ export default function VideoPlayer({
   const controlsTimeoutRef = useRef(null);
   const flashTimeoutRef = useRef(null);
   const isScrubbingRef = useRef(false);
+  const isHoveringControlsRef = useRef(false);
+  const isFocusInsideControlsRef = useRef(false);
+  const showControlsRef = useRef(true);
+  const wereControlsHiddenOnTouchStartRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -90,20 +94,96 @@ export default function VideoPlayer({
     }
   }, [episodeId, initialPosition]);
 
-  // 2. Hide controls automatically after 3.5s of inactivity while playing
+  // 2. Hide controls automatically after 3.0s of inactivity while playing
   const resetControlsTimer = useCallback(() => {
     setShowControls(true);
+    showControlsRef.current = true;
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
+      controlsTimeoutRef.current = null;
     }
-    if (isPlaying && !isScrubbingRef.current && !isMobileOptionsOpen) {
+
+    // Never auto-hide if:
+    // - Video is paused or ended (!isPlaying)
+    // - User is scrubbing timeline (isScrubbingRef.current)
+    // - Mobile options sheet is open (isMobileOptionsOpen)
+    // - User is hovering controls bar on desktop (isHoveringControlsRef.current)
+    // - Focus is currently inside controls bar (isFocusInsideControlsRef.current)
+    // - Video has error (errorMsg)
+    if (
+      isPlaying &&
+      !isScrubbingRef.current &&
+      !isMobileOptionsOpen &&
+      !isHoveringControlsRef.current &&
+      !isFocusInsideControlsRef.current &&
+      !errorMsg
+    ) {
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false);
-      }, 3500);
+        showControlsRef.current = false;
+      }, 3000);
     }
-  }, [isPlaying, isMobileOptionsOpen]);
+  }, [isPlaying, isMobileOptionsOpen, errorMsg]);
 
-  const handleMouseMove = () => {
+  // Sync showControlsRef whenever showControls updates
+  useEffect(() => {
+    showControlsRef.current = showControls;
+  }, [showControls]);
+
+  // React to isPlaying changes for auto-hide controls
+  useEffect(() => {
+    if (isPlaying) {
+      resetControlsTimer();
+    } else {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+        controlsTimeoutRef.current = null;
+      }
+      setShowControls(true);
+    }
+  }, [isPlaying, resetControlsTimer]);
+
+  // Keep controls visible while scrubbing
+  useEffect(() => {
+    if (isScrubbing) {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+        controlsTimeoutRef.current = null;
+      }
+      setShowControls(true);
+    } else if (isPlaying) {
+      resetControlsTimer();
+    }
+  }, [isScrubbing, isPlaying, resetControlsTimer]);
+
+  // Keep controls visible while mobile options menu is open
+  useEffect(() => {
+    if (isMobileOptionsOpen) {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+        controlsTimeoutRef.current = null;
+      }
+      setShowControls(true);
+    } else if (isPlaying) {
+      resetControlsTimer();
+    }
+  }, [isMobileOptionsOpen, isPlaying, resetControlsTimer]);
+
+  // Cleanup timers on unmount or episode/source change
+  useEffect(() => {
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+        controlsTimeoutRef.current = null;
+      }
+      if (flashTimeoutRef.current) {
+        clearTimeout(flashTimeoutRef.current);
+        flashTimeoutRef.current = null;
+      }
+    };
+  }, [episodeId, src]);
+
+  const handleUserActivity = () => {
     resetControlsTimer();
   };
 
@@ -138,9 +218,21 @@ export default function VideoPlayer({
     }, 650);
   };
 
-  // Tap directly on video canvas to Play/Pause
+  // Tap on video surface:
+  // - If controls are hidden while playing: gentle tap reveals controls WITHOUT toggling play/pause.
+  // - If controls are already visible or video paused: tap toggles play/pause.
   const handleSurfaceTap = (e) => {
     if (isScrubbingRef.current) return;
+
+    if (wereControlsHiddenOnTouchStartRef.current || (isPlaying && !showControls)) {
+      wereControlsHiddenOnTouchStartRef.current = false;
+      setShowControls(true);
+      showControlsRef.current = true;
+      resetControlsTimer();
+      return;
+    }
+
+    wereControlsHiddenOnTouchStartRef.current = false;
     togglePlay();
   };
 
@@ -161,6 +253,13 @@ export default function VideoPlayer({
 
     e.preventDefault();
     e.stopPropagation();
+
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+      controlsTimeoutRef.current = null;
+    }
+    setShowControls(true);
+    showControlsRef.current = true;
 
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -204,6 +303,10 @@ export default function VideoPlayer({
         immediate: true,
         extraMeta: { seriesTitle, episodeTitle, episodeNumber, posterKey },
       });
+
+      if (isPlaying) {
+        resetControlsTimer();
+      }
 
       try {
         e.currentTarget.releasePointerCapture(e.pointerId);
@@ -270,31 +373,181 @@ export default function VideoPlayer({
     }
   };
 
-  // 8. Fullscreen
+  // Screen orientation helpers (landscape lock on mobile fullscreen)
+  const tryLockLandscape = () => {
+    try {
+      if (window.screen?.orientation?.lock) {
+        window.screen.orientation.lock('landscape').catch(() => {});
+      }
+    } catch {}
+  };
+
+  const tryUnlockOrientation = () => {
+    try {
+      if (window.screen?.orientation?.unlock) {
+        window.screen.orientation.unlock();
+      }
+    } catch {}
+  };
+
+  // 8. Fullscreen (Universal support: Desktop, Android Chrome, iPhone Safari, iPhone Cốc Cốc)
   const toggleFullscreen = () => {
     const container = containerRef.current;
-    if (!container) return;
+    const video = videoRef.current;
+    if (!container && !video) return;
 
-    if (!document.fullscreenElement) {
-      if (container.requestFullscreen) {
-        container.requestFullscreen();
-      } else if (container.webkitRequestFullscreen) {
+    // Check if currently in fullscreen (Standard API, WebKit container, or iOS native video)
+    const isDocFs = Boolean(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement
+    );
+    const isVideoFs = Boolean(
+      video && (video.webkitDisplayingFullscreen || video.webkitDisplayingFullscreen === true)
+    );
+    const currentlyInFs = isDocFs || isVideoFs || isFullscreen;
+
+    if (currentlyInFs) {
+      // Exit fullscreen
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if (document.webkitExitFullscreen) {
+        try { document.webkitExitFullscreen(); } catch {}
+      } else if (document.mozCancelFullScreen) {
+        try { document.mozCancelFullScreen(); } catch {}
+      } else if (document.msExitFullscreen) {
+        try { document.msExitFullscreen(); } catch {}
+      }
+
+      if (video && typeof video.webkitExitFullscreen === 'function') {
+        try { video.webkitExitFullscreen(); } catch {}
+      }
+
+      tryUnlockOrientation();
+      setIsFullscreen(false);
+      return;
+    }
+
+    // ENTER Fullscreen:
+    // Helper to enter native video fullscreen (essential for iPhone Safari, iPhone Cốc Cốc, iOS WebKit)
+    const tryVideoNativeFullscreen = () => {
+      if (!video) return;
+      if (typeof video.webkitEnterFullscreen === 'function') {
+        try {
+          video.webkitEnterFullscreen();
+          tryLockLandscape();
+          setIsFullscreen(true);
+        } catch (err) {
+          console.warn('[VideoPlayer] webkitEnterFullscreen error:', err);
+        }
+      } else if (typeof video.requestFullscreen === 'function') {
+        video.requestFullscreen().then(() => {
+          tryLockLandscape();
+          setIsFullscreen(true);
+        }).catch((err) => {
+          console.warn('[VideoPlayer] video.requestFullscreen error:', err);
+        });
+      } else if (typeof video.webkitRequestFullscreen === 'function') {
+        try {
+          video.webkitRequestFullscreen();
+          tryLockLandscape();
+          setIsFullscreen(true);
+        } catch (err) {
+          console.warn('[VideoPlayer] video.webkitRequestFullscreen error:', err);
+        }
+      }
+    };
+
+    // Special handling for iPhone / iPod WebKit (Safari, Cốc Cốc iOS, Chrome iOS):
+    // WebKit on iPhone does not support container requestFullscreen; calling it throws or returns undefined.
+    // Calling video.webkitEnterFullscreen() MUST be synchronous inside the user gesture.
+    const isIPhone = typeof navigator !== 'undefined' && /iPhone|iPod/.test(navigator.userAgent);
+    if (isIPhone && video && typeof video.webkitEnterFullscreen === 'function') {
+      tryVideoNativeFullscreen();
+      return;
+    }
+
+    // 1. If standard container.requestFullscreen is supported (Android Chrome, Desktop):
+    if (container && typeof container.requestFullscreen === 'function') {
+      const fsPromise = container.requestFullscreen();
+      if (fsPromise && typeof fsPromise.then === 'function') {
+        fsPromise
+          .then(() => {
+            tryLockLandscape();
+            setIsFullscreen(true);
+          })
+          .catch((err) => {
+            console.warn('[VideoPlayer] container.requestFullscreen rejected, falling back to video native:', err);
+            tryVideoNativeFullscreen();
+          });
+      } else {
+        tryLockLandscape();
+        setIsFullscreen(true);
+      }
+    } else if (container && typeof container.webkitRequestFullscreen === 'function') {
+      try {
         container.webkitRequestFullscreen();
+        tryLockLandscape();
+        setIsFullscreen(true);
+      } catch (err) {
+        console.warn('[VideoPlayer] container.webkitRequestFullscreen error, falling back:', err);
+        tryVideoNativeFullscreen();
       }
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      }
+      // 2. Container fullscreen not supported (e.g. Cốc Cốc on iPhone, Safari iOS):
+      // Call video.webkitEnterFullscreen() directly within user gesture!
+      tryVideoNativeFullscreen();
     }
   };
 
   useEffect(() => {
-    const onFsChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
+    const syncFullscreenState = () => {
+      const isDocFs = Boolean(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+      );
+      const isVideoFs = Boolean(
+        videoRef.current && videoRef.current.webkitDisplayingFullscreen
+      );
+      setIsFullscreen(isDocFs || isVideoFs);
     };
-    document.addEventListener('fullscreenchange', onFsChange);
-    return () => document.removeEventListener('fullscreenchange', onFsChange);
-  }, []);
+
+    const handleWebkitBegin = () => {
+      setIsFullscreen(true);
+    };
+
+    const handleWebkitEnd = () => {
+      setIsFullscreen(false);
+      tryUnlockOrientation();
+      setShowControls(true);
+      resetControlsTimer();
+    };
+
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+    document.addEventListener('webkitfullscreenchange', syncFullscreenState);
+    document.addEventListener('mozfullscreenchange', syncFullscreenState);
+    document.addEventListener('MSFullscreenChange', syncFullscreenState);
+
+    const video = videoRef.current;
+    if (video) {
+      video.addEventListener('webkitbeginfullscreen', handleWebkitBegin);
+      video.addEventListener('webkitendfullscreen', handleWebkitEnd);
+    }
+
+    return () => {
+      document.removeEventListener('fullscreenchange', syncFullscreenState);
+      document.removeEventListener('webkitfullscreenchange', syncFullscreenState);
+      document.removeEventListener('mozfullscreenchange', syncFullscreenState);
+      document.removeEventListener('MSFullscreenChange', syncFullscreenState);
+      if (video) {
+        video.removeEventListener('webkitbeginfullscreen', handleWebkitBegin);
+        video.removeEventListener('webkitendfullscreen', handleWebkitEnd);
+      }
+    };
+  }, [resetControlsTimer]);
 
   // 9. Keyboard Shortcuts
   useEffect(() => {
@@ -438,12 +691,24 @@ export default function VideoPlayer({
   return (
     <div
       ref={containerRef}
-      className={styles.playerContainer}
-      onMouseMove={handleMouseMove}
+      className={`${styles.playerContainer} ${isPlaying && !showControls ? styles.cursorHidden : ''} ${isFullscreen ? styles.playerFullscreen : ''}`}
+      onMouseMove={handleUserActivity}
+      onTouchStart={handleUserActivity}
+      onPointerDown={handleUserActivity}
       tabIndex={0}
     >
       {/* Video Surface Tap Layer */}
-      <div className={styles.videoSurface} onClick={handleSurfaceTap}>
+      <div
+        className={styles.videoSurface}
+        onPointerDown={() => {
+          if (isPlaying && !showControlsRef.current) {
+            wereControlsHiddenOnTouchStartRef.current = true;
+          } else {
+            wereControlsHiddenOnTouchStartRef.current = false;
+          }
+        }}
+        onClick={handleSurfaceTap}
+      >
         <video
           ref={videoRef}
           src={src}
@@ -459,10 +724,15 @@ export default function VideoPlayer({
             setShowControls(true);
           }}
           onWaiting={() => setIsLoading(true)}
-          onPlaying={() => setIsLoading(false)}
+          onPlaying={() => {
+            setIsLoading(false);
+            resetControlsTimer();
+          }}
           onEnded={onEnded}
           onError={onError}
           playsInline
+          webkit-playsinline="true"
+          x5-playsinline="true"
         >
           {subtitles.map((sub) => (
             <track
@@ -495,7 +765,13 @@ export default function VideoPlayer({
 
       {/* Big Center Play Button when paused & controls visible */}
       {!isPlaying && !isLoading && !errorMsg && (
-        <div className={styles.centerOverlay} onClick={togglePlay}>
+        <div
+          className={styles.centerOverlay}
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlay();
+          }}
+        >
           <div className={styles.centerPlayBtn}>
             <IconPlay size={32} />
           </div>
@@ -543,8 +819,45 @@ export default function VideoPlayer({
 
       {/* Custom Bottom Controls Bar */}
       <div
-        className={`${styles.controlsBar} ${!showControls && isPlaying && !isScrubbing && !isMobileOptionsOpen ? styles.controlsHidden : ''}`}
-        onClick={(e) => e.stopPropagation()}
+        className={`${styles.controlsBar} ${
+          !showControls && isPlaying && !isScrubbing && !isMobileOptionsOpen
+            ? styles.controlsHidden
+            : ''
+        }`}
+        onClick={(e) => {
+          e.stopPropagation();
+          resetControlsTimer();
+        }}
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          resetControlsTimer();
+        }}
+        onMouseEnter={() => {
+          isHoveringControlsRef.current = true;
+          if (controlsTimeoutRef.current) {
+            clearTimeout(controlsTimeoutRef.current);
+            controlsTimeoutRef.current = null;
+          }
+          setShowControls(true);
+        }}
+        onMouseLeave={() => {
+          isHoveringControlsRef.current = false;
+          resetControlsTimer();
+        }}
+        onFocus={() => {
+          isFocusInsideControlsRef.current = true;
+          if (controlsTimeoutRef.current) {
+            clearTimeout(controlsTimeoutRef.current);
+            controlsTimeoutRef.current = null;
+          }
+          setShowControls(true);
+        }}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget)) {
+            isFocusInsideControlsRef.current = false;
+            resetControlsTimer();
+          }
+        }}
       >
         {/* ROW 1: Timeline Scrubber with Smooth Pointer Dragging */}
         <div

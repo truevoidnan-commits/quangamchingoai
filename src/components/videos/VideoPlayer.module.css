@@ -22,6 +22,35 @@
   height: 100vh;
 }
 
+.playerContainer:-webkit-full-screen {
+  border-radius: 0;
+  border: none;
+  width: 100vw;
+  height: 100vh;
+}
+
+.playerContainer:-moz-full-screen {
+  border-radius: 0;
+  border: none;
+  width: 100vw;
+  height: 100vh;
+}
+
+.playerFullscreen {
+  border-radius: 0 !important;
+  border: none !important;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+.cursorHidden {
+  cursor: none !important;
+}
+
+.cursorHidden * {
+  cursor: none !important;
+}
+
 /* Video Surface with Tap layer */
 .videoSurface {
   width: 100%;
@@ -129,13 +158,13 @@
   flex-direction: column;
   gap: 6px;
   z-index: 20;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.25s ease, transform 0.25s ease;
   box-sizing: border-box;
 }
 
 .controlsHidden {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(8px);
   pointer-events: none;
 }
 
