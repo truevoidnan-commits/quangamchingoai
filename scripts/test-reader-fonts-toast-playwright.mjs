@@ -51,44 +51,70 @@ const testHtml = `<!DOCTYPE html>
 
     function ReaderTestApp() {
       const [currentFontId, setCurrentFontId] = useState('serif');
+      const [chapterId, setChapterId] = useState('ch-1');
       const [editorToast, setEditorToast] = useState(null);
       const [undoCount, setUndoCount] = useState(0);
 
       const fontObj = FONT_OPTIONS.find(f => f.id === currentFontId) || FONT_OPTIONS[1];
       const fontCss = fontObj.css;
 
+      if (typeof window.__LATE_FALLBACK_PREPARE_COUNT !== 'number') {
+        window.__LATE_FALLBACK_PREPARE_COUNT = 0;
+      }
+
       const fontCoordinatorRef = useRef(null);
       if (!fontCoordinatorRef.current) {
         fontCoordinatorRef.current = new FontChangeCoordinator({
-          onRealigned: ({ targetY, paraIndex }) => {
+          onRealigned: ({ targetY, paraIndex, offsetY, sessionId }) => {
             window.__LAST_REALIGNED_PARA = paraIndex;
+            window.__LAST_REALIGNED_OFFSET = offsetY;
             window.__LAST_REALIGNED_Y = targetY;
+            window.__LAST_REALIGNED_SESSION = sessionId;
           }
         });
       }
 
       // Synchronously prepare anchor BEFORE font change
       const handleFontChange = useCallback((newId) => {
-        fontCoordinatorRef.current.prepare(document);
+        if (newId && newId !== currentFontId) {
+          fontCoordinatorRef.current.prepare(document);
+        }
         setCurrentFontId(newId);
-      }, []);
+      }, [currentFontId]);
 
-      // Realignment effect triggered when font changes
+      // Realignment effect triggered when font changes (matches ReaderPage.jsx lifecycle)
       const prevFontRef = useRef(currentFontId);
       useEffect(() => {
         if (prevFontRef.current === currentFontId) return;
         prevFontRef.current = currentFontId;
 
-        if (!fontCoordinatorRef.current.activeAnchor) {
-          fontCoordinatorRef.current.prepare(document);
+        const coordinator = fontCoordinatorRef.current;
+        if (!coordinator.activeAnchor || coordinator.scheduledSessionId === coordinator.currentSessionId) {
+          window.__LATE_FALLBACK_PREPARE_COUNT++;
+          coordinator.prepare(document);
         }
 
-        fontCoordinatorRef.current.scheduleRealignments(document);
+        const sessionId = coordinator.scheduleRealignments(document);
 
         return () => {
-          fontCoordinatorRef.current.cancel();
+          if (sessionId !== null) {
+            coordinator.cancel(sessionId);
+          }
         };
-      }, [currentFontId]);
+      }, [currentFontId, chapterId]);
+
+      // Cancel pending realignment on chapter change or unmount
+      const prevChapterIdRef = useRef(chapterId);
+      useEffect(() => {
+        if (prevChapterIdRef.current !== chapterId) {
+          prevChapterIdRef.current = chapterId;
+          fontCoordinatorRef.current.cancel();
+        }
+      }, [chapterId]);
+
+      useEffect(() => {
+        return () => fontCoordinatorRef.current.cancel();
+      }, []);
 
       // User scroll detection
       useEffect(() => {
@@ -101,6 +127,7 @@ const testHtml = `<!DOCTYPE html>
 
       window.__APP_COORDINATOR = fontCoordinatorRef.current;
       window.__APP_CURRENT_FONT = currentFontId;
+      window.__GET_READING_ANCHOR = () => getReadingAnchor(document);
 
       return React.createElement('div', { style: { padding: '20px 16px 140px' } }, [
         // Controls Toolbar
@@ -149,7 +176,13 @@ const testHtml = `<!DOCTYPE html>
                 message: 'Đã thay thế 28 vị trí từ ngữ trong 12 chương toàn bộ tiểu thuyết!',
                 onUndo: () => setUndoCount(c => c + 1)
               })
-            }, 'Mở Toast Dài')
+            }, 'Mở Toast Dài'),
+            React.createElement('button', {
+              key: 'btn-switch-chapter',
+              id: 'btn-switch-chapter',
+              style: { padding: '8px 14px', borderRadius: '8px', background: 'rgba(255,204,0,0.18)', color: '#ffcc00', border: '1px solid rgba(255,204,0,0.35)', cursor: 'pointer' },
+              onClick: () => setChapterId(prev => prev === 'ch-1' ? 'ch-2' : 'ch-1')
+            }, 'Chuyển chương (' + chapterId + ')')
           ]),
           React.createElement('div', { key: 'undo-status', id: 'undo-status', style: { marginTop: '10px', fontSize: '13px', color: '#94a3b8' } }, 'Undo Count: ' + undoCount)
         ]),
@@ -258,13 +291,13 @@ try {
   const fontBtns = desktopPage.locator('button[id^="btn-font-"]');
   assert.equal(await fontBtns.count(), 6, 'Must display all 6 font options');
 
-  // 1. Scroll down to middle of chapter (e.g. Paragraph 12)
-  console.log('  Scrolling to middle of long chapter (Paragraph 12)...');
+  // 1. Scroll down to middle of chapter (Paragraph 12 at non-zero intra-paragraph offset: rect.top = 52px)
+  console.log('  Scrolling to middle of long chapter (Paragraph 12 at top ~52px)...');
   const para12 = desktopPage.locator('#para-12');
   await desktopPage.evaluate(() => {
     const el = document.getElementById('para-12');
     if (el) {
-      const targetY = Math.max(0, window.scrollY + el.getBoundingClientRect().top - 70);
+      const targetY = Math.max(0, window.scrollY + el.getBoundingClientRect().top - 52);
       window.scrollTo({ top: targetY, behavior: 'instant' });
     }
   });
@@ -272,49 +305,85 @@ try {
 
   const initialTop12 = await para12.evaluate(el => el.getBoundingClientRect().top);
   const initialScrollY = await desktopPage.evaluate(() => window.scrollY);
+  const initialAnchor = await desktopPage.evaluate(() => window.__GET_READING_ANCHOR());
   assert.ok(initialScrollY > 400, 'Initial scroll position must be deep in the chapter');
-  assert.ok(Math.abs(initialTop12 - 70) < 15, `Paragraph 12 must be aligned near 70px (was: ${initialTop12})`);
+  assert.equal(initialAnchor.paraIndex, 12, `Initial reading anchor must be paraIndex 12 (got: ${initialAnchor.paraIndex})`);
+  assert.ok(Math.abs(initialTop12 - 52) < 5, `Paragraph 12 must start near 52px (got: ${initialTop12})`);
 
-  // 2. Switch font: Serif -> Literata
+  const verifyParagraph12Anchor = async (label) => {
+    const metrics = await desktopPage.evaluate(() => {
+      const el = document.getElementById('para-12');
+      const rect = el.getBoundingClientRect();
+      return {
+        scrollY: window.scrollY,
+        top12: rect.top,
+        anchor: window.__GET_READING_ANCHOR(),
+        lastRealignedPara: window.__LAST_REALIGNED_PARA,
+        lateFallbackCount: window.__LATE_FALLBACK_PREPARE_COUNT,
+      };
+    });
+    assert.equal(metrics.lateFallbackCount, 0, `${label}: old effect cleanup must NOT wipe pre-reflow activeAnchor`);
+    assert.equal(metrics.lastRealignedPara, 12, `${label}: coordinator must realign paraIndex 12 (got: ${metrics.lastRealignedPara})`);
+    assert.equal(metrics.anchor.paraIndex, 12, `${label}: reading anchor paraIndex must remain 12 (got: ${metrics.anchor.paraIndex})`);
+    assert.ok(
+      Math.abs(metrics.top12 - initialTop12) <= 3,
+      `${label}: exact offset of paragraph 12 must be preserved (expected top ~${initialTop12}, got ${metrics.top12})`
+    );
+  };
+
+  // 2. Full sequence: Serif -> Literata -> Patrick Hand -> Serif
   console.log('  Switching Serif -> Literata...');
   await desktopPage.locator('#btn-font-literata').click();
   await desktopPage.waitForFunction(() => window.__APP_CURRENT_FONT === 'literata', { timeout: 5000 });
-  await desktopPage.waitForTimeout(400);
+  await desktopPage.waitForTimeout(550);
 
   const literataContentFamily = await desktopPage.locator('#reading-content').evaluate(el => window.getComputedStyle(el).fontFamily);
   assert.ok(literataContentFamily.toLowerCase().includes('literata'), `Must apply Literata font-family (got: ${literataContentFamily})`);
+  await verifyParagraph12Anchor('Serif -> Literata');
 
-  // Verify paragraph 12 is still in the active reading area (not jumped to 0 or top of chapter)
-  const afterLitScrollY = await desktopPage.evaluate(() => window.scrollY);
-  const afterLitTop12 = await para12.evaluate(el => el.getBoundingClientRect().top);
-  assert.ok(afterLitScrollY > 300, `Scroll position after Literata must NOT reset to 0 (was: ${afterLitScrollY})`);
-  assert.ok(afterLitTop12 < 180 && afterLitTop12 > -60, `Paragraph 12 must remain in focal viewport (got top: ${afterLitTop12})`);
-
-  // 3. Switch font: Literata -> Patrick Hand
   console.log('  Switching Literata -> Patrick Hand...');
   await desktopPage.locator('#btn-font-patrick-hand').click();
   await desktopPage.waitForFunction(() => window.__APP_CURRENT_FONT === 'patrick-hand', { timeout: 5000 });
-  await desktopPage.waitForTimeout(400);
+  await desktopPage.waitForTimeout(550);
 
   const patrickContentFamily = await desktopPage.locator('#reading-content').evaluate(el => window.getComputedStyle(el).fontFamily);
   assert.ok(patrickContentFamily.toLowerCase().includes('patrick hand'), `Must apply Patrick Hand (got: ${patrickContentFamily})`);
+  await verifyParagraph12Anchor('Literata -> Patrick Hand');
 
-  const afterPatScrollY = await desktopPage.evaluate(() => window.scrollY);
-  const afterPatTop12 = await para12.evaluate(el => el.getBoundingClientRect().top);
-  assert.ok(afterPatScrollY > 300, `Scroll position after Patrick Hand must NOT reset to 0 (was: ${afterPatScrollY})`);
-  assert.ok(afterPatTop12 < 180 && afterPatTop12 > -60, `Paragraph 12 must remain in focal viewport (got top: ${afterPatTop12})`);
-
-  // 4. Test rapid consecutive font switching (stress test)
-  console.log('  Testing rapid consecutive font switching (Serif -> Sans -> Literata -> Patrick Hand)...');
+  console.log('  Switching Patrick Hand -> Serif...');
   await desktopPage.locator('#btn-font-serif').click();
-  await desktopPage.locator('#btn-font-sans').click();
-  await desktopPage.locator('#btn-font-literata').click();
-  await desktopPage.locator('#btn-font-patrick-hand').click();
-  await desktopPage.waitForTimeout(400);
+  await desktopPage.waitForFunction(() => window.__APP_CURRENT_FONT === 'serif', { timeout: 5000 });
+  await desktopPage.waitForTimeout(550);
 
-  const rapidScrollY = await desktopPage.evaluate(() => window.scrollY);
-  assert.ok(rapidScrollY > 300, `Rapid font switching must not cause jump to top (scrollY: ${rapidScrollY})`);
-  assert.equal(desktopErrors.length, 0, 'No errors during rapid font switching');
+  const serifContentFamily = await desktopPage.locator('#reading-content').evaluate(el => window.getComputedStyle(el).fontFamily);
+  assert.ok(serifContentFamily.toLowerCase().includes('serif'), `Must apply Serif (got: ${serifContentFamily})`);
+  await verifyParagraph12Anchor('Patrick Hand -> Serif');
+
+  // 3. Rapid mid-session consecutive switching (30ms intervals BEFORE previous 500ms session finishes)
+  console.log('  Testing rapid mid-session switching (Serif -> Literata -> Patrick Hand -> Serif before session end)...');
+  await desktopPage.locator('#btn-font-literata').click();
+  await desktopPage.waitForTimeout(30);
+  await desktopPage.locator('#btn-font-patrick-hand').click();
+  await desktopPage.waitForTimeout(30);
+  await desktopPage.locator('#btn-font-serif').click();
+  await desktopPage.waitForFunction(() => window.__APP_CURRENT_FONT === 'serif', { timeout: 5000 });
+  await desktopPage.waitForTimeout(600);
+
+  await verifyParagraph12Anchor('Rapid Serif -> Literata -> Patrick Hand -> Serif');
+  assert.equal(desktopErrors.length, 0, 'No errors during rapid mid-session font switching');
+
+  // 4. Verify chapter transition cancels active font session
+  console.log('  Testing chapter change cancellation mid-session...');
+  await desktopPage.locator('#btn-font-literata').click();
+  await desktopPage.waitForTimeout(20);
+  await desktopPage.locator('#btn-switch-chapter').click();
+  await desktopPage.waitForTimeout(100);
+  const afterChapterSwitchState = await desktopPage.evaluate(() => ({
+    activeAnchor: window.__APP_COORDINATOR.activeAnchor,
+    timersCount: window.__APP_COORDINATOR.timers.length,
+  }));
+  assert.equal(afterChapterSwitchState.activeAnchor, null, 'Chapter switch must clear activeAnchor');
+  assert.equal(afterChapterSwitchState.timersCount, 0, 'Chapter switch must clear pending timers');
 
   // 5. Test Editor Toast Presentation on Desktop
   console.log('  Testing Editor Toast presentation on Desktop...');
@@ -362,23 +431,34 @@ try {
   await mobilePage.waitForFunction(() => window.__APP_MOUNTED === true, { timeout: 10000 });
   assert.equal(mobileErrors.length, 0, 'No mobile page errors');
 
-  // 1. Mobile font change at paragraph 8
+  // 1. Mobile font change at paragraph 8 (at non-zero intra-paragraph offset top ~56px)
   const mobilePara8 = mobilePage.locator('#para-8');
   await mobilePage.evaluate(() => {
     const el = document.getElementById('para-8');
     if (el) {
-      const targetY = Math.max(0, window.scrollY + el.getBoundingClientRect().top - 70);
+      const targetY = Math.max(0, window.scrollY + el.getBoundingClientRect().top - 56);
       window.scrollTo({ top: targetY, behavior: 'instant' });
     }
   });
   await mobilePage.waitForTimeout(100);
-  const mobileInitialY = await mobilePage.evaluate(() => window.scrollY);
+  const mobileInitialTop8 = await mobilePara8.evaluate(el => el.getBoundingClientRect().top);
 
   await mobilePage.locator('#btn-font-literata').click();
-  await mobilePage.waitForTimeout(400);
+  await mobilePage.waitForFunction(() => window.__APP_CURRENT_FONT === 'literata', { timeout: 5000 });
+  await mobilePage.waitForTimeout(550);
 
-  const mobileAfterY = await mobilePage.evaluate(() => window.scrollY);
-  assert.ok(mobileAfterY > 200, 'Mobile scroll must stay anchored to paragraph 8');
+  const mobileMetricsAfter = await mobilePage.evaluate(() => ({
+    scrollY: window.scrollY,
+    top8: document.getElementById('para-8').getBoundingClientRect().top,
+    anchor: window.__GET_READING_ANCHOR(),
+    lateFallbackCount: window.__LATE_FALLBACK_PREPARE_COUNT,
+  }));
+  assert.equal(mobileMetricsAfter.lateFallbackCount, 0, 'Mobile must capture anchor pre-reflow');
+  assert.equal(mobileMetricsAfter.anchor.paraIndex, 8, `Mobile reading anchor must remain paraIndex 8 (got: ${mobileMetricsAfter.anchor.paraIndex})`);
+  assert.ok(
+    Math.abs(mobileMetricsAfter.top8 - mobileInitialTop8) <= 3,
+    `Mobile paragraph 8 offset must be preserved (expected ~${mobileInitialTop8}, got: ${mobileMetricsAfter.top8})`
+  );
 
   // 2. Test user actively scrolling during font loading (coordinator must NOT fight user)
   console.log('  Testing user actively scrolling (coordinator must yield to user intent)...');

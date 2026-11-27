@@ -588,23 +588,36 @@ export default function ReaderPage() {
     prevFontFamilyRef.current = settings.fontFamily;
     if (!chapter) return;
 
-    // Nếu chưa prepare từ handleUpdateSettings (ví dụ đổi font qua test/khác), chuẩn bị ngay
-    if (!fontCoordinatorRef.current.activeAnchor) {
-      fontCoordinatorRef.current.prepare(document);
+    const coordinator = fontCoordinatorRef.current;
+    // Nếu chưa prepare từ handleUpdateSettings cho lần đổi này, chuẩn bị ngay
+    if (!coordinator.activeAnchor || coordinator.scheduledSessionId === coordinator.currentSessionId) {
+      coordinator.prepare(document);
     }
 
-    fontCoordinatorRef.current.scheduleRealignments(document);
+    const sessionId = coordinator.scheduleRealignments(document);
 
     return () => {
-      // Hủy tác vụ cũ khi đổi font liên tiếp hoặc unmount
-      fontCoordinatorRef.current.cancel();
+      // Chỉ hủy đúng session mà chính effect này tạo/quản lý để không xóa nhầm anchor của lần đổi font kế tiếp
+      if (sessionId !== null) {
+        coordinator.cancel(sessionId);
+      }
     };
   }, [settings.fontFamily, chapter?.id]);
 
-  // Hủy các tác vụ khôi phục cũ nếu người dùng chuyển chương
+  // Hủy các tác vụ khôi phục cũ khi chuyển chương hoặc khi unmount
+  const prevChapterIdRef = useRef(chapter?.id);
   useEffect(() => {
-    fontCoordinatorRef.current.cancel();
+    if (prevChapterIdRef.current !== chapter?.id) {
+      prevChapterIdRef.current = chapter?.id;
+      fontCoordinatorRef.current.cancel();
+    }
   }, [chapter?.id]);
+
+  useEffect(() => {
+    return () => {
+      fontCoordinatorRef.current.cancel();
+    };
+  }, []);
 
   // Chu kỳ ngộ đạo 60s lặp lại liên tục (cứ 60s tăng tu vi âm thầm & bắt đầu vòng mới)
   const [cycleSeconds, setCycleSeconds] = useState(() => { const saved = localStorage.getItem(getCultivationKey('pending_seconds')); return saved && !isNaN(parseInt(saved, 10)) ? parseInt(saved, 10) : 0; });

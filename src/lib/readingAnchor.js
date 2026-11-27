@@ -31,7 +31,7 @@ export function getReadingAnchor(doc = typeof document !== 'undefined' ? documen
     const lastRect = paraEls[lastIdx].getBoundingClientRect();
     return {
       paraIndex: lastIdx,
-      offsetY: Math.max(0, READING_LINE_OFFSET - lastRect.top),
+      offsetY: READING_LINE_OFFSET - lastRect.top,
       scrollY: currentScrollY,
       isNearBottom: true,
     };
@@ -43,7 +43,7 @@ export function getReadingAnchor(doc = typeof document !== 'undefined' ? documen
     if (rect.bottom >= 60 && rect.top <= 140) {
       return {
         paraIndex: i,
-        offsetY: Math.max(0, READING_LINE_OFFSET - rect.top),
+        offsetY: READING_LINE_OFFSET - rect.top,
         scrollY: currentScrollY,
       };
     }
@@ -57,7 +57,7 @@ export function getReadingAnchor(doc = typeof document !== 'undefined' ? documen
       const prevRect = paraEls[idx].getBoundingClientRect();
       return {
         paraIndex: idx,
-        offsetY: Math.max(0, READING_LINE_OFFSET - prevRect.top),
+        offsetY: READING_LINE_OFFSET - prevRect.top,
         scrollY: currentScrollY,
       };
     }
@@ -114,6 +114,7 @@ export function restoreReadingAnchor(anchor, doc = typeof document !== 'undefine
 export class FontChangeCoordinator {
   constructor({ onRealigned, onSessionEnd } = {}) {
     this.currentSessionId = 0;
+    this.scheduledSessionId = null;
     this.activeAnchor = null;
     this.userHasScrolled = false;
     this.lastTargetY = null;
@@ -122,13 +123,23 @@ export class FontChangeCoordinator {
     this.onSessionEnd = onSessionEnd;
   }
 
+  _clearTimers() {
+    for (const t of this.timers) {
+      clearTimeout(t);
+    }
+    this.timers = [];
+  }
+
   /**
-   * Must be called right before applying font update
+   * Must be called right before applying font update.
+   * Invalidates any previous session timers/promises and captures pre-reflow anchor.
    */
   prepare(doc = typeof document !== 'undefined' ? document : null) {
-    this.cancel();
+    this._clearTimers();
     this.currentSessionId++;
+    this.scheduledSessionId = null;
     this.userHasScrolled = false;
+    this.lastTargetY = null;
     this.activeAnchor = getReadingAnchor(doc);
     return this.activeAnchor;
   }
@@ -148,8 +159,9 @@ export class FontChangeCoordinator {
   /**
    * Execute realignment for the active session
    */
-  realign(doc = typeof document !== 'undefined' ? document : null) {
+  realign(doc = typeof document !== 'undefined' ? document : null, expectedSessionId = null) {
     if (!this.activeAnchor || this.userHasScrolled) return null;
+    if (expectedSessionId !== null && expectedSessionId !== this.currentSessionId) return null;
 
     const targetY = restoreReadingAnchor(this.activeAnchor, doc);
     if (targetY !== null) {
@@ -158,6 +170,8 @@ export class FontChangeCoordinator {
         this.onRealigned({
           targetY,
           paraIndex: this.activeAnchor.paraIndex,
+          offsetY: this.activeAnchor.offsetY,
+          sessionId: this.currentSessionId,
         });
       }
     }
@@ -165,13 +179,19 @@ export class FontChangeCoordinator {
   }
 
   /**
-   * Schedule multi-pass realignment and bind to document.fonts.ready
+   * Schedule multi-pass realignment and bind to document.fonts.ready.
+   * Returns the sessionId bound to this scheduling pass.
    */
   scheduleRealignments(doc = typeof document !== 'undefined' ? document : null) {
+    if (!this.activeAnchor || this.userHasScrolled) return null;
+
+    this._clearTimers();
     const sessionId = this.currentSessionId;
+    this.scheduledSessionId = sessionId;
+
     const runIfCurrent = () => {
-      if (this.currentSessionId === sessionId && !this.userHasScrolled) {
-        return this.realign(doc);
+      if (this.currentSessionId === sessionId && !this.userHasScrolled && this.activeAnchor) {
+        return this.realign(doc, sessionId);
       }
       return null;
     };
@@ -179,7 +199,7 @@ export class FontChangeCoordinator {
     // Immediate pass
     runIfCurrent();
 
-    // Bind to fonts.ready promise
+    // Bind to fonts.ready promise (guarded by sessionId so stale promises cannot interfere)
     if (doc?.fonts?.ready) {
       doc.fonts.ready.then(() => {
         runIfCurrent();
@@ -199,17 +219,25 @@ export class FontChangeCoordinator {
       }, delay);
       this.timers.push(timer);
     }
+
+    return sessionId;
   }
 
   /**
-   * Cancel any pending realignment timers and invalidate current session
+   * Cancel pending realignment timers and invalidate session.
+   * When sessionId is provided (e.g. React effect cleanup), ONLY cancels if that
+   * sessionId is still the current active session — so stale cleanups never wipe
+   * out a newer font change's pre-reflow anchor.
    */
-  cancel() {
-    for (const t of this.timers) {
-      clearTimeout(t);
+  cancel(sessionId = null) {
+    if (sessionId !== null && sessionId !== undefined && sessionId !== this.currentSessionId) {
+      return false;
     }
-    this.timers = [];
+    this._clearTimers();
+    this.currentSessionId++;
+    this.scheduledSessionId = null;
     this.activeAnchor = null;
     this.lastTargetY = null;
+    return true;
   }
 }

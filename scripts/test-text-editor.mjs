@@ -1185,13 +1185,13 @@ describe('Reader Fonts & Compact Minimal Editor Toast', () => {
       // 2. Reflow shifts paragraph top from 90 to 110 (+20px)
       targetParaTop = 110;
       const targetY = coordinator.realign(mockDoc);
-      // 500 + 110 - 70 = 540
-      assert.equal(targetY, 540);
-      assert.equal(currentScrollY, 540);
+      // Keeps paragraph top exact at pre-reflow 90px (offsetY = 70 - 90 = -20): 500 + 110 - (70 - (-20)) = 520
+      assert.equal(targetY, 520);
+      assert.equal(currentScrollY, 520);
       assert.equal(realignedEvents.length, 1);
-      assert.equal(realignedEvents[0].targetY, 540);
+      assert.equal(realignedEvents[0].targetY, 520);
 
-      // 3. User actively scrolls away (> 45px delta from lastTargetY=540)
+      // 3. User actively scrolls away (> 45px delta from lastTargetY=520)
       coordinator.handleUserScroll(650); // scrolled 110px down
       assert.equal(coordinator.userHasScrolled, true);
       assert.equal(coordinator.activeAnchor, null);
@@ -1212,6 +1212,120 @@ describe('Reader Fonts & Compact Minimal Editor Toast', () => {
       coordinator.cancel();
       assert.equal(coordinator.activeAnchor, null);
       assert.equal(coordinator.lastTargetY, null);
+    });
+
+    test('React effect cleanup cancel(oldSessionId) does NOT erase newly prepared anchor and isolates stale fonts.ready', async () => {
+      const realignedLog = [];
+      const coordinator = new FontChangeCoordinator({
+        onRealigned: (info) => realignedLog.push(info),
+      });
+
+      let currentScrollY = 1200;
+      // Paragraph 0 scrolled past, Paragraph 12 at top=52 (offsetY = 18), Paragraph 13 below
+      let para12Top = 52;
+      let para13Top = 210;
+
+      let resolveFonts1;
+      let resolveFonts2;
+      const fontsReady1 = new Promise((r) => { resolveFonts1 = r; });
+      const fontsReady2 = new Promise((r) => { resolveFonts2 = r; });
+      let currentFontsReady = fontsReady1;
+
+      const makeMockElements = () => [
+        ...Array.from({ length: 12 }, (_, idx) => ({
+          getBoundingClientRect: () => ({ top: -1500 + idx * 120, bottom: -1380 + idx * 120 }),
+        })),
+        { getBoundingClientRect: () => ({ top: para12Top, bottom: para12Top + 140 }) },
+        { getBoundingClientRect: () => ({ top: para13Top, bottom: para13Top + 140 }) },
+      ];
+
+      const mockDoc = {
+        defaultView: {
+          get scrollY() { return currentScrollY; },
+          innerHeight: 800,
+          scrollTo: ({ top }) => {
+            const delta = top - currentScrollY;
+            currentScrollY = top;
+            para12Top -= delta;
+            para13Top -= delta;
+          },
+        },
+        documentElement: { scrollHeight: 5000 },
+        fonts: {
+          get ready() { return currentFontsReady; },
+        },
+        querySelectorAll: () => makeMockElements(),
+        getElementById: (id) => {
+          if (id === 'para-12') return { getBoundingClientRect: () => ({ top: para12Top, bottom: para12Top + 140 }) };
+          if (id === 'para-13') return { getBoundingClientRect: () => ({ top: para13Top, bottom: para13Top + 140 }) };
+          return null;
+        },
+      };
+
+      // --- Transition 1: Serif -> Literata ---
+      // 1a. handleUpdateSettings calls prepare() BEFORE render
+      const anchor1 = coordinator.prepare(mockDoc);
+      assert.equal(anchor1.paraIndex, 12);
+      assert.equal(anchor1.offsetY, 18); // 70 - 52
+
+      // 1b. Literata renders & reflows DOM (+28px shift down)
+      para12Top += 28;
+      para13Top += 28;
+      const sessionId1 = coordinator.scheduleRealignments(mockDoc);
+      assert.ok(sessionId1 > 0);
+      assert.equal(para12Top, 52, 'Immediate pass keeps para 12 at exact offset 52px');
+
+      // --- Transition 2: Literata -> Patrick Hand (before session 1 timers/fontsReady1 finish!) ---
+      // 2a. handleUpdateSettings calls prepare() BEFORE second render (captures pre-reflow para 12 at 52px!)
+      const anchor2 = coordinator.prepare(mockDoc);
+      assert.equal(anchor2.paraIndex, 12);
+      assert.equal(anchor2.offsetY, 18);
+      const sessionId2 = coordinator.currentSessionId;
+      assert.ok(sessionId2 > sessionId1);
+
+      // 2b. Patrick Hand renders & reflows DOM dramatically (para 12 pushed off focal line, para 13 moves to 110px)
+      currentFontsReady = fontsReady2;
+      para12Top = -80;
+      para13Top = 110;
+
+      // 2c. React executes Effect 1 cleanup BEFORE Effect 2 body!
+      const canceledOld = coordinator.cancel(sessionId1);
+      assert.equal(canceledOld, false, 'Cleanup of old session MUST NOT cancel newly prepared session 2');
+      assert.ok(coordinator.activeAnchor !== null, 'Session 2 pre-reflow anchor MUST remain intact');
+      assert.equal(coordinator.activeAnchor.paraIndex, 12, 'Anchor MUST remain para 12 (not drifted to para 13)');
+      assert.equal(coordinator.activeAnchor.offsetY, 18, 'Anchor offsetY MUST remain preserved');
+
+      // 2d. React executes Effect 2 body -> schedules session 2 using pre-reflow anchor 2
+      const scheduled2 = coordinator.scheduleRealignments(mockDoc);
+      assert.equal(scheduled2, sessionId2);
+      assert.equal(para12Top, 52, 'Session 2 restores para 12 back to exact 52px despite dramatic reflow');
+
+      // 3. Stale fontsReady1 from session 1 resolves late -> MUST NOT interfere with session 2
+      const eventsBeforeStaleResolve = realignedLog.length;
+      para12Top = 65; // simulate slight metric shift before fontsReady2
+      resolveFonts1();
+      await Promise.resolve();
+      await Promise.resolve();
+      assert.equal(
+        realignedLog.length,
+        eventsBeforeStaleResolve,
+        'Stale document.fonts.ready from session 1 MUST NOT trigger realign on session 2'
+      );
+      assert.equal(para12Top, 65, 'Scroll must NOT be touched by stale session 1 promise');
+
+      // 4. Current fontsReady2 resolves -> realigns para 12 cleanly for session 2
+      resolveFonts2();
+      await Promise.resolve();
+      await Promise.resolve();
+      assert.equal(realignedLog.length, eventsBeforeStaleResolve + 1);
+      assert.equal(realignedLog[realignedLog.length - 1].sessionId, sessionId2);
+      assert.equal(para12Top, 52, 'Current session 2 fonts.ready restores para 12 to exact 52px');
+
+      // 5. Matching cleanup cancel(sessionId2) on chapter switch or unmount cancels cleanly
+      const canceledCurrent = coordinator.cancel(sessionId2);
+      assert.equal(canceledCurrent, true, 'Matching sessionId cleanup cancels active session');
+      assert.equal(coordinator.activeAnchor, null);
+      assert.equal(coordinator.timers.length, 0);
     });
   });
 });
