@@ -556,6 +556,57 @@ export default function ReaderPage() {
     };
   }, [chapter?.id, loading, activeNovelId, searchKeyword, pullProgressDone]);
 
+  // Tái căn chỉnh vị trí đọc khi đổi font chữ để tránh reflow làm nhảy trang hoặc mất dấu
+  const prevFontFamilyRef = useRef(settings.fontFamily);
+  useEffect(() => {
+    if (prevFontFamilyRef.current === settings.fontFamily) return;
+    prevFontFamilyRef.current = settings.fontFamily;
+    if (!chapter) return;
+
+    // Xác định đoạn văn đang hiển thị trong tầm mắt trước khi reflow
+    let targetParaIndex = lastRecordedScrollRef.current.paraIndex || 0;
+    const paraEls = document.querySelectorAll('[data-para-index]');
+    for (let i = 0; i < paraEls.length; i++) {
+      const rect = paraEls[i].getBoundingClientRect();
+      if (rect.bottom >= 60 && rect.top <= 140) {
+        targetParaIndex = i;
+        break;
+      }
+    }
+
+    const realignReadingPosition = () => {
+      const targetPara = document.getElementById(`para-${targetParaIndex}`);
+      if (targetPara) {
+        const rect = targetPara.getBoundingClientRect();
+        const targetY = Math.max(0, window.scrollY + rect.top - 70);
+        window.scrollTo({ top: targetY, behavior: 'instant' });
+        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const percent = maxScroll > 0 ? Math.max(0, Math.min(1, targetY / maxScroll)) : 0;
+        lastRecordedScrollRef.current = {
+          ...lastRecordedScrollRef.current,
+          percent,
+          scrollY: targetY,
+          paraIndex: targetParaIndex,
+        };
+      }
+    };
+
+    // Căn chỉnh ngay và đa nhịp sau khi font WOFF2 tải xong
+    realignReadingPosition();
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      document.fonts.ready.then(realignReadingPosition).catch(() => {});
+    }
+    const t1 = setTimeout(realignReadingPosition, 60);
+    const t2 = setTimeout(realignReadingPosition, 180);
+    const t3 = setTimeout(realignReadingPosition, 360);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [settings.fontFamily, chapter]);
+
   // Chu kỳ ngộ đạo 60s lặp lại liên tục (cứ 60s tăng tu vi âm thầm & bắt đầu vòng mới)
   const [cycleSeconds, setCycleSeconds] = useState(() => { const saved = localStorage.getItem(getCultivationKey('pending_seconds')); return saved && !isNaN(parseInt(saved, 10)) ? parseInt(saved, 10) : 0; });
 
@@ -1509,8 +1560,11 @@ export default function ReaderPage() {
 
       {/* Undo / Editor Toast notification */}
       {editorToast && (
-        <div className={selectionStyles.editorToast}>
-          <span>{editorToast.message}</span>
+        <div className={selectionStyles.editorToast} role="status" aria-live="polite">
+          <span className={selectionStyles.toastIconWrap} aria-hidden="true">
+            <Icon name="check" size={13} className={selectionStyles.toastIcon} />
+          </span>
+          <span className={selectionStyles.toastMessage}>{editorToast.message}</span>
           {editorToast.onUndo && (
             <button
               type="button"
@@ -1525,8 +1579,9 @@ export default function ReaderPage() {
             className={selectionStyles.toastCloseBtn}
             onClick={() => setEditorToast(null)}
             title="Đóng thông báo"
+            aria-label="Đóng thông báo"
           >
-            ✕
+            <Icon name="x" size={14} />
           </button>
         </div>
       )}

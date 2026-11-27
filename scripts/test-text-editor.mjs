@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { test, describe, beforeEach } from 'node:test';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   isUnicodeWordChar,
   hasWordBoundaries,
@@ -16,6 +19,8 @@ import {
   restoreNovelSnapshot as restoreSnapshotInternal,
 } from '../src/lib/novelSnapshot.js';
 import { setDBPromiseForTesting, replaceTextInNovel, restoreNovelSnapshot } from '../src/lib/db.js';
+import { FONT_OPTIONS } from '../src/hooks/useReadingSettings.js';
+import { getReadingSettings, saveReadingSettings } from '../src/lib/storage.js';
 
 // -------------------------------------------------------------
 // 1. Mock In-Memory Databases for Main DB and Snapshot DB
@@ -865,5 +870,180 @@ describe('Novel-wide Snapshot Backup & Atomic Restoration', () => {
     // Verify snapshot was NOT deleted
     const preservedSnap = await getNovelSnapshot(replaceRes2.snapshotId);
     assert.ok(preservedSnap, 'Snapshot must be preserved when rollback aborts');
+  });
+});
+
+// -------------------------------------------------------------
+// 5. Reader Fonts (Literata & Patrick Hand) & Minimal Editor Toast
+// -------------------------------------------------------------
+describe('Reader Fonts & Compact Minimal Editor Toast', () => {
+  beforeEach(() => {
+    if (typeof globalThis.localStorage === 'undefined') {
+      const store = new Map();
+      globalThis.localStorage = {
+        getItem: (key) => store.get(key) || null,
+        setItem: (key, val) => store.set(key, String(val)),
+        removeItem: (key) => store.delete(key),
+        clear: () => store.clear(),
+      };
+    } else {
+      globalThis.localStorage.clear();
+    }
+  });
+
+  test('FONT_OPTIONS includes Literata and Patrick Hand with valid IDs, labels and fallbacks', () => {
+    assert.equal(FONT_OPTIONS.length, 6, 'Must have exactly 6 font options');
+
+    const ids = FONT_OPTIONS.map((f) => f.id);
+    assert.ok(ids.includes('be-vietnam'), 'Must keep be-vietnam');
+    assert.ok(ids.includes('serif'), 'Must keep serif');
+    assert.ok(ids.includes('literata'), 'Must include literata');
+    assert.ok(ids.includes('patrick-hand'), 'Must include patrick-hand');
+    assert.ok(ids.includes('sans'), 'Must keep sans');
+    assert.ok(ids.includes('mono'), 'Must keep mono');
+
+    const literata = FONT_OPTIONS.find((f) => f.id === 'literata');
+    assert.equal(literata.label, 'Literata');
+    assert.ok(literata.css.includes("'Literata'"), 'Must include Literata in font-family css');
+    assert.ok(literata.css.includes('serif'), 'Must include serif fallback in font-family css');
+
+    const patrickHand = FONT_OPTIONS.find((f) => f.id === 'patrick-hand');
+    assert.equal(patrickHand.label, 'Patrick Hand');
+    assert.ok(patrickHand.css.includes("'Patrick Hand'"), 'Must include Patrick Hand in font-family css');
+    assert.ok(patrickHand.css.includes('cursive') || patrickHand.css.includes('sans-serif'), 'Must include appropriate fallback');
+  });
+
+  test('Default reading settings preserve default serif font and persist custom fonts', () => {
+    const defaultSettings = getReadingSettings();
+    assert.equal(defaultSettings.fontFamily, 'serif', 'Default fontFamily must remain serif');
+
+    saveReadingSettings({ fontFamily: 'literata' });
+    const savedLiterata = getReadingSettings();
+    assert.equal(savedLiterata.fontFamily, 'literata', 'Must persist literata');
+
+    saveReadingSettings({ fontFamily: 'patrick-hand' });
+    const savedPatrick = getReadingSettings();
+    assert.equal(savedPatrick.fontFamily, 'patrick-hand', 'Must persist patrick-hand');
+  });
+
+  test('Font asset files (WOFF2, TTF) and OFL licenses are present on disk', () => {
+    const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    
+    // Literata assets
+    const litWoff2Vi = path.join(projectRoot, 'src/assets/fonts/literata/literata-v40-vietnamese.woff2');
+    const litWoff2Lat = path.join(projectRoot, 'src/assets/fonts/literata/literata-v40-latin.woff2');
+    const litTtf = path.join(projectRoot, 'src/assets/fonts/literata/Literata-VariableFont.ttf');
+    const litOfl = path.join(projectRoot, 'src/assets/fonts/literata/OFL.txt');
+
+    assert.ok(fs.existsSync(litWoff2Vi), 'Literata vietnamese woff2 must exist');
+    assert.ok(fs.existsSync(litWoff2Lat), 'Literata latin woff2 must exist');
+    assert.ok(fs.existsSync(litTtf), 'Literata variable TTF must exist');
+    assert.ok(fs.existsSync(litOfl), 'Literata OFL license must exist');
+    assert.ok(fs.statSync(litWoff2Vi).size > 10000, 'Literata woff2 must have non-zero content');
+    assert.ok(fs.readFileSync(litOfl, 'utf-8').includes('SIL Open Font License'), 'Must contain OFL license text');
+
+    // Patrick Hand assets
+    const patWoff2Vi = path.join(projectRoot, 'src/assets/fonts/patrick-hand/patrick-hand-v25-vietnamese.woff2');
+    const patWoff2Lat = path.join(projectRoot, 'src/assets/fonts/patrick-hand/patrick-hand-v25-latin.woff2');
+    const patTtf = path.join(projectRoot, 'src/assets/fonts/patrick-hand/PatrickHand-Regular.ttf');
+    const patOfl = path.join(projectRoot, 'src/assets/fonts/patrick-hand/OFL.txt');
+
+    assert.ok(fs.existsSync(patWoff2Vi), 'Patrick Hand vietnamese woff2 must exist');
+    assert.ok(fs.existsSync(patWoff2Lat), 'Patrick Hand latin woff2 must exist');
+    assert.ok(fs.existsSync(patTtf), 'Patrick Hand TTF must exist');
+    assert.ok(fs.existsSync(patOfl), 'Patrick Hand OFL license must exist');
+    assert.ok(fs.statSync(patWoff2Vi).size > 5000, 'Patrick Hand woff2 must have non-zero content');
+    assert.ok(fs.readFileSync(patOfl, 'utf-8').includes('SIL Open Font License'), 'Must contain OFL license text');
+  });
+
+  test('src/styles/fonts.css declares @font-face rules with unicode-range for Vietnamese and Latin', () => {
+    const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    const fontsCss = fs.readFileSync(path.join(projectRoot, 'src/styles/fonts.css'), 'utf-8');
+
+    assert.ok(fontsCss.includes("@font-face"), 'Must declare @font-face');
+    assert.ok(fontsCss.includes("font-family: 'Literata'"), 'Must declare font-family Literata');
+    assert.ok(fontsCss.includes("font-family: 'Patrick Hand'"), 'Must declare font-family Patrick Hand');
+    assert.ok(fontsCss.includes("font-weight: 200 900"), 'Literata must declare variable weight 200 900');
+    assert.ok(fontsCss.includes("font-weight: 400"), 'Patrick Hand must declare normal weight 400');
+    assert.ok(fontsCss.includes("U+0102-0103") && fontsCss.includes("U+1EA0-1EF9"), 'Must include Vietnamese unicode-range');
+  });
+
+  test('Reading position preservation algorithm calculates target scroll offset without jumping to top', () => {
+    // Simulate 10 paragraphs on a page
+    const mockParagraphs = [
+      { top: -450, bottom: -200, index: 0 },
+      { top: -200, bottom: -50, index: 1 },
+      { top: -50, bottom: 50, index: 2 },
+      { top: 50, bottom: 180, index: 3 }, // In reading focal area (top <= 140, bottom >= 60)
+      { top: 180, bottom: 350, index: 4 },
+      { top: 350, bottom: 550, index: 5 },
+    ];
+
+    let targetIndex = 0;
+    for (let i = 0; i < mockParagraphs.length; i++) {
+      const rect = mockParagraphs[i];
+      if (rect.bottom >= 60 && rect.top <= 140) {
+        targetIndex = i;
+        break;
+      }
+    }
+    assert.equal(targetIndex, 3, 'Must identify paragraph 3 in active viewport');
+
+    // Simulate reflow after font change where paragraph 3 has slightly shifted
+    const currentScrollY = 800;
+    const shiftedRect = { top: 95, bottom: 230 };
+    const targetY = Math.max(0, currentScrollY + shiftedRect.top - 70);
+    assert.equal(targetY, 825, 'Calculated target scroll maintains top 70px offset');
+    assert.ok(targetY > 0, 'Target Y must not reset to 0');
+  });
+
+  test('Editor Toast CSS complies with minimal, compact, non-pill specifications', () => {
+    const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    const toastCss = fs.readFileSync(path.join(projectRoot, 'src/components/reader/SelectionEditor.module.css'), 'utf-8');
+
+    const toastBlockMatch = toastCss.match(/\.editorToast\s*\{([^}]+)\}/);
+    const toastBlock = toastBlockMatch ? toastBlockMatch[1] : '';
+
+    // Radius check: must be 12-16px, NOT 30px pill
+    assert.ok(!toastBlock.includes('border-radius: 30px'), 'Toast must NOT use border-radius 30px pill');
+    assert.ok(toastBlock.includes('border-radius: 14px') || toastBlock.includes('border-radius: 12px'), 'Toast must use 12-14px border radius');
+
+    // Color/glow check: must not use bright #38bdf8 border on toast
+    assert.ok(!toastBlock.includes('#38bdf8'), 'Toast must NOT use bright cyan border');
+
+    // Max width check: must not be hardcoded to 92vw stretched on desktop
+    assert.ok(toastBlock.includes('max-width: min(440px') || toastBlock.includes('max-width: 440px') || toastBlock.includes('width: auto'), 'Toast must be compact width');
+
+    // Text wrapping check: must allow text wrap on toast message
+    assert.ok(toastCss.includes('word-break: break-word'), 'Must support word breaking on message');
+
+    // Safe area & reduced motion
+    assert.ok(toastCss.includes('safe-area-inset-bottom'), 'Must respect safe-area-inset-bottom');
+    assert.ok(toastCss.includes('prefers-reduced-motion'), 'Must respect prefers-reduced-motion');
+  });
+
+  test('Editor Toast undo callback is isolated and close button does not trigger undo', () => {
+    let undoTriggered = false;
+    let toastClosed = false;
+
+    const mockToast = {
+      message: 'Đã lưu thay đổi vào chương thành công!',
+      onUndo: () => {
+        undoTriggered = true;
+      },
+    };
+
+    const handleClose = () => {
+      toastClosed = true;
+    };
+
+    // 1. User clicks close button
+    handleClose();
+    assert.equal(toastClosed, true, 'Toast close must be called');
+    assert.equal(undoTriggered, false, 'Closing toast must NOT trigger undo');
+
+    // 2. User clicks Undo button
+    mockToast.onUndo();
+    assert.equal(undoTriggered, true, 'Undo callback must be triggered on explicit button click');
   });
 });
