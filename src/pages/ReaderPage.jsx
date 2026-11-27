@@ -33,6 +33,7 @@ import SelectionToolbar from '../components/reader/SelectionToolbar';
 import ChapterTextEditModal from '../components/reader/ChapterTextEditModal';
 import GlobalReplaceModal from '../components/reader/GlobalReplaceModal';
 import { countOccurrences, replaceOccurrences } from '../lib/textSearch';
+import { FontChangeCoordinator } from '../lib/readingAnchor.js';
 import {
   expandSelectionToWordBoundaries,
   getPreciseSelectionSetting,
@@ -64,6 +65,30 @@ export default function ReaderPage() {
   const isInitialPassiveOpenRef = useRef(location.key === 'default');
   const effectiveLocationKey = isInitialPassiveOpenRef.current ? 'default' : location.key;
   const { settings, updateSettings } = useReadingSettings();
+
+  const fontCoordinatorRef = useRef(null);
+  if (!fontCoordinatorRef.current) {
+    fontCoordinatorRef.current = new FontChangeCoordinator({
+      onRealigned: ({ targetY, paraIndex }) => {
+        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const percent = maxScroll > 0 ? Math.max(0, Math.min(1, targetY / maxScroll)) : 0;
+        lastRecordedScrollRef.current = {
+          ...lastRecordedScrollRef.current,
+          percent,
+          scrollY: targetY,
+          paraIndex,
+        };
+      },
+    });
+  }
+
+  // Ghi nhận vị trí đọc chính xác trước khi font thay đổi để tránh reflow làm lệch mắt đọc
+  const handleUpdateSettings = useCallback((updates) => {
+    if (updates.fontFamily && updates.fontFamily !== settings.fontFamily) {
+      fontCoordinatorRef.current.prepare(document);
+    }
+    updateSettings(updates);
+  }, [settings.fontFamily, updateSettings]);
   const { 
     gainReadingExp, 
     displayName, 
@@ -563,49 +588,23 @@ export default function ReaderPage() {
     prevFontFamilyRef.current = settings.fontFamily;
     if (!chapter) return;
 
-    // Xác định đoạn văn đang hiển thị trong tầm mắt trước khi reflow
-    let targetParaIndex = lastRecordedScrollRef.current.paraIndex || 0;
-    const paraEls = document.querySelectorAll('[data-para-index]');
-    for (let i = 0; i < paraEls.length; i++) {
-      const rect = paraEls[i].getBoundingClientRect();
-      if (rect.bottom >= 60 && rect.top <= 140) {
-        targetParaIndex = i;
-        break;
-      }
+    // Nếu chưa prepare từ handleUpdateSettings (ví dụ đổi font qua test/khác), chuẩn bị ngay
+    if (!fontCoordinatorRef.current.activeAnchor) {
+      fontCoordinatorRef.current.prepare(document);
     }
 
-    const realignReadingPosition = () => {
-      const targetPara = document.getElementById(`para-${targetParaIndex}`);
-      if (targetPara) {
-        const rect = targetPara.getBoundingClientRect();
-        const targetY = Math.max(0, window.scrollY + rect.top - 70);
-        window.scrollTo({ top: targetY, behavior: 'instant' });
-        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-        const percent = maxScroll > 0 ? Math.max(0, Math.min(1, targetY / maxScroll)) : 0;
-        lastRecordedScrollRef.current = {
-          ...lastRecordedScrollRef.current,
-          percent,
-          scrollY: targetY,
-          paraIndex: targetParaIndex,
-        };
-      }
-    };
-
-    // Căn chỉnh ngay và đa nhịp sau khi font WOFF2 tải xong
-    realignReadingPosition();
-    if (typeof document !== 'undefined' && document.fonts?.ready) {
-      document.fonts.ready.then(realignReadingPosition).catch(() => {});
-    }
-    const t1 = setTimeout(realignReadingPosition, 60);
-    const t2 = setTimeout(realignReadingPosition, 180);
-    const t3 = setTimeout(realignReadingPosition, 360);
+    fontCoordinatorRef.current.scheduleRealignments(document);
 
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
+      // Hủy tác vụ cũ khi đổi font liên tiếp hoặc unmount
+      fontCoordinatorRef.current.cancel();
     };
-  }, [settings.fontFamily, chapter]);
+  }, [settings.fontFamily, chapter?.id]);
+
+  // Hủy các tác vụ khôi phục cũ nếu người dùng chuyển chương
+  useEffect(() => {
+    fontCoordinatorRef.current.cancel();
+  }, [chapter?.id]);
 
   // Chu kỳ ngộ đạo 60s lặp lại liên tục (cứ 60s tăng tu vi âm thầm & bắt đầu vòng mới)
   const [cycleSeconds, setCycleSeconds] = useState(() => { const saved = localStorage.getItem(getCultivationKey('pending_seconds')); return saved && !isNaN(parseInt(saved, 10)) ? parseInt(saved, 10) : 0; });
@@ -690,6 +689,7 @@ export default function ReaderPage() {
       if (currentY > 0) {
         lastRecordedScrollRef.current.scrollY = currentY;
       }
+      fontCoordinatorRef.current?.handleUserScroll(currentY);
 
       // Ẩn thanh công cụ bôi đen khi người dùng cuộn trang
       setSelectionData(prev => (prev ? null : prev));
@@ -1465,7 +1465,7 @@ export default function ReaderPage() {
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         settings={settings}
-        onUpdate={updateSettings}
+        onUpdate={handleUpdateSettings}
       />
 
       {/* Cultivation Modal - only rendered when open with zero layout shift/spinner */}

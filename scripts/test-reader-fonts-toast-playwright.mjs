@@ -1,6 +1,7 @@
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
@@ -9,7 +10,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
-const artifactDir = process.env.ARTIFACT_DIR || 'C:/Users/ADMIN/.gemini/antigravity/brain/5badca54-4ca4-4d4f-aa16-774f1b682a2c';
+// Multi-platform artifact directory (no hardcoded Windows user paths)
+const artifactDir = process.env.ARTIFACT_DIR || path.join(os.tmpdir(), 'tcl-reader-test-screenshots');
 if (!fs.existsSync(artifactDir)) {
   fs.mkdirSync(artifactDir, { recursive: true });
 }
@@ -18,16 +20,12 @@ console.log('══════════════════════�
 console.log('🧪 PLAYWRIGHT E2E: READER FONTS & REDESIGNED EDITOR TOAST');
 console.log('═══════════════════════════════════════════════════════════\n');
 
-// 1. Start Vite Dev Server
-const devServer = await createServer({
-  server: { port: 5198, host: '127.0.0.1' },
-  appType: 'spa'
+// Generate 25 distinct Vietnamese paragraphs for middle-chapter scrolling tests
+const sampleParagraphs = Array.from({ length: 25 }, (_, i) => {
+  return `Đoạn thứ ${i + 1}: Thiên Cơ Lâu đứng sừng sững giữa biển mây trùng điệp. Gió rít từng cơn thổi qua đỉnh núi tuyết ngàn năm, mang theo linh khí tinh thuần từ chín tầng trời. Trần Phàm tĩnh tâm ngồi xếp bằng, quanh thân tỏa ra vầng hào quang tím vàng rực rỡ của Thần Thông Ảnh Họa. Từng dòng chữ cổ biến hóa ảo diệu, câu thông cùng thiên địa đạo tắc.`;
 });
-await devServer.listen();
-const serverUrl = devServer.resolvedUrls.local[0];
-console.log('⚡ Vite dev server listening at:', serverUrl);
 
-// 2. Prepare test harness page HTML
+// Prepare test harness page HTML importing genuine shared modules
 const testHtml = `<!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -41,12 +39,15 @@ const testHtml = `<!DOCTYPE html>
 <body style="background: #101927; color: #f0f6fc; margin: 0; padding: 0;">
   <div id="root"></div>
   <script type="module">
-    import React, { useState, useRef, useEffect } from 'react';
+    import React, { useState, useRef, useEffect, useCallback } from 'react';
     import ReactDOM from 'react-dom/client';
     import { FONT_OPTIONS } from '/src/hooks/useReadingSettings.js';
+    import { FontChangeCoordinator, getReadingAnchor, restoreReadingAnchor } from '/src/lib/readingAnchor.js';
     import selectionStyles from '/src/components/reader/SelectionEditor.module.css';
     import readingStyles from '/src/components/reader/ReadingSettings.module.css';
     import Icon from '/src/components/ui/Icon.jsx';
+
+    const paragraphs = ${JSON.stringify(sampleParagraphs)};
 
     function ReaderTestApp() {
       const [currentFontId, setCurrentFontId] = useState('serif');
@@ -56,50 +57,78 @@ const testHtml = `<!DOCTYPE html>
       const fontObj = FONT_OPTIONS.find(f => f.id === currentFontId) || FONT_OPTIONS[1];
       const fontCss = fontObj.css;
 
-      // Paragraph reflow realignment simulation
+      const fontCoordinatorRef = useRef(null);
+      if (!fontCoordinatorRef.current) {
+        fontCoordinatorRef.current = new FontChangeCoordinator({
+          onRealigned: ({ targetY, paraIndex }) => {
+            window.__LAST_REALIGNED_PARA = paraIndex;
+            window.__LAST_REALIGNED_Y = targetY;
+          }
+        });
+      }
+
+      // Synchronously prepare anchor BEFORE font change
+      const handleFontChange = useCallback((newId) => {
+        fontCoordinatorRef.current.prepare(document);
+        setCurrentFontId(newId);
+      }, []);
+
+      // Realignment effect triggered when font changes
       const prevFontRef = useRef(currentFontId);
       useEffect(() => {
         if (prevFontRef.current === currentFontId) return;
         prevFontRef.current = currentFontId;
 
-        let targetIndex = 2; // Suppose user reading paragraph 2
-        const paraEls = document.querySelectorAll('[data-para-index]');
-        for (let i = 0; i < paraEls.length; i++) {
-          const r = paraEls[i].getBoundingClientRect();
-          if (r.bottom >= 60 && r.top <= 140) {
-            targetIndex = i;
-            break;
-          }
+        if (!fontCoordinatorRef.current.activeAnchor) {
+          fontCoordinatorRef.current.prepare(document);
         }
 
-        const realign = () => {
-          const target = document.getElementById('para-' + targetIndex);
-          if (target) {
-            const r = target.getBoundingClientRect();
-            const targetY = Math.max(0, window.scrollY + r.top - 70);
-            window.scrollTo({ top: targetY, behavior: 'instant' });
-            window.__LAST_REALIGNED_PARA = targetIndex;
-            window.__LAST_REALIGNED_Y = targetY;
-          }
+        fontCoordinatorRef.current.scheduleRealignments(document);
+
+        return () => {
+          fontCoordinatorRef.current.cancel();
         };
-
-        realign();
-        if (document.fonts?.ready) {
-          document.fonts.ready.then(realign).catch(() => {});
-        }
       }, [currentFontId]);
 
-      return React.createElement('div', { style: { padding: '24px 20px 120px' } }, [
+      // User scroll detection
+      useEffect(() => {
+        const onScroll = () => {
+          fontCoordinatorRef.current.handleUserScroll(window.scrollY);
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+      }, []);
+
+      window.__APP_COORDINATOR = fontCoordinatorRef.current;
+      window.__APP_CURRENT_FONT = currentFontId;
+
+      return React.createElement('div', { style: { padding: '20px 16px 140px' } }, [
         // Controls Toolbar
-        React.createElement('div', { key: 'ctrl', style: { marginBottom: '24px', background: 'rgba(23,35,56,0.8)', padding: '16px', borderRadius: '14px' } }, [
-          React.createElement('h3', { key: 'h3', style: { margin: '0 0 12px', fontSize: '15px', color: '#ffcc00' } }, 'Chọn Font Chữ:'),
+        React.createElement('div', {
+          key: 'ctrl',
+          id: 'test-controls',
+          style: {
+            position: 'fixed',
+            top: '10px',
+            right: '10px',
+            zIndex: 1000,
+            width: '280px',
+            maxWidth: 'calc(100vw - 20px)',
+            background: 'rgba(23,35,56,0.96)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            padding: '12px 14px',
+            borderRadius: '14px',
+            border: '1px solid rgba(255,255,255,0.12)'
+          }
+        }, [
+          React.createElement('h3', { key: 'h3', style: { margin: '0 0 12px', fontSize: '14px', color: '#ffcc00' } }, 'Chọn Font Chữ:'),
           React.createElement('div', { key: 'fonts', className: readingStyles.fontRow },
             FONT_OPTIONS.map(f => React.createElement('button', {
               key: f.id,
               id: 'btn-font-' + f.id,
               className: readingStyles.fontBtn + (currentFontId === f.id ? ' ' + readingStyles.fontActive : ''),
               style: { fontFamily: f.css },
-              onClick: () => setCurrentFontId(f.id)
+              onClick: () => handleFontChange(f.id)
             }, f.label))
           ),
           React.createElement('div', { key: 'toast-triggers', style: { marginTop: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' } }, [
@@ -129,14 +158,15 @@ const testHtml = `<!DOCTYPE html>
         React.createElement('article', {
           key: 'art',
           id: 'reading-content',
-          style: { fontFamily: fontCss, fontSize: '18px', lineHeight: 1.85, maxWidth: '760px', margin: '0 auto' }
+          style: { fontFamily: fontCss, fontSize: '18px', lineHeight: 1.85, maxWidth: '720px', margin: '0 auto' }
         }, [
           React.createElement('h1', { key: 'title', id: 'chapter-title', style: { fontFamily: fontCss, color: '#ffcc00', marginBottom: '24px' } }, 'Chương 1: Thiên Cơ Tái Hiện'),
-          React.createElement('p', { key: 'p0', id: 'para-0', 'data-para-index': 0 }, 'Đêm trăng thanh vắng, trên đỉnh Thiên Cơ Lâu gió lộng thổi tung tà áo bào xanh thẫm. Trần Phàm đứng chắp tay nhìn về phía chân trời vô tận.'),
-          React.createElement('p', { key: 'p1', id: 'para-1', 'data-para-index': 1 }, 'Tu tiên chi lộ gian nan muôn trùng, chỉ có người kiên định tâm trí mới có thể vượt qua ngàn tầng kiếp nạn mà chứng đạo trường sinh.'),
-          React.createElement('p', { key: 'p2', id: 'para-2', 'data-para-index': 2, style: { background: 'rgba(34, 195, 240, 0.08)', padding: '12px', borderRadius: '8px' } }, 'Thần Thông Ảnh Họa sáng rực trong hư không, từng dòng chữ cổ xưa như rồng bay phượng múa hiện ra trước mắt: "Tâm bất biến giữa dòng đời vạn biến, đạo tại nhân tâm."'),
-          React.createElement('p', { key: 'p3', id: 'para-3', 'data-para-index': 3 }, 'Một luồng linh lực ấm áp từ đan điền dâng trào, lan toả khắp kinh mạch kỳ kinh bát mạch, khiến cho toàn thân hắn sảng khoái dị thường.'),
-          React.createElement('p', { key: 'p4', id: 'para-4', 'data-para-index': 4 }, 'Dưới chân núi, sương mù lượn lờ bao phủ ngàn dặm giang sơn, báo hiệu một thời kỳ phong vân biến ảo sắp sửa bắt đầu.')
+          paragraphs.map((p, i) => React.createElement('p', {
+            key: i,
+            id: 'para-' + i,
+            'data-para-index': i,
+            style: { margin: '0 0 1.4em', textIndent: '1.8em', padding: '4px 0' }
+          }, p))
         ]),
 
         // Redesigned Toast
@@ -181,11 +211,24 @@ const testHtml = `<!DOCTYPE html>
 const tempHtmlPath = path.join(projectRoot, 'test-reader-runner.html');
 fs.writeFileSync(tempHtmlPath, testHtml);
 
+// 1. Start Vite Dev Server with HMR disabled to prevent unwanted reloads
+const devServer = await createServer({
+  server: {
+    port: 5198,
+    host: '127.0.0.1',
+    hmr: false,
+  },
+  appType: 'spa'
+});
+await devServer.listen();
+const serverUrl = devServer.resolvedUrls.local[0];
+console.log('⚡ Vite dev server listening at:', serverUrl);
+
 const browser = await chromium.launch({ headless: true });
 
 try {
   // -------------------------------------------------------------
-  // TEST A: Desktop Viewport (1280x800)
+  // TEST A: Desktop Viewport (1280x800) — Font Switching & Middle-Chapter Reflow
   // -------------------------------------------------------------
   console.log('🖥️ Testing Desktop Viewport (1280x800)...');
   const desktopPage = await browser.newPage({ viewport: { width: 1280, height: 800 } });
@@ -198,7 +241,16 @@ try {
     if (msg.type() === 'error') console.error('DESKTOP_CONSOLE_ERROR:', msg.text());
   });
 
-  await desktopPage.goto(serverUrl + 'test-reader-runner.html');
+  // Track WOFF2 network requests
+  const loadedFonts = [];
+  desktopPage.on('response', resp => {
+    const url = resp.url();
+    if (url.includes('.woff2') || url.includes('fonts/')) {
+      loadedFonts.push({ url, status: resp.status() });
+    }
+  });
+
+  await desktopPage.goto(serverUrl + 'test-reader-runner.html', { waitUntil: 'domcontentloaded' });
   await desktopPage.waitForFunction(() => window.__APP_MOUNTED === true, { timeout: 10000 });
   assert.equal(desktopErrors.length, 0, 'No page errors on mount');
 
@@ -206,25 +258,70 @@ try {
   const fontBtns = desktopPage.locator('button[id^="btn-font-"]');
   assert.equal(await fontBtns.count(), 6, 'Must display all 6 font options');
 
-  // 1. Test Literata font selection
-  console.log('  Testing Literata font selection...');
+  // 1. Scroll down to middle of chapter (e.g. Paragraph 12)
+  console.log('  Scrolling to middle of long chapter (Paragraph 12)...');
+  const para12 = desktopPage.locator('#para-12');
+  await desktopPage.evaluate(() => {
+    const el = document.getElementById('para-12');
+    if (el) {
+      const targetY = Math.max(0, window.scrollY + el.getBoundingClientRect().top - 70);
+      window.scrollTo({ top: targetY, behavior: 'instant' });
+    }
+  });
+  await desktopPage.waitForTimeout(100);
+
+  const initialTop12 = await para12.evaluate(el => el.getBoundingClientRect().top);
+  const initialScrollY = await desktopPage.evaluate(() => window.scrollY);
+  assert.ok(initialScrollY > 400, 'Initial scroll position must be deep in the chapter');
+  assert.ok(Math.abs(initialTop12 - 70) < 15, `Paragraph 12 must be aligned near 70px (was: ${initialTop12})`);
+
+  // 2. Switch font: Serif -> Literata
+  console.log('  Switching Serif -> Literata...');
   await desktopPage.locator('#btn-font-literata').click();
-  const contentFamily = await desktopPage.locator('#reading-content').evaluate(el => window.getComputedStyle(el).fontFamily);
-  assert.ok(contentFamily.toLowerCase().includes('literata'), `Content font-family must include Literata (got: ${contentFamily})`);
+  await desktopPage.waitForFunction(() => window.__APP_CURRENT_FONT === 'literata', { timeout: 5000 });
+  await desktopPage.waitForTimeout(400);
 
-  // 2. Test Patrick Hand font selection
-  console.log('  Testing Patrick Hand font selection...');
+  const literataContentFamily = await desktopPage.locator('#reading-content').evaluate(el => window.getComputedStyle(el).fontFamily);
+  assert.ok(literataContentFamily.toLowerCase().includes('literata'), `Must apply Literata font-family (got: ${literataContentFamily})`);
+
+  // Verify paragraph 12 is still in the active reading area (not jumped to 0 or top of chapter)
+  const afterLitScrollY = await desktopPage.evaluate(() => window.scrollY);
+  const afterLitTop12 = await para12.evaluate(el => el.getBoundingClientRect().top);
+  assert.ok(afterLitScrollY > 300, `Scroll position after Literata must NOT reset to 0 (was: ${afterLitScrollY})`);
+  assert.ok(afterLitTop12 < 180 && afterLitTop12 > -60, `Paragraph 12 must remain in focal viewport (got top: ${afterLitTop12})`);
+
+  // 3. Switch font: Literata -> Patrick Hand
+  console.log('  Switching Literata -> Patrick Hand...');
   await desktopPage.locator('#btn-font-patrick-hand').click();
-  const patrickFamily = await desktopPage.locator('#reading-content').evaluate(el => window.getComputedStyle(el).fontFamily);
-  assert.ok(patrickFamily.toLowerCase().includes('patrick hand'), `Content font-family must include Patrick Hand (got: ${patrickFamily})`);
+  await desktopPage.waitForFunction(() => window.__APP_CURRENT_FONT === 'patrick-hand', { timeout: 5000 });
+  await desktopPage.waitForTimeout(400);
 
-  // 3. Test Toast Display & Styling on Desktop
+  const patrickContentFamily = await desktopPage.locator('#reading-content').evaluate(el => window.getComputedStyle(el).fontFamily);
+  assert.ok(patrickContentFamily.toLowerCase().includes('patrick hand'), `Must apply Patrick Hand (got: ${patrickContentFamily})`);
+
+  const afterPatScrollY = await desktopPage.evaluate(() => window.scrollY);
+  const afterPatTop12 = await para12.evaluate(el => el.getBoundingClientRect().top);
+  assert.ok(afterPatScrollY > 300, `Scroll position after Patrick Hand must NOT reset to 0 (was: ${afterPatScrollY})`);
+  assert.ok(afterPatTop12 < 180 && afterPatTop12 > -60, `Paragraph 12 must remain in focal viewport (got top: ${afterPatTop12})`);
+
+  // 4. Test rapid consecutive font switching (stress test)
+  console.log('  Testing rapid consecutive font switching (Serif -> Sans -> Literata -> Patrick Hand)...');
+  await desktopPage.locator('#btn-font-serif').click();
+  await desktopPage.locator('#btn-font-sans').click();
+  await desktopPage.locator('#btn-font-literata').click();
+  await desktopPage.locator('#btn-font-patrick-hand').click();
+  await desktopPage.waitForTimeout(400);
+
+  const rapidScrollY = await desktopPage.evaluate(() => window.scrollY);
+  assert.ok(rapidScrollY > 300, `Rapid font switching must not cause jump to top (scrollY: ${rapidScrollY})`);
+  assert.equal(desktopErrors.length, 0, 'No errors during rapid font switching');
+
+  // 5. Test Editor Toast Presentation on Desktop
   console.log('  Testing Editor Toast presentation on Desktop...');
   await desktopPage.locator('#btn-trigger-toast').click();
   const toastEl = desktopPage.locator('#editor-toast');
   await toastEl.waitFor({ state: 'visible', timeout: 5000 });
 
-  // Verify toast styles
   const toastStyle = await toastEl.evaluate(el => {
     const cs = window.getComputedStyle(el);
     const rect = el.getBoundingClientRect();
@@ -254,23 +351,53 @@ try {
   await desktopPage.close();
 
   // -------------------------------------------------------------
-  // TEST B: Mobile Viewport (iPhone 14/15: 390x844)
+  // TEST B: Mobile Viewport (iPhone 14/15: 390x844) & User Active Scroll
   // -------------------------------------------------------------
   console.log('\n📱 Testing Mobile Viewport (390x844)...');
   const mobilePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const mobileErrors = [];
   mobilePage.on('pageerror', err => mobileErrors.push(err.message));
 
-  await mobilePage.goto(serverUrl + 'test-reader-runner.html');
+  await mobilePage.goto(serverUrl + 'test-reader-runner.html', { waitUntil: 'domcontentloaded' });
   await mobilePage.waitForFunction(() => window.__APP_MOUNTED === true, { timeout: 10000 });
   assert.equal(mobileErrors.length, 0, 'No mobile page errors');
 
-  // Trigger toast
+  // 1. Mobile font change at paragraph 8
+  const mobilePara8 = mobilePage.locator('#para-8');
+  await mobilePage.evaluate(() => {
+    const el = document.getElementById('para-8');
+    if (el) {
+      const targetY = Math.max(0, window.scrollY + el.getBoundingClientRect().top - 70);
+      window.scrollTo({ top: targetY, behavior: 'instant' });
+    }
+  });
+  await mobilePage.waitForTimeout(100);
+  const mobileInitialY = await mobilePage.evaluate(() => window.scrollY);
+
+  await mobilePage.locator('#btn-font-literata').click();
+  await mobilePage.waitForTimeout(400);
+
+  const mobileAfterY = await mobilePage.evaluate(() => window.scrollY);
+  assert.ok(mobileAfterY > 200, 'Mobile scroll must stay anchored to paragraph 8');
+
+  // 2. Test user actively scrolling during font loading (coordinator must NOT fight user)
+  console.log('  Testing user actively scrolling (coordinator must yield to user intent)...');
+  // Trigger font switch
+  await mobilePage.locator('#btn-font-patrick-hand').click();
+  // User deliberately scrolls down by 300px immediately
+  await mobilePage.evaluate(() => window.scrollBy({ top: 300, behavior: 'instant' }));
+  const userMovedY = await mobilePage.evaluate(() => window.scrollY);
+  // Wait past all realignment timer windows
+  await mobilePage.waitForTimeout(600);
+  const finalUserY = await mobilePage.evaluate(() => window.scrollY);
+  // The coordinator must not have dragged the user back up to the old position
+  assert.ok(Math.abs(finalUserY - userMovedY) < 30, `Coordinator must yield to deliberate user scrolling (final: ${finalUserY}, user moved to: ${userMovedY})`);
+
+  // 3. Mobile Toast verification
   await mobilePage.locator('#btn-trigger-toast').click();
   const mobileToast = mobilePage.locator('#editor-toast');
   await mobileToast.waitFor({ state: 'visible', timeout: 5000 });
 
-  // Verify mobile bounds (no horizontal scrollbar / overflow)
   const isOverflowing = await mobilePage.evaluate(() => {
     return document.documentElement.scrollWidth > window.innerWidth;
   });
@@ -306,7 +433,7 @@ try {
   // -------------------------------------------------------------
   console.log('\n📱 Testing Small Mobile Viewport (320x568) with Long Text...');
   const smallPage = await browser.newPage({ viewport: { width: 320, height: 568 } });
-  await smallPage.goto(serverUrl + 'test-reader-runner.html');
+  await smallPage.goto(serverUrl + 'test-reader-runner.html', { waitUntil: 'domcontentloaded' });
   await smallPage.waitForFunction(() => window.__APP_MOUNTED === true, { timeout: 10000 });
 
   // Trigger long toast
@@ -338,9 +465,25 @@ try {
 
   await smallPage.close();
 
+  // -------------------------------------------------------------
+  // TEST D: WOFF2 Font HTTP 200 Delivery Verification
+  // -------------------------------------------------------------
+  console.log('\n🔤 Verifying WOFF2 Fonts HTTP 200 delivery...');
+  const reqContext = await browser.newContext();
+  const litViRes = await reqContext.request.get(serverUrl + 'src/assets/fonts/literata/literata-v40-vietnamese.woff2');
+  assert.equal(litViRes.status(), 200, 'Literata vietnamese woff2 must serve HTTP 200');
+  assert.ok((await litViRes.body()).length > 5000, 'Literata woff2 must have non-empty binary content');
+
+  const patViRes = await reqContext.request.get(serverUrl + 'src/assets/fonts/patrick-hand/patrick-hand-v25-vietnamese.woff2');
+  assert.equal(patViRes.status(), 200, 'Patrick Hand vietnamese woff2 must serve HTTP 200');
+  assert.ok((await patViRes.body()).length > 5000, 'Patrick Hand woff2 must have non-empty binary content');
+  await reqContext.close();
+
   console.log('\n🎉 ALL PLAYWRIGHT E2E TESTS PASSED SUCCESSFULLY!\n');
 } finally {
-  if (fs.existsSync(tempHtmlPath)) fs.unlinkSync(tempHtmlPath);
+  if (fs.existsSync(tempHtmlPath)) {
+    try { fs.unlinkSync(tempHtmlPath); } catch {}
+  }
   await browser.close();
   await devServer.close();
 }

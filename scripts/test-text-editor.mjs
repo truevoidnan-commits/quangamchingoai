@@ -21,6 +21,12 @@ import {
 import { setDBPromiseForTesting, replaceTextInNovel, restoreNovelSnapshot } from '../src/lib/db.js';
 import { FONT_OPTIONS } from '../src/hooks/useReadingSettings.js';
 import { getReadingSettings, saveReadingSettings } from '../src/lib/storage.js';
+import {
+  getReadingAnchor,
+  calculateTargetScrollY,
+  restoreReadingAnchor,
+  FontChangeCoordinator,
+} from '../src/lib/readingAnchor.js';
 
 // -------------------------------------------------------------
 // 1. Mock In-Memory Databases for Main DB and Snapshot DB
@@ -1045,5 +1051,167 @@ describe('Reader Fonts & Compact Minimal Editor Toast', () => {
     // 2. User clicks Undo button
     mockToast.onUndo();
     assert.equal(undoTriggered, true, 'Undo callback must be triggered on explicit button click');
+  });
+
+  describe('ReadingAnchor & FontChangeCoordinator', () => {
+    test('calculateTargetScrollY calculates precise offsets and clamps to 0', () => {
+      // Current scroll: 600. Paragraph top: 70. Desired offset: 0 -> target: 600
+      assert.equal(calculateTargetScrollY(70, 600, 0, 70), 600);
+
+      // Paragraph top shifted down to 105 (+35px) -> target: 635
+      assert.equal(calculateTargetScrollY(105, 600, 0, 70), 635);
+
+      // Paragraph top shifted up to 45 (-25px) -> target: 575
+      assert.equal(calculateTargetScrollY(45, 600, 0, 70), 575);
+
+      // Paragraph had prior intra-paragraph offsetY of 15px
+      // target paragraph top should be 70 - 15 = 55. If rect.top = 80, delta is 25 -> 625
+      assert.equal(calculateTargetScrollY(80, 600, 15, 70), 625);
+
+      // Clamp to 0 when delta is negative beyond scrollY
+      assert.equal(calculateTargetScrollY(-200, 100, 0, 70), 0);
+    });
+
+    test('getReadingAnchor detects active paragraph and near-bottom boundaries', () => {
+      // 1. Null / empty doc fallback
+      assert.deepEqual(getReadingAnchor(null), { paraIndex: 0, offsetY: 0, scrollY: 0 });
+
+      // 2. Mock document with 5 paragraphs
+      const mockElements = [
+        { getBoundingClientRect: () => ({ top: -200, bottom: -50 }) },
+        { getBoundingClientRect: () => ({ top: -50, bottom: 50 }) },
+        { getBoundingClientRect: () => ({ top: 80, bottom: 220 }) }, // in focal reading line 60..140
+        { getBoundingClientRect: () => ({ top: 220, bottom: 400 }) },
+        { getBoundingClientRect: () => ({ top: 400, bottom: 550 }) },
+      ];
+
+      const mockDoc = {
+        defaultView: { scrollY: 450, innerHeight: 800 },
+        documentElement: { scrollHeight: 3000 },
+        querySelectorAll: (selector) => {
+          if (selector === '[data-para-index]') return mockElements;
+          return [];
+        },
+      };
+
+      const anchor = getReadingAnchor(mockDoc);
+      assert.equal(anchor.paraIndex, 2, 'Must locate paragraph 2 crossing focal line');
+      assert.equal(anchor.scrollY, 450);
+
+      // 3. User scrolled near bottom (scrollY >= maxScroll - 60)
+      const nearBottomDoc = {
+        defaultView: { scrollY: 2150, innerHeight: 800 },
+        documentElement: { scrollHeight: 3000 }, // maxScroll = 2200
+        querySelectorAll: (selector) => {
+          if (selector === '[data-para-index]') return mockElements;
+          return [];
+        },
+      };
+      const bottomAnchor = getReadingAnchor(nearBottomDoc);
+      assert.equal(bottomAnchor.paraIndex, 4, 'Must anchor to last paragraph at bottom');
+      assert.equal(bottomAnchor.isNearBottom, true);
+    });
+
+    test('restoreReadingAnchor updates window.scrollTo with instant behavior', () => {
+      let scrolledTo = null;
+      const mockDoc = {
+        defaultView: {
+          scrollY: 1000,
+          scrollTo: (opts) => {
+            scrolledTo = opts;
+          },
+        },
+        getElementById: (id) => {
+          if (id === 'para-3') {
+            return {
+              getBoundingClientRect: () => ({ top: 120, bottom: 300 }),
+            };
+          }
+          return null;
+        },
+      };
+
+      const anchor = { paraIndex: 3, offsetY: 0, scrollY: 1000 };
+      const targetY = restoreReadingAnchor(anchor, mockDoc);
+
+      // 1000 + 120 - 70 = 1050
+      assert.equal(targetY, 1050);
+      assert.deepEqual(scrolledTo, { top: 1050, behavior: 'instant' });
+
+      // Non-existent paragraph returns null
+      const invalidAnchor = { paraIndex: 99, offsetY: 0, scrollY: 1000 };
+      assert.equal(restoreReadingAnchor(invalidAnchor, mockDoc), null);
+    });
+
+    test('FontChangeCoordinator coordinates realignment, handles user scroll cancellation and consecutive changes', async () => {
+      let realignedEvents = [];
+      let sessionEnded = false;
+
+      const coordinator = new FontChangeCoordinator({
+        onRealigned: (data) => {
+          realignedEvents.push(data);
+        },
+        onSessionEnd: () => {
+          sessionEnded = true;
+        },
+      });
+
+      let currentScrollY = 500;
+      let targetParaTop = 90;
+
+      const mockDoc = {
+        defaultView: {
+          get scrollY() { return currentScrollY; },
+          set scrollY(v) { currentScrollY = v; },
+          innerHeight: 800,
+          scrollTo: ({ top }) => {
+            currentScrollY = top;
+          },
+        },
+        documentElement: { scrollHeight: 3000 },
+        querySelectorAll: () => [
+          { getBoundingClientRect: () => ({ top: targetParaTop, bottom: targetParaTop + 150 }) }
+        ],
+        getElementById: () => ({
+          getBoundingClientRect: () => ({ top: targetParaTop, bottom: targetParaTop + 150 }),
+        }),
+      };
+
+      // 1. Prepare anchor before change
+      const anchor = coordinator.prepare(mockDoc);
+      assert.equal(anchor.paraIndex, 0);
+      assert.equal(coordinator.activeAnchor.paraIndex, 0);
+
+      // 2. Reflow shifts paragraph top from 90 to 110 (+20px)
+      targetParaTop = 110;
+      const targetY = coordinator.realign(mockDoc);
+      // 500 + 110 - 70 = 540
+      assert.equal(targetY, 540);
+      assert.equal(currentScrollY, 540);
+      assert.equal(realignedEvents.length, 1);
+      assert.equal(realignedEvents[0].targetY, 540);
+
+      // 3. User actively scrolls away (> 45px delta from lastTargetY=540)
+      coordinator.handleUserScroll(650); // scrolled 110px down
+      assert.equal(coordinator.userHasScrolled, true);
+      assert.equal(coordinator.activeAnchor, null);
+
+      // Further realignment calls must be rejected
+      const abortedY = coordinator.realign(mockDoc);
+      assert.equal(abortedY, null);
+
+      // 4. Consecutive font changes: rapid prepare calls cancel stale sessions
+      const session1 = coordinator.prepare(mockDoc);
+      const id1 = coordinator.currentSessionId;
+      const session2 = coordinator.prepare(mockDoc);
+      const id2 = coordinator.currentSessionId;
+      assert.ok(id2 > id1, 'Session ID must increment');
+      assert.equal(coordinator.timers.length, 0, 'Previous timers cleared on prepare');
+
+      // 5. Explicit cancellation (e.g. Chapter change or unmount)
+      coordinator.cancel();
+      assert.equal(coordinator.activeAnchor, null);
+      assert.equal(coordinator.lastTargetY, null);
+    });
   });
 });
