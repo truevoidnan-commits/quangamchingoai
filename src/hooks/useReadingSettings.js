@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { getReadingSettings, saveReadingSettings } from '../lib/storage';
+import { getReadingSettings, saveReadingSettings } from '../lib/storage.js';
 
 export const READING_THEMES = {
   paper: {
@@ -49,6 +49,8 @@ export const READING_THEMES = {
 export const FONT_OPTIONS = [
   { id: 'be-vietnam', label: 'Be Vietnam Pro', css: "'Be Vietnam Pro', sans-serif" },
   { id: 'serif', label: 'Serif', css: "'Noto Serif', Georgia, serif" },
+  { id: 'literata', label: 'Literata', css: "'Literata', 'Noto Serif', Georgia, serif" },
+  { id: 'patrick-hand', label: 'Patrick Hand', css: "'Patrick Hand', 'Comic Sans MS', cursive, sans-serif" },
   { id: 'sans', label: 'Sans', css: "'Noto Sans', system-ui, sans-serif" },
   { id: 'mono', label: 'Mono', css: "'Courier New', monospace" },
 ];

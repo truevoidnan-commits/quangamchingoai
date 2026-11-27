@@ -33,6 +33,7 @@ import SelectionToolbar from '../components/reader/SelectionToolbar';
 import ChapterTextEditModal from '../components/reader/ChapterTextEditModal';
 import GlobalReplaceModal from '../components/reader/GlobalReplaceModal';
 import { countOccurrences, replaceOccurrences } from '../lib/textSearch';
+import { FontChangeCoordinator } from '../lib/readingAnchor.js';
 import {
   expandSelectionToWordBoundaries,
   getPreciseSelectionSetting,
@@ -64,6 +65,30 @@ export default function ReaderPage() {
   const isInitialPassiveOpenRef = useRef(location.key === 'default');
   const effectiveLocationKey = isInitialPassiveOpenRef.current ? 'default' : location.key;
   const { settings, updateSettings } = useReadingSettings();
+
+  const fontCoordinatorRef = useRef(null);
+  if (!fontCoordinatorRef.current) {
+    fontCoordinatorRef.current = new FontChangeCoordinator({
+      onRealigned: ({ targetY, paraIndex }) => {
+        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const percent = maxScroll > 0 ? Math.max(0, Math.min(1, targetY / maxScroll)) : 0;
+        lastRecordedScrollRef.current = {
+          ...lastRecordedScrollRef.current,
+          percent,
+          scrollY: targetY,
+          paraIndex,
+        };
+      },
+    });
+  }
+
+  // Ghi nhận vị trí đọc chính xác trước khi font thay đổi để tránh reflow làm lệch mắt đọc
+  const handleUpdateSettings = useCallback((updates) => {
+    if (updates.fontFamily && updates.fontFamily !== settings.fontFamily) {
+      fontCoordinatorRef.current.prepare(document);
+    }
+    updateSettings(updates);
+  }, [settings.fontFamily, updateSettings]);
   const { 
     gainReadingExp, 
     displayName, 
@@ -556,6 +581,44 @@ export default function ReaderPage() {
     };
   }, [chapter?.id, loading, activeNovelId, searchKeyword, pullProgressDone]);
 
+  // Tái căn chỉnh vị trí đọc khi đổi font chữ để tránh reflow làm nhảy trang hoặc mất dấu
+  const prevFontFamilyRef = useRef(settings.fontFamily);
+  useEffect(() => {
+    if (prevFontFamilyRef.current === settings.fontFamily) return;
+    prevFontFamilyRef.current = settings.fontFamily;
+    if (!chapter) return;
+
+    const coordinator = fontCoordinatorRef.current;
+    // Nếu chưa prepare từ handleUpdateSettings cho lần đổi này, chuẩn bị ngay
+    if (!coordinator.activeAnchor || coordinator.scheduledSessionId === coordinator.currentSessionId) {
+      coordinator.prepare(document);
+    }
+
+    const sessionId = coordinator.scheduleRealignments(document);
+
+    return () => {
+      // Chỉ hủy đúng session mà chính effect này tạo/quản lý để không xóa nhầm anchor của lần đổi font kế tiếp
+      if (sessionId !== null) {
+        coordinator.cancel(sessionId);
+      }
+    };
+  }, [settings.fontFamily, chapter?.id]);
+
+  // Hủy các tác vụ khôi phục cũ khi chuyển chương hoặc khi unmount
+  const prevChapterIdRef = useRef(chapter?.id);
+  useEffect(() => {
+    if (prevChapterIdRef.current !== chapter?.id) {
+      prevChapterIdRef.current = chapter?.id;
+      fontCoordinatorRef.current.cancel();
+    }
+  }, [chapter?.id]);
+
+  useEffect(() => {
+    return () => {
+      fontCoordinatorRef.current.cancel();
+    };
+  }, []);
+
   // Chu kỳ ngộ đạo 60s lặp lại liên tục (cứ 60s tăng tu vi âm thầm & bắt đầu vòng mới)
   const [cycleSeconds, setCycleSeconds] = useState(() => { const saved = localStorage.getItem(getCultivationKey('pending_seconds')); return saved && !isNaN(parseInt(saved, 10)) ? parseInt(saved, 10) : 0; });
 
@@ -639,6 +702,7 @@ export default function ReaderPage() {
       if (currentY > 0) {
         lastRecordedScrollRef.current.scrollY = currentY;
       }
+      fontCoordinatorRef.current?.handleUserScroll(currentY);
 
       // Ẩn thanh công cụ bôi đen khi người dùng cuộn trang
       setSelectionData(prev => (prev ? null : prev));
@@ -1414,7 +1478,7 @@ export default function ReaderPage() {
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         settings={settings}
-        onUpdate={updateSettings}
+        onUpdate={handleUpdateSettings}
       />
 
       {/* Cultivation Modal - only rendered when open with zero layout shift/spinner */}
@@ -1509,8 +1573,11 @@ export default function ReaderPage() {
 
       {/* Undo / Editor Toast notification */}
       {editorToast && (
-        <div className={selectionStyles.editorToast}>
-          <span>{editorToast.message}</span>
+        <div className={selectionStyles.editorToast} role="status" aria-live="polite">
+          <span className={selectionStyles.toastIconWrap} aria-hidden="true">
+            <Icon name="check" size={13} className={selectionStyles.toastIcon} />
+          </span>
+          <span className={selectionStyles.toastMessage}>{editorToast.message}</span>
           {editorToast.onUndo && (
             <button
               type="button"
@@ -1525,8 +1592,9 @@ export default function ReaderPage() {
             className={selectionStyles.toastCloseBtn}
             onClick={() => setEditorToast(null)}
             title="Đóng thông báo"
+            aria-label="Đóng thông báo"
           >
-            ✕
+            <Icon name="x" size={14} />
           </button>
         </div>
       )}

@@ -15,3 +15,5 @@ dist-ssr
 screenshots/
 artifacts/
 backups/
+test-*.html
+test-*.mjs.tmp

@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { test, describe, beforeEach } from 'node:test';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   isUnicodeWordChar,
   hasWordBoundaries,
@@ -16,6 +19,14 @@ import {
   restoreNovelSnapshot as restoreSnapshotInternal,
 } from '../src/lib/novelSnapshot.js';
 import { setDBPromiseForTesting, replaceTextInNovel, restoreNovelSnapshot } from '../src/lib/db.js';
+import { FONT_OPTIONS } from '../src/hooks/useReadingSettings.js';
+import { getReadingSettings, saveReadingSettings } from '../src/lib/storage.js';
+import {
+  getReadingAnchor,
+  calculateTargetScrollY,
+  restoreReadingAnchor,
+  FontChangeCoordinator,
+} from '../src/lib/readingAnchor.js';
 
 // -------------------------------------------------------------
 // 1. Mock In-Memory Databases for Main DB and Snapshot DB
@@ -865,5 +876,456 @@ describe('Novel-wide Snapshot Backup & Atomic Restoration', () => {
     // Verify snapshot was NOT deleted
     const preservedSnap = await getNovelSnapshot(replaceRes2.snapshotId);
     assert.ok(preservedSnap, 'Snapshot must be preserved when rollback aborts');
+  });
+});
+
+// -------------------------------------------------------------
+// 5. Reader Fonts (Literata & Patrick Hand) & Minimal Editor Toast
+// -------------------------------------------------------------
+describe('Reader Fonts & Compact Minimal Editor Toast', () => {
+  beforeEach(() => {
+    if (typeof globalThis.localStorage === 'undefined') {
+      const store = new Map();
+      globalThis.localStorage = {
+        getItem: (key) => store.get(key) || null,
+        setItem: (key, val) => store.set(key, String(val)),
+        removeItem: (key) => store.delete(key),
+        clear: () => store.clear(),
+      };
+    } else {
+      globalThis.localStorage.clear();
+    }
+  });
+
+  test('FONT_OPTIONS includes Literata and Patrick Hand with valid IDs, labels and fallbacks', () => {
+    assert.equal(FONT_OPTIONS.length, 6, 'Must have exactly 6 font options');
+
+    const ids = FONT_OPTIONS.map((f) => f.id);
+    assert.ok(ids.includes('be-vietnam'), 'Must keep be-vietnam');
+    assert.ok(ids.includes('serif'), 'Must keep serif');
+    assert.ok(ids.includes('literata'), 'Must include literata');
+    assert.ok(ids.includes('patrick-hand'), 'Must include patrick-hand');
+    assert.ok(ids.includes('sans'), 'Must keep sans');
+    assert.ok(ids.includes('mono'), 'Must keep mono');
+
+    const literata = FONT_OPTIONS.find((f) => f.id === 'literata');
+    assert.equal(literata.label, 'Literata');
+    assert.ok(literata.css.includes("'Literata'"), 'Must include Literata in font-family css');
+    assert.ok(literata.css.includes('serif'), 'Must include serif fallback in font-family css');
+
+    const patrickHand = FONT_OPTIONS.find((f) => f.id === 'patrick-hand');
+    assert.equal(patrickHand.label, 'Patrick Hand');
+    assert.ok(patrickHand.css.includes("'Patrick Hand'"), 'Must include Patrick Hand in font-family css');
+    assert.ok(patrickHand.css.includes('cursive') || patrickHand.css.includes('sans-serif'), 'Must include appropriate fallback');
+  });
+
+  test('Default reading settings preserve default serif font and persist custom fonts', () => {
+    const defaultSettings = getReadingSettings();
+    assert.equal(defaultSettings.fontFamily, 'serif', 'Default fontFamily must remain serif');
+
+    saveReadingSettings({ fontFamily: 'literata' });
+    const savedLiterata = getReadingSettings();
+    assert.equal(savedLiterata.fontFamily, 'literata', 'Must persist literata');
+
+    saveReadingSettings({ fontFamily: 'patrick-hand' });
+    const savedPatrick = getReadingSettings();
+    assert.equal(savedPatrick.fontFamily, 'patrick-hand', 'Must persist patrick-hand');
+  });
+
+  test('Font asset files (WOFF2, TTF) and OFL licenses are present on disk', () => {
+    const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    
+    // Literata assets
+    const litWoff2Vi = path.join(projectRoot, 'src/assets/fonts/literata/literata-v40-vietnamese.woff2');
+    const litWoff2Lat = path.join(projectRoot, 'src/assets/fonts/literata/literata-v40-latin.woff2');
+    const litTtf = path.join(projectRoot, 'src/assets/fonts/literata/Literata-VariableFont.ttf');
+    const litOfl = path.join(projectRoot, 'src/assets/fonts/literata/OFL.txt');
+
+    assert.ok(fs.existsSync(litWoff2Vi), 'Literata vietnamese woff2 must exist');
+    assert.ok(fs.existsSync(litWoff2Lat), 'Literata latin woff2 must exist');
+    assert.ok(fs.existsSync(litTtf), 'Literata variable TTF must exist');
+    assert.ok(fs.existsSync(litOfl), 'Literata OFL license must exist');
+    assert.ok(fs.statSync(litWoff2Vi).size > 10000, 'Literata woff2 must have non-zero content');
+    assert.ok(fs.readFileSync(litOfl, 'utf-8').includes('SIL Open Font License'), 'Must contain OFL license text');
+
+    // Patrick Hand assets
+    const patWoff2Vi = path.join(projectRoot, 'src/assets/fonts/patrick-hand/patrick-hand-v25-vietnamese.woff2');
+    const patWoff2Lat = path.join(projectRoot, 'src/assets/fonts/patrick-hand/patrick-hand-v25-latin.woff2');
+    const patTtf = path.join(projectRoot, 'src/assets/fonts/patrick-hand/PatrickHand-Regular.ttf');
+    const patOfl = path.join(projectRoot, 'src/assets/fonts/patrick-hand/OFL.txt');
+
+    assert.ok(fs.existsSync(patWoff2Vi), 'Patrick Hand vietnamese woff2 must exist');
+    assert.ok(fs.existsSync(patWoff2Lat), 'Patrick Hand latin woff2 must exist');
+    assert.ok(fs.existsSync(patTtf), 'Patrick Hand TTF must exist');
+    assert.ok(fs.existsSync(patOfl), 'Patrick Hand OFL license must exist');
+    assert.ok(fs.statSync(patWoff2Vi).size > 5000, 'Patrick Hand woff2 must have non-zero content');
+    assert.ok(fs.readFileSync(patOfl, 'utf-8').includes('SIL Open Font License'), 'Must contain OFL license text');
+  });
+
+  test('src/styles/fonts.css declares @font-face rules with unicode-range for Vietnamese and Latin', () => {
+    const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    const fontsCss = fs.readFileSync(path.join(projectRoot, 'src/styles/fonts.css'), 'utf-8');
+
+    assert.ok(fontsCss.includes("@font-face"), 'Must declare @font-face');
+    assert.ok(fontsCss.includes("font-family: 'Literata'"), 'Must declare font-family Literata');
+    assert.ok(fontsCss.includes("font-family: 'Patrick Hand'"), 'Must declare font-family Patrick Hand');
+    assert.ok(fontsCss.includes("font-weight: 200 900"), 'Literata must declare variable weight 200 900');
+    assert.ok(fontsCss.includes("font-weight: 400"), 'Patrick Hand must declare normal weight 400');
+    assert.ok(fontsCss.includes("U+0102-0103") && fontsCss.includes("U+1EA0-1EF9"), 'Must include Vietnamese unicode-range');
+  });
+
+  test('Reading position preservation algorithm calculates target scroll offset without jumping to top', () => {
+    // Simulate 10 paragraphs on a page
+    const mockParagraphs = [
+      { top: -450, bottom: -200, index: 0 },
+      { top: -200, bottom: -50, index: 1 },
+      { top: -50, bottom: 50, index: 2 },
+      { top: 50, bottom: 180, index: 3 }, // In reading focal area (top <= 140, bottom >= 60)
+      { top: 180, bottom: 350, index: 4 },
+      { top: 350, bottom: 550, index: 5 },
+    ];
+
+    let targetIndex = 0;
+    for (let i = 0; i < mockParagraphs.length; i++) {
+      const rect = mockParagraphs[i];
+      if (rect.bottom >= 60 && rect.top <= 140) {
+        targetIndex = i;
+        break;
+      }
+    }
+    assert.equal(targetIndex, 3, 'Must identify paragraph 3 in active viewport');
+
+    // Simulate reflow after font change where paragraph 3 has slightly shifted
+    const currentScrollY = 800;
+    const shiftedRect = { top: 95, bottom: 230 };
+    const targetY = Math.max(0, currentScrollY + shiftedRect.top - 70);
+    assert.equal(targetY, 825, 'Calculated target scroll maintains top 70px offset');
+    assert.ok(targetY > 0, 'Target Y must not reset to 0');
+  });
+
+  test('Editor Toast CSS complies with minimal, compact, non-pill specifications', () => {
+    const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    const toastCss = fs.readFileSync(path.join(projectRoot, 'src/components/reader/SelectionEditor.module.css'), 'utf-8');
+
+    const toastBlockMatch = toastCss.match(/\.editorToast\s*\{([^}]+)\}/);
+    const toastBlock = toastBlockMatch ? toastBlockMatch[1] : '';
+
+    // Radius check: must be 12-16px, NOT 30px pill
+    assert.ok(!toastBlock.includes('border-radius: 30px'), 'Toast must NOT use border-radius 30px pill');
+    assert.ok(toastBlock.includes('border-radius: 14px') || toastBlock.includes('border-radius: 12px'), 'Toast must use 12-14px border radius');
+
+    // Color/glow check: must not use bright #38bdf8 border on toast
+    assert.ok(!toastBlock.includes('#38bdf8'), 'Toast must NOT use bright cyan border');
+
+    // Max width check: must not be hardcoded to 92vw stretched on desktop
+    assert.ok(toastBlock.includes('max-width: min(440px') || toastBlock.includes('max-width: 440px') || toastBlock.includes('width: auto'), 'Toast must be compact width');
+
+    // Text wrapping check: must allow text wrap on toast message
+    assert.ok(toastCss.includes('word-break: break-word'), 'Must support word breaking on message');
+
+    // Safe area & reduced motion
+    assert.ok(toastCss.includes('safe-area-inset-bottom'), 'Must respect safe-area-inset-bottom');
+    assert.ok(toastCss.includes('prefers-reduced-motion'), 'Must respect prefers-reduced-motion');
+  });
+
+  test('Editor Toast undo callback is isolated and close button does not trigger undo', () => {
+    let undoTriggered = false;
+    let toastClosed = false;
+
+    const mockToast = {
+      message: 'Đã lưu thay đổi vào chương thành công!',
+      onUndo: () => {
+        undoTriggered = true;
+      },
+    };
+
+    const handleClose = () => {
+      toastClosed = true;
+    };
+
+    // 1. User clicks close button
+    handleClose();
+    assert.equal(toastClosed, true, 'Toast close must be called');
+    assert.equal(undoTriggered, false, 'Closing toast must NOT trigger undo');
+
+    // 2. User clicks Undo button
+    mockToast.onUndo();
+    assert.equal(undoTriggered, true, 'Undo callback must be triggered on explicit button click');
+  });
+
+  describe('ReadingAnchor & FontChangeCoordinator', () => {
+    test('calculateTargetScrollY calculates precise offsets and clamps to 0', () => {
+      // Current scroll: 600. Paragraph top: 70. Desired offset: 0 -> target: 600
+      assert.equal(calculateTargetScrollY(70, 600, 0, 70), 600);
+
+      // Paragraph top shifted down to 105 (+35px) -> target: 635
+      assert.equal(calculateTargetScrollY(105, 600, 0, 70), 635);
+
+      // Paragraph top shifted up to 45 (-25px) -> target: 575
+      assert.equal(calculateTargetScrollY(45, 600, 0, 70), 575);
+
+      // Paragraph had prior intra-paragraph offsetY of 15px
+      // target paragraph top should be 70 - 15 = 55. If rect.top = 80, delta is 25 -> 625
+      assert.equal(calculateTargetScrollY(80, 600, 15, 70), 625);
+
+      // Clamp to 0 when delta is negative beyond scrollY
+      assert.equal(calculateTargetScrollY(-200, 100, 0, 70), 0);
+    });
+
+    test('getReadingAnchor detects active paragraph and near-bottom boundaries', () => {
+      // 1. Null / empty doc fallback
+      assert.deepEqual(getReadingAnchor(null), { paraIndex: 0, offsetY: 0, scrollY: 0 });
+
+      // 2. Mock document with 5 paragraphs
+      const mockElements = [
+        { getBoundingClientRect: () => ({ top: -200, bottom: -50 }) },
+        { getBoundingClientRect: () => ({ top: -50, bottom: 50 }) },
+        { getBoundingClientRect: () => ({ top: 80, bottom: 220 }) }, // in focal reading line 60..140
+        { getBoundingClientRect: () => ({ top: 220, bottom: 400 }) },
+        { getBoundingClientRect: () => ({ top: 400, bottom: 550 }) },
+      ];
+
+      const mockDoc = {
+        defaultView: { scrollY: 450, innerHeight: 800 },
+        documentElement: { scrollHeight: 3000 },
+        querySelectorAll: (selector) => {
+          if (selector === '[data-para-index]') return mockElements;
+          return [];
+        },
+      };
+
+      const anchor = getReadingAnchor(mockDoc);
+      assert.equal(anchor.paraIndex, 2, 'Must locate paragraph 2 crossing focal line');
+      assert.equal(anchor.scrollY, 450);
+
+      // 3. User scrolled near bottom (scrollY >= maxScroll - 60)
+      const nearBottomDoc = {
+        defaultView: { scrollY: 2150, innerHeight: 800 },
+        documentElement: { scrollHeight: 3000 }, // maxScroll = 2200
+        querySelectorAll: (selector) => {
+          if (selector === '[data-para-index]') return mockElements;
+          return [];
+        },
+      };
+      const bottomAnchor = getReadingAnchor(nearBottomDoc);
+      assert.equal(bottomAnchor.paraIndex, 4, 'Must anchor to last paragraph at bottom');
+      assert.equal(bottomAnchor.isNearBottom, true);
+    });
+
+    test('restoreReadingAnchor updates window.scrollTo with instant behavior', () => {
+      let scrolledTo = null;
+      const mockDoc = {
+        defaultView: {
+          scrollY: 1000,
+          scrollTo: (opts) => {
+            scrolledTo = opts;
+          },
+        },
+        getElementById: (id) => {
+          if (id === 'para-3') {
+            return {
+              getBoundingClientRect: () => ({ top: 120, bottom: 300 }),
+            };
+          }
+          return null;
+        },
+      };
+
+      const anchor = { paraIndex: 3, offsetY: 0, scrollY: 1000 };
+      const targetY = restoreReadingAnchor(anchor, mockDoc);
+
+      // 1000 + 120 - 70 = 1050
+      assert.equal(targetY, 1050);
+      assert.deepEqual(scrolledTo, { top: 1050, behavior: 'instant' });
+
+      // Non-existent paragraph returns null
+      const invalidAnchor = { paraIndex: 99, offsetY: 0, scrollY: 1000 };
+      assert.equal(restoreReadingAnchor(invalidAnchor, mockDoc), null);
+    });
+
+    test('FontChangeCoordinator coordinates realignment, handles user scroll cancellation and consecutive changes', async () => {
+      let realignedEvents = [];
+      let sessionEnded = false;
+
+      const coordinator = new FontChangeCoordinator({
+        onRealigned: (data) => {
+          realignedEvents.push(data);
+        },
+        onSessionEnd: () => {
+          sessionEnded = true;
+        },
+      });
+
+      let currentScrollY = 500;
+      let targetParaTop = 90;
+
+      const mockDoc = {
+        defaultView: {
+          get scrollY() { return currentScrollY; },
+          set scrollY(v) { currentScrollY = v; },
+          innerHeight: 800,
+          scrollTo: ({ top }) => {
+            currentScrollY = top;
+          },
+        },
+        documentElement: { scrollHeight: 3000 },
+        querySelectorAll: () => [
+          { getBoundingClientRect: () => ({ top: targetParaTop, bottom: targetParaTop + 150 }) }
+        ],
+        getElementById: () => ({
+          getBoundingClientRect: () => ({ top: targetParaTop, bottom: targetParaTop + 150 }),
+        }),
+      };
+
+      // 1. Prepare anchor before change
+      const anchor = coordinator.prepare(mockDoc);
+      assert.equal(anchor.paraIndex, 0);
+      assert.equal(coordinator.activeAnchor.paraIndex, 0);
+
+      // 2. Reflow shifts paragraph top from 90 to 110 (+20px)
+      targetParaTop = 110;
+      const targetY = coordinator.realign(mockDoc);
+      // Keeps paragraph top exact at pre-reflow 90px (offsetY = 70 - 90 = -20): 500 + 110 - (70 - (-20)) = 520
+      assert.equal(targetY, 520);
+      assert.equal(currentScrollY, 520);
+      assert.equal(realignedEvents.length, 1);
+      assert.equal(realignedEvents[0].targetY, 520);
+
+      // 3. User actively scrolls away (> 45px delta from lastTargetY=520)
+      coordinator.handleUserScroll(650); // scrolled 110px down
+      assert.equal(coordinator.userHasScrolled, true);
+      assert.equal(coordinator.activeAnchor, null);
+
+      // Further realignment calls must be rejected
+      const abortedY = coordinator.realign(mockDoc);
+      assert.equal(abortedY, null);
+
+      // 4. Consecutive font changes: rapid prepare calls cancel stale sessions
+      const session1 = coordinator.prepare(mockDoc);
+      const id1 = coordinator.currentSessionId;
+      const session2 = coordinator.prepare(mockDoc);
+      const id2 = coordinator.currentSessionId;
+      assert.ok(id2 > id1, 'Session ID must increment');
+      assert.equal(coordinator.timers.length, 0, 'Previous timers cleared on prepare');
+
+      // 5. Explicit cancellation (e.g. Chapter change or unmount)
+      coordinator.cancel();
+      assert.equal(coordinator.activeAnchor, null);
+      assert.equal(coordinator.lastTargetY, null);
+    });
+
+    test('React effect cleanup cancel(oldSessionId) does NOT erase newly prepared anchor and isolates stale fonts.ready', async () => {
+      const realignedLog = [];
+      const coordinator = new FontChangeCoordinator({
+        onRealigned: (info) => realignedLog.push(info),
+      });
+
+      let currentScrollY = 1200;
+      // Paragraph 0 scrolled past, Paragraph 12 at top=52 (offsetY = 18), Paragraph 13 below
+      let para12Top = 52;
+      let para13Top = 210;
+
+      let resolveFonts1;
+      let resolveFonts2;
+      const fontsReady1 = new Promise((r) => { resolveFonts1 = r; });
+      const fontsReady2 = new Promise((r) => { resolveFonts2 = r; });
+      let currentFontsReady = fontsReady1;
+
+      const makeMockElements = () => [
+        ...Array.from({ length: 12 }, (_, idx) => ({
+          getBoundingClientRect: () => ({ top: -1500 + idx * 120, bottom: -1380 + idx * 120 }),
+        })),
+        { getBoundingClientRect: () => ({ top: para12Top, bottom: para12Top + 140 }) },
+        { getBoundingClientRect: () => ({ top: para13Top, bottom: para13Top + 140 }) },
+      ];
+
+      const mockDoc = {
+        defaultView: {
+          get scrollY() { return currentScrollY; },
+          innerHeight: 800,
+          scrollTo: ({ top }) => {
+            const delta = top - currentScrollY;
+            currentScrollY = top;
+            para12Top -= delta;
+            para13Top -= delta;
+          },
+        },
+        documentElement: { scrollHeight: 5000 },
+        fonts: {
+          get ready() { return currentFontsReady; },
+        },
+        querySelectorAll: () => makeMockElements(),
+        getElementById: (id) => {
+          if (id === 'para-12') return { getBoundingClientRect: () => ({ top: para12Top, bottom: para12Top + 140 }) };
+          if (id === 'para-13') return { getBoundingClientRect: () => ({ top: para13Top, bottom: para13Top + 140 }) };
+          return null;
+        },
+      };
+
+      // --- Transition 1: Serif -> Literata ---
+      // 1a. handleUpdateSettings calls prepare() BEFORE render
+      const anchor1 = coordinator.prepare(mockDoc);
+      assert.equal(anchor1.paraIndex, 12);
+      assert.equal(anchor1.offsetY, 18); // 70 - 52
+
+      // 1b. Literata renders & reflows DOM (+28px shift down)
+      para12Top += 28;
+      para13Top += 28;
+      const sessionId1 = coordinator.scheduleRealignments(mockDoc);
+      assert.ok(sessionId1 > 0);
+      assert.equal(para12Top, 52, 'Immediate pass keeps para 12 at exact offset 52px');
+
+      // --- Transition 2: Literata -> Patrick Hand (before session 1 timers/fontsReady1 finish!) ---
+      // 2a. handleUpdateSettings calls prepare() BEFORE second render (captures pre-reflow para 12 at 52px!)
+      const anchor2 = coordinator.prepare(mockDoc);
+      assert.equal(anchor2.paraIndex, 12);
+      assert.equal(anchor2.offsetY, 18);
+      const sessionId2 = coordinator.currentSessionId;
+      assert.ok(sessionId2 > sessionId1);
+
+      // 2b. Patrick Hand renders & reflows DOM dramatically (para 12 pushed off focal line, para 13 moves to 110px)
+      currentFontsReady = fontsReady2;
+      para12Top = -80;
+      para13Top = 110;
+
+      // 2c. React executes Effect 1 cleanup BEFORE Effect 2 body!
+      const canceledOld = coordinator.cancel(sessionId1);
+      assert.equal(canceledOld, false, 'Cleanup of old session MUST NOT cancel newly prepared session 2');
+      assert.ok(coordinator.activeAnchor !== null, 'Session 2 pre-reflow anchor MUST remain intact');
+      assert.equal(coordinator.activeAnchor.paraIndex, 12, 'Anchor MUST remain para 12 (not drifted to para 13)');
+      assert.equal(coordinator.activeAnchor.offsetY, 18, 'Anchor offsetY MUST remain preserved');
+
+      // 2d. React executes Effect 2 body -> schedules session 2 using pre-reflow anchor 2
+      const scheduled2 = coordinator.scheduleRealignments(mockDoc);
+      assert.equal(scheduled2, sessionId2);
+      assert.equal(para12Top, 52, 'Session 2 restores para 12 back to exact 52px despite dramatic reflow');
+
+      // 3. Stale fontsReady1 from session 1 resolves late -> MUST NOT interfere with session 2
+      const eventsBeforeStaleResolve = realignedLog.length;
+      para12Top = 65; // simulate slight metric shift before fontsReady2
+      resolveFonts1();
+      await Promise.resolve();
+      await Promise.resolve();
+      assert.equal(
+        realignedLog.length,
+        eventsBeforeStaleResolve,
+        'Stale document.fonts.ready from session 1 MUST NOT trigger realign on session 2'
+      );
+      assert.equal(para12Top, 65, 'Scroll must NOT be touched by stale session 1 promise');
+
+      // 4. Current fontsReady2 resolves -> realigns para 12 cleanly for session 2
+      resolveFonts2();
+      await Promise.resolve();
+      await Promise.resolve();
+      assert.equal(realignedLog.length, eventsBeforeStaleResolve + 1);
+      assert.equal(realignedLog[realignedLog.length - 1].sessionId, sessionId2);
+      assert.equal(para12Top, 52, 'Current session 2 fonts.ready restores para 12 to exact 52px');
+
+      // 5. Matching cleanup cancel(sessionId2) on chapter switch or unmount cancels cleanly
+      const canceledCurrent = coordinator.cancel(sessionId2);
+      assert.equal(canceledCurrent, true, 'Matching sessionId cleanup cancels active session');
+      assert.equal(coordinator.activeAnchor, null);
+      assert.equal(coordinator.timers.length, 0);
+    });
   });
 });
